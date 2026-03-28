@@ -17,13 +17,13 @@ static bool _connected = false;
 class PulsarServerCB : public BLEServerCallbacks {
     void onConnect(BLEServer* s) override {
         _connected = true;
-        Serial.println("[BLE] Client connected");
+        Serial.printf("[BLE] Client connected (state=%d, mode=%d)\n",
+                      triggers_current_state(), triggers_current_mode());
     }
     void onDisconnect(BLEServer* s) override {
         _connected = false;
-        Serial.println("[BLE] Client disconnected");
-        triggers_stop();
-        // Restart advertising
+        Serial.println("[BLE] Client disconnected — job continues");
+        // Do NOT stop triggers: the running job survives disconnection
         BLEDevice::startAdvertising();
     }
 };

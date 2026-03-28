@@ -18,15 +18,22 @@ void setup() {
 }
 
 void loop() {
-    // Blink LED while connected
+    // LED status indicator:
+    //   Connected:                  slow blink (1 s)
+    //   Disconnected, job running:  solid ON
+    //   Disconnected, idle:         fast blink (200 ms)
     static uint32_t led_timer = 0;
+    bool running = (triggers_current_state() == STATE_RUNNING ||
+                    triggers_current_state() == STATE_WAITING);
+
     if (ble_connected()) {
         if (millis() - led_timer > 1000) {
             digitalWrite(PIN_LED, !digitalRead(PIN_LED));
             led_timer = millis();
         }
+    } else if (running) {
+        digitalWrite(PIN_LED, HIGH);
     } else {
-        // Fast blink while advertising
         if (millis() - led_timer > 200) {
             digitalWrite(PIN_LED, !digitalRead(PIN_LED));
             led_timer = millis();
