@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <cstddef>
 
 // ── Command IDs (byte 0 of BLE write) ───────────────────────────────────────
 enum Cmd : uint8_t {

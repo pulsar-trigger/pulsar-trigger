@@ -1,4 +1,6 @@
 #pragma once
+#include <cstdint>
+#include <cstddef>
 
 /// Set up BLE service, characteristics, and start advertising.
 void ble_init();

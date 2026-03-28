@@ -12,6 +12,7 @@ import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ControlScreen(vm: PulsarViewModel) {
     val connected by vm.connected.collectAsState()

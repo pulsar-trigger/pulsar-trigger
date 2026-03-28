@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.Pulsar" parent="android:Theme.Material.NoActionBar">
+        <item name="android:colorPrimary">@color/pulsar_orange</item>
+        <item name="android:statusBarColor">@color/background_dark</item>
+        <item name="android:navigationBarColor">@color/background_dark</item>
+    </style>
+</resources>
