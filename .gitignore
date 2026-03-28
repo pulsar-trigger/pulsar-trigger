@@ -1,0 +1,24 @@
+# ESP32 / PlatformIO
+firmware/.pio/
+firmware/.vscode/
+firmware/lib/
+
+# Android / Gradle
+android/.gradle/
+android/build/
+android/app/build/
+android/app/release/
+android/local.properties
+android/captures/
+android/.idea/
+android/*.iml
+android/app/*.iml
+
+# General
+*.o
+*.a
+*.so
+*.dylib
+*.log
+.DS_Store
+Thumbs.db

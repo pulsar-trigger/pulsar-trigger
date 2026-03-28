@@ -1,0 +1,26 @@
+#pragma once
+#include "protocol.h"
+
+/// Initialize all trigger mode state machines.
+void triggers_init();
+
+/// Call from loop() — runs the active mode's tick.
+void triggers_tick();
+
+/// Apply a SET_MODE command payload.
+void triggers_set_mode(Mode mode, const uint8_t* payload, size_t len);
+
+/// Start the currently configured mode.
+void triggers_start();
+
+/// Stop / abort the active mode.
+void triggers_stop();
+
+/// Fire a single manual shutter.
+void triggers_single_shot();
+
+/// Get the currently active mode.
+Mode triggers_current_mode();
+
+/// Get the current state.
+State triggers_current_state();
