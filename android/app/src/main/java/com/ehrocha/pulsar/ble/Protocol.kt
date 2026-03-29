@@ -22,6 +22,7 @@ object Cmd {
 /** Trigger modes */
 enum class TriggerMode(val id: Byte) {
     INTERVALOMETER(0x01),
+    ASTRO(0x01),          // uses intervalometer on firmware
     SOUND(0x02),
     LIGHTNING(0x03),
     LASER(0x04),

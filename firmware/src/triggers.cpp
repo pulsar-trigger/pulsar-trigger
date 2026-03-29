@@ -75,7 +75,7 @@ void triggers_start() {
     if (_mode == MODE_INTERVALOMETER) {
         _next_fire_ms = millis() + _interval.delay_ms;
         _state = STATE_WAITING;
-    } else if (_mode == MODE_PRESS_LOCK) {
+    } else if (_mode == MODE_PRESS_HOLD || _mode == MODE_PRESS_LOCK) {
         _lock_active = true;
         camera_focus(true);
         digitalWrite(PIN_SHUTTER, HIGH);

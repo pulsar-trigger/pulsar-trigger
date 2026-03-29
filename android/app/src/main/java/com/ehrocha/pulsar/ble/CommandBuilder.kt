@@ -81,4 +81,12 @@ object CommandBuilder {
     fun setPressLock(): ByteArray {
         return frame(Cmd.SET_MODE, byteArrayOf(TriggerMode.PRESS_LOCK.id))
     }
+
+    /** Astro mode reuses intervalometer on firmware side. */
+    fun setAstro(
+        intervalMs: Long,
+        exposureMs: Long,
+        count: Int = 0,
+        delayMs: Long = 0,
+    ): ByteArray = setIntervalometer(intervalMs, exposureMs, count, delayMs)
 }

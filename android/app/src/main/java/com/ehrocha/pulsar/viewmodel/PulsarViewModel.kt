@@ -7,12 +7,19 @@ import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.ParcelUuid
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import com.ehrocha.pulsar.ble.*
+import com.ehrocha.pulsar.service.PulsarNotificationService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -54,9 +61,45 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     // ── Laser params ─────────────────────────────────────────────────────
     val laserExposureMs = MutableStateFlow(200L)
 
+    // ── Astro params ─────────────────────────────────────────────────────
+    val astroFocalLength = MutableStateFlow(24)       // mm
+    val astroCropFactor = MutableStateFlow(1.5f)      // APS-C default
+    val astroRuleDivisor = MutableStateFlow(500)      // 500 or 400
+    val astroShotCount = MutableStateFlow(0)          // 0 = infinite
+    val astroDelayMs = MutableStateFlow(5000L)
+    val astroGapMs = MutableStateFlow(2000L)          // gap between shots
+
     // ── BLE Scan ─────────────────────────────────────────────────────────
     private val btManager = app.getSystemService(BluetoothManager::class.java)
     private val scanner = btManager?.adapter?.bluetoothLeScanner
+
+    // ── Notification / cancel ────────────────────────────────────────────
+    private val cancelReceiver = object : BroadcastReceiver() {
+        override fun onReceive(ctx: Context, intent: Intent) {
+            if (intent.action == PulsarNotificationService.ACTION_CANCEL) {
+                stop()
+            }
+        }
+    }
+
+    init {
+        app.registerReceiver(
+            cancelReceiver,
+            IntentFilter(PulsarNotificationService.ACTION_CANCEL),
+            Context.RECEIVER_NOT_EXPORTED,
+        )
+
+        // Auto-update notification as status frames arrive
+        viewModelScope.launch {
+            status.collect { frame ->
+                if (frame != null && frame.state == DeviceState.RUNNING) {
+                    updateNotification()
+                } else if (frame != null && frame.state == DeviceState.IDLE) {
+                    dismissNotification()
+                }
+            }
+        }
+    }
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
@@ -106,6 +149,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             TriggerMode.INTERVALOMETER -> CommandBuilder.setIntervalometer(
                 intervalMs.value, exposureMs.value, shotCount.value, delayMs.value
             )
+            TriggerMode.ASTRO -> {
+                val exposureS = astroRuleDivisor.value.toDouble() / (astroFocalLength.value * astroCropFactor.value)
+                val exposureMs = (exposureS * 1000).toLong().coerceAtLeast(100)
+                val intervalMs = exposureMs + astroGapMs.value
+                CommandBuilder.setAstro(
+                    intervalMs, exposureMs, astroShotCount.value, astroDelayMs.value
+                )
+            }
             TriggerMode.SOUND -> CommandBuilder.setSound(
                 soundThreshold.value, soundExposureMs.value
             )
@@ -123,19 +174,54 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     fun start() {
         sendConfig()
         bleManager.sendCommand(CommandBuilder.start())
+        updateNotification()
     }
 
     fun stop() {
         bleManager.sendCommand(CommandBuilder.stop())
+        dismissNotification()
     }
 
     fun singleShot() {
         bleManager.sendCommand(CommandBuilder.shutter())
     }
 
+    /** Press & Hold: shutter open on down */
+    fun shutterDown() {
+        sendConfig()
+        bleManager.sendCommand(CommandBuilder.start())
+    }
+
+    /** Press & Hold: shutter close on up */
+    fun shutterUp() {
+        bleManager.sendCommand(CommandBuilder.stop())
+    }
+
+    // ── Notification helpers ─────────────────────────────────────────────
+    fun updateNotification() {
+        val app = getApplication<Application>()
+        val s = status.value
+        val intent = Intent(app, PulsarNotificationService::class.java).apply {
+            putExtra(PulsarNotificationService.EXTRA_MODE, _currentMode.value.name.replace('_', ' '))
+            putExtra(PulsarNotificationService.EXTRA_SHOTS, s?.shotsTaken ?: 0)
+            putExtra(PulsarNotificationService.EXTRA_TOTAL, shotCount.value)
+            putExtra(PulsarNotificationService.EXTRA_STATE, s?.state?.name ?: "RUNNING")
+        }
+        app.startForegroundService(intent)
+    }
+
+    private fun dismissNotification() {
+        val app = getApplication<Application>()
+        app.stopService(Intent(app, PulsarNotificationService::class.java))
+    }
+
     override fun onCleared() {
         super.onCleared()
         stopScan()
+        dismissNotification()
+        try {
+            getApplication<Application>().unregisterReceiver(cancelReceiver)
+        } catch (_: Exception) {}
         bleManager.disconnectDevice()
     }
 }

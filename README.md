@@ -42,18 +42,59 @@ pulsar/
 - Laser + photoresistor (break-beam)
 - LiPo battery + voltage divider on GPIO 33
 
-## Getting Started
+## Building
 
 ### Firmware
+
+**Prerequisites:** [PlatformIO CLI](https://docs.platformio.org/en/latest/core/installation.html)
+
 ```bash
 cd firmware
 pio run                  # build
-pio run -t upload        # flash
-pio device monitor       # serial console
+pio run -t upload        # flash to connected ESP32
+pio device monitor       # serial console (115200 baud)
 ```
 
+The build produces `firmware/.pio/build/esp32dev/firmware.bin` (~1.1 MB).
+
 ### Android
-Open `android/` in Android Studio. Build and deploy to a device with BLE support (API 26+).
+
+**Prerequisites:**
+- JDK 17 (e.g. [Eclipse Temurin](https://adoptium.net/))
+- Android SDK with platform 35 and build-tools 35.0.0
+
+**SDK setup** (if not using Android Studio):
+```bash
+# Download Android command-line tools from https://developer.android.com/studio#command-line-tools-only
+# Then install required SDK components:
+sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+```
+
+**Configure `android/local.properties`** (not tracked in git):
+```properties
+sdk.dir=/path/to/your/Android/Sdk
+```
+
+JDK 17 is pinned in `gradle.properties` via `org.gradle.java.home`. Update the path if your JDK 17 installation differs.
+
+**Build:**
+```bash
+cd android
+./gradlew assembleDebug
+```
+
+The APK is written to `android/app/build/outputs/apk/debug/app-debug.apk`.
+
+To build and install on a connected device:
+```bash
+./gradlew installDebug
+```
+
+**Using Android Studio:** Open the `android/` directory as a project. Studio will detect the Gradle wrapper and SDK configuration automatically.
+
+## Wiring
+
+See [docs/wiring.md](docs/wiring.md) for the full wiring guide with pin assignments, optocoupler circuits, sensor hookups, and battery monitoring.
 
 ## BLE Protocol
 
