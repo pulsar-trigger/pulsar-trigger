@@ -191,49 +191,39 @@ internal fun DefaultActionsContent(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                OutlinedButton(
-                    onClick = onSingleShot,
-                    enabled = connected && !isRunning,
-                    shape = RoundedCornerShape(8.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp),
-                    modifier = Modifier.height(40.dp)
-                ) {
-                    Text("SINGLE", style = MaterialTheme.typography.labelLarge)
-                }
-            }
-
-            Surface(
-                shape = CircleShape,
-                color = if (isRunning) MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.primary,
-                tonalElevation = if (isRunning) 8.dp else 2.dp,
-                modifier = Modifier
-                    .size(120.dp)
-                    .clickable(enabled = connected) {
-                        if (isRunning) onStop() else onStart()
-                    },
+            OutlinedButton(
+                onClick = onSingleShot,
+                enabled = connected && !isRunning,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.height(56.dp).weight(1f)
             ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Text(
-                        text = if (isRunning) "STOP" else "START",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        textAlign = TextAlign.Center,
-                    )
-                }
+                Text("SINGLE", style = MaterialTheme.typography.labelLarge)
             }
 
-            Box(modifier = Modifier.weight(1f))
+            Button(
+                onClick = { if (isRunning) onStop() else onStart() },
+                enabled = connected,
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isRunning) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.primary
+                ),
+                modifier = Modifier.height(56.dp).weight(2f)
+            ) {
+                Text(
+                    text = if (isRunning) "STOP" else "START",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
 
-        Spacer(Modifier.height(8.dp))
         Text(
             text = if (isRunning) "Sequence running…" else "Ready to start sequence",
             style = MaterialTheme.typography.bodySmall,
@@ -270,86 +260,84 @@ internal fun ManualActionsContent(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Row(
-            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                FilterChip(
-                    selected = mode == TriggerMode.PRESS_HOLD,
-                    onClick = { onModeSelected(TriggerMode.PRESS_HOLD) },
-                    enabled = connected,
-                    label = { Text("Hold") },
-                )
-            }
+            FilterChip(
+                selected = mode == TriggerMode.PRESS_HOLD,
+                onClick = { onModeSelected(TriggerMode.PRESS_HOLD) },
+                enabled = connected,
+                label = { Text("HOLD MODE", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                modifier = Modifier.weight(1f)
+            )
+            FilterChip(
+                selected = mode == TriggerMode.PRESS_LOCK,
+                onClick = { onModeSelected(TriggerMode.PRESS_LOCK) },
+                enabled = connected,
+                label = { Text("LOCK MODE", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                modifier = Modifier.weight(1f)
+            )
+        }
 
-            Surface(
-                shape = CircleShape,
-                color = if (active) MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.primary,
-                tonalElevation = if (active) 8.dp else 2.dp,
-                modifier = Modifier
-                    .size(120.dp)
-                    .pointerInput(connected, isHold) {
-                        if (!connected) return@pointerInput
-                        if (isHold) {
-                            detectTapGestures(
-                                onPress = {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = if (active) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.primary,
+            tonalElevation = if (active) 8.dp else 2.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp)
+                .pointerInput(connected, isHold) {
+                    if (!connected) return@pointerInput
+                    if (isHold) {
+                        detectTapGestures(
+                            onPress = {
+                                active = true
+                                onShutterDown()
+                                try { awaitRelease() } finally {
+                                    active = false
+                                    onShutterUp()
+                                }
+                            },
+                        )
+                    } else {
+                        detectTapGestures(
+                            onPress = {
+                                if (!active) {
                                     active = true
                                     onShutterDown()
-                                    try { awaitRelease() } finally {
-                                        active = false
-                                        onShutterUp()
-                                    }
-                                },
-                            )
-                        } else {
-                            detectTapGestures(
-                                onPress = {
-                                    if (!active) {
-                                        active = true
-                                        onShutterDown()
-                                    } else {
-                                        active = false
-                                        onShutterUp()
-                                    }
-                                },
-                            )
-                        }
+                                } else {
+                                    active = false
+                                    onShutterUp()
+                                }
+                            },
+                        )
+                    }
+                },
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = if (isHold) {
+                        if (active) "RELEASE SHUTTER" else "HOLD SHUTTER"
+                    } else {
+                        if (active) "CLOSE SHUTTER" else "OPEN SHUTTER"
                     },
-            ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Text(
-                        text = if (isHold) {
-                            if (active) "RELEASE" else "HOLD"
-                        } else {
-                            if (active) "STOP" else "START"
-                        },
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            }
-
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                FilterChip(
-                    selected = mode == TriggerMode.PRESS_LOCK,
-                    onClick = { onModeSelected(TriggerMode.PRESS_LOCK) },
-                    enabled = connected,
-                    label = { Text("Lock") },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    textAlign = TextAlign.Center,
                 )
             }
         }
 
-        Spacer(Modifier.height(8.dp))
         Text(
             text = if (isHold) {
-                if (active) "Shutter open…" else "Press and hold to open shutter"
+                if (active) "Shutter open…" else "Press and hold button"
             } else {
-                if (active) "Shutter open… tap to close" else "Tap to open shutter"
+                if (active) "Shutter locked open" else "Tap button to toggle"
             },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -383,53 +371,45 @@ internal fun AstroActionsContent(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Row(
-            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                FilterChip(
-                    selected = ruleDivisor == 500,
-                    onClick = { onRuleChanged(500) },
-                    enabled = connected && !isRunning,
-                    label = { Text("500 Rule", style = MaterialTheme.typography.labelMedium) },
-                )
-            }
-
-            Surface(
-                shape = CircleShape,
-                color = if (isRunning) MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.primary,
-                tonalElevation = if (isRunning) 8.dp else 2.dp,
-                modifier = Modifier
-                    .size(120.dp)
-                    .clickable(enabled = connected) {
-                        if (isRunning) onStop() else onStart()
-                    },
-            ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Text(
-                        text = if (isRunning) "STOP" else "START",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            }
-
-            Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                FilterChip(
-                    selected = ruleDivisor == 400,
-                    onClick = { onRuleChanged(400) },
-                    enabled = connected && !isRunning,
-                    label = { Text("400 Rule", style = MaterialTheme.typography.labelMedium) },
-                )
-            }
+            FilterChip(
+                selected = ruleDivisor == 500,
+                onClick = { onRuleChanged(500) },
+                enabled = connected && !isRunning,
+                label = { Text("500 RULE", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                modifier = Modifier.weight(1f)
+            )
+            FilterChip(
+                selected = ruleDivisor == 400,
+                onClick = { onRuleChanged(400) },
+                enabled = connected && !isRunning,
+                label = { Text("400 RULE", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                modifier = Modifier.weight(1f)
+            )
         }
 
-        Spacer(Modifier.height(8.dp))
+        Button(
+            onClick = { if (isRunning) onStop() else onStart() },
+            enabled = connected,
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isRunning) MaterialTheme.colorScheme.error
+                                 else MaterialTheme.colorScheme.primary
+            ),
+            modifier = Modifier.fillMaxWidth().height(56.dp)
+        ) {
+            Text(
+                text = if (isRunning) "STOP ASTRO" else "START ASTRO",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
         Text(
             text = if (isRunning) "Capturing stars…" else "Ready for astro sequence",
             style = MaterialTheme.typography.bodySmall,
@@ -553,31 +533,35 @@ internal fun IntervalometerPanelContent(
                 enabled = enabled,
             )
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    "Number of Shots",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f),
-                )
-                ScrollPicker(
-                    value = shotCount,
-                    range = 1..999,
-                    onValueChange = { onShotCountChanged(it) },
-                    format = { "$it" },
-                    enabled = enabled,
-                )
-            }
-
             TimePicker(
                 totalMs = delayMs,
                 onChanged = { onDelayChanged(it) },
                 label = "Start Delay",
                 enabled = enabled,
             )
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Number of Shots",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        text = "$shotCount",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Slider(
+                    value = shotCount.toFloat(),
+                    onValueChange = { onShotCountChanged(it.toInt()) },
+                    valueRange = 1f..500f,
+                    enabled = enabled,
+                )
+            }
         }
     }
 }
@@ -822,31 +806,35 @@ internal fun AstroPanelContent(
                 enabled = enabled,
             )
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    "Number of Shots",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f),
-                )
-                ScrollPicker(
-                    value = shotCount,
-                    range = 1..999,
-                    onValueChange = { onShotCountChanged(it) },
-                    format = { "$it" },
-                    enabled = enabled,
-                )
-            }
-
             TimePicker(
                 totalMs = delayMs,
                 onChanged = { onDelayMsChanged(it) },
                 label = "Start Delay",
                 enabled = enabled,
             )
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Number of Shots",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        text = "$shotCount",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Slider(
+                    value = shotCount.toFloat(),
+                    onValueChange = { onShotCountChanged(it.toInt()) },
+                    valueRange = 1f..500f,
+                    enabled = enabled,
+                )
+            }
         }
     }
 }

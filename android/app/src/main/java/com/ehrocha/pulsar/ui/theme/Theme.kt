@@ -9,21 +9,25 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
-val PulsarOrange = Color(0xFFFF6B00)
-val PulsarDark = Color(0xFF1A1A2E)
-val PulsarSurface = Color(0xFF16213E)
-val PulsarOnSurface = Color(0xFFE0E0E0)
+val PulsarViolet = Color(0xFFB15CFF)
+val PulsarDark = Color(0xFF1C1B1F)
+val PulsarSurface = Color(0xFF252429)
+val PulsarOnSurface = Color(0xFFE6E1E5)
+val PulsarSecondary = Color(0xFF353439)
 
 val DarkColorScheme = darkColorScheme(
-    primary = PulsarOrange,
+    primary = PulsarViolet,
     onPrimary = Color.White,
     background = PulsarDark,
     surface = PulsarSurface,
     onBackground = PulsarOnSurface,
     onSurface = PulsarOnSurface,
+    surfaceVariant = PulsarSecondary,
+    onSurfaceVariant = Color(0xFFCAC4D0),
+    outline = Color(0xFF938F99)
 )
 
 val LightColorScheme = lightColorScheme(
-    primary = PulsarOrange,
+    primary = PulsarViolet,
     onPrimary = Color.White,
 )
