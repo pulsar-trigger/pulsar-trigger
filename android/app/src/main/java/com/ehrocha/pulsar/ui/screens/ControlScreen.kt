@@ -313,7 +313,7 @@ private fun IntervalometerPanel(vm: PulsarViewModel, enabled: Boolean = true) {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                "Shots (0 = ∞)",
+                "Number of Shots (0 = ∞)",
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
@@ -541,7 +541,7 @@ private fun AstroPanel(vm: PulsarViewModel, enabled: Boolean = true) {
     val maxExposureMs = (maxExposureS * 1000).toLong().coerceAtLeast(100)
     val intervalMs = maxExposureMs + gapMs
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
         Text("Astro Mode", style = MaterialTheme.typography.titleLarge)
 
         Text(
@@ -594,7 +594,7 @@ private fun AstroPanel(vm: PulsarViewModel, enabled: Boolean = true) {
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                "Focal Length (mm)",
+                "Focal Length",
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
@@ -604,6 +604,7 @@ private fun AstroPanel(vm: PulsarViewModel, enabled: Boolean = true) {
                 range = 8..600,
                 onValueChange = { vm.astroFocalLength.value = it },
                 format = { "$it" },
+                label = "mm",
                 enabled = enabled,
             )
         }
@@ -650,39 +651,32 @@ private fun AstroPanel(vm: PulsarViewModel, enabled: Boolean = true) {
             }
         }
 
-        // ── Gap + Shot count (side by side) ─────────────────────────
+        // ── Interval (gap between shots) ─────────────────────────────
+        TimePicker(
+            totalMs = gapMs,
+            onChanged = { vm.astroGapMs.value = it.coerceAtLeast(500) },
+            label = "Interval (gap between shots)",
+            enabled = enabled,
+        )
+
+        // ── Shot count ───────────────────────────────────────────────
         Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    "Gap (s)",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                ScrollPicker(
-                    value = (gapMs / 1000).toInt(),
-                    range = 1..10,
-                    onValueChange = { vm.astroGapMs.value = it * 1000L },
-                    format = { "${it}s" },
-                    enabled = enabled,
-                )
-            }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    "Shots (0 = ∞)",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                ScrollPicker(
-                    value = shotCount,
-                    range = 0..999,
-                    onValueChange = { vm.astroShotCount.value = it },
-                    format = { "$it" },
-                    enabled = enabled,
-                )
-            }
+            Text(
+                "Number of Shots (0 = ∞)",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            ScrollPicker(
+                value = shotCount,
+                range = 0..999,
+                onValueChange = { vm.astroShotCount.value = it },
+                format = { "$it" },
+                enabled = enabled,
+            )
         }
 
         // ── Start delay ──────────────────────────────────────────────
