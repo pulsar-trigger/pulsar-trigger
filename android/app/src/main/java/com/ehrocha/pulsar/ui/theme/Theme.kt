@@ -1,3 +1,8 @@
+/*
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Pulsar Trigger contributors
+ */
+
 package com.ehrocha.pulsar.ui.theme
 
 import androidx.compose.material3.darkColorScheme

@@ -1,3 +1,8 @@
+/*
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Pulsar Trigger contributors
+ */
+
 #include <Arduino.h>
 #include "config.h"
 #include "camera.h"

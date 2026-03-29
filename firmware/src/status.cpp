@@ -1,3 +1,8 @@
+/*
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Pulsar Trigger contributors
+ */
+
 #include "status.h"
 #include "ble_server.h"
 #include "config.h"
