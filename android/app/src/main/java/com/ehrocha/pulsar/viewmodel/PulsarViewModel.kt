@@ -52,7 +52,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     // ── Intervalometer params ────────────────────────────────────────────
     val intervalMs = MutableStateFlow(5000L)
     val exposureMs = MutableStateFlow(200L)
-    val shotCount = MutableStateFlow(0)       // 0 = infinite
+    val shotCount = MutableStateFlow(1)
     val delayMs = MutableStateFlow(0L)
 
     // ── Sound params ─────────────────────────────────────────────────────
@@ -63,14 +63,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val lightningSensitivity = MutableStateFlow(3)
     val lightningExposureMs = MutableStateFlow(200L)
 
-    // ── Laser params ─────────────────────────────────────────────────────
+    // ── Mode params (generic) ────────────────────────────────────────────
     val laserExposureMs = MutableStateFlow(200L)
 
     // ── Astro params ─────────────────────────────────────────────────────
     val astroFocalLength = MutableStateFlow(24)       // mm
-    val astroCropFactor = MutableStateFlow(1.5f)      // APS-C default
+    val astroCropFactor = MutableStateFlow(1.0f)      // Full Frame default
     val astroRuleDivisor = MutableStateFlow(500)      // 500 or 400
-    val astroShotCount = MutableStateFlow(0)          // 0 = infinite
+    val astroShotCount = MutableStateFlow(1)
     val astroDelayMs = MutableStateFlow(5000L)
     val astroGapMs = MutableStateFlow(2000L)          // gap between shots
 
