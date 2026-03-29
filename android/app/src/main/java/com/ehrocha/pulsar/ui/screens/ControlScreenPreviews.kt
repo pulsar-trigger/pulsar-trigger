@@ -23,8 +23,6 @@ import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.ble.StatusFrame
 import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.ui.components.LiveStatusPanel
-import com.ehrocha.pulsar.ui.components.ScrollPicker
-import com.ehrocha.pulsar.ui.components.TimePicker
 import com.ehrocha.pulsar.ui.theme.DarkColorScheme
 
 // ── Intervalometer Preview ───────────────────────────────────────────────────
@@ -33,229 +31,67 @@ import com.ehrocha.pulsar.ui.theme.DarkColorScheme
 @Composable
 private fun IntervalometerPanelPreview() {
     MaterialTheme(colorScheme = DarkColorScheme) {
+        var interval by remember { mutableLongStateOf(5_000L) }
+        var exposure by remember { mutableLongStateOf(500L) }
+        var count by remember { mutableIntStateOf(0) }
+        var delay by remember { mutableLongStateOf(5_000L) }
+
         Surface(
             shape = RoundedCornerShape(16.dp),
             tonalElevation = 1.dp,
             modifier = Modifier.fillMaxSize(),
         ) {
-            Column(
+            IntervalometerPanelContent(
+                intervalMs = interval,
+                exposureMs = exposure,
+                shotCount = count,
+                delayMs = delay,
+                onIntervalChanged = { interval = it },
+                onExposureChanged = { exposure = it },
+                onShotCountChanged = { count = it },
+                onDelayChanged = { delay = it },
                 modifier = Modifier
-                    .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp),
-            ) {
-                var interval by remember { mutableLongStateOf(5_000L) }
-                var exposure by remember { mutableLongStateOf(500L) }
-                var count by remember { mutableIntStateOf(0) }
-                var delay by remember { mutableLongStateOf(5_000L) }
-
-                Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                    Text("Intervalometer", style = MaterialTheme.typography.titleLarge)
-
-                    TimePicker(
-                        totalMs = interval,
-                        onChanged = { interval = it.coerceAtLeast(500) },
-                        label = "Interval (gap between shots)",
-                    )
-                    TimePicker(
-                        totalMs = exposure,
-                        onChanged = { exposure = it.coerceAtLeast(50) },
-                        label = "Exposure",
-                    )
-                    TimePicker(
-                        totalMs = delay,
-                        onChanged = { delay = it },
-                        label = "Start Delay",
-                    )
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(
-                            "Number of Shots (0 = ∞)",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f),
-                        )
-                        ScrollPicker(
-                            value = count,
-                            range = 0..999,
-                            onValueChange = { count = it },
-                            format = { "$it" },
-                        )
-                    }
-                }
-            }
+            )
         }
     }
 }
 
 // ── Astro Panel Preview ──────────────────────────────────────────────────────
 
-@OptIn(ExperimentalLayoutApi::class)
 @Preview(showBackground = true, widthDp = 380, heightDp = 900, name = "Astro")
 @Composable
 private fun AstroPanelPreview() {
+    var focalLength by remember { mutableIntStateOf(24) }
+    var cropFactor by remember { mutableFloatStateOf(1.0f) }
+    var ruleDivisor by remember { mutableIntStateOf(500) }
+    var shotCount by remember { mutableIntStateOf(100) }
+    var delayMs by remember { mutableLongStateOf(5_000L) }
+    var gapMs by remember { mutableLongStateOf(2_000L) }
+
     MaterialTheme(colorScheme = DarkColorScheme) {
         Surface(
             shape = RoundedCornerShape(16.dp),
             tonalElevation = 1.dp,
             modifier = Modifier.fillMaxSize(),
         ) {
-            Column(
+            AstroPanelContent(
                 modifier = Modifier
-                    .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp),
-            ) {
-                var focalLength by remember { mutableIntStateOf(24) }
-                var cropFactor by remember { mutableFloatStateOf(1.0f) }
-                var ruleDivisor by remember { mutableIntStateOf(500) }
-                var shotCount by remember { mutableIntStateOf(100) }
-                var delay by remember { mutableLongStateOf(5_000L) }
-                var gapMs by remember { mutableLongStateOf(2_000L) }
-
-                val maxExposureS = ruleDivisor.toDouble() / (focalLength * cropFactor)
-                val maxExposureMs = (maxExposureS * 1000).toLong().coerceAtLeast(100)
-                val intervalMs = maxExposureMs + gapMs
-
-                Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                    Text("Astro Mode", style = MaterialTheme.typography.titleLarge)
-
-                    Text(
-                        "Calculates optimal exposure to avoid star trails.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-
-                    // Rule selector
-                    Text(
-                        "Exposure Rule",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(500 to "500 Rule", 400 to "400 Rule").forEach { (d, label) ->
-                            FilterChip(
-                                selected = ruleDivisor == d,
-                                onClick = { ruleDivisor = d },
-                                label = { Text(label) },
-                            )
-                        }
-                    }
-
-                    // Sensor type
-                    Text(
-                        "Sensor Type",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        listOf(
-                            "Full Frame" to 1.0f,
-                            "APS-C (Canon)" to 1.6f,
-                            "APS-C (Nikon/Sony)" to 1.5f,
-                            "Micro 4/3" to 2.0f,
-                        ).forEach { (label, crop) ->
-                            FilterChip(
-                                selected = cropFactor == crop,
-                                onClick = { cropFactor = crop },
-                                label = { Text(label) },
-                            )
-                        }
-                    }
-
-                    // Focal length
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(
-                            "Focal Length",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f),
-                        )
-                        ScrollPicker(
-                            value = focalLength,
-                            range = 8..600,
-                            onValueChange = { focalLength = it },
-                            format = { "$it" },
-                            label = "mm",
-                        )
-                    }
-
-                    // Calculated result
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        tonalElevation = 4.dp,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                "$ruleDivisor Rule Result",
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            Row(modifier = Modifier.fillMaxWidth()) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("Max Exposure", style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(
-                                        formatDuration(maxExposureMs),
-                                        style = MaterialTheme.typography.headlineSmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                    )
-                                }
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("Interval", style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(
-                                        formatDuration(intervalMs),
-                                        style = MaterialTheme.typography.headlineSmall,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    TimePicker(
-                        totalMs = gapMs,
-                        onChanged = { gapMs = it.coerceAtLeast(500) },
-                        label = "Interval (gap between shots)",
-                    )
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(
-                            "Number of Shots (0 = ∞)",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f),
-                        )
-                        ScrollPicker(
-                            value = shotCount,
-                            range = 0..999,
-                            onValueChange = { shotCount = it },
-                            format = { "$it" },
-                        )
-                    }
-
-                    TimePicker(
-                        totalMs = delay,
-                        onChanged = { delay = it },
-                        label = "Start Delay",
-                    )
-                }
-            }
+                focalLength = focalLength,
+                cropFactor = cropFactor,
+                shotCount = shotCount,
+                delayMs = delayMs,
+                gapMs = gapMs,
+                ruleDivisor = ruleDivisor,
+                onCropFactorChanged = { cropFactor = it },
+                onFocalLengthChanged = { focalLength = it },
+                onGapMsChanged = { gapMs = it },
+                onShotCountChanged = { shotCount = it },
+                onDelayMsChanged = { delayMs = it },
+            )
         }
     }
 }
@@ -271,58 +107,12 @@ private fun ManualPanelPreview() {
             tonalElevation = 1.dp,
             modifier = Modifier.fillMaxSize(),
         ) {
-            Column(
+            ManualPanelContent(
                 modifier = Modifier
-                    .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp),
-            ) {
-                var isLock by remember { mutableStateOf(false) }
-
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("Manual Shutter", style = MaterialTheme.typography.titleLarge)
-
-                    Text(
-                        "Control the shutter directly. Choose Hold (press and hold) or Lock (toggle on/off).",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-
-                    Text(
-                        "Behaviour",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(
-                            selected = !isLock,
-                            onClick = { isLock = false },
-                            label = { Text("Hold") },
-                        )
-                        FilterChip(
-                            selected = isLock,
-                            onClick = { isLock = true },
-                            label = { Text("Lock") },
-                        )
-                    }
-
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        tonalElevation = 2.dp,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(
-                            text = if (isLock)
-                                "Tap the button to open the shutter, tap again to close."
-                            else
-                                "Press and hold the button to keep the shutter open. Release to close.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(12.dp),
-                        )
-                    }
-                }
-            }
+                mode = TriggerMode.PRESS_HOLD,
+            )
         }
     }
 }
