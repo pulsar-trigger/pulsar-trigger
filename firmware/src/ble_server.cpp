@@ -13,10 +13,16 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <BLE2902.h>
+#include <Preferences.h>
+#include <esp_gap_ble_api.h>
 
+static Preferences _prefs;
+static char _deviceName[7 + BLE_NAME_SUFFIX_MAX + 1]; // "Pulsar-" + suffix + NUL
 static BLECharacteristic* _cmdChar   = nullptr;
 static BLECharacteristic* _statusChar = nullptr;
 static bool _connected = false;
+static volatile bool _pendingReinit = false;
+static bool _advConfigured = false;
 
 // ── Connection callbacks ─────────────────────────────────────────────────────
 class PulsarServerCB : public BLEServerCallbacks {
@@ -28,10 +34,30 @@ class PulsarServerCB : public BLEServerCallbacks {
     void onDisconnect(BLEServer* s) override {
         _connected = false;
         Serial.println("[BLE] Client disconnected — job continues");
-        // Do NOT stop triggers: the running job survives disconnection
-        BLEDevice::startAdvertising();
+        // Skip re-advertising if a reinit is pending (deinit is tearing down the stack)
+        if (!_pendingReinit) {
+            BLEDevice::startAdvertising();
+        }
     }
 };
+// ── NVS name helpers ─────────────────────────────────────────────────────────
+static void load_device_name() {
+    _prefs.begin("pulsar", true);  // read-only
+    String suffix = _prefs.getString("name", "");
+    _prefs.end();
+
+    if (suffix.length() > 0) {
+        snprintf(_deviceName, sizeof(_deviceName), "%s%s", BLE_NAME_PREFIX, suffix.c_str());
+    } else {
+        strncpy(_deviceName, BLE_DEVICE_NAME, sizeof(_deviceName));
+    }
+}
+
+static void save_device_name(const char* suffix) {
+    _prefs.begin("pulsar", false);  // read-write
+    _prefs.putString("name", suffix);
+    _prefs.end();
+}
 
 // ── Command characteristic callback ─────────────────────────────────────────
 class CmdCharCB : public BLECharacteristicCallbacks {
@@ -74,6 +100,29 @@ class CmdCharCB : public BLECharacteristicCallbacks {
                 }
                 break;
             }
+            case CMD_SET_NAME: {
+                if (len < 2) return;
+                // Bytes 1..N are the UTF-8 suffix (no "Pulsar-" prefix)
+                size_t suffixLen = len - 1;
+                if (suffixLen > BLE_NAME_SUFFIX_MAX) suffixLen = BLE_NAME_SUFFIX_MAX;
+                char suffix[BLE_NAME_SUFFIX_MAX + 1] = {};
+                memcpy(suffix, data + 1, suffixLen);
+                suffix[suffixLen] = '\0';
+
+                if (suffixLen == 0) {
+                    // Empty suffix → reset to default "Pulsar"
+                    save_device_name("");
+                    strncpy(_deviceName, BLE_DEVICE_NAME, sizeof(_deviceName));
+                } else {
+                    save_device_name(suffix);
+                    snprintf(_deviceName, sizeof(_deviceName), "%s%s", BLE_NAME_PREFIX, suffix);
+                }
+
+                // Defer BLE reinit to main loop (unsafe from callback context)
+                _pendingReinit = true;
+                Serial.printf("[BLE] SET_NAME → %s (reinit pending)\n", _deviceName);
+                break;
+            }
             default:
                 Serial.printf("[BLE] Unknown CMD %02X\n", cmd);
                 break;
@@ -83,7 +132,8 @@ class CmdCharCB : public BLECharacteristicCallbacks {
 
 // ── Public API ───────────────────────────────────────────────────────────────
 void ble_init() {
-    BLEDevice::init(BLE_DEVICE_NAME);
+    load_device_name();
+    BLEDevice::init(_deviceName);
 
     BLEServer* server = BLEDevice::createServer();
     server->setCallbacks(new PulsarServerCB());
@@ -107,12 +157,15 @@ void ble_init() {
     svc->start();
 
     BLEAdvertising* adv = BLEDevice::getAdvertising();
-    adv->addServiceUUID(SERVICE_UUID);
+    if (!_advConfigured) {
+        adv->addServiceUUID(SERVICE_UUID);
+        _advConfigured = true;
+    }
     adv->setScanResponse(true);
     adv->setMinPreferred(0x06);
     BLEDevice::startAdvertising();
 
-    Serial.println("[BLE] Advertising as " BLE_DEVICE_NAME);
+    Serial.printf("[BLE] Advertising as %s\n", _deviceName);
 }
 
 void ble_notify(const uint8_t* data, size_t len) {
@@ -124,4 +177,23 @@ void ble_notify(const uint8_t* data, size_t len) {
 
 bool ble_connected() {
     return _connected;
+}
+
+void ble_handle_reinit() {
+    if (!_pendingReinit) return;
+    Serial.printf("[BLE] Renaming to %s ...\n", _deviceName);
+
+    // Update GAP device name in the BLE stack (no deinit needed)
+    esp_ble_gap_set_device_name(_deviceName);
+
+    // Restart advertising so scan response carries the new name
+    BLEAdvertising* adv = BLEDevice::getAdvertising();
+    adv->stop();
+    delay(50);
+    adv->setScanResponse(true);
+    adv->setMinPreferred(0x06);
+    BLEDevice::startAdvertising();
+
+    Serial.printf("[BLE] Now advertising as %s\n", _deviceName);
+    _pendingReinit = false;
 }

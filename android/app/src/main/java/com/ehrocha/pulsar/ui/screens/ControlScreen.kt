@@ -14,7 +14,12 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.ble.DeviceState
@@ -38,6 +44,7 @@ fun ControlScreen(vm: PulsarViewModel) {
     val connected by vm.connected.collectAsState()
     val status by vm.status.collectAsState()
     val mode by vm.currentMode.collectAsState()
+    val deviceName by vm.deviceName.collectAsState()
 
     val modes = TriggerMode.entries.filter {
         it !in setOf(
@@ -45,18 +52,22 @@ fun ControlScreen(vm: PulsarViewModel) {
             TriggerMode.HDR, TriggerMode.PRESS_LOCK,
         )
     }
+    val settingsPageIndex = modes.size
     val pagerState = rememberPagerState(
         initialPage = modes.indexOf(mode),
-        pageCount = { modes.size },
+        pageCount = { modes.size + 1 },
     )
     val scope = rememberCoroutineScope()
+    val onSettingsPage = pagerState.currentPage == settingsPageIndex
 
     LaunchedEffect(pagerState.currentPage) {
+        if (pagerState.currentPage >= modes.size) return@LaunchedEffect
         val pageMode = modes[pagerState.currentPage]
         if (pageMode == TriggerMode.PRESS_HOLD && mode == TriggerMode.PRESS_LOCK) return@LaunchedEffect
         if (pageMode != mode) vm.selectMode(pageMode)
     }
     LaunchedEffect(mode) {
+        if (onSettingsPage) return@LaunchedEffect
         val effective = if (mode == TriggerMode.PRESS_LOCK) TriggerMode.PRESS_HOLD else mode
         val idx = modes.indexOf(effective)
         if (idx >= 0 && idx != pagerState.currentPage) pagerState.animateScrollToPage(idx)
@@ -71,6 +82,7 @@ fun ControlScreen(vm: PulsarViewModel) {
             connected = connected,
             status = status,
             currentMode = mode,
+            deviceName = deviceName,
         )
 
         Spacer(Modifier.height(16.dp))
@@ -92,11 +104,17 @@ fun ControlScreen(vm: PulsarViewModel) {
                     text = { Text(label, maxLines = 1) },
                 )
             }
+            Tab(
+                selected = onSettingsPage,
+                onClick = { if (!isRunning) scope.launch { pagerState.animateScrollToPage(settingsPageIndex) } },
+                enabled = !isRunning,
+                text = { Text("SETTINGS", maxLines = 1) },
+            )
         }
 
         Spacer(Modifier.height(12.dp))
 
-        // ── Pager with dedicated mode panels ─────────────────────────
+        // ── Pager with dedicated mode panels + settings ──────────────
         HorizontalPager(
             state = pagerState,
             userScrollEnabled = !isRunning,
@@ -113,15 +131,19 @@ fun ControlScreen(vm: PulsarViewModel) {
                         .verticalScroll(rememberScrollState())
                         .padding(16.dp),
                 ) {
-                    when (modes[page]) {
-                        TriggerMode.INTERVALOMETER -> IntervalometerPanel(vm, enabled = !isRunning)
-                        TriggerMode.ASTRO -> AstroPanel(vm, enabled = !isRunning)
-                        TriggerMode.SOUND -> SoundPanel(vm, enabled = !isRunning)
-                        TriggerMode.LIGHTNING -> LightningPanel(vm, enabled = !isRunning)
-                        TriggerMode.LASER -> LaserPanel(vm, enabled = !isRunning)
-                        TriggerMode.HDR -> HdrPanel(enabled = !isRunning)
-                        TriggerMode.PRESS_HOLD -> ManualPanel(vm)
-                        else -> {}
+                    if (page < modes.size) {
+                        when (modes[page]) {
+                            TriggerMode.INTERVALOMETER -> IntervalometerPanel(vm, enabled = !isRunning)
+                            TriggerMode.ASTRO -> AstroPanel(vm, enabled = !isRunning)
+                            TriggerMode.SOUND -> SoundPanel(vm, enabled = !isRunning)
+                            TriggerMode.LIGHTNING -> LightningPanel(vm, enabled = !isRunning)
+                            TriggerMode.LASER -> LaserPanel(vm, enabled = !isRunning)
+                            TriggerMode.HDR -> HdrPanel(enabled = !isRunning)
+                            TriggerMode.PRESS_HOLD -> ManualPanel(vm)
+                            else -> {}
+                        }
+                    } else {
+                        SettingsPanel(vm, deviceName, connected)
                     }
                 }
             }
@@ -129,17 +151,19 @@ fun ControlScreen(vm: PulsarViewModel) {
 
         Spacer(Modifier.height(16.dp))
 
-        LaunchedEffect(isRunning, status?.shotsTaken) {
-            if (isRunning) vm.updateNotification()
-        }
+        if (!onSettingsPage) {
+            LaunchedEffect(isRunning, status?.shotsTaken) {
+                if (isRunning) vm.updateNotification()
+            }
 
-        when (mode) {
-            TriggerMode.PRESS_HOLD, TriggerMode.PRESS_LOCK -> ManualActions(vm, connected, mode)
-            TriggerMode.ASTRO -> AstroActions(vm, connected, isRunning)
-            else -> DefaultActions(vm, connected, isRunning)
-        }
+            when (mode) {
+                TriggerMode.PRESS_HOLD, TriggerMode.PRESS_LOCK -> ManualActions(vm, connected, mode)
+                TriggerMode.ASTRO -> AstroActions(vm, connected, isRunning)
+                else -> DefaultActions(vm, connected, isRunning)
+            }
 
-        Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(8.dp))
+        }
 
         TextButton(
             onClick = { vm.disconnect() },
@@ -1046,4 +1070,132 @@ internal fun formatDuration(ms: Long): String {
     } else {
         "${"%.1f".format(totalS)}s"
     }
+}
+
+@Composable
+private fun SettingsPanel(
+    vm: PulsarViewModel,
+    deviceName: String,
+    connected: Boolean,
+) {
+    var showRenameDialog by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text("DEVICE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = 2.dp,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = connected) { showRenameDialog = true }
+                    .padding(16.dp),
+            ) {
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(Modifier.width(16.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Device Name", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        deviceName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        Text("ABOUT", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = 2.dp,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            ) {
+                Icon(
+                    Icons.Outlined.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(Modifier.width(16.dp))
+                Column {
+                    Text("Pulsar Trigger", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        "BLE Camera Remote Control",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+
+    if (showRenameDialog) {
+        RenameDeviceDialog(
+            onDismiss = { showRenameDialog = false },
+            onConfirm = { suffix ->
+                vm.renameDevice(suffix)
+                showRenameDialog = false
+            },
+        )
+    }
+}
+
+@Composable
+private fun RenameDeviceDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (suffix: String) -> Unit,
+) {
+    var text by remember { mutableStateOf("") }
+    val maxLen = 12
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Rename Device") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Enter a custom name. The device will advertise as \"Pulsar-<name>\". " +
+                    "Leave empty to reset to \"Pulsar\".",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { if (it.length <= maxLen) text = it },
+                    label = { Text("Device name") },
+                    prefix = { Text("Pulsar-") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { onConfirm(text) }),
+                    supportingText = { Text("${text.length}/$maxLen characters") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(text) }) {
+                Text("Rename")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+    )
 }

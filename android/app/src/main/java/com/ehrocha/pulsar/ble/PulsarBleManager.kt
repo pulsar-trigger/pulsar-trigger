@@ -47,7 +47,8 @@ class PulsarBleManager(context: Context) : BleManager(context) {
             }
         }
         enableNotifications(statusChar).enqueue()
-        Log.i(TAG, "Initialized — notifications enabled")
+        sendCommand(CommandBuilder.statusRequest())
+        Log.i(TAG, "Initialized — notifications enabled, status requested")
     }
 
     override fun onServicesInvalidated() {

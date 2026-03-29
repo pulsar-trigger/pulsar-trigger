@@ -45,6 +45,9 @@ void loop() {
         }
     }
 
+    // Handle deferred BLE reinit (e.g. after name change)
+    ble_handle_reinit();
+
     // Run active trigger mode
     triggers_tick();
 

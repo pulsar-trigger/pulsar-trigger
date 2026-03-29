@@ -23,6 +23,12 @@ object CommandBuilder {
     fun shutter(): ByteArray = frame(Cmd.SHUTTER)
     fun statusRequest(): ByteArray = frame(Cmd.STATUS_REQ)
 
+    fun setName(suffix: String): ByteArray {
+        val bytes = suffix.toByteArray(Charsets.UTF_8)
+        val trimmed = bytes.copyOf(minOf(bytes.size, 12))
+        return frame(Cmd.SET_NAME, trimmed)
+    }
+
     fun setFocus(ms: Int): ByteArray {
         val payload = ByteBuffer.allocate(2).order(ByteOrder.LITTLE_ENDIAN).putShort(ms.toShort()).array()
         return frame(Cmd.SET_FOCUS, payload)

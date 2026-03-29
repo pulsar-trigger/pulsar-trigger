@@ -29,6 +29,7 @@ fun LiveStatusPanel(
     connected: Boolean,
     status: StatusFrame?,
     currentMode: TriggerMode,
+    deviceName: String = "Pulsar",
     modifier: Modifier = Modifier,
 ) {
     val stateColor by animateColorAsState(
@@ -67,7 +68,7 @@ fun LiveStatusPanel(
                     text = when {
                         !connected -> "Disconnected"
                         status == null -> "Connecting…"
-                        else -> status.state.name
+                        else -> "${status.state.name} \u00b7 $deviceName"
                     },
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f),

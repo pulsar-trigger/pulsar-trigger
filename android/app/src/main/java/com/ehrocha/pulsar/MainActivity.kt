@@ -5,6 +5,7 @@
 
 package com.ehrocha.pulsar
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -37,11 +38,14 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background,
                 ) {
                     val permissions = rememberMultiplePermissionsState(
-                        listOf(
-                            android.Manifest.permission.BLUETOOTH_SCAN,
-                            android.Manifest.permission.BLUETOOTH_CONNECT,
-                            android.Manifest.permission.ACCESS_FINE_LOCATION,
-                        )
+                        buildList {
+                            add(android.Manifest.permission.BLUETOOTH_SCAN)
+                            add(android.Manifest.permission.BLUETOOTH_CONNECT)
+                            add(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                add(android.Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        }
                     )
 
                     LaunchedEffect(Unit) {

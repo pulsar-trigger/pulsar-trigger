@@ -5,6 +5,7 @@
 
 package com.ehrocha.pulsar.viewmodel
 
+import android.annotation.SuppressLint
 import android.app.Application
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
@@ -44,6 +45,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     // ── Connection state ─────────────────────────────────────────────────
     val connected: StateFlow<Boolean> = bleManager.connectionState
     val status: StateFlow<StatusFrame?> = bleManager.status
+
+    private val _deviceName = MutableStateFlow("Pulsar")
+    val deviceName: StateFlow<String> = _deviceName
 
     // ── Mode config state ────────────────────────────────────────────────
     private val _currentMode = MutableStateFlow(TriggerMode.INTERVALOMETER)
@@ -97,7 +101,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         // Auto-update notification as status frames arrive
         viewModelScope.launch {
             status.collect { frame ->
-                if (frame != null && frame.state == DeviceState.RUNNING) {
+                if (frame != null && (frame.state == DeviceState.RUNNING || frame.state == DeviceState.WAITING)) {
                     updateNotification()
                 } else if (frame != null && frame.state == DeviceState.IDLE) {
                     dismissNotification()
@@ -135,8 +139,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         _scanning.value = false
     }
 
+    @SuppressLint("MissingPermission")
     fun connectTo(device: BluetoothDevice) {
         stopScan()
+        _deviceName.value = device.name ?: "Pulsar"
         bleManager.connectDevice(device)
     }
 
@@ -189,6 +195,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun singleShot() {
         bleManager.sendCommand(CommandBuilder.shutter())
+    }
+
+    fun renameDevice(suffix: String) {
+        bleManager.sendCommand(CommandBuilder.setName(suffix))
+        _deviceName.value = if (suffix.isNotEmpty()) "Pulsar-$suffix" else "Pulsar"
     }
 
     /** Press & Hold: shutter open on down */

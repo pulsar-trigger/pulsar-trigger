@@ -20,6 +20,8 @@
 
 // ── BLE ──────────────────────────────────────────────────────────────────────
 #define BLE_DEVICE_NAME       "Pulsar"
+#define BLE_NAME_PREFIX       "Pulsar-"
+#define BLE_NAME_SUFFIX_MAX   12          // max chars after "Pulsar-"
 #define SERVICE_UUID          "0000ff00-0000-1000-8000-00805f9b34fb"
 #define CHAR_COMMAND_UUID     "0000ff01-0000-1000-8000-00805f9b34fb"
 #define CHAR_STATUS_UUID      "0000ff02-0000-1000-8000-00805f9b34fb"
