@@ -1,6 +1,6 @@
 # Pulsar
 
-An open-source camera intervalometer and trigger system, inspired by MIOPS Trigger.
+An open-source camera intervalometer and trigger system.
 
 **Android app** (BLE client) ↔ **ESP32 firmware** (BLE server + camera control)
 
