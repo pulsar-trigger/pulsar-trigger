@@ -18,6 +18,24 @@
 #define DEFAULT_FOCUS_MS      200   // pre-focus hold before shutter
 #define DEBOUNCE_MS           50
 
+// ── Parameter ranges ─────────────────────────────────────────────────────────
+#define MIN_FOCUS_MS          50
+#define MAX_FOCUS_MS          5000
+#define MIN_INTERVAL_MS       500
+#define MAX_INTERVAL_MS       3600000   // 1 hour
+#define MIN_EXPOSURE_MS       10
+#define MAX_EXPOSURE_MS       3600000   // 1 hour
+#define MIN_SHOT_COUNT        0         // 0 = infinite
+#define MAX_SHOT_COUNT        9999
+#define MIN_DELAY_MS          0
+#define MAX_DELAY_MS          3600000   // 1 hour
+#define MIN_SOUND_THRESHOLD   1
+#define MAX_SOUND_THRESHOLD   4095
+#define MIN_LIGHTNING_SENS    1
+#define MAX_LIGHTNING_SENS    5
+#define MIN_HDR_COUNT         2
+#define MAX_HDR_COUNT         5
+
 // ── BLE ──────────────────────────────────────────────────────────────────────
 #define BLE_DEVICE_NAME       "Pulsar"
 #define BLE_NAME_PREFIX       "Pulsar-"

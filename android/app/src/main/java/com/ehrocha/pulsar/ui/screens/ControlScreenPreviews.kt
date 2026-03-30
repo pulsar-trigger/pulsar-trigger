@@ -16,6 +16,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Stars
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -332,17 +336,12 @@ fun ScanScreenPreview() {
     }
 }
 
-// ── Full Control Screen Preview ─────────────────────────────────────────────
+// ── Main Menu Preview ───────────────────────────────────────────────────────
 
-@Preview(showBackground = true, widthDp = 380, heightDp = 800, name = "Full Control Screen")
+@Preview(showBackground = true, widthDp = 380, heightDp = 800, name = "Main Menu")
 @Composable
-fun FullControlScreenPreview() {
+fun MainMenuPreview() {
     MaterialTheme(colorScheme = DarkColorScheme) {
-        var interval by remember { mutableLongStateOf(2000L) }
-        var exposure by remember { mutableLongStateOf(500L) }
-        var count by remember { mutableIntStateOf(50) }
-        var delay by remember { mutableLongStateOf(5000L) }
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -363,52 +362,67 @@ fun FullControlScreenPreview() {
                 deviceName = "Pulsar-Duza",
             )
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(24.dp))
 
-            ScrollableTabRow(
-                selectedTabIndex = 0,
-                edgePadding = 0.dp,
-                divider = {},
-                modifier = Modifier,
+            Text(
+                "MODES",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            listOf(
+                Triple("Intervalometer", "Automate timelapse sequences with precision timing", Icons.Default.Timer),
+                Triple("Astro", "Star photography with calculated exposure times", Icons.Default.Stars),
+                Triple("Manual", "Direct shutter control — hold or lock mode", Icons.Default.TouchApp),
+            ).forEach { (title, desc, icon) ->
+                Surface(
+                    onClick = {},
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 2.dp,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(20.dp),
+                    ) {
+                        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                        Spacer(Modifier.width(16.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.weight(1f))
+
+            Surface(
+                onClick = {},
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 2.dp,
+                modifier = Modifier.fillMaxWidth(),
             ) {
-                listOf("INTERVAL", "ASTRO", "MANUAL", "SETTINGS").forEachIndexed { index, title ->
-                    Tab(
-                        selected = index == 0,
-                        onClick = {},
-                        text = { Text(title) },
-                    )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(20.dp),
+                ) {
+                    Icon(Icons.Default.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
+                    Spacer(Modifier.width(16.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Settings", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text("Device configuration and info", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
 
             Spacer(Modifier.height(12.dp))
 
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                tonalElevation = 1.dp,
-                modifier = Modifier.weight(1f),
-            ) {
-                IntervalometerPanelContent(
-                    intervalMs = interval,
-                    exposureMs = exposure,
-                    shotCount = count,
-                    delayMs = delay,
-                    onIntervalChanged = { interval = it },
-                    onExposureChanged = { exposure = it },
-                    onShotCountChanged = { count = it },
-                    onDelayChanged = { delay = it },
-                    modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())
-                )
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            DefaultActionsContent(
-                connected = true,
-                isRunning = false,
-                onStart = {},
-                onStop = {},
-                onSingleShot = {}
-            )
+            TextButton(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text("Disconnect") }
         }
     }
 }

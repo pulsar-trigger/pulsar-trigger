@@ -70,14 +70,14 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
             Spacer(Modifier.width(16.dp))
             Column {
                 Text(
-                    "PULSAR",
+                    "Pulsar",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 2.sp,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    "TRIGGER SYSTEM",
+                    "BLE Remote Trigger",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                     letterSpacing = 1.sp

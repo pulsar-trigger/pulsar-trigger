@@ -8,14 +8,9 @@ package com.ehrocha.pulsar.ui.screens
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.Info
@@ -29,147 +24,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.ble.TriggerMode
-import com.ehrocha.pulsar.ui.components.LiveStatusPanel
-import com.ehrocha.pulsar.ui.components.ScrollPicker
 import com.ehrocha.pulsar.ui.components.TimePicker
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
-import kotlinx.coroutines.launch
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ControlScreen(vm: PulsarViewModel) {
-    val connected by vm.connected.collectAsState()
-    val status by vm.status.collectAsState()
-    val mode by vm.currentMode.collectAsState()
-    val deviceName by vm.deviceName.collectAsState()
-
-    val modes = TriggerMode.entries.filter {
-        it !in setOf(
-            TriggerMode.SOUND, TriggerMode.LIGHTNING, TriggerMode.LASER,
-            TriggerMode.HDR, TriggerMode.PRESS_LOCK,
-        )
-    }
-    val settingsPageIndex = modes.size
-    val pagerState = rememberPagerState(
-        initialPage = modes.indexOf(mode),
-        pageCount = { modes.size + 1 },
-    )
-    val scope = rememberCoroutineScope()
-    val onSettingsPage = pagerState.currentPage == settingsPageIndex
-
-    LaunchedEffect(pagerState.currentPage) {
-        if (pagerState.currentPage >= modes.size) return@LaunchedEffect
-        val pageMode = modes[pagerState.currentPage]
-        if (pageMode == TriggerMode.PRESS_HOLD && mode == TriggerMode.PRESS_LOCK) return@LaunchedEffect
-        if (pageMode != mode) vm.selectMode(pageMode)
-    }
-    LaunchedEffect(mode) {
-        if (onSettingsPage) return@LaunchedEffect
-        val effective = if (mode == TriggerMode.PRESS_LOCK) TriggerMode.PRESS_HOLD else mode
-        val idx = modes.indexOf(effective)
-        if (idx >= 0 && idx != pagerState.currentPage) pagerState.animateScrollToPage(idx)
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-    ) {
-        LiveStatusPanel(
-            connected = connected,
-            status = status,
-            currentMode = mode,
-            deviceName = deviceName,
-        )
-
-        Spacer(Modifier.height(16.dp))
-
-        val isRunning = status?.state == DeviceState.RUNNING || status?.state == DeviceState.WAITING
-
-        ScrollableTabRow(
-            selectedTabIndex = pagerState.currentPage,
-            edgePadding = 0.dp,
-            divider = {},
-            modifier = Modifier.alpha(if (isRunning) 0.5f else 1f),
-        ) {
-            modes.forEachIndexed { index, m ->
-                val label = if (m == TriggerMode.PRESS_HOLD) "MANUAL" else m.name.replace('_', ' ')
-                Tab(
-                    selected = pagerState.currentPage == index,
-                    onClick = { if (!isRunning) scope.launch { pagerState.animateScrollToPage(index) } },
-                    enabled = !isRunning,
-                    text = { Text(label, maxLines = 1) },
-                )
-            }
-            Tab(
-                selected = onSettingsPage,
-                onClick = { if (!isRunning) scope.launch { pagerState.animateScrollToPage(settingsPageIndex) } },
-                enabled = !isRunning,
-                text = { Text("SETTINGS", maxLines = 1) },
-            )
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        // ── Pager with dedicated mode panels + settings ──────────────
-        HorizontalPager(
-            state = pagerState,
-            userScrollEnabled = !isRunning,
-            modifier = Modifier.weight(1f),
-        ) { page ->
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                tonalElevation = 1.dp,
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp),
-                ) {
-                    if (page < modes.size) {
-                        when (modes[page]) {
-                            TriggerMode.INTERVALOMETER -> IntervalometerPanel(vm, enabled = !isRunning)
-                            TriggerMode.ASTRO -> AstroPanel(vm, enabled = !isRunning)
-                            TriggerMode.PRESS_HOLD -> ManualPanel(vm)
-                            else -> {}
-                        }
-                    } else {
-                        SettingsPanel(vm, deviceName, connected)
-                    }
-                }
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        if (!onSettingsPage) {
-            LaunchedEffect(isRunning, status?.shotsTaken) {
-                if (isRunning) vm.updateNotification()
-            }
-
-            when (mode) {
-                TriggerMode.PRESS_HOLD, TriggerMode.PRESS_LOCK -> ManualActions(vm, connected, mode)
-                TriggerMode.ASTRO -> AstroActions(vm, connected, isRunning)
-                else -> DefaultActions(vm, connected, isRunning)
-            }
-
-            Spacer(Modifier.height(8.dp))
-        }
-
-        TextButton(
-            onClick = { vm.disconnect() },
-            enabled = !isRunning,
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text("Disconnect") }
-    }
-}
 
 @Composable
-private fun DefaultActions(vm: PulsarViewModel, connected: Boolean, isRunning: Boolean) {
+internal fun DefaultActions(vm: PulsarViewModel, connected: Boolean, isRunning: Boolean) {
     DefaultActionsContent(
         connected = connected,
         isRunning = isRunning,
@@ -233,7 +93,7 @@ internal fun DefaultActionsContent(
 }
 
 @Composable
-private fun ManualActions(vm: PulsarViewModel, connected: Boolean, mode: TriggerMode) {
+internal fun ManualActions(vm: PulsarViewModel, connected: Boolean, mode: TriggerMode) {
     ManualActionsContent(
         connected = connected,
         mode = mode,
@@ -346,7 +206,7 @@ internal fun ManualActionsContent(
 }
 
 @Composable
-private fun AstroActions(vm: PulsarViewModel, connected: Boolean, isRunning: Boolean) {
+internal fun AstroActions(vm: PulsarViewModel, connected: Boolean, isRunning: Boolean) {
     val ruleDivisor by vm.astroRuleDivisor.collectAsState()
     AstroActionsContent(
         connected = connected,
@@ -451,7 +311,7 @@ internal fun IntervalometerPanelContent(
     onDelayChanged: (Long) -> Unit,
     enabled: Boolean = true,
 ) {
-    val totalSequenceTimeMs = delayMs + (intervalMs * shotCount)
+    val totalSequenceTimeMs = delayMs + ((exposureMs + intervalMs) * shotCount)
 
     Column(verticalArrangement = Arrangement.spacedBy(24.dp), modifier = modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -500,7 +360,7 @@ internal fun IntervalometerPanelContent(
                 }
                 
                 LinearProgressIndicator(
-                    progress = { (exposureMs.toFloat() / intervalMs).coerceIn(0f, 1f) },
+                    progress = { (exposureMs.toFloat() / (exposureMs + intervalMs)).coerceIn(0f, 1f) },
                     modifier = Modifier.fillMaxWidth().height(4.dp),
                     color = MaterialTheme.colorScheme.primary,
                     trackColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -508,7 +368,7 @@ internal fun IntervalometerPanelContent(
                 )
                 
                 Text(
-                    "Duty Cycle: ${(exposureMs.toFloat() / intervalMs * 100).toInt()}% active exposure",
+                    "Duty Cycle: ${(exposureMs.toFloat() / (exposureMs + intervalMs) * 100).toInt()}% active exposure",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.alpha(0.7f)
@@ -552,13 +412,13 @@ internal fun IntervalometerPanelContent(
                         text = "$shotCount",
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                 }
                 Slider(
                     value = shotCount.toFloat(),
                     onValueChange = { onShotCountChanged(it.toInt()) },
-                    valueRange = 1f..500f,
+                    valueRange = 1f..999f,
                     enabled = enabled,
                 )
             }
@@ -825,13 +685,13 @@ internal fun AstroPanelContent(
                         text = "$shotCount",
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
                     )
                 }
                 Slider(
                     value = shotCount.toFloat(),
                     onValueChange = { onShotCountChanged(it.toInt()) },
-                    valueRange = 1f..500f,
+                    valueRange = 1f..999f,
                     enabled = enabled,
                 )
             }
@@ -866,7 +726,7 @@ internal fun formatDuration(ms: Long): String {
 }
 
 @Composable
-private fun SettingsPanel(
+internal fun SettingsPanel(
     vm: PulsarViewModel,
     deviceName: String,
     connected: Boolean,

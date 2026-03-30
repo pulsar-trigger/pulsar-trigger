@@ -25,6 +25,29 @@ static uint32_t _focus_ms      = DEFAULT_FOCUS_MS;
 static bool     _lock_active   = false;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+static uint32_t clamp_u32(uint32_t value, uint32_t lower, uint32_t upper) {
+    if (value < lower) return lower;
+    if (value > upper) return upper;
+    return value;
+}
+
+static uint16_t clamp_u16(uint16_t value, uint16_t lower, uint16_t upper) {
+    if (value < lower) return lower;
+    if (value > upper) return upper;
+    return value;
+}
+
+static uint32_t read_u32_le(const uint8_t* data) {
+    return (uint32_t)data[0] |
+           ((uint32_t)data[1] << 8) |
+           ((uint32_t)data[2] << 16) |
+           ((uint32_t)data[3] << 24);
+}
+
+static uint16_t read_u16_le(const uint8_t* data) {
+    return (uint16_t)data[0] | ((uint16_t)data[1] << 8);
+}
+
 static void fire_and_count(uint32_t exposure_ms) {
     camera_shutter(exposure_ms, _focus_ms);
     _shots_taken++;
@@ -40,37 +63,71 @@ void triggers_init() {
     _state = STATE_IDLE;
 }
 
-void triggers_set_mode(Mode mode, const uint8_t* payload, size_t len) {
-    _mode = mode;
+bool triggers_set_focus(uint16_t ms) {
+    _focus_ms = clamp_u32(ms, MIN_FOCUS_MS, MAX_FOCUS_MS);
+    return true;
+}
+
+bool triggers_set_mode(Mode mode, const uint8_t* payload, size_t len) {
     switch (mode) {
-        case MODE_INTERVALOMETER:
-            if (len >= sizeof(IntervalParams))
-                memcpy(&_interval, payload, sizeof(IntervalParams));
-            break;
-        case MODE_SOUND:
-            if (len >= sizeof(SoundParams))
-                memcpy(&_sound, payload, sizeof(SoundParams));
-            break;
-        case MODE_LIGHTNING:
-            if (len >= sizeof(LightningParams))
-                memcpy(&_lightning, payload, sizeof(LightningParams));
-            break;
-        case MODE_LASER:
-            if (len >= sizeof(LaserParams))
-                memcpy(&_laser, payload, sizeof(LaserParams));
-            break;
-        case MODE_HDR:
-            if (len >= sizeof(uint8_t)) {
-                _hdr.count = payload[0];
-                if (_hdr.count > 5) _hdr.count = 5;
-                size_t needed = 1 + _hdr.count * sizeof(uint32_t);
-                if (len >= needed)
-                    memcpy(_hdr.exposures, payload + 1, _hdr.count * sizeof(uint32_t));
+        case MODE_INTERVALOMETER: {
+            if (len < sizeof(IntervalParams)) return false;
+            _interval.interval_ms = clamp_u32(read_u32_le(payload), MIN_INTERVAL_MS, MAX_INTERVAL_MS);
+            _interval.exposure_ms = clamp_u32(read_u32_le(payload + 4), MIN_EXPOSURE_MS, MAX_EXPOSURE_MS);
+            _interval.count = clamp_u16(read_u16_le(payload + 8), MIN_SHOT_COUNT, MAX_SHOT_COUNT);
+            _interval.delay_ms = clamp_u32(read_u32_le(payload + 10), MIN_DELAY_MS, MAX_DELAY_MS);
+            _mode = mode;
+            return true;
+        }
+        case MODE_SOUND: {
+            if (len < sizeof(SoundParams)) return false;
+            _sound.threshold = clamp_u16(read_u16_le(payload), MIN_SOUND_THRESHOLD, MAX_SOUND_THRESHOLD);
+            _sound.exposure_ms = clamp_u32(read_u32_le(payload + 2), MIN_EXPOSURE_MS, MAX_EXPOSURE_MS);
+            _mode = mode;
+            return true;
+        }
+        case MODE_LIGHTNING: {
+            if (len < sizeof(LightningParams)) return false;
+            _lightning.sensitivity = clamp_u32(payload[0], MIN_LIGHTNING_SENS, MAX_LIGHTNING_SENS);
+            _lightning.exposure_ms = clamp_u32(read_u32_le(payload + 1), MIN_EXPOSURE_MS, MAX_EXPOSURE_MS);
+            _mode = mode;
+            return true;
+        }
+        case MODE_LASER: {
+            if (len < sizeof(LaserParams)) return false;
+            _laser.exposure_ms = clamp_u32(read_u32_le(payload), MIN_EXPOSURE_MS, MAX_EXPOSURE_MS);
+            _mode = mode;
+            return true;
+        }
+        case MODE_HDR: {
+            if (len < sizeof(uint8_t)) return false;
+            uint8_t requested = payload[0];
+            if (requested < MIN_HDR_COUNT || requested > MAX_HDR_COUNT) return false;
+            size_t needed = 1 + requested * sizeof(uint32_t);
+            if (len < needed) return false;
+            _hdr.count = requested;
+            for (uint8_t i = 0; i < _hdr.count; i++) {
+                _hdr.exposures[i] = clamp_u32(
+                    read_u32_le(payload + 1 + (i * sizeof(uint32_t))),
+                    MIN_EXPOSURE_MS,
+                    MAX_EXPOSURE_MS
+                );
             }
-            break;
+            for (uint8_t i = _hdr.count; i < MAX_HDR_COUNT; i++) {
+                _hdr.exposures[i] = 0;
+            }
+            _mode = mode;
+            return true;
+        }
+        case MODE_PRESS_HOLD:
+        case MODE_PRESS_LOCK:
+            _mode = mode;
+            return true;
         default:
-            break;
+            return false;
     }
+
+    return false;
 }
 
 void triggers_start() {
@@ -126,7 +183,7 @@ void triggers_tick() {
                     status_send(_state, _mode, _shots_taken, 0);
                     return;
                 }
-                _next_fire_ms = now + _interval.interval_ms;
+                _next_fire_ms = millis() + _interval.interval_ms;
                 _state = STATE_WAITING;
 
                 uint32_t remaining = _next_fire_ms - millis();

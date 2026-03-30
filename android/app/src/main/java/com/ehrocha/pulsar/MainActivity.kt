@@ -8,6 +8,7 @@ package com.ehrocha.pulsar
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,11 +18,17 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.ehrocha.pulsar.ui.screens.ControlScreen
+import com.ehrocha.pulsar.ble.DeviceState
+import com.ehrocha.pulsar.ble.TriggerMode
+import com.ehrocha.pulsar.ui.screens.MainMenuScreen
+import com.ehrocha.pulsar.ui.screens.ModeScreen
 import com.ehrocha.pulsar.ui.screens.ScanScreen
+import com.ehrocha.pulsar.ui.screens.SettingsScreen
 import com.ehrocha.pulsar.ui.theme.DarkColorScheme
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
 class MainActivity : ComponentActivity() {
@@ -65,17 +72,58 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
-    var showControl by remember { mutableStateOf(false) }
+    var currentScreen by remember { mutableStateOf<AppScreen>(AppScreen.Scan) }
     val connected by vm.connected.collectAsState()
 
     // Go back to scan if disconnected
     LaunchedEffect(connected) {
-        if (!connected) showControl = false
+        if (!connected) currentScreen = AppScreen.Scan
     }
 
-    if (showControl) {
-        ControlScreen(vm)
-    } else {
-        ScanScreen(vm) { showControl = true }
+    // Auto-navigate to running mode when connecting to a busy device
+    LaunchedEffect(currentScreen) {
+        if (currentScreen == AppScreen.Menu) {
+            vm.status.filterNotNull().first().let { s ->
+                if (s.state == DeviceState.RUNNING || s.state == DeviceState.WAITING) {
+                    triggerModeFromByte(s.mode)?.let { mode ->
+                        currentScreen = AppScreen.Mode(mode)
+                    }
+                }
+            }
+        }
+    }
+
+    when (val screen = currentScreen) {
+        AppScreen.Scan -> ScanScreen(vm) { currentScreen = AppScreen.Menu }
+        AppScreen.Menu -> MainMenuScreen(
+            vm = vm,
+            onModeSelected = { currentScreen = AppScreen.Mode(it) },
+            onSettingsSelected = { currentScreen = AppScreen.Settings },
+        )
+        is AppScreen.Mode -> {
+            BackHandler { currentScreen = AppScreen.Menu }
+            ModeScreen(
+                vm = vm,
+                targetMode = screen.mode,
+                onBack = { currentScreen = AppScreen.Menu },
+            )
+        }
+        AppScreen.Settings -> {
+            BackHandler { currentScreen = AppScreen.Menu }
+            SettingsScreen(
+                vm = vm,
+                onBack = { currentScreen = AppScreen.Menu },
+            )
+        }
     }
 }
+
+private sealed class AppScreen {
+    data object Scan : AppScreen()
+    data object Menu : AppScreen()
+    data class Mode(val mode: TriggerMode) : AppScreen()
+    data object Settings : AppScreen()
+}
+
+private fun triggerModeFromByte(mode: Byte): TriggerMode? =
+    TriggerMode.entries.firstOrNull { it.id == mode }

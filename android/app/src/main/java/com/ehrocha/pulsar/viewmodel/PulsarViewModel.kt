@@ -163,9 +163,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             TriggerMode.ASTRO -> {
                 val exposureS = astroRuleDivisor.value.toDouble() / (astroFocalLength.value * astroCropFactor.value)
                 val exposureMs = (exposureS * 1000).toLong().coerceAtLeast(100)
-                val intervalMs = exposureMs + astroGapMs.value
                 CommandBuilder.setAstro(
-                    intervalMs, exposureMs, astroShotCount.value, astroDelayMs.value
+                    astroGapMs.value, exposureMs, astroShotCount.value, astroDelayMs.value
                 )
             }
             TriggerMode.SOUND -> CommandBuilder.setSound(

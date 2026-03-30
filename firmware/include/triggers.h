@@ -13,7 +13,10 @@ void triggers_init();
 void triggers_tick();
 
 /// Apply a SET_MODE command payload.
-void triggers_set_mode(Mode mode, const uint8_t* payload, size_t len);
+bool triggers_set_mode(Mode mode, const uint8_t* payload, size_t len);
+
+/// Update pre-focus time in milliseconds.
+bool triggers_set_focus(uint16_t ms);
 
 /// Start the currently configured mode.
 void triggers_start();
