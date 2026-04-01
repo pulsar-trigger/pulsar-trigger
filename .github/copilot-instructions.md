@@ -32,6 +32,11 @@ Open-source BLE camera intervalometer/trigger: ESP32 firmware + Android companio
 - **BLE Just Works pairing** — ESP32 has no I/O for PIN, uses `ESP_IO_CAP_NONE`
 - **`build.gradle.kts` namespace** must be `com.ehrocha.pulsar` (not `com.ehrocha`)
 - **PlatformIO** lives in a Python venv — use full path or activate `zassist/.venv`
+- **Intervalometer gap semantics** — gap timer starts after exposure ends (expose → wait gap → repeat), not period semantics
+- **ViewModel owns connection state** — `_connected`/`_status` are ViewModel `MutableStateFlow`s forwarded from BLE manager, also driven by simulator
+- **Simulator mode** — virtual device for UI exploration without hardware; all command methods check `_simulatorActive` before touching BLE
+- **Settings persistence** — SharedPreferences file `pulsar_settings` with keys `intv_interval_ms`, `intv_exposure_ms`, `intv_shot_count`, `intv_delay_ms`, `intv_max_shots`
+- **Backup/Restore** — uses SAF (Storage Access Framework), no OAuth or extra deps; supports Google Drive and any DocumentsProvider
 
 ## Adding a New Trigger Mode
 

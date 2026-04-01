@@ -7,6 +7,8 @@ package com.ehrocha.pulsar.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -28,6 +30,7 @@ import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.ble.StatusFrame
 import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
+import kotlinx.coroutines.delay
 
 @Composable
 fun ModeScreen(
@@ -105,9 +108,26 @@ fun ModeScreen(
                     TriggerMode.ASTRO -> vm.astroShotCount.collectAsState().value
                     else -> 0
                 }
+                val cycleMs = when (targetMode) {
+                    TriggerMode.INTERVALOMETER -> {
+                        val intv = vm.intervalMs.collectAsState().value
+                        val exp = vm.exposureMs.collectAsState().value
+                        exp + intv
+                    }
+                    TriggerMode.ASTRO -> {
+                        val gap = vm.astroGapMs.collectAsState().value
+                        val fl = vm.astroFocalLength.collectAsState().value
+                        val cf = vm.astroCropFactor.collectAsState().value
+                        val rd = vm.astroRuleDivisor.collectAsState().value
+                        val expMs = (rd.toDouble() / (fl * cf) * 1000).toLong().coerceAtLeast(100)
+                        expMs + gap
+                    }
+                    else -> 1L
+                }
                 RunningStatusContent(
                     status = status!!,
                     totalShots = totalShots,
+                    cycleMs = cycleMs,
                 )
             } else {
                 Column(
@@ -214,7 +234,45 @@ fun SettingsScreen(
 private fun RunningStatusContent(
     status: StatusFrame,
     totalShots: Int,
+    cycleMs: Long,
 ) {
+    // ── Local countdown: start from firmware's timeRemainingMs and tick down ──
+    var lastUpdateTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var lastRemainingMs by remember { mutableLongStateOf(status.timeRemainingMs) }
+    var liveRemainingMs by remember { mutableLongStateOf(status.timeRemainingMs) }
+
+    // When firmware sends a new status, reset the baseline
+    LaunchedEffect(status.timeRemainingMs, status.shotsTaken) {
+        lastUpdateTime = System.currentTimeMillis()
+        lastRemainingMs = status.timeRemainingMs
+        liveRemainingMs = status.timeRemainingMs
+    }
+
+    // Tick every 100 ms to update the countdown locally
+    LaunchedEffect(lastUpdateTime) {
+        while (true) {
+            delay(100L)
+            val elapsed = System.currentTimeMillis() - lastUpdateTime
+            liveRemainingMs = (lastRemainingMs - elapsed).coerceAtLeast(0)
+        }
+    }
+
+    // ── Smooth progress: shots completed + fractional current cycle ──
+    val totalTimeMs = if (totalShots > 0) totalShots.toLong() * cycleMs - (cycleMs - cycleMs) else 1L
+    val elapsedMs = if (totalShots > 0) {
+        val completedMs = status.shotsTaken.toLong() * cycleMs
+        val cycleElapsed = (lastRemainingMs - liveRemainingMs).coerceAtLeast(0)
+        completedMs + cycleElapsed
+    } else 0L
+    val rawProgress = if (totalShots > 0) {
+        (status.shotsTaken.toFloat() + (1f - liveRemainingMs.toFloat() / lastRemainingMs.coerceAtLeast(1))) / totalShots
+    } else 0f
+    val smoothProgress by animateFloatAsState(
+        targetValue = rawProgress.coerceIn(0f, 1f),
+        animationSpec = tween(durationMillis = 150),
+        label = "progress",
+    )
+
     val stateColor by animateColorAsState(
         targetValue = when (status.state) {
             DeviceState.RUNNING -> Color(0xFF00E676)
@@ -280,7 +338,7 @@ private fun RunningStatusContent(
 
         // Progress bar
         LinearProgressIndicator(
-            progress = { if (totalShots > 0) status.shotsTaken.toFloat() / totalShots else 0f },
+            progress = { smoothProgress },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(8.dp),
@@ -292,9 +350,9 @@ private fun RunningStatusContent(
         Spacer(Modifier.height(24.dp))
 
         // Time remaining
-        if (status.timeRemainingMs > 0) {
+        if (liveRemainingMs > 0) {
             Text(
-                text = formatTimeRemaining(status.timeRemainingMs),
+                text = formatTimeRemaining(liveRemainingMs),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
             )

@@ -80,6 +80,9 @@ bool triggers_set_mode(Mode mode, const uint8_t* payload, size_t len) {
             _interval.count = clamp_u16(read_u16_le(payload + 8), MIN_SHOT_COUNT, MAX_SHOT_COUNT);
             _interval.delay_ms = clamp_u32(read_u32_le(payload + 10), MIN_DELAY_MS, MAX_DELAY_MS);
             _mode = mode;
+            Serial.printf("[INTV] config: interval=%lu exposure=%lu count=%u delay=%lu\n",
+                          _interval.interval_ms, _interval.exposure_ms,
+                          _interval.count, _interval.delay_ms);
             return true;
         }
         case MODE_SOUND: {
@@ -186,16 +189,20 @@ void triggers_tick() {
         case MODE_INTERVALOMETER: {
             if ((now - _next_fire_ms) < 0x80000000UL) {  // wraparound-safe: now >= _next_fire_ms
                 _state = STATE_RUNNING;
+                Serial.printf("[INTV] shot %u firing at %lu ms\n", _shots_taken + 1, millis());
                 fire_and_count(_interval.exposure_ms);
 
                 if (_interval.count > 0 && _shots_taken >= _interval.count) {
                     _state = STATE_IDLE;
+                    Serial.printf("[INTV] sequence complete: %u shots\n", _shots_taken);
                     status_send(_state, _mode, _shots_taken, 0);
                     return;
                 }
                 // Gap semantics: wait interval_ms AFTER the exposure ends,
                 // then fire the next shot.
                 _next_fire_ms = millis() + _interval.interval_ms;
+                Serial.printf("[INTV] gap %lu ms, next fire at %lu ms\n",
+                              _interval.interval_ms, _next_fire_ms);
                 _state = STATE_WAITING;
 
                 // Compute total remaining time for the job

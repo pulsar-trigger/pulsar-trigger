@@ -23,6 +23,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ehrocha.pulsar.ble.*
 import com.ehrocha.pulsar.service.PulsarNotificationService
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -31,7 +33,15 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     companion object {
         private const val TAG = "PulsarVM"
+        private const val PREFS_NAME = "pulsar_settings"
+        private const val KEY_INTV_INTERVAL = "intv_interval_ms"
+        private const val KEY_INTV_EXPOSURE = "intv_exposure_ms"
+        private const val KEY_INTV_COUNT = "intv_shot_count"
+        private const val KEY_INTV_DELAY = "intv_delay_ms"
+        private const val KEY_INTV_MAX_SHOTS = "intv_max_shots"
     }
+
+    private val prefs = app.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     private val bleManager = PulsarBleManager(app)
 
@@ -43,8 +53,16 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val devices: StateFlow<List<BluetoothDevice>> = _devices
 
     // ── Connection state ─────────────────────────────────────────────────
-    val connected: StateFlow<Boolean> = bleManager.connectionState
-    val status: StateFlow<StatusFrame?> = bleManager.status
+    private val _connected = MutableStateFlow(false)
+    val connected: StateFlow<Boolean> = _connected
+
+    private val _status = MutableStateFlow<StatusFrame?>(null)
+    val status: StateFlow<StatusFrame?> = _status
+
+    // ── Simulator ────────────────────────────────────────────────────────
+    private val _simulatorActive = MutableStateFlow(false)
+    val simulatorActive: StateFlow<Boolean> = _simulatorActive
+    private var simulatorJob: Job? = null
 
     private val _deviceName = MutableStateFlow("Pulsar")
     val deviceName: StateFlow<String> = _deviceName
@@ -58,6 +76,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val exposureMs = MutableStateFlow(200L)
     val shotCount = MutableStateFlow(1)
     val delayMs = MutableStateFlow(0L)
+
+    // ── Intervalometer defaults (persisted) ──────────────────────────────
+    val defaultIntervalMs = MutableStateFlow(5000L)
+    val defaultExposureMs = MutableStateFlow(200L)
+    val defaultShotCount = MutableStateFlow(1)
+    val defaultDelayMs = MutableStateFlow(0L)
+    val maxShotCount = MutableStateFlow(999)
 
     // ── Sound params ─────────────────────────────────────────────────────
     val soundThreshold = MutableStateFlow(512)
@@ -92,6 +117,26 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     init {
+        // Forward BLE manager state to ViewModel flows
+        viewModelScope.launch {
+            bleManager.connectionState.collect { _connected.value = it }
+        }
+        viewModelScope.launch {
+            bleManager.status.collect { _status.value = it }
+        }
+
+        // Load persisted intervalometer defaults
+        defaultIntervalMs.value = prefs.getLong(KEY_INTV_INTERVAL, 5000L)
+        defaultExposureMs.value = prefs.getLong(KEY_INTV_EXPOSURE, 200L)
+        defaultShotCount.value = prefs.getInt(KEY_INTV_COUNT, 1)
+        defaultDelayMs.value = prefs.getLong(KEY_INTV_DELAY, 0L)
+        maxShotCount.value = prefs.getInt(KEY_INTV_MAX_SHOTS, 999)
+        // Apply defaults as initial working values
+        intervalMs.value = defaultIntervalMs.value
+        exposureMs.value = defaultExposureMs.value
+        shotCount.value = defaultShotCount.value
+        delayMs.value = defaultDelayMs.value
+
         app.registerReceiver(
             cancelReceiver,
             IntentFilter(PulsarNotificationService.ACTION_CANCEL),
@@ -147,6 +192,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun disconnect() {
+        if (_simulatorActive.value) {
+            disconnectSimulator()
+            return
+        }
         bleManager.disconnectDevice()
     }
 
@@ -155,7 +204,64 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         _currentMode.value = mode
     }
 
+    fun saveIntervalometerDefaults(interval: Long, exposure: Long, count: Int, delay: Long) {
+        defaultIntervalMs.value = interval
+        defaultExposureMs.value = exposure
+        defaultShotCount.value = count
+        defaultDelayMs.value = delay
+        prefs.edit()
+            .putLong(KEY_INTV_INTERVAL, interval)
+            .putLong(KEY_INTV_EXPOSURE, exposure)
+            .putInt(KEY_INTV_COUNT, count)
+            .putLong(KEY_INTV_DELAY, delay)
+            .apply()
+        // Apply to working values
+        intervalMs.value = interval
+        exposureMs.value = exposure
+        shotCount.value = count
+        delayMs.value = delay
+    }
+
+    fun saveMaxShotCount(max: Int) {
+        maxShotCount.value = max.coerceIn(10, 9999)
+        prefs.edit().putInt(KEY_INTV_MAX_SHOTS, maxShotCount.value).apply()
+        // Clamp current values if they exceed the new max
+        if (shotCount.value > maxShotCount.value) shotCount.value = maxShotCount.value
+        if (defaultShotCount.value > maxShotCount.value) {
+            saveIntervalometerDefaults(defaultIntervalMs.value, defaultExposureMs.value, maxShotCount.value, defaultDelayMs.value)
+        }
+    }
+
+    fun resetIntervalometerDefaults() {
+        saveIntervalometerDefaults(5000L, 200L, 1, 0L)
+        saveMaxShotCount(999)
+    }
+
+    /** Serialize all persisted settings to JSON for export. */
+    fun exportSettingsJson(): String {
+        val json = org.json.JSONObject()
+        json.put("intv_interval_ms", defaultIntervalMs.value)
+        json.put("intv_exposure_ms", defaultExposureMs.value)
+        json.put("intv_shot_count", defaultShotCount.value)
+        json.put("intv_delay_ms", defaultDelayMs.value)
+        json.put("intv_max_shots", maxShotCount.value)
+        return json.toString(2)
+    }
+
+    /** Import settings from a JSON string. */
+    fun importSettingsJson(json: String) {
+        val obj = org.json.JSONObject(json)
+        if (obj.has("intv_max_shots")) saveMaxShotCount(obj.getInt("intv_max_shots"))
+        saveIntervalometerDefaults(
+            obj.optLong("intv_interval_ms", 5000L),
+            obj.optLong("intv_exposure_ms", 200L),
+            obj.optInt("intv_shot_count", 1),
+            obj.optLong("intv_delay_ms", 0L),
+        )
+    }
+
     fun sendConfig() {
+        if (_simulatorActive.value) return
         val packet = when (_currentMode.value) {
             TriggerMode.INTERVALOMETER -> CommandBuilder.setIntervalometer(
                 intervalMs.value, exposureMs.value, shotCount.value, delayMs.value
@@ -182,34 +288,161 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun start() {
+        if (_simulatorActive.value) {
+            startSimulatorRun()
+            return
+        }
         sendConfig()
         bleManager.sendCommand(CommandBuilder.start())
         updateNotification()
     }
 
     fun stop() {
+        if (_simulatorActive.value) {
+            stopSimulatorRun()
+            return
+        }
         bleManager.sendCommand(CommandBuilder.stop())
         dismissNotification()
     }
 
     fun singleShot() {
+        if (_simulatorActive.value) {
+            viewModelScope.launch {
+                _status.value = _status.value?.copy(state = DeviceState.RUNNING, shotsTaken = 1, timeRemainingMs = exposureMs.value)
+                delay(exposureMs.value)
+                _status.value = _status.value?.copy(state = DeviceState.IDLE, shotsTaken = 1, timeRemainingMs = 0L)
+            }
+            return
+        }
         bleManager.sendCommand(CommandBuilder.shutter())
     }
 
     fun renameDevice(suffix: String) {
-        bleManager.sendCommand(CommandBuilder.setName(suffix))
+        if (!_simulatorActive.value) {
+            bleManager.sendCommand(CommandBuilder.setName(suffix))
+        }
         _deviceName.value = if (suffix.isNotEmpty()) "Pulsar-$suffix" else "Pulsar"
     }
 
     /** Press & Hold: shutter open on down */
     fun shutterDown() {
+        if (_simulatorActive.value) {
+            _status.value = _status.value?.copy(state = DeviceState.RUNNING)
+            return
+        }
         sendConfig()
         bleManager.sendCommand(CommandBuilder.start())
     }
 
     /** Press & Hold: shutter close on up */
     fun shutterUp() {
+        if (_simulatorActive.value) {
+            _status.value = _status.value?.copy(state = DeviceState.IDLE)
+            return
+        }
         bleManager.sendCommand(CommandBuilder.stop())
+    }
+
+    // ── Simulator ────────────────────────────────────────────────────────
+
+    fun connectSimulator() {
+        stopScan()
+        _simulatorActive.value = true
+        _deviceName.value = "Pulsar (Simulator)"
+        _status.value = StatusFrame(
+            state = DeviceState.IDLE,
+            mode = TriggerMode.INTERVALOMETER.id,
+            shotsTaken = 0,
+            timeRemainingMs = 0L,
+            batteryPct = 85,
+            errorCode = 0,
+        )
+        _connected.value = true
+    }
+
+    fun disconnectSimulator() {
+        simulatorJob?.cancel()
+        simulatorJob = null
+        _simulatorActive.value = false
+        _connected.value = false
+        _status.value = null
+        _deviceName.value = "Pulsar"
+    }
+
+    private fun startSimulatorRun() {
+        simulatorJob?.cancel()
+        val mode = _currentMode.value
+        val totalShots = when (mode) {
+            TriggerMode.INTERVALOMETER -> shotCount.value
+            TriggerMode.ASTRO -> astroShotCount.value
+            else -> 1
+        }
+        val expMs = when (mode) {
+            TriggerMode.INTERVALOMETER -> exposureMs.value
+            TriggerMode.ASTRO -> {
+                val s = astroRuleDivisor.value.toDouble() / (astroFocalLength.value * astroCropFactor.value)
+                (s * 1000).toLong().coerceAtLeast(100)
+            }
+            else -> exposureMs.value
+        }
+        val gapMs = when (mode) {
+            TriggerMode.INTERVALOMETER -> intervalMs.value
+            TriggerMode.ASTRO -> astroGapMs.value
+            else -> 0L
+        }
+        val startDelayMs = when (mode) {
+            TriggerMode.INTERVALOMETER -> delayMs.value
+            TriggerMode.ASTRO -> astroDelayMs.value
+            else -> 0L
+        }
+
+        simulatorJob = viewModelScope.launch {
+            if (startDelayMs > 0) {
+                val totalTimeMs = startDelayMs + totalShots * (expMs + gapMs) - gapMs
+                _status.value = _status.value?.copy(
+                    state = DeviceState.WAITING, shotsTaken = 0,
+                    timeRemainingMs = totalTimeMs,
+                )
+                delay(startDelayMs)
+            }
+
+            for (shot in 1..totalShots) {
+                val remaining = (totalShots - shot + 1) * (expMs + gapMs) - gapMs
+                // Exposing
+                _status.value = _status.value?.copy(
+                    state = DeviceState.RUNNING,
+                    shotsTaken = shot - 1,
+                    timeRemainingMs = remaining,
+                )
+                delay(expMs)
+                // Shot complete
+                _status.value = _status.value?.copy(
+                    shotsTaken = shot,
+                    timeRemainingMs = remaining - expMs,
+                )
+                // Gap (except after last shot)
+                if (shot < totalShots) {
+                    _status.value = _status.value?.copy(state = DeviceState.WAITING)
+                    delay(gapMs)
+                }
+            }
+
+            // Done
+            _status.value = _status.value?.copy(
+                state = DeviceState.IDLE,
+                timeRemainingMs = 0L,
+            )
+        }
+    }
+
+    private fun stopSimulatorRun() {
+        simulatorJob?.cancel()
+        simulatorJob = null
+        _status.value = _status.value?.copy(
+            state = DeviceState.IDLE,
+            timeRemainingMs = 0L,
+        )
     }
 
     // ── Notification helpers ─────────────────────────────────────────────
@@ -233,6 +466,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     override fun onCleared() {
         super.onCleared()
         stopScan()
+        simulatorJob?.cancel()
         dismissNotification()
         try {
             getApplication<Application>().unregisterReceiver(cancelReceiver)

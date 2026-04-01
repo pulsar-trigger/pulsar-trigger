@@ -58,14 +58,14 @@ Single-threaded `loop()` architecture. All trigger modes are driven by `triggers
 | `CommandBuilder.kt` | Builds 20-byte BLE command packets — one function per command/mode |
 | `PulsarBleManager.kt` | Nordic BLE manager — GATT discovery, notifications, `sendCommand()`, connection lifecycle |
 | **viewmodel/** | |
-| `PulsarViewModel.kt` | All app state — scan, connection, mode config (intervalometer/astro/sound/etc.), notification lifecycle |
+| `PulsarViewModel.kt` | All app state — scan, connection, mode config, notification lifecycle, settings persistence (SharedPreferences), simulator engine |
 | **service/** | |
 | `PulsarNotificationService.kt` | Foreground notification showing job progress, cancel action via broadcast |
 | **ui/screens/** | |
-| `ScanScreen.kt` | BLE scan UI with device list |
+| `ScanScreen.kt` | BLE scan UI with device list + simulator entry point |
 | `MainMenuScreen.kt` | Mode selection cards (Intervalometer, Astro, Manual) + Settings |
-| `ModeScreen.kt` | Mode-specific config panel + running status display + Settings screen |
-| `ControlScreen.kt` | Reusable panels: `IntervalometerPanel`, `AstroPanel`, `ManualPanel`, `SettingsPanel`, action buttons |
+| `ModeScreen.kt` | Mode-specific config panel + running status display with live countdown timer + Settings screen |
+| `ControlScreen.kt` | Reusable panels: `IntervalometerPanel`, `AstroPanel`, `ManualPanel`, `SettingsPanel` (defaults, backup/restore), action buttons |
 | **ui/components/** | |
 | `TimePicker.kt` | hh:mm:ss scroll-wheel time input, converts to/from milliseconds |
 | `ScrollPicker.kt` | Generic scroll-wheel number picker with tap-to-type |
@@ -77,6 +77,26 @@ Single-threaded `loop()` architecture. All trigger modes are driven by `triggers
 - BLE characteristic references are `@Volatile` for thread safety between the BLE callback thread and the main thread
 - `CommandBuilder` always pads to 20 bytes (ATT MTU friendly)
 - Cancel action from notification → broadcast → ViewModel → `stop()` → firmware
+
+### Settings Persistence
+
+Intervalometer defaults (interval, exposure, shot count, start delay) and the max shot count slider limit are persisted via **SharedPreferences** (file: `pulsar_settings`). Values are loaded at ViewModel init and applied as working values. The SettingsPanel provides controls to adjust defaults and a "Reset to Factory Defaults" button.
+
+### Backup & Restore
+
+Settings can be exported/imported via Android's **Storage Access Framework** (SAF). This supports Google Drive, local storage, OneDrive, Dropbox, or any other DocumentsProvider installed on the device — no extra dependencies or OAuth required.
+
+- **Export:** Opens the system file picker (`CreateDocument`) with default filename `pulsar-settings.json`. Writes all persisted settings as formatted JSON.
+- **Import:** Opens the system file picker (`OpenDocument`) filtered to `application/json`. Reads and applies settings.
+
+### Simulator Mode
+
+The app can run without a physical ESP32 device. On the scan screen, a "Use Simulator" card connects to a virtual device with a fake 85% battery. The simulator:
+
+- Creates synthetic `StatusFrame`s so all UI screens render correctly
+- Simulates intervalometer/astro runs with realistic timing (delay → expose → gap → next shot → idle)
+- Supports `start`, `stop`, `singleShot`, `shutterDown`/`shutterUp`, and `renameDevice`
+- Disconnects cleanly back to the scan screen
 
 ### BLE Security
 
@@ -263,6 +283,14 @@ See [docs/ble-protocol.md](docs/ble-protocol.md) for the full packet specificati
 8. Add UI screen/panel in `ControlScreen.kt` and wire into `ModeScreen.kt`
 9. Add menu entry in `MainMenuScreen.kt`
 10. Update `docs/ble-protocol.md`
+
+### Intervalometer Timing
+
+The intervalometer uses **gap semantics**: expose → wait gap → repeat. The gap timer starts *after* the exposure ends, not at the start of the shot. Serial debug output (115200 baud) prints `[INTV] config:`, `[INTV] shot N firing at`, and `[INTV] gap X ms` for timing verification.
+
+### Live Countdown Timer
+
+The running status screen updates in real-time using a client-side 100 ms tick (`LaunchedEffect`). The countdown interpolates from the last firmware status update, so the progress bar and time remaining animate smoothly between shot boundaries. Uses `animateFloatAsState` for the progress bar.
 
 ### Known Limitations
 

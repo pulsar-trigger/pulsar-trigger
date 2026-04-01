@@ -5,6 +5,9 @@
 
 package com.ehrocha.pulsar.ui.screens
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -12,6 +15,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
@@ -20,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -284,12 +290,14 @@ internal fun IntervalometerPanel(vm: PulsarViewModel, enabled: Boolean = true) {
     val exposure by vm.exposureMs.collectAsState()
     val count by vm.shotCount.collectAsState()
     val delayVal by vm.delayMs.collectAsState()
+    val maxShots by vm.maxShotCount.collectAsState()
 
     IntervalometerPanelContent(
         intervalMs = interval,
         exposureMs = exposure,
         shotCount = count,
         delayMs = delayVal,
+        maxShotCount = maxShots,
         onIntervalChanged = { vm.intervalMs.value = it.coerceAtLeast(500) },
         onExposureChanged = { vm.exposureMs.value = it.coerceAtLeast(50) },
         onShotCountChanged = { vm.shotCount.value = it.coerceAtLeast(1) },
@@ -305,6 +313,7 @@ internal fun IntervalometerPanelContent(
     exposureMs: Long,
     shotCount: Int,
     delayMs: Long,
+    maxShotCount: Int = 999,
     onIntervalChanged: (Long) -> Unit,
     onExposureChanged: (Long) -> Unit,
     onShotCountChanged: (Int) -> Unit,
@@ -418,7 +427,7 @@ internal fun IntervalometerPanelContent(
                 Slider(
                     value = shotCount.toFloat(),
                     onValueChange = { onShotCountChanged(it.toInt()) },
-                    valueRange = 1f..999f,
+                    valueRange = 1f..maxShotCount.toFloat(),
                     enabled = enabled,
                 )
             }
@@ -732,6 +741,44 @@ internal fun SettingsPanel(
     connected: Boolean,
 ) {
     var showRenameDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    val defInterval by vm.defaultIntervalMs.collectAsState()
+    val defExposure by vm.defaultExposureMs.collectAsState()
+    val defCount by vm.defaultShotCount.collectAsState()
+    val defDelay by vm.defaultDelayMs.collectAsState()
+    val maxShots by vm.maxShotCount.collectAsState()
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri ->
+        if (uri != null) {
+            try {
+                context.contentResolver.openOutputStream(uri)?.use { stream ->
+                    stream.write(vm.exportSettingsJson().toByteArray())
+                }
+                Toast.makeText(context, "Settings exported", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri != null) {
+            try {
+                context.contentResolver.openInputStream(uri)?.use { stream ->
+                    val json = stream.bufferedReader().readText()
+                    vm.importSettingsJson(json)
+                }
+                Toast.makeText(context, "Settings imported", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(context, "Import failed: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("DEVICE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
@@ -761,6 +808,143 @@ internal fun SettingsPanel(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        Text("INTERVALOMETER DEFAULTS", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = 2.dp,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Text(
+                    "Set default values for the Intervalometer. These are applied when the app starts.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                TimePicker(
+                    totalMs = defInterval,
+                    onChanged = { vm.saveIntervalometerDefaults(it.coerceAtLeast(500), defExposure, defCount, defDelay) },
+                    label = "Default Interval (gap)",
+                )
+
+                TimePicker(
+                    totalMs = defExposure,
+                    onChanged = { vm.saveIntervalometerDefaults(defInterval, it.coerceAtLeast(50), defCount, defDelay) },
+                    label = "Default Exposure",
+                )
+
+                TimePicker(
+                    totalMs = defDelay,
+                    onChanged = { vm.saveIntervalometerDefaults(defInterval, defExposure, defCount, it) },
+                    label = "Default Start Delay",
+                )
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "Default Shot Count",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            "$defCount",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                    Slider(
+                        value = defCount.toFloat(),
+                        onValueChange = { vm.saveIntervalometerDefaults(defInterval, defExposure, it.toInt().coerceAtLeast(1), defDelay) },
+                        valueRange = 1f..maxShots.toFloat(),
+                    )
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "Max Shot Count (slider limit)",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            "$maxShots",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                    Slider(
+                        value = maxShots.toFloat(),
+                        onValueChange = { vm.saveMaxShotCount(it.toInt()) },
+                        valueRange = 10f..9999f,
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = { vm.resetIntervalometerDefaults() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Text("Reset to Factory Defaults")
+                }
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        Text("BACKUP & RESTORE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = 2.dp,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    "Export settings to Google Drive or local storage, and import them on another device.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    OutlinedButton(
+                        onClick = { exportLauncher.launch("pulsar-settings.json") },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Export")
+                    }
+                    OutlinedButton(
+                        onClick = { importLauncher.launch(arrayOf("application/json")) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Import")
+                    }
                 }
             }
         }
