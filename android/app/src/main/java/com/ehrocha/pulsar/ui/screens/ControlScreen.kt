@@ -311,7 +311,7 @@ internal fun IntervalometerPanelContent(
     onDelayChanged: (Long) -> Unit,
     enabled: Boolean = true,
 ) {
-    val totalSequenceTimeMs = delayMs + ((exposureMs + intervalMs) * shotCount)
+    val totalSequenceTimeMs = delayMs + shotCount.toLong() * (exposureMs + intervalMs) - intervalMs
 
     Column(verticalArrangement = Arrangement.spacedBy(24.dp), modifier = modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -519,7 +519,7 @@ internal fun AstroPanelContent(
     val maxExposureS = ruleDivisor.toDouble() / (focalLength * cropFactor)
     val maxExposureMs = (maxExposureS * 1000).toLong().coerceAtLeast(100)
     val intervalMs = maxExposureMs + gapMs
-    val totalTimeMs = delayMs + (intervalMs * shotCount)
+    val totalTimeMs = delayMs + shotCount.toLong() * (maxExposureMs + gapMs) - gapMs
 
     Column(verticalArrangement = Arrangement.spacedBy(24.dp), modifier = modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {

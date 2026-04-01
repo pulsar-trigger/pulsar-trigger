@@ -5,7 +5,6 @@ plugins {
 }
 
 android {
-    namespace = "com.ehrocha"
     namespace = "com.ehrocha.pulsar"
     compileSdk = 35
 

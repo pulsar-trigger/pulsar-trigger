@@ -6,8 +6,6 @@
 #include "camera.h"
 #include "triggers.h"
 
-static uint32_t _focus_ms = DEFAULT_FOCUS_MS;
-
 void camera_init() {
     pinMode(PIN_SHUTTER, OUTPUT);
     pinMode(PIN_FOCUS, OUTPUT);
@@ -31,11 +29,9 @@ static bool interruptible_delay(uint32_t ms) {
 }
 
 void camera_shutter(uint32_t duration_ms, uint32_t focus_ms) {
-    uint32_t f = focus_ms ? focus_ms : _focus_ms;
-
     // Pre-focus
     digitalWrite(PIN_FOCUS, HIGH);
-    if (!interruptible_delay(f)) {
+    if (!interruptible_delay(focus_ms)) {
         digitalWrite(PIN_FOCUS, LOW);
         return;
     }

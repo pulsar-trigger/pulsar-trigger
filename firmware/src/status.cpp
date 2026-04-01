@@ -7,15 +7,27 @@
 #include "ble_server.h"
 #include "config.h"
 
+static uint8_t  _cached_battery_pct = 0;
+static uint32_t _last_battery_read  = 0;
+static const uint32_t BATTERY_CACHE_MS = 5000;  // refresh at most every 5 s
+
 uint8_t battery_read_pct() {
+    uint32_t now = millis();
+    if (now - _last_battery_read < BATTERY_CACHE_MS && _last_battery_read != 0) {
+        return _cached_battery_pct;
+    }
+    _last_battery_read = now;
+
     uint32_t raw = analogRead(PIN_BATTERY);
     // ESP32 ADC: 12-bit (0-4095), 3.3 V reference
     float voltage = (raw / 4095.0f) * 3.3f * BATTERY_DIVIDER_RATIO;
     uint32_t mv = (uint32_t)(voltage * 1000.0f);
 
-    if (mv >= BATTERY_FULL_MV) return 100;
-    if (mv <= BATTERY_EMPTY_MV) return 0;
-    return (uint8_t)((mv - BATTERY_EMPTY_MV) * 100 / (BATTERY_FULL_MV - BATTERY_EMPTY_MV));
+    if (mv >= BATTERY_FULL_MV) _cached_battery_pct = 100;
+    else if (mv <= BATTERY_EMPTY_MV) _cached_battery_pct = 0;
+    else _cached_battery_pct = (uint8_t)((mv - BATTERY_EMPTY_MV) * 100 / (BATTERY_FULL_MV - BATTERY_EMPTY_MV));
+
+    return _cached_battery_pct;
 }
 
 void status_send(State state, Mode mode, uint16_t shots, uint32_t time_ms, uint8_t error) {

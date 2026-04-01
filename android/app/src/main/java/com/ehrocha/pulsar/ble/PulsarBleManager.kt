@@ -21,7 +21,9 @@ class PulsarBleManager(context: Context) : BleManager(context) {
         private const val TAG = "PulsarBLE"
     }
 
+    @Volatile
     private var cmdChar: BluetoothGattCharacteristic? = null
+    @Volatile
     private var statusChar: BluetoothGattCharacteristic? = null
 
     private val _status = MutableStateFlow<StatusFrame?>(null)

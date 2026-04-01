@@ -22,3 +22,6 @@ android/app/*.iml
 *.log
 .DS_Store
 Thumbs.db
+
+# Copilot memory (local dev context, not for repo)
+.github/copilot-memory/

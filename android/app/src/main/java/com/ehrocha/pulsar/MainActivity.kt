@@ -85,9 +85,9 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
         if (currentScreen == AppScreen.Menu) {
             vm.status.filterNotNull().first().let { s ->
                 if (s.state == DeviceState.RUNNING || s.state == DeviceState.WAITING) {
-                    triggerModeFromByte(s.mode)?.let { mode ->
-                        currentScreen = AppScreen.Mode(mode)
-                    }
+                    // Use the ViewModel's selected mode (avoids ambiguity when
+                    // firmware modes like ASTRO share the same byte as INTERVALOMETER)
+                    currentScreen = AppScreen.Mode(vm.currentMode.value)
                 }
             }
         }
@@ -124,6 +124,3 @@ private sealed class AppScreen {
     data class Mode(val mode: TriggerMode) : AppScreen()
     data object Settings : AppScreen()
 }
-
-private fun triggerModeFromByte(mode: Byte): TriggerMode? =
-    TriggerMode.entries.firstOrNull { it.id == mode }

@@ -23,6 +23,9 @@ static uint16_t _shots_taken   = 0;
 static uint32_t _next_fire_ms  = 0;
 static uint32_t _focus_ms      = DEFAULT_FOCUS_MS;
 static bool     _lock_active   = false;
+static uint32_t _debounce_until = 0;  // non-blocking debounce timestamp
+static uint8_t  _hdr_index     = 0;   // current HDR bracket index
+static uint32_t _hdr_gap_until = 0;   // HDR inter-bracket gap timer
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 static uint32_t clamp_u32(uint32_t value, uint32_t lower, uint32_t upper) {
@@ -132,6 +135,9 @@ bool triggers_set_mode(Mode mode, const uint8_t* payload, size_t len) {
 
 void triggers_start() {
     _shots_taken = 0;
+    _debounce_until = 0;
+    _hdr_index = 0;
+    _hdr_gap_until = 0;
     _state = STATE_RUNNING;
 
     if (_mode == MODE_INTERVALOMETER) {
@@ -171,10 +177,14 @@ void triggers_tick() {
 
     uint32_t now = millis();
 
+    // Non-blocking debounce guard for sensor triggers
+    if (_debounce_until != 0 && (now - _debounce_until) < DEBOUNCE_MS) return;
+    _debounce_until = 0;
+
     switch (_mode) {
         // ── Intervalometer ───────────────────────────────────────────────
         case MODE_INTERVALOMETER: {
-            if (now >= _next_fire_ms) {
+            if ((now - _next_fire_ms) < 0x80000000UL) {  // wraparound-safe: now >= _next_fire_ms
                 _state = STATE_RUNNING;
                 fire_and_count(_interval.exposure_ms);
 
@@ -183,10 +193,23 @@ void triggers_tick() {
                     status_send(_state, _mode, _shots_taken, 0);
                     return;
                 }
+                // Gap semantics: wait interval_ms AFTER the exposure ends,
+                // then fire the next shot.
                 _next_fire_ms = millis() + _interval.interval_ms;
                 _state = STATE_WAITING;
 
-                uint32_t remaining = _next_fire_ms - millis();
+                // Compute total remaining time for the job
+                uint32_t remaining;
+                if (_interval.count > 0) {
+                    uint16_t shots_left = _interval.count - _shots_taken;
+                    // remaining = gap + (shots_left-1) * (exposure + gap) + exposure
+                    //           = shots_left * (exposure + gap)
+                    uint64_t cycle = (uint64_t)_interval.exposure_ms + _interval.interval_ms;
+                    uint64_t total = (uint64_t)shots_left * cycle;
+                    remaining = (total > UINT32_MAX) ? UINT32_MAX : (uint32_t)total;
+                } else {
+                    remaining = _interval.interval_ms;  // infinite: gap countdown
+                }
                 status_send(_state, _mode, _shots_taken, remaining);
             }
             break;
@@ -197,7 +220,7 @@ void triggers_tick() {
             uint16_t val = analogRead(PIN_SOUND);
             if (val > _sound.threshold) {
                 fire_and_count(_sound.exposure_ms);
-                delay(DEBOUNCE_MS);
+                _debounce_until = millis();
             }
             break;
         }
@@ -209,7 +232,7 @@ void triggers_tick() {
             uint16_t val = analogRead(PIN_LIGHT);
             if (val > thresh) {
                 fire_and_count(_lightning.exposure_ms);
-                delay(DEBOUNCE_MS);
+                _debounce_until = millis();
             }
             break;
         }
@@ -219,20 +242,33 @@ void triggers_tick() {
             uint16_t val = analogRead(PIN_LASER_RX);
             if (val < LASER_BREAK_THRESH) {  // beam broken = low reading
                 fire_and_count(_laser.exposure_ms);
-                delay(DEBOUNCE_MS);
+                _debounce_until = millis();
             }
             break;
         }
 
-        // ── HDR bracket ──────────────────────────────────────────────────
+        // ── HDR bracket (state-machine, non-blocking) ────────────────────
         case MODE_HDR: {
-            for (uint8_t i = 0; i < _hdr.count; i++) {
-                camera_shutter(_hdr.exposures[i], _focus_ms);
-                _shots_taken++;
-                delay(500);  // gap between brackets
+            // Waiting for inter-bracket gap?
+            if (_hdr_gap_until != 0) {
+                if ((now - _hdr_gap_until) < 500) return;  // 500 ms gap
+                _hdr_gap_until = 0;
             }
-            _state = STATE_IDLE;
-            status_send(_state, _mode, _shots_taken, 0);
+
+            if (_hdr_index < _hdr.count) {
+                camera_shutter(_hdr.exposures[_hdr_index], _focus_ms);
+                _shots_taken++;
+                _hdr_index++;
+                status_send(_state, _mode, _shots_taken, 0);
+
+                if (_hdr_index < _hdr.count) {
+                    _hdr_gap_until = millis();  // start gap timer
+                } else {
+                    // All brackets done
+                    _state = STATE_IDLE;
+                    status_send(_state, _mode, _shots_taken, 0);
+                }
+            }
             break;
         }
 

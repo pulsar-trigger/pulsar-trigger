@@ -15,6 +15,7 @@
 #include <BLE2902.h>
 #include <Preferences.h>
 #include <esp_gap_ble_api.h>
+#include <esp_bt_main.h>
 
 static Preferences _prefs;
 static char _deviceName[7 + BLE_NAME_SUFFIX_MAX + 1]; // "Pulsar-" + suffix + NUL
@@ -93,9 +94,8 @@ class CmdCharCB : public BLECharacteristicCallbacks {
                 break;
             case CMD_SET_FOCUS: {
                 if (len >= 3) {
-                    // u16 LE at bytes 1-2
-                    // (focus_ms stored globally — for simplicity, just log)
                     uint16_t ms = data[1] | (data[2] << 8);
+                    triggers_set_focus(ms);
                     Serial.printf("[BLE] SET_FOCUS %u ms\n", ms);
                 }
                 break;
@@ -108,6 +108,16 @@ class CmdCharCB : public BLECharacteristicCallbacks {
                 char suffix[BLE_NAME_SUFFIX_MAX + 1] = {};
                 memcpy(suffix, data + 1, suffixLen);
                 suffix[suffixLen] = '\0';
+
+                // Sanitise: keep only printable ASCII (0x20-0x7E)
+                size_t clean = 0;
+                for (size_t i = 0; i < suffixLen; i++) {
+                    if (suffix[i] >= 0x20 && suffix[i] <= 0x7E) {
+                        suffix[clean++] = suffix[i];
+                    }
+                }
+                suffix[clean] = '\0';
+                suffixLen = clean;
 
                 if (suffixLen == 0) {
                     // Empty suffix → reset to default "Pulsar"
@@ -135,16 +145,24 @@ void ble_init() {
     load_device_name();
     BLEDevice::init(_deviceName);
 
+    // Enable BLE security — require bonding for writes
+    BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT_MITM);
+    BLESecurity* security = new BLESecurity();
+    security->setAuthenticationMode(ESP_LE_AUTH_REQ_SC_MITM_BOND);
+    security->setCapability(ESP_IO_CAP_NONE);  // Just Works pairing
+    security->setInitEncryptionKey(ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK);
+
     BLEServer* server = BLEDevice::createServer();
     server->setCallbacks(new PulsarServerCB());
 
     BLEService* svc = server->createService(SERVICE_UUID);
 
-    // Command characteristic (write)
+    // Command characteristic (write, requires encryption)
     _cmdChar = svc->createCharacteristic(
         CHAR_COMMAND_UUID,
         BLECharacteristic::PROPERTY_WRITE
     );
+    _cmdChar->setAccessPermissions(ESP_GATT_PERM_WRITE_ENCRYPTED);
     _cmdChar->setCallbacks(new CmdCharCB());
 
     // Status characteristic (notify)
