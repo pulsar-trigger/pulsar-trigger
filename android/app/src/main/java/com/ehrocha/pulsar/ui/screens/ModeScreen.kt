@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.ble.DeviceState
+import com.ehrocha.pulsar.ble.OtaState
 import com.ehrocha.pulsar.ble.StatusFrame
 import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
@@ -170,6 +171,49 @@ fun SettingsScreen(
     val connected by vm.connected.collectAsState()
     val status by vm.status.collectAsState()
     val deviceName by vm.deviceName.collectAsState()
+    val otaState by vm.firmwareManager.state.collectAsState()
+    val otaProgress by vm.firmwareManager.progress.collectAsState()
+    val otaError by vm.firmwareManager.errorMessage.collectAsState()
+
+    val otaActive = otaState in listOf(
+        OtaState.DOWNLOADING, OtaState.UPLOADING, OtaState.VALIDATING, OtaState.COMPLETE,
+    )
+
+    // Block back navigation while OTA is in progress
+    BackHandler(enabled = otaActive && otaState != OtaState.COMPLETE) { /* swallow */ }
+
+    // Post OTA notifications on state changes
+    LaunchedEffect(otaState, otaProgress) {
+        when (otaState) {
+            OtaState.DOWNLOADING -> vm.updateOtaNotification(
+                "Downloading firmware…",
+                "${(otaProgress * 100).toInt()}%",
+                (otaProgress * 100).toInt(),
+            )
+            OtaState.UPLOADING -> vm.updateOtaNotification(
+                "Uploading to device…",
+                "${(otaProgress * 100).toInt()}%",
+                (otaProgress * 100).toInt(),
+            )
+            OtaState.VALIDATING -> vm.updateOtaNotification(
+                "Validating firmware…",
+                "Device is verifying and rebooting",
+            )
+            OtaState.COMPLETE -> vm.updateOtaNotification(
+                "Firmware updated",
+                "Update complete",
+                done = true,
+            )
+            OtaState.ERROR -> vm.updateOtaNotification(
+                "Firmware update failed",
+                otaError ?: "Unknown error",
+                done = true,
+            )
+            else -> {}
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
 
     Column(
         modifier = Modifier
@@ -225,6 +269,87 @@ fun SettingsScreen(
                     .padding(16.dp),
             ) {
                 SettingsPanel(vm, deviceName, connected)
+            }
+        }
+    }
+
+        // ── Firmware OTA overlay ─────────────────────────────────────────
+        if (otaActive) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.6f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    tonalElevation = 8.dp,
+                    modifier = Modifier
+                        .fillMaxWidth(0.85f)
+                        .padding(24.dp),
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.padding(24.dp),
+                    ) {
+                        when (otaState) {
+                            OtaState.DOWNLOADING -> {
+                                CircularProgressIndicator()
+                                Text("Downloading Firmware…", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                LinearProgressIndicator(
+                                    progress = { otaProgress },
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                                Text("${(otaProgress * 100).toInt()}%", style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    "Do not close the app.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            OtaState.UPLOADING -> {
+                                CircularProgressIndicator()
+                                Text("Uploading to Device…", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                LinearProgressIndicator(
+                                    progress = { otaProgress },
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                                Text("${(otaProgress * 100).toInt()}%", style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    "Do not disconnect the device.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            OtaState.VALIDATING -> {
+                                CircularProgressIndicator()
+                                Text("Validating & Rebooting…", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text(
+                                    "The device is verifying the firmware and will reboot automatically.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                )
+                            }
+                            OtaState.COMPLETE -> {
+                                Text("✓", style = MaterialTheme.typography.displayMedium, color = MaterialTheme.colorScheme.primary)
+                                Text("Update Complete!", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text(
+                                    "Device is rebooting. You will be returned to the scan screen.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                )
+                                OutlinedButton(
+                                    onClick = { vm.firmwareManager.reset() },
+                                    shape = RoundedCornerShape(12.dp),
+                                ) { Text("Done") }
+                            }
+                            else -> {}
+                        }
+                    }
+                }
             }
         }
     }

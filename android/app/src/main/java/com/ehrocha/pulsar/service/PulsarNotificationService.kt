@@ -20,12 +20,19 @@ class PulsarNotificationService : Service() {
 
     companion object {
         const val CHANNEL_ID = "pulsar_job"
+        const val CHANNEL_OTA = "pulsar_ota"
         const val NOTIFICATION_ID = 1
+        const val NOTIFICATION_OTA_ID = 2
         const val ACTION_CANCEL = "com.ehrocha.pulsar.CANCEL_JOB"
+        const val ACTION_OTA = "com.ehrocha.pulsar.OTA_PROGRESS"
         const val EXTRA_MODE = "mode"
         const val EXTRA_SHOTS = "shots"
         const val EXTRA_TOTAL = "total"
         const val EXTRA_STATE = "state"
+        const val EXTRA_OTA_TITLE = "ota_title"
+        const val EXTRA_OTA_TEXT = "ota_text"
+        const val EXTRA_OTA_PROGRESS = "ota_progress"
+        const val EXTRA_OTA_DONE = "ota_done"
     }
 
     private lateinit var notificationManager: NotificationManager
@@ -42,6 +49,23 @@ class PulsarNotificationService : Service() {
             sendBroadcast(Intent(ACTION_CANCEL).setPackage(packageName))
             stopForeground(STOP_FOREGROUND_REMOVE)
             stopSelf()
+            return START_NOT_STICKY
+        }
+
+        if (intent?.action == ACTION_OTA) {
+            val title = intent.getStringExtra(EXTRA_OTA_TITLE) ?: "Updating…"
+            val text = intent.getStringExtra(EXTRA_OTA_TEXT) ?: ""
+            val progress = intent.getIntExtra(EXTRA_OTA_PROGRESS, -1)
+            val done = intent.getBooleanExtra(EXTRA_OTA_DONE, false)
+
+            if (done) {
+                notificationManager.cancel(NOTIFICATION_OTA_ID)
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            } else {
+                val notification = buildOtaNotification(title, text, progress)
+                startForeground(NOTIFICATION_OTA_ID, notification)
+            }
             return START_NOT_STICKY
         }
 
@@ -68,6 +92,16 @@ class PulsarNotificationService : Service() {
             setShowBadge(false)
         }
         notificationManager.createNotificationChannel(channel)
+
+        val otaChannel = NotificationChannel(
+            CHANNEL_OTA,
+            "Firmware & App Updates",
+            NotificationManager.IMPORTANCE_LOW,
+        ).apply {
+            description = "Shows progress during firmware or app updates"
+            setShowBadge(false)
+        }
+        notificationManager.createNotificationChannel(otaChannel)
     }
 
     private fun buildNotification(mode: String, shots: Int, total: Int, state: String): Notification {
@@ -105,6 +139,31 @@ class PulsarNotificationService : Service() {
             builder.setProgress(total, shots.coerceAtMost(total), false)
         } else {
             builder.setProgress(0, 0, true)  // indeterminate
+        }
+
+        return builder.build()
+    }
+
+    private fun buildOtaNotification(title: String, text: String, progress: Int): Notification {
+        val openIntent = PendingIntent.getActivity(
+            this, 0,
+            Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            },
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+
+        val builder = NotificationCompat.Builder(this, CHANNEL_OTA)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setContentIntent(openIntent)
+            .setOngoing(true)
+            .setSilent(true)
+
+        when {
+            progress in 0..100 -> builder.setProgress(100, progress, false)
+            else -> builder.setProgress(0, 0, true)  // indeterminate
         }
 
         return builder.build()

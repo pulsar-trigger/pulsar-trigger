@@ -500,6 +500,18 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         app.startForegroundService(intent)
     }
 
+    fun updateOtaNotification(title: String, text: String, progress: Int = -1, done: Boolean = false) {
+        val app = getApplication<Application>()
+        val intent = Intent(app, PulsarNotificationService::class.java).apply {
+            action = PulsarNotificationService.ACTION_OTA
+            putExtra(PulsarNotificationService.EXTRA_OTA_TITLE, title)
+            putExtra(PulsarNotificationService.EXTRA_OTA_TEXT, text)
+            putExtra(PulsarNotificationService.EXTRA_OTA_PROGRESS, progress)
+            putExtra(PulsarNotificationService.EXTRA_OTA_DONE, done)
+        }
+        app.startForegroundService(intent)
+    }
+
     private fun dismissNotification() {
         val app = getApplication<Application>()
         app.stopService(Intent(app, PulsarNotificationService::class.java))

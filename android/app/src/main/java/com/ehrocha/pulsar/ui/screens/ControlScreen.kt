@@ -30,6 +30,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.ble.TriggerMode
@@ -1380,48 +1381,46 @@ internal fun IntervalometerSettingsPanel(vm: PulsarViewModel, connected: Boolean
                 )
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            "Default Shot Count",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Text(
-                            "$defCount",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                    Slider(
-                        value = defCount.toFloat(),
-                        onValueChange = { vm.saveIntervalometerDefaults(defInterval, defExposure, it.toInt().coerceAtLeast(1), defDelay) },
-                        valueRange = 1f..maxShots.toFloat(),
+                    var defCountText by remember(defCount) { mutableStateOf(defCount.toString()) }
+                    OutlinedTextField(
+                        value = defCountText,
+                        onValueChange = { defCountText = it.filter { c -> c.isDigit() } },
+                        label = { Text("Default Shot Count") },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Done,
+                        ),
+                        keyboardActions = KeyboardActions(onDone = {
+                            val v = defCountText.toIntOrNull()?.coerceIn(1, maxShots) ?: defCount
+                            defCountText = v.toString()
+                            vm.saveIntervalometerDefaults(defInterval, defExposure, v, defDelay)
+                        }),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        supportingText = { Text("1 – $maxShots") },
                     )
                 }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            "Max Shot Count (slider limit)",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Text(
-                            "$maxShots",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                    Slider(
-                        value = maxShots.toFloat(),
-                        onValueChange = { vm.saveMaxShotCount(it.toInt()) },
-                        valueRange = 10f..9999f,
+                    var maxShotsText by remember(maxShots) { mutableStateOf(maxShots.toString()) }
+                    OutlinedTextField(
+                        value = maxShotsText,
+                        onValueChange = { maxShotsText = it.filter { c -> c.isDigit() } },
+                        label = { Text("Max Shot Count") },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Done,
+                        ),
+                        keyboardActions = KeyboardActions(onDone = {
+                            val v = maxShotsText.toIntOrNull()?.coerceIn(10, 9999) ?: maxShots
+                            maxShotsText = v.toString()
+                            vm.saveMaxShotCount(v)
+                        }),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        supportingText = { Text("10 – 9999") },
                     )
                 }
 
