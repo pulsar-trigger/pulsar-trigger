@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.ehrocha.pulsar.model.FlowStep
 import com.ehrocha.pulsar.model.FlowStepType
+import com.ehrocha.pulsar.model.SavedFlow
 import com.ehrocha.pulsar.model.displayName
 import com.ehrocha.pulsar.model.summaryLabel
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
@@ -43,12 +44,15 @@ fun CustomFlowScreen(
     val connected by vm.connected.collectAsState()
     val status by vm.status.collectAsState()
     val steps by vm.flowSteps.collectAsState()
+    val saved by vm.savedFlows.collectAsState()
     val running by vm.flowRunning.collectAsState()
     val paused by vm.flowPaused.collectAsState()
     val currentStep by vm.flowCurrentStep.collectAsState()
 
     var showAddDialog by remember { mutableStateOf(false) }
     var editingIndex by remember { mutableIntStateOf(-1) }
+    var showSaveDialog by remember { mutableStateOf(false) }
+    var showLoadDialog by remember { mutableStateOf(false) }
 
     BackHandler(enabled = running) { /* block back while running */ }
 
@@ -193,6 +197,37 @@ fun CustomFlowScreen(
 
         Spacer(Modifier.height(16.dp))
 
+        // ── Save / Load buttons ──────────────────────────────────────────
+        if (!running) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedButton(
+                    onClick = { showSaveDialog = true },
+                    enabled = steps.isNotEmpty(),
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Save Flow")
+                }
+                OutlinedButton(
+                    onClick = { showLoadDialog = true },
+                    enabled = saved.isNotEmpty(),
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Load Flow")
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+        }
+
         // ── Action buttons ───────────────────────────────────────────────
         if (running) {
             Button(
@@ -242,6 +277,29 @@ fun CustomFlowScreen(
                 vm.saveFlowSteps(mutable)
                 editingIndex = -1
             },
+        )
+    }
+
+    if (showSaveDialog) {
+        SaveFlowDialog(
+            existingNames = saved.map { it.name },
+            onDismiss = { showSaveDialog = false },
+            onSave = { name ->
+                vm.saveFlowAs(name)
+                showSaveDialog = false
+            },
+        )
+    }
+
+    if (showLoadDialog) {
+        LoadFlowDialog(
+            flows = saved,
+            onDismiss = { showLoadDialog = false },
+            onLoad = { name ->
+                vm.loadSavedFlow(name)
+                showLoadDialog = false
+            },
+            onDelete = { name -> vm.deleteSavedFlow(name) },
         )
     }
 }
@@ -663,4 +721,123 @@ private fun NumberField(
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
+}
+
+// ─── Save Flow dialog ────────────────────────────────────────────────────────
+
+@Composable
+private fun SaveFlowDialog(
+    existingNames: List<String>,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit,
+) {
+    var name by remember { mutableStateOf("") }
+    val nameExists = existingNames.any { it.equals(name.trim(), ignoreCase = true) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            tonalElevation = 6.dp,
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text("Save Flow", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Flow name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (nameExists) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "A flow with this name already exists and will be replaced.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+                Spacer(Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                        onClick = { onSave(name.trim()) },
+                        enabled = name.isNotBlank(),
+                    ) { Text(if (nameExists) "Replace" else "Save") }
+                }
+            }
+        }
+    }
+}
+
+// ─── Load Flow dialog ────────────────────────────────────────────────────────
+
+@Composable
+private fun LoadFlowDialog(
+    flows: List<SavedFlow>,
+    onDismiss: () -> Unit,
+    onLoad: (String) -> Unit,
+    onDelete: (String) -> Unit,
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            tonalElevation = 6.dp,
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text("Load Flow", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(16.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 300.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    flows.forEach { flow ->
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            tonalElevation = 2.dp,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(flow.name, fontWeight = FontWeight.Bold)
+                                    Text(
+                                        "${flow.steps.size} step${if (flow.steps.size != 1) "s" else ""}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                IconButton(onClick = { onDelete(flow.name) }) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = "Delete",
+                                        tint = MaterialTheme.colorScheme.error,
+                                    )
+                                }
+                                IconButton(onClick = { onLoad(flow.name) }) {
+                                    Icon(Icons.Default.FileOpen, contentDescription = "Load")
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    TextButton(onClick = onDismiss) { Text("Close") }
+                }
+            }
+        }
+    }
 }

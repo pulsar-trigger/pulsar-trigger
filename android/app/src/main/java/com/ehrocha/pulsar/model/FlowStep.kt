@@ -115,3 +115,38 @@ fun FlowStepType.displayName(): String = when (this) {
     FlowStepType.HDR -> "HDR Bracket"
     FlowStepType.PAUSE -> "Pause"
 }
+
+// ── Saved Flow (named flow preset) ──────────────────────────────────────────
+
+data class SavedFlow(
+    val name: String,
+    val steps: List<FlowStep>,
+) {
+    fun toJson(): JSONObject = JSONObject().apply {
+        put("name", name)
+        put("steps", JSONArray().also { arr ->
+            steps.forEach { arr.put(it.toJson()) }
+        })
+    }
+
+    companion object {
+        fun fromJson(json: JSONObject): SavedFlow = SavedFlow(
+            name = json.getString("name"),
+            steps = json.optJSONArray("steps")?.let { arr ->
+                (0 until arr.length()).map { FlowStep.fromJson(arr.getJSONObject(it)) }
+            } ?: emptyList(),
+        )
+
+        fun serializeList(flows: List<SavedFlow>): String {
+            val arr = JSONArray()
+            flows.forEach { arr.put(it.toJson()) }
+            return arr.toString()
+        }
+
+        fun deserializeList(json: String): List<SavedFlow> {
+            if (json.isBlank()) return emptyList()
+            val arr = JSONArray(json)
+            return (0 until arr.length()).map { fromJson(arr.getJSONObject(it)) }
+        }
+    }
+}

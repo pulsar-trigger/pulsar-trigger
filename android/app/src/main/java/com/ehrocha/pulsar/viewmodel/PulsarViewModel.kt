@@ -24,6 +24,7 @@ import androidx.lifecycle.viewModelScope
 import com.ehrocha.pulsar.ble.*
 import com.ehrocha.pulsar.model.FlowStep
 import com.ehrocha.pulsar.model.FlowStepType
+import com.ehrocha.pulsar.model.SavedFlow
 import com.ehrocha.pulsar.service.PulsarNotificationService
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -46,6 +47,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         private const val KEY_PIN_SHUTTER = "pin_shutter"
         private const val KEY_PIN_FOCUS = "pin_focus"
         private const val KEY_FLOW_STEPS = "flow_steps"
+        private const val KEY_SAVED_FLOWS = "saved_flows"
         const val DEFAULT_PIN_SHUTTER = 25
         const val DEFAULT_PIN_FOCUS = 26
         val SAFE_OUTPUT_PINS = listOf(4, 13, 14, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27)
@@ -125,6 +127,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     // ── Custom Flow ──────────────────────────────────────────────────────
     val flowSteps = MutableStateFlow<List<FlowStep>>(emptyList())
+    val savedFlows = MutableStateFlow<List<SavedFlow>>(emptyList())
     val flowRunning = MutableStateFlow(false)
     val flowPaused = MutableStateFlow(false)
     val flowCurrentStep = MutableStateFlow(-1)
@@ -166,6 +169,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         // Load custom flow steps
         flowSteps.value = try {
             FlowStep.deserializeList(prefs.getString(KEY_FLOW_STEPS, "") ?: "")
+        } catch (_: Exception) { emptyList() }
+        // Load saved flows library
+        savedFlows.value = try {
+            SavedFlow.deserializeList(prefs.getString(KEY_SAVED_FLOWS, "") ?: "")
         } catch (_: Exception) { emptyList() }
         // Apply defaults as initial working values
         intervalMs.value = defaultIntervalMs.value
@@ -293,6 +300,24 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     fun saveFlowSteps(steps: List<FlowStep>) {
         flowSteps.value = steps
         prefs.edit().putString(KEY_FLOW_STEPS, FlowStep.serializeList(steps)).apply()
+    }
+
+    fun saveFlowAs(name: String) {
+        val flow = SavedFlow(name = name, steps = flowSteps.value)
+        val updated = savedFlows.value.filter { it.name != name } + flow
+        savedFlows.value = updated
+        prefs.edit().putString(KEY_SAVED_FLOWS, SavedFlow.serializeList(updated)).apply()
+    }
+
+    fun loadSavedFlow(name: String) {
+        val flow = savedFlows.value.firstOrNull { it.name == name } ?: return
+        saveFlowSteps(flow.steps)
+    }
+
+    fun deleteSavedFlow(name: String) {
+        val updated = savedFlows.value.filter { it.name != name }
+        savedFlows.value = updated
+        prefs.edit().putString(KEY_SAVED_FLOWS, SavedFlow.serializeList(updated)).apply()
     }
 
     fun startFlow() {
@@ -432,6 +457,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         json.put("intv_max_shots", maxShotCount.value)
         json.put("pin_shutter", pinShutter.value)
         json.put("pin_focus", pinFocus.value)
+        // Custom flow steps
+        json.put("flow_steps", org.json.JSONArray(flowSteps.value.map { it.toJson() }))
+        // Saved flows library
+        json.put("saved_flows", org.json.JSONArray(savedFlows.value.map { it.toJson() }))
         return json.toString(2)
     }
 
@@ -449,6 +478,17 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         val focus = obj.optInt("pin_focus", DEFAULT_PIN_FOCUS)
         if (shutter in SAFE_OUTPUT_PINS && focus in SAFE_OUTPUT_PINS && shutter != focus) {
             savePins(shutter, focus)
+        }
+        // Import custom flow steps
+        obj.optJSONArray("flow_steps")?.let { arr ->
+            val steps = (0 until arr.length()).map { FlowStep.fromJson(arr.getJSONObject(it)) }
+            saveFlowSteps(steps)
+        }
+        // Import saved flows library
+        obj.optJSONArray("saved_flows")?.let { arr ->
+            val flows = (0 until arr.length()).map { SavedFlow.fromJson(arr.getJSONObject(it)) }
+            savedFlows.value = flows
+            prefs.edit().putString(KEY_SAVED_FLOWS, SavedFlow.serializeList(flows)).apply()
         }
     }
 
