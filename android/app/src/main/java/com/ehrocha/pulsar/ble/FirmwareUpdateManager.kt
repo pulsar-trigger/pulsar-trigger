@@ -39,7 +39,7 @@ class FirmwareUpdateManager(
 ) {
     companion object {
         private const val TAG = "FirmwareOTA"
-        private const val GITHUB_REPO = "ehrocha/pulsar-trigger"
+        private const val GITHUB_REPO = "pulsar-trigger/pulsar-trigger"
         private const val RELEASES_URL = "https://api.github.com/repos/$GITHUB_REPO/releases"
         private const val CHUNK_DELAY_MS = 10L  // throttle between BLE writes
     }

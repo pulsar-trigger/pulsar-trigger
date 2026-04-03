@@ -41,7 +41,7 @@ class AppUpdateManager(
 ) {
     companion object {
         private const val TAG = "AppUpdate"
-        private const val GITHUB_REPO = "ehrocha/pulsar-trigger"
+        private const val GITHUB_REPO = "pulsar-trigger/pulsar-trigger"
         private const val RELEASES_URL = "https://api.github.com/repos/$GITHUB_REPO/releases"
         private const val APK_FILENAME = "pulsar-update.apk"
     }
