@@ -4,10 +4,23 @@ An open-source camera intervalometer and trigger system.
 
 **Android app** (BLE client) ↔ **ESP32 firmware** (BLE server + camera control)
 
+### Author
+
+**Eduardo Henrique Rocha** — Global System Z Infrastructure Architect at Kyndryl, passionate about mainframe modernization, cloud architecture, electronics, and photography.
+
+| | |
+|---|---|
+| Email | [ehrocha@gmail.com](mailto:ehrocha@gmail.com) |
+| GitHub | [github.com/ehrocha](https://github.com/ehrocha) |
+| LinkedIn | [linkedin.com/in/ehrocha](https://www.linkedin.com/in/ehrocha/) |
+| X / Twitter | [@ehrocha](https://twitter.com/ehrocha) |
+| Credly | [credly.com/users/ehrocha](https://www.credly.com/users/ehrocha) |
+| Resume | [github.com/ehrocha/resume](https://github.com/ehrocha/resume) |
+
 | | Version | Source of truth |
 |---|---------|----------------|
-| Firmware | 0.4.0 | `firmware/platformio.ini` build flags → `config.h` via `#ifndef` |
-| Android  | 0.3.0 | `android/app/build.gradle.kts` → `BuildConfig.VERSION_NAME` |
+| Firmware | 0.5.0 | `firmware/platformio.ini` build flags → `config.h` via `#ifndef` |
+| Android  | 0.4.0 | `android/app/build.gradle.kts` → `BuildConfig.VERSION_NAME` |
 
 ---
 
