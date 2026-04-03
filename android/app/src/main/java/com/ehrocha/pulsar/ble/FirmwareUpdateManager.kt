@@ -140,6 +140,7 @@ class FirmwareUpdateManager(
                 }
 
                 _state.value = OtaState.COMPLETE
+                bleManager.requestCacheRefresh()
                 Log.i(TAG, "OTA complete — device is rebooting")
 
             } catch (e: CancellationException) {

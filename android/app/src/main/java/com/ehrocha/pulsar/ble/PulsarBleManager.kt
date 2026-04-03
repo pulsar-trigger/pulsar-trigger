@@ -30,6 +30,8 @@ class PulsarBleManager(context: Context) : BleManager(context) {
     private var otaCtrlChar: BluetoothGattCharacteristic? = null
     @Volatile
     private var otaDataChar: BluetoothGattCharacteristic? = null
+    @Volatile
+    private var shouldRefreshCache = false
 
     private val _status = MutableStateFlow<StatusFrame?>(null)
     val status: StateFlow<StatusFrame?> = _status
@@ -123,6 +125,20 @@ class PulsarBleManager(context: Context) : BleManager(context) {
 
     /** Returns usable payload per BLE write (MTU - 3 for ATT header). */
     fun otaChunkSize(): Int = (_mtu.value - 3).coerceAtLeast(20)
+
+    /** Request GATT cache clear on next disconnect+reconnect. */
+    fun requestCacheRefresh() {
+        shouldRefreshCache = true
+    }
+
+    override fun shouldClearCacheWhenDisconnected(): Boolean {
+        if (shouldRefreshCache) {
+            shouldRefreshCache = false
+            Log.i(TAG, "Clearing GATT cache on disconnect")
+            return true
+        }
+        return super.shouldClearCacheWhenDisconnected()
+    }
 
     fun connectDevice(device: BluetoothDevice) {
         connect(device)
