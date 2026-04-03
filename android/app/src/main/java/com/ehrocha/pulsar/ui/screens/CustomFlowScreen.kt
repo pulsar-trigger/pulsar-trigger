@@ -34,6 +34,7 @@ import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.model.SavedFlow
 import com.ehrocha.pulsar.model.displayName
 import com.ehrocha.pulsar.model.summaryLabel
+import com.ehrocha.pulsar.ui.components.TimePicker
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 
 @Composable
@@ -538,11 +539,14 @@ private fun EditStepDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text(
-                    step.type.displayName(),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                )
+                // Intervalometer/Astro panels include their own title
+                if (step.type != FlowStepType.INTERVALOMETER && step.type != FlowStepType.ASTRO) {
+                    Text(
+                        step.type.displayName(),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
 
                 when (step.type) {
                     FlowStepType.INTERVALOMETER -> IntervalometerStepEditor(current) { current = it }
@@ -573,95 +577,176 @@ private fun EditStepDialog(
 
 @Composable
 private fun IntervalometerStepEditor(step: FlowStep, onChange: (FlowStep) -> Unit) {
-    NumberField("Interval (ms)", step.intervalMs.toString()) {
-        onChange(step.copy(intervalMs = it.toLongOrNull()?.coerceAtLeast(500) ?: step.intervalMs))
-    }
-    NumberField("Exposure (ms)", step.exposureMs.toString()) {
-        onChange(step.copy(exposureMs = it.toLongOrNull()?.coerceAtLeast(50) ?: step.exposureMs))
-    }
-    NumberField("Shot count", step.shotCount.toString()) {
-        onChange(step.copy(shotCount = it.toIntOrNull()?.coerceAtLeast(1) ?: step.shotCount))
-    }
-    NumberField("Start delay (ms)", step.delayMs.toString()) {
-        onChange(step.copy(delayMs = it.toLongOrNull()?.coerceAtLeast(0) ?: step.delayMs))
-    }
+    IntervalometerPanelContent(
+        intervalMs = step.intervalMs,
+        exposureMs = step.exposureMs,
+        shotCount = step.shotCount,
+        delayMs = step.delayMs,
+        onIntervalChanged = { onChange(step.copy(intervalMs = it.coerceAtLeast(500))) },
+        onExposureChanged = { onChange(step.copy(exposureMs = it.coerceAtLeast(50))) },
+        onShotCountChanged = { onChange(step.copy(shotCount = it.coerceAtLeast(1))) },
+        onDelayChanged = { onChange(step.copy(delayMs = it)) },
+    )
 }
 
 @Composable
 private fun AstroStepEditor(step: FlowStep, onChange: (FlowStep) -> Unit) {
-    NumberField("Focal length (mm)", step.focalLength.toString()) {
-        onChange(step.copy(focalLength = it.toIntOrNull()?.coerceIn(4, 1200) ?: step.focalLength))
-    }
-    NumberField("Crop factor (×10)", (step.cropFactor * 10).toInt().toString()) {
-        val v = it.toIntOrNull()?.coerceIn(1, 100) ?: (step.cropFactor * 10).toInt()
-        onChange(step.copy(cropFactor = v / 10f))
-    }
-    val expS = step.ruleDivisor.toDouble() / (step.focalLength * step.cropFactor)
-    Text(
-        "Calculated exposure: ${String.format("%.1f", expS)}s",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.primary,
+    AstroPanelContent(
+        focalLength = step.focalLength,
+        cropFactor = step.cropFactor,
+        shotCount = step.shotCount,
+        delayMs = step.delayMs,
+        gapMs = step.gapMs,
+        ruleDivisor = step.ruleDivisor,
+        onCropFactorChanged = { onChange(step.copy(cropFactor = it)) },
+        onFocalLengthChanged = { onChange(step.copy(focalLength = it)) },
+        onGapMsChanged = { onChange(step.copy(gapMs = it.coerceAtLeast(500))) },
+        onShotCountChanged = { onChange(step.copy(shotCount = it.coerceAtLeast(1))) },
+        onDelayMsChanged = { onChange(step.copy(delayMs = it)) },
     )
-    NumberField("Gap between shots (ms)", step.gapMs.toString()) {
-        onChange(step.copy(gapMs = it.toLongOrNull()?.coerceAtLeast(500) ?: step.gapMs))
-    }
-    NumberField("Shot count", step.shotCount.toString()) {
-        onChange(step.copy(shotCount = it.toIntOrNull()?.coerceAtLeast(1) ?: step.shotCount))
-    }
-    NumberField("Start delay (ms)", step.delayMs.toString()) {
-        onChange(step.copy(delayMs = it.toLongOrNull()?.coerceAtLeast(0) ?: step.delayMs))
-    }
-
-    // Rule selector
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("NPF Rule: ", style = MaterialTheme.typography.bodyMedium)
-        FilterChip(
-            selected = step.ruleDivisor == 500,
-            onClick = { onChange(step.copy(ruleDivisor = 500)) },
-            label = { Text("500") },
-        )
-        Spacer(Modifier.width(8.dp))
-        FilterChip(
-            selected = step.ruleDivisor == 400,
-            onClick = { onChange(step.copy(ruleDivisor = 400)) },
-            label = { Text("400") },
-        )
-    }
 }
 
 @Composable
 private fun SoundStepEditor(step: FlowStep, onChange: (FlowStep) -> Unit) {
-    NumberField("Threshold (0–4095)", step.soundThreshold.toString()) {
-        onChange(step.copy(soundThreshold = it.toIntOrNull()?.coerceIn(0, 4095) ?: step.soundThreshold))
-    }
-    NumberField("Exposure (ms)", step.exposureMs.toString()) {
-        onChange(step.copy(exposureMs = it.toLongOrNull()?.coerceAtLeast(50) ?: step.exposureMs))
-    }
-    NumberField("Shots to capture", step.shotCount.toString()) {
-        onChange(step.copy(shotCount = it.toIntOrNull()?.coerceAtLeast(1) ?: step.shotCount))
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Sound Threshold",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    "${step.soundThreshold}",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Slider(
+                value = step.soundThreshold.toFloat(),
+                onValueChange = { onChange(step.copy(soundThreshold = it.toInt())) },
+                valueRange = 0f..4095f,
+            )
+        }
+
+        TimePicker(
+            totalMs = step.exposureMs,
+            onChanged = { onChange(step.copy(exposureMs = it.coerceAtLeast(50))) },
+            label = "Exposure duration",
+        )
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Shots to capture",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    "${step.shotCount}",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Slider(
+                value = step.shotCount.toFloat(),
+                onValueChange = { onChange(step.copy(shotCount = it.toInt().coerceAtLeast(1))) },
+                valueRange = 1f..999f,
+            )
+        }
     }
 }
 
 @Composable
 private fun LightningStepEditor(step: FlowStep, onChange: (FlowStep) -> Unit) {
-    NumberField("Sensitivity (1–5)", step.lightningSensitivity.toString()) {
-        onChange(step.copy(lightningSensitivity = it.toIntOrNull()?.coerceIn(1, 5) ?: step.lightningSensitivity))
-    }
-    NumberField("Exposure (ms)", step.exposureMs.toString()) {
-        onChange(step.copy(exposureMs = it.toLongOrNull()?.coerceAtLeast(50) ?: step.exposureMs))
-    }
-    NumberField("Shots to capture", step.shotCount.toString()) {
-        onChange(step.copy(shotCount = it.toIntOrNull()?.coerceAtLeast(1) ?: step.shotCount))
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Sensitivity",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    "${step.lightningSensitivity}",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Slider(
+                value = step.lightningSensitivity.toFloat(),
+                onValueChange = { onChange(step.copy(lightningSensitivity = it.toInt())) },
+                valueRange = 1f..5f,
+                steps = 3,
+            )
+        }
+
+        TimePicker(
+            totalMs = step.exposureMs,
+            onChanged = { onChange(step.copy(exposureMs = it.coerceAtLeast(50))) },
+            label = "Exposure duration",
+        )
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Shots to capture",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    "${step.shotCount}",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Slider(
+                value = step.shotCount.toFloat(),
+                onValueChange = { onChange(step.copy(shotCount = it.toInt().coerceAtLeast(1))) },
+                valueRange = 1f..999f,
+            )
+        }
     }
 }
 
 @Composable
 private fun LaserStepEditor(step: FlowStep, onChange: (FlowStep) -> Unit) {
-    NumberField("Exposure (ms)", step.exposureMs.toString()) {
-        onChange(step.copy(exposureMs = it.toLongOrNull()?.coerceAtLeast(50) ?: step.exposureMs))
-    }
-    NumberField("Shots to capture", step.shotCount.toString()) {
-        onChange(step.copy(shotCount = it.toIntOrNull()?.coerceAtLeast(1) ?: step.shotCount))
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        TimePicker(
+            totalMs = step.exposureMs,
+            onChanged = { onChange(step.copy(exposureMs = it.coerceAtLeast(50))) },
+            label = "Exposure duration",
+        )
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Shots to capture",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    "${step.shotCount}",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Slider(
+                value = step.shotCount.toFloat(),
+                onValueChange = { onChange(step.copy(shotCount = it.toInt().coerceAtLeast(1))) },
+                valueRange = 1f..999f,
+            )
+        }
     }
 }
 
@@ -699,27 +784,6 @@ private fun PauseStepEditor(step: FlowStep, onChange: (FlowStep) -> Unit) {
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
         supportingText = { Text("Shown when flow reaches this step") },
-    )
-}
-
-@Composable
-private fun NumberField(
-    label: String,
-    value: String,
-    onCommit: (String) -> Unit,
-) {
-    var text by remember(value) { mutableStateOf(value) }
-    OutlinedTextField(
-        value = text,
-        onValueChange = { text = it.filter { c -> c.isDigit() } },
-        label = { Text(label) },
-        keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Number,
-            imeAction = ImeAction.Done,
-        ),
-        keyboardActions = KeyboardActions(onDone = { onCommit(text) }),
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
     )
 }
 
