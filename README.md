@@ -4,6 +4,11 @@ An open-source camera intervalometer and trigger system.
 
 **Android app** (BLE client) ↔ **ESP32 firmware** (BLE server + camera control)
 
+| | Version | Source of truth |
+|---|---------|----------------|
+| Firmware | 0.4.0 | `firmware/platformio.ini` build flags → `config.h` via `#ifndef` |
+| Android  | 0.3.0 | `android/app/build.gradle.kts` → `BuildConfig.VERSION_NAME` |
+
 ---
 
 ## Trigger Modes
@@ -18,8 +23,9 @@ An open-source camera intervalometer and trigger system.
 | **HDR** | `0x05` | Automatic exposure bracketing (2–5 exposures, non-blocking state machine) |
 | **Press & Hold** | `0x06` | Shutter open while START is held |
 | **Press & Lock** | `0x07` | Toggle shutter open/closed |
+| **Custom Flow** | app-only | Multi-step sequence builder — chain any combination of modes and pauses. App-orchestrated; sends individual mode commands to firmware in sequence (see [Custom Flow](#custom-flow)) |
 
-> **Note:** Astro mode shares firmware mode `0x01` with Intervalometer. The distinction is app-side only — the ViewModel tracks which mode was selected.
+> **Note:** Astro mode shares firmware mode `0x01` with Intervalometer. The distinction is app-side only — the ViewModel tracks which mode was selected. Custom Flow (`0x7F`) has no firmware counterpart — it is orchestrated entirely by the Android app.
 
 ---
 
@@ -57,15 +63,21 @@ Single-threaded `loop()` architecture. All trigger modes are driven by `triggers
 | `Protocol.kt` | UUIDs (`PulsarUuids`), command IDs (`Cmd`), `TriggerMode` enum, `DeviceState` enum, `StatusFrame` parser |
 | `CommandBuilder.kt` | Builds 20-byte BLE command packets — one function per command/mode |
 | `PulsarBleManager.kt` | Nordic BLE manager — GATT discovery, notifications, `sendCommand()`, connection lifecycle |
+| `FirmwareUpdateManager.kt` | OTA firmware update orchestration — download from GitHub, BLE chunked upload, progress tracking |
+| **model/** | |
+| `FlowStep.kt` | `FlowStep` data class (step types + parameters), `SavedFlow` data class (named flow presets), JSON serialization |
 | **viewmodel/** | |
-| `PulsarViewModel.kt` | All app state — scan, connection, mode config, notification lifecycle, settings persistence (SharedPreferences), simulator engine |
+| `PulsarViewModel.kt` | All app state — scan, connection, mode config, notification lifecycle, settings persistence (SharedPreferences), simulator engine, custom flow execution |
+| **update/** | |
+| `AppUpdateManager.kt` | APK self-update — checks GitHub releases for newer `app-v*` tags, downloads APK, triggers system installer |
 | **service/** | |
 | `PulsarNotificationService.kt` | Foreground notification showing job progress, cancel action via broadcast |
 | **ui/screens/** | |
 | `ScanScreen.kt` | BLE scan UI with device list + simulator entry point |
-| `MainMenuScreen.kt` | Mode selection cards (Intervalometer, Astro, Manual) + Settings |
-| `ModeScreen.kt` | Mode-specific config panel + running status display with live countdown timer + Settings screen |
-| `ControlScreen.kt` | Reusable panels: `IntervalometerPanel`, `AstroPanel`, `ManualPanel`, `SettingsPanel` (defaults, backup/restore), action buttons |
+| `MainMenuScreen.kt` | Mode selection cards (Intervalometer, Astro, Manual, Custom Flow) + Settings |
+| `ModeScreen.kt` | Mode-specific config panel + running status display with live countdown timer + Settings screen + OTA firmware update UI |
+| `ControlScreen.kt` | Reusable panels: `IntervalometerPanel`, `AstroPanel`, `ManualPanel`, `SettingsPanel` (defaults, GPIO pins, backup/restore, app update), action buttons |
+| `CustomFlowScreen.kt` | Flow builder UI — add/edit/reorder/delete steps, save/load named flows, execute with live progress |
 | **ui/components/** | |
 | `TimePicker.kt` | hh:mm:ss scroll-wheel time input, converts to/from milliseconds |
 | `ScrollPicker.kt` | Generic scroll-wheel number picker with tap-to-type |
@@ -80,7 +92,62 @@ Single-threaded `loop()` architecture. All trigger modes are driven by `triggers
 
 ### Settings Persistence
 
-Intervalometer defaults (interval, exposure, shot count, start delay) and the max shot count slider limit are persisted via **SharedPreferences** (file: `pulsar_settings`). Values are loaded at ViewModel init and applied as working values. The SettingsPanel provides controls to adjust defaults and a "Reset to Factory Defaults" button.
+Intervalometer defaults (interval, exposure, shot count, start delay), the max shot count limit, and GPIO pin assignments are persisted via **SharedPreferences** (file: `pulsar_settings`). Values are loaded at ViewModel init and applied as working values. The SettingsPanel provides controls to adjust defaults and a "Reset to Factory Defaults" button.
+
+### GPIO Pin Configuration
+
+Shutter and focus GPIO pins are **configurable at runtime** (defaults: 25 and 26). The Settings screen shows dropdowns restricted to **safe output pins**: `[4, 13, 14, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27]`. Validation ensures both pins are different. Pin configuration is sent to the ESP32 via the `SET_PINS` command (`0x09`) on every BLE connection. Pins are persisted in SharedPreferences and included in settings export/import.
+
+### Custom Flow
+
+Custom Flow is an **app-orchestrated** multi-step shooting sequence. The user builds a flow from any combination of trigger modes and pauses:
+
+| Step Type | Parameters | Execution |
+|-----------|-----------|-----------|
+| Intervalometer | interval, exposure, shot count, delay | Sends intervalometer command; waits for firmware IDLE |
+| Astro | focal length, crop factor, rule divisor, gap, count, delay | Computes exposure; sends as intervalometer; waits for IDLE |
+| Sound | threshold, exposure, shot count | Sends sound command; auto-stops after N shots |
+| Lightning | sensitivity, exposure, shot count | Sends lightning command; auto-stops after N shots |
+| Laser | exposure, shot count | Sends laser command; auto-stops after N shots |
+| HDR | exposure list | Sends HDR command; waits for IDLE |
+| Pause | label text | Blocks until user taps "Continue" |
+
+The flow builder lets you add, edit, reorder (move up/down), and delete steps. During execution, the UI highlights the current step and marks completed ones.
+
+### Saved Flows
+
+Flows can be **saved as named presets** and loaded later. The saved flow library is persisted in SharedPreferences and included in settings export/import. From the Custom Flow screen:
+
+- **Save Flow** — prompts for a name; overwrites if a flow with the same name exists
+- **Load Flow** — shows the library with step counts; tap to load, swipe to delete
+
+### OTA Firmware Update
+
+The app can update the ESP32 firmware over BLE without USB. The OTA flow has **4 phases**:
+
+1. **DOWNLOADING** — fetches the latest `firmware-v*` release from the GitHub Releases API, downloads the `.bin` asset
+2. **UPLOADING** — sends the binary to the ESP32 in **8 KB chunks** (10 ms throttle) via the OTA Data characteristic
+3. **VALIDATING** — device verifies CRC and prepares to reboot
+4. **COMPLETE** — device reboots automatically; app prompts to reconnect
+
+During OTA, a **full-screen overlay** blocks all interaction with a "Do not disconnect device" warning. The back button is disabled. A progress bar and percentage are shown for download and upload phases.
+
+**OTA BLE Service:**
+
+| UUID | Characteristic | Purpose |
+|------|---------------|---------|
+| `0000ff10-...` | OTA Service | — |
+| `0000ff11-...` | OTA Control (Write) | BEGIN (`0x01`), END (`0x02`), ABORT (`0x03`) |
+| `0000ff12-...` | OTA Data (Write) | Firmware binary chunks |
+
+### App Self-Update
+
+The Settings screen includes an **app update checker** that queries the GitHub Releases API for `app-v*` tags. If a newer version is found:
+
+1. The user taps "Download" — the APK is streamed to the app cache with a progress bar
+2. Once downloaded, the app triggers the system package installer via `FileProvider` + `ACTION_INSTALL_PACKAGE`
+
+Version comparison uses semantic versioning (`isNewer()` compares major.minor.patch).
 
 ### Backup & Restore
 
@@ -88,6 +155,12 @@ Settings can be exported/imported via Android's **Storage Access Framework** (SA
 
 - **Export:** Opens the system file picker (`CreateDocument`) with default filename `pulsar-settings.json`. Writes all persisted settings as formatted JSON.
 - **Import:** Opens the system file picker (`OpenDocument`) filtered to `application/json`. Reads and applies settings.
+
+**Exported JSON includes:**
+- Intervalometer defaults (interval, exposure, shot count, delay, max shots)
+- GPIO pin assignments (shutter, focus)
+- Active custom flow steps
+- Saved flows library (all named flow presets)
 
 ### Simulator Mode
 
@@ -114,6 +187,7 @@ The app can run without a physical ESP32 device. On the scan screen, a "Use Simu
 pulsar-trigger/
 ├── firmware/                 ← ESP32 PlatformIO project
 │   ├── platformio.ini        ← Board: esp32dev, framework: arduino
+│   ├── partitions.csv        ← Custom partition table (with OTA)
 │   ├── include/
 │   │   ├── config.h          ← GPIO pins, ranges, BLE UUIDs, battery constants
 │   │   ├── protocol.h        ← Cmd/Mode/State enums, packed payload structs
@@ -135,9 +209,14 @@ pulsar-trigger/
 │       ├── ble/
 │       │   ├── Protocol.kt
 │       │   ├── CommandBuilder.kt
-│       │   └── PulsarBleManager.kt
+│       │   ├── PulsarBleManager.kt
+│       │   └── FirmwareUpdateManager.kt
+│       ├── model/
+│       │   └── FlowStep.kt          ← FlowStep + SavedFlow data models
 │       ├── viewmodel/
 │       │   └── PulsarViewModel.kt
+│       ├── update/
+│       │   └── AppUpdateManager.kt   ← APK self-update from GitHub
 │       ├── service/
 │       │   └── PulsarNotificationService.kt
 │       └── ui/
@@ -145,13 +224,19 @@ pulsar-trigger/
 │           │   ├── ScanScreen.kt
 │           │   ├── MainMenuScreen.kt
 │           │   ├── ModeScreen.kt
-│           │   └── ControlScreen.kt
+│           │   ├── ControlScreen.kt
+│           │   └── CustomFlowScreen.kt
 │           ├── components/
 │           │   ├── TimePicker.kt
 │           │   ├── ScrollPicker.kt
 │           │   └── LiveStatusPanel.kt
 │           └── theme/
 │               └── Theme.kt
+├── web/                      ← ESP Web Tools browser-based installer
+│   └── index.html
+├── .github/workflows/        ← CI/CD
+│   ├── android.yml           ← Build + sign + release APK
+│   └── firmware.yml          ← Build + release firmware + ESP Web Tools manifest
 └── docs/
     ├── ble-protocol.md       ← BLE packet format specification
     └── wiring.md             ← Full wiring guide with circuits
@@ -231,6 +316,9 @@ See [docs/ble-protocol.md](docs/ble-protocol.md) for the full packet specificati
 | `0000ff00-...` | Service | — |
 | `0000ff01-...` | Command (Write) | Encrypted (bonded) |
 | `0000ff02-...` | Status (Notify) | Open |
+| `0000ff10-...` | OTA Service | — |
+| `0000ff11-...` | OTA Control (Write) | BEGIN/END/ABORT |
+| `0000ff12-...` | OTA Data (Write) | Firmware binary chunks |
 
 **Commands** (byte 0 of write to FF01):
 
@@ -243,6 +331,7 @@ See [docs/ble-protocol.md](docs/ble-protocol.md) for the full packet specificati
 | `0x05` | STATUS_REQ | — |
 | `0x06` | SET_FOCUS | focus_ms(u16 LE) |
 | `0x08` | SET_NAME | suffix bytes (printable ASCII, max 12) |
+| `0x09` | SET_PINS | shutter_pin(u8), focus_pin(u8) |
 
 **StatusFrame** (20 bytes, notify on FF02):
 
@@ -255,6 +344,28 @@ See [docs/ble-protocol.md](docs/ble-protocol.md) for the full packet specificati
 | 8 | battery_pct | u8 (0–100) |
 | 9 | error_code | u8 |
 | 10–19 | reserved | — |
+
+---
+
+## CI/CD
+
+GitHub Actions workflows automate builds and releases on push to `master`.
+
+### Firmware (`firmware.yml`)
+
+Triggers on changes to `firmware/**`. Extracts version from `platformio.ini` build flags, builds with PlatformIO, generates an ESP Web Tools `manifest.json`, and creates a GitHub Release tagged `firmware-v<version>` with the `.bin` artifact.
+
+### Android (`android.yml`)
+
+Triggers on changes to `android/**`. Extracts version from `build.gradle.kts`, decodes the release keystore from the `KEYSTORE_BASE64` GitHub secret, builds a signed release APK via `assembleRelease`, and creates a GitHub Release tagged `app-v<version>` with the APK attached.
+
+**Required GitHub Secrets:** `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`
+
+---
+
+## ESP Web Tools
+
+A browser-based firmware installer is available at `web/index.html`. It uses [ESP Web Tools](https://esphome.github.io/esp-web-tools/) to flash the ESP32 via USB directly from the browser (WebSerial API). The firmware CI/CD generates the required `manifest.json` with bootloader, partition, and firmware binary offsets.
 
 ---
 
@@ -295,7 +406,6 @@ The running status screen updates in real-time using a client-side 100 ms tick (
 ### Known Limitations
 
 - **Astro/Intervalometer ID collision:** Both use firmware mode `0x01`. Auto-nav on reconnect uses the ViewModel's tracked mode, not the firmware byte
-- **No OTA firmware update** — currently requires USB flash
 - **BLE pairing is Just Works** — no passkey since ESP32 has no I/O for PIN entry
 - **Single concurrent connection** — only one phone can control the device at a time
 
