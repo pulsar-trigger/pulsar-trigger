@@ -8,12 +8,15 @@ An open-source camera intervalometer and trigger system.
 
 **Eduardo Henrique Rocha** — Global System Z Infrastructure Architect at Kyndryl, passionate about mainframe modernization, cloud architecture, electronics, and photography.
 
+> 📷 Check out shots captured with Pulsar on Instagram: [**@ehrocha.br**](https://www.instagram.com/ehrocha.br/)
+
 | | |
 |---|---|
 | Email | [ehrocha@gmail.com](mailto:ehrocha@gmail.com) |
 | GitHub | [github.com/ehrocha](https://github.com/ehrocha) |
 | LinkedIn | [linkedin.com/in/ehrocha](https://www.linkedin.com/in/ehrocha/) |
 | X / Twitter | [@ehrocha](https://twitter.com/ehrocha) |
+| Instagram | [@ehrocha.br](https://www.instagram.com/ehrocha.br/) |
 | Credly | [credly.com/users/ehrocha](https://www.credly.com/users/ehrocha) |
 | Resume | [github.com/ehrocha/resume](https://github.com/ehrocha/resume) |
 
