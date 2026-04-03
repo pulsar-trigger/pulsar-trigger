@@ -43,6 +43,17 @@ static const uint8_t SAFE_OUTPUT_PINS[] = {
 #define MIN_HDR_COUNT         2
 #define MAX_HDR_COUNT         5
 
+// ── Firmware version ──────────────────────────────────────────────────────────
+#ifndef FW_VERSION_MAJOR
+#define FW_VERSION_MAJOR  0
+#endif
+#ifndef FW_VERSION_MINOR
+#define FW_VERSION_MINOR  2
+#endif
+#ifndef FW_VERSION_PATCH
+#define FW_VERSION_PATCH  0
+#endif
+
 // ── BLE ──────────────────────────────────────────────────────────────────────
 #define BLE_DEVICE_NAME       "Pulsar"
 #define BLE_NAME_PREFIX       "Pulsar-"
@@ -50,6 +61,11 @@ static const uint8_t SAFE_OUTPUT_PINS[] = {
 #define SERVICE_UUID          "0000ff00-0000-1000-8000-00805f9b34fb"
 #define CHAR_COMMAND_UUID     "0000ff01-0000-1000-8000-00805f9b34fb"
 #define CHAR_STATUS_UUID      "0000ff02-0000-1000-8000-00805f9b34fb"
+
+// ── OTA BLE characteristics ──────────────────────────────────────────────────
+#define OTA_SERVICE_UUID      "0000ff10-0000-1000-8000-00805f9b34fb"
+#define OTA_CONTROL_UUID      "0000ff11-0000-1000-8000-00805f9b34fb"
+#define OTA_DATA_UUID         "0000ff12-0000-1000-8000-00805f9b34fb"
 
 // ── Sensor thresholds ────────────────────────────────────────────────────────
 #define SOUND_DEFAULT_THRESH  512

@@ -38,5 +38,8 @@ void status_send(State state, Mode mode, uint16_t shots, uint32_t time_ms, uint8
     f.time_remaining_ms = time_ms;
     f.battery_pct = battery_read_pct();
     f.error_code = error;
+    f.fw_major = FW_VERSION_MAJOR;
+    f.fw_minor = FW_VERSION_MINOR;
+    f.fw_patch = FW_VERSION_PATCH;
     ble_notify(reinterpret_cast<const uint8_t*>(&f), sizeof(f));
 }

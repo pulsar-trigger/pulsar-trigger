@@ -105,4 +105,18 @@ object CommandBuilder {
         val payload = byteArrayOf(shutterPin.toByte(), focusPin.toByte())
         return frame(Cmd.SET_PINS, payload)
     }
+
+    // ── OTA control commands ─────────────────────────────────────────────
+
+    fun otaBegin(totalSize: Int): ByteArray {
+        val payload = ByteBuffer.allocate(5).order(ByteOrder.LITTLE_ENDIAN)
+            .put(OtaCmd.BEGIN)
+            .putInt(totalSize)
+            .array()
+        return payload  // sent to OTA_CONTROL characteristic, not normal CMD
+    }
+
+    fun otaEnd(): ByteArray = byteArrayOf(OtaCmd.END)
+
+    fun otaAbort(): ByteArray = byteArrayOf(OtaCmd.ABORT)
 }

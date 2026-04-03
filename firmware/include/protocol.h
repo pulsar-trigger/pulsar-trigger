@@ -66,6 +66,24 @@ struct __attribute__((packed)) HdrParams {
     uint32_t exposures[5]; // ms per bracket
 };
 
+// ── OTA control commands ─────────────────────────────────────────────────────
+enum OtaCmd : uint8_t {
+    OTA_BEGIN  = 0x01,  // payload: u32LE total_size
+    OTA_END    = 0x02,  // no payload — validate & reboot
+    OTA_ABORT  = 0x03,  // no payload — cancel OTA
+};
+
+// OTA status codes sent back via OTA control characteristic (notify)
+enum OtaStatus : uint8_t {
+    OTA_OK          = 0x00,
+    OTA_ERR_BEGIN   = 0x01,
+    OTA_ERR_WRITE   = 0x02,
+    OTA_ERR_VALIDATE = 0x03,
+    OTA_ERR_SIZE    = 0x04,
+    OTA_READY       = 0x10,  // sent after OTA_BEGIN accepted
+    OTA_COMPLETE    = 0x11,  // sent after OTA_END validated (rebooting)
+};
+
 // ── Status frame (20 bytes, sent via notify) ────────────────────────────────
 struct __attribute__((packed)) StatusFrame {
     uint8_t  state;
@@ -74,5 +92,8 @@ struct __attribute__((packed)) StatusFrame {
     uint32_t time_remaining_ms;
     uint8_t  battery_pct;
     uint8_t  error_code;
-    uint8_t  reserved[10];
+    uint8_t  fw_major;
+    uint8_t  fw_minor;
+    uint8_t  fw_patch;
+    uint8_t  reserved[7];
 };

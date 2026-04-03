@@ -1,0 +1,62 @@
+name: Android Build
+
+on:
+  push:
+    paths:
+      - 'android/**'
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Extract app version
+        id: version
+        run: |
+          VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' android/app/build.gradle.kts)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Building app v$VERSION"
+
+      - name: Build release APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease
+
+      - name: Rename APK
+        run: |
+          cp android/app/build/outputs/apk/release/app-release-unsigned.apk \
+             android/app/build/outputs/apk/release/pulsar-app-v${{ steps.version.outputs.version }}.apk
+
+      - name: Create or update release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: app-v${{ steps.version.outputs.version }}
+          name: "App v${{ steps.version.outputs.version }}"
+          body: |
+            Automated Android app build for Pulsar Trigger.
+
+            **Version:** v${{ steps.version.outputs.version }}
+            **Commit:** ${{ github.sha }}
+
+            Install via the in-app updater (Settings → App Update) or download and install manually.
+          files: |
+            android/app/build/outputs/apk/release/pulsar-app-v${{ steps.version.outputs.version }}.apk
+          draft: false
+          prerelease: false
+          make_latest: true

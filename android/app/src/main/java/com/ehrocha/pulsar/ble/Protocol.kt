@@ -12,6 +12,11 @@ object PulsarUuids {
     val SERVICE: UUID       = UUID.fromString("0000ff00-0000-1000-8000-00805f9b34fb")
     val CHAR_COMMAND: UUID  = UUID.fromString("0000ff01-0000-1000-8000-00805f9b34fb")
     val CHAR_STATUS: UUID   = UUID.fromString("0000ff02-0000-1000-8000-00805f9b34fb")
+
+    // OTA service
+    val OTA_SERVICE: UUID   = UUID.fromString("0000ff10-0000-1000-8000-00805f9b34fb")
+    val OTA_CONTROL: UUID   = UUID.fromString("0000ff11-0000-1000-8000-00805f9b34fb")
+    val OTA_DATA: UUID      = UUID.fromString("0000ff12-0000-1000-8000-00805f9b34fb")
 }
 
 /** Command IDs */
@@ -50,6 +55,28 @@ enum class DeviceState(val id: Byte) {
     }
 }
 
+/** OTA control commands sent to firmware */
+object OtaCmd {
+    const val BEGIN: Byte = 0x01
+    const val END: Byte   = 0x02
+    const val ABORT: Byte = 0x03
+}
+
+/** OTA status codes received from firmware */
+enum class OtaStatus(val id: Byte) {
+    OK(0x00),
+    ERR_BEGIN(0x01),
+    ERR_WRITE(0x02),
+    ERR_VALIDATE(0x03),
+    ERR_SIZE(0x04),
+    READY(0x10),
+    COMPLETE(0x11);
+
+    companion object {
+        fun fromByte(b: Byte) = entries.firstOrNull { it.id == b } ?: OK
+    }
+}
+
 /** Parsed status frame from the firmware */
 data class StatusFrame(
     val state: DeviceState,
@@ -58,10 +85,14 @@ data class StatusFrame(
     val timeRemainingMs: Long,
     val batteryPct: Int,
     val errorCode: Int,
+    val fwVersion: String = "",
 ) {
     companion object {
         fun parse(data: ByteArray): StatusFrame? {
             if (data.size < 10) return null
+            val fwVer = if (data.size >= 13) {
+                "${data[10].toInt() and 0xFF}.${data[11].toInt() and 0xFF}.${data[12].toInt() and 0xFF}"
+            } else ""
             return StatusFrame(
                 state = DeviceState.fromByte(data[0]),
                 mode = data[1],
@@ -69,6 +100,7 @@ data class StatusFrame(
                 timeRemainingMs = data.readU32LE(4),
                 batteryPct = data[8].toInt() and 0xFF,
                 errorCode = data[9].toInt() and 0xFF,
+                fwVersion = fwVer,
             )
         }
     }

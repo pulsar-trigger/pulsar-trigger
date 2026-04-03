@@ -9,6 +9,7 @@
 #include "triggers.h"
 #include "status.h"
 #include "camera.h"
+#include "ota.h"
 
 #include <BLEDevice.h>
 #include <BLEServer.h>
@@ -20,8 +21,10 @@
 
 static Preferences _prefs;
 static char _deviceName[7 + BLE_NAME_SUFFIX_MAX + 1]; // "Pulsar-" + suffix + NUL
-static BLECharacteristic* _cmdChar   = nullptr;
-static BLECharacteristic* _statusChar = nullptr;
+static BLECharacteristic* _cmdChar     = nullptr;
+static BLECharacteristic* _statusChar  = nullptr;
+static BLECharacteristic* _otaCtrlChar = nullptr;
+static BLECharacteristic* _otaDataChar = nullptr;
 static bool _connected = false;
 static volatile bool _pendingReinit = false;
 static bool _advConfigured = false;
@@ -168,9 +171,31 @@ class CmdCharCB : public BLECharacteristicCallbacks {
     }
 };
 
+// ── OTA characteristic callbacks ─────────────────────────────────────────────
+class OtaCtrlCB : public BLECharacteristicCallbacks {
+    void onWrite(BLECharacteristic* c) override {
+        ota_handle_control(c->getData(), c->getLength());
+    }
+};
+
+class OtaDataCB : public BLECharacteristicCallbacks {
+    void onWrite(BLECharacteristic* c) override {
+        ota_handle_data(c->getData(), c->getLength());
+    }
+};
+
+// ── Public: OTA notify (called from ota.cpp) ─────────────────────────────────
+void ble_ota_notify(const uint8_t* data, size_t len) {
+    if (_otaCtrlChar && _connected) {
+        _otaCtrlChar->setValue(const_cast<uint8_t*>(data), len);
+        _otaCtrlChar->notify();
+    }
+}
+
 // ── Public API ───────────────────────────────────────────────────────────────
 void ble_init() {
     load_device_name();
+    ota_init();
 
     // Load saved GPIO pins and apply them
     _prefs.begin("pulsar", true);
@@ -213,6 +238,29 @@ void ble_init() {
 
     svc->start();
 
+    // ── OTA service (separate service UUID) ──────────────────────────────
+    BLEService* otaSvc = server->createService(OTA_SERVICE_UUID);
+
+    // OTA control characteristic (write + notify for status feedback)
+    _otaCtrlChar = otaSvc->createCharacteristic(
+        OTA_CONTROL_UUID,
+        BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY
+    );
+    _otaCtrlChar->setAccessPermissions(ESP_GATT_PERM_WRITE_ENCRYPTED);
+    _otaCtrlChar->setCallbacks(new OtaCtrlCB());
+    _otaCtrlChar->addDescriptor(new BLE2902());
+
+    // OTA data characteristic (write-no-response for fast bulk transfer)
+    _otaDataChar = otaSvc->createCharacteristic(
+        OTA_DATA_UUID,
+        BLECharacteristic::PROPERTY_WRITE_NR
+    );
+    _otaDataChar->setAccessPermissions(ESP_GATT_PERM_WRITE_ENCRYPTED);
+    _otaDataChar->setCallbacks(new OtaDataCB());
+
+    otaSvc->start();
+
+    // ── Advertising ──────────────────────────────────────────────────────
     BLEAdvertising* adv = BLEDevice::getAdvertising();
     if (!_advConfigured) {
         adv->addServiceUUID(SERVICE_UUID);

@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,6 +30,7 @@ import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 fun MainMenuScreen(
     vm: PulsarViewModel,
     onModeSelected: (TriggerMode) -> Unit,
+    onModeSettingsSelected: (TriggerMode) -> Unit,
     onSettingsSelected: () -> Unit,
 ) {
     val status by vm.status.collectAsState()
@@ -98,18 +100,21 @@ fun MainMenuScreen(
                 description = "Automate timelapse sequences with precision timing",
                 icon = Icons.Default.Timer,
                 onClick = { onModeSelected(TriggerMode.INTERVALOMETER) },
+                onGearClick = { onModeSettingsSelected(TriggerMode.INTERVALOMETER) },
             )
             MenuCard(
                 title = "Astro",
                 description = "Star photography with calculated exposure times",
                 icon = Icons.Default.Stars,
                 onClick = { onModeSelected(TriggerMode.ASTRO) },
+                onGearClick = { onModeSettingsSelected(TriggerMode.ASTRO) },
             )
             MenuCard(
                 title = "Manual",
                 description = "Direct shutter control — hold or lock mode",
                 icon = Icons.Default.TouchApp,
                 onClick = { onModeSelected(TriggerMode.PRESS_HOLD) },
+                onGearClick = { onModeSettingsSelected(TriggerMode.PRESS_HOLD) },
             )
         }
 
@@ -137,6 +142,7 @@ private fun MenuCard(
     description: String,
     icon: ImageVector,
     onClick: () -> Unit,
+    onGearClick: (() -> Unit)? = null,
 ) {
     Surface(
         onClick = onClick,
@@ -169,12 +175,26 @@ private fun MenuCard(
                 )
             }
             Spacer(Modifier.width(8.dp))
-            Icon(
-                Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
-            )
+            if (onGearClick != null) {
+                IconButton(
+                    onClick = onGearClick,
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        Icons.Default.Tune,
+                        contentDescription = "Settings",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            } else {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
         }
     }
 }

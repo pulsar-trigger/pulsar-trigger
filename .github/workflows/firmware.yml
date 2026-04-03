@@ -1,0 +1,63 @@
+name: Firmware Build
+
+on:
+  push:
+    paths:
+      - 'firmware/**'
+    branches: [master]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 4 * * 1'   # weekly Monday 04:00 UTC
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Extract firmware version
+        id: version
+        run: |
+          MAJOR=$(grep -oP 'FW_VERSION_MAJOR=\K\d+' firmware/platformio.ini)
+          MINOR=$(grep -oP 'FW_VERSION_MINOR=\K\d+' firmware/platformio.ini)
+          PATCH=$(grep -oP 'FW_VERSION_PATCH=\K\d+' firmware/platformio.ini)
+          VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Building firmware $VERSION"
+
+      - name: Build firmware
+        run: cd firmware && pio run
+
+      - name: Rename artifact
+        run: |
+          cp firmware/.pio/build/esp32/firmware.bin \
+             firmware/.pio/build/esp32/pulsar-firmware-${{ steps.version.outputs.version }}.bin
+
+      - name: Create or update release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: firmware-${{ steps.version.outputs.version }}
+          name: "Firmware ${{ steps.version.outputs.version }}"
+          body: |
+            Automated firmware build for Pulsar Trigger.
+
+            **Version:** ${{ steps.version.outputs.version }}
+            **Commit:** ${{ github.sha }}
+
+            Flash via the Android app (Settings → Firmware Update) or manually with PlatformIO.
+          files: |
+            firmware/.pio/build/esp32/pulsar-firmware-${{ steps.version.outputs.version }}.bin
+          draft: false
+          prerelease: false
+          make_latest: true

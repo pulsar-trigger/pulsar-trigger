@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -132,7 +133,7 @@ private fun ManualPanelPreview() {
 
 // ── Settings Preview ────────────────────────────────────────────────────────
 
-@Preview(showBackground = true, widthDp = 380, heightDp = 600, name = "Settings")
+@Preview(showBackground = true, widthDp = 380, heightDp = 700, name = "Settings")
 @Composable
 fun SettingsPanelPreview() {
     MaterialTheme(colorScheme = DarkColorScheme) {
@@ -143,6 +144,7 @@ fun SettingsPanelPreview() {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            // ── DEVICE ──
             Text("DEVICE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
 
             Surface(
@@ -176,6 +178,46 @@ fun SettingsPanelPreview() {
 
             Spacer(Modifier.height(8.dp))
 
+            // ── GPIO PINS ──
+            Text("GPIO PINS", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                tonalElevation = 2.dp,
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Shutter Pin", style = MaterialTheme.typography.titleSmall)
+                    Surface(shape = RoundedCornerShape(8.dp), tonalElevation = 4.dp) {
+                        Text("GPIO 32", modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Text("Focus Pin", style = MaterialTheme.typography.titleSmall)
+                    Surface(shape = RoundedCornerShape(8.dp), tonalElevation = 4.dp) {
+                        Text("GPIO 33", modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // ── BACKUP & RESTORE ──
+            Text("BACKUP & RESTORE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                tonalElevation = 2.dp,
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    OutlinedButton(onClick = {}, modifier = Modifier.weight(1f)) { Text("Export") }
+                    OutlinedButton(onClick = {}, modifier = Modifier.weight(1f)) { Text("Import") }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // ── ABOUT ──
             Text("ABOUT", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
 
             Surface(
@@ -394,6 +436,13 @@ fun MainMenuPreview() {
                             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
+                        IconButton(onClick = {}) {
+                            Icon(
+                                Icons.Default.Tune,
+                                contentDescription = "Mode settings",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             }
@@ -423,6 +472,133 @@ fun MainMenuPreview() {
             Spacer(Modifier.height(12.dp))
 
             TextButton(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text("Disconnect") }
+        }
+    }
+}
+
+// ── Intervalometer Settings Preview ─────────────────────────────────────────
+
+@Preview(showBackground = true, widthDp = 380, heightDp = 700, name = "Intervalometer Settings")
+@Composable
+fun IntervalometerSettingsPreview() {
+    MaterialTheme(colorScheme = DarkColorScheme) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text("DEFAULT VALUES", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+
+            Surface(shape = RoundedCornerShape(12.dp), tonalElevation = 2.dp) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text("Default Interval (gap)", style = MaterialTheme.typography.titleSmall)
+                    Surface(shape = RoundedCornerShape(8.dp), tonalElevation = 4.dp) {
+                        Text("5s", modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Text("Default Exposure", style = MaterialTheme.typography.titleSmall)
+                    Surface(shape = RoundedCornerShape(8.dp), tonalElevation = 4.dp) {
+                        Text("1/125", modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Text("Default Start Delay", style = MaterialTheme.typography.titleSmall)
+                    Surface(shape = RoundedCornerShape(8.dp), tonalElevation = 4.dp) {
+                        Text("0s", modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Text("Default Shot Count", style = MaterialTheme.typography.titleSmall)
+                    Surface(shape = RoundedCornerShape(8.dp), tonalElevation = 4.dp) {
+                        Text("100", modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Text("Max Shot Count", style = MaterialTheme.typography.titleSmall)
+                    Surface(shape = RoundedCornerShape(8.dp), tonalElevation = 4.dp) {
+                        Text("999", modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+
+            OutlinedButton(onClick = {}, modifier = Modifier.fillMaxWidth()) {
+                Text("Reset to Factory Defaults")
+            }
+        }
+    }
+}
+
+// ── Astro Settings Preview ──────────────────────────────────────────────────
+
+@Preview(showBackground = true, widthDp = 380, heightDp = 600, name = "Astro Settings")
+@Composable
+fun AstroSettingsPreview() {
+    MaterialTheme(colorScheme = DarkColorScheme) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text(
+                "Astro mode calculates optimal exposure time based on your optics to avoid star trails.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Text("OPTICS", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+
+            Surface(shape = RoundedCornerShape(12.dp), tonalElevation = 2.dp) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Focal Length", style = MaterialTheme.typography.titleSmall)
+                    Surface(shape = RoundedCornerShape(8.dp), tonalElevation = 4.dp) {
+                        Text("24mm", modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Text("Crop Factor", style = MaterialTheme.typography.titleSmall)
+                    Surface(shape = RoundedCornerShape(8.dp), tonalElevation = 4.dp) {
+                        Text("1.5×", modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Text("Shot Count", style = MaterialTheme.typography.titleSmall)
+                    Surface(shape = RoundedCornerShape(8.dp), tonalElevation = 4.dp) {
+                        Text("50", modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── Manual Settings Preview ─────────────────────────────────────────────────
+
+@Preview(showBackground = true, widthDp = 380, heightDp = 400, name = "Manual Settings")
+@Composable
+fun ManualSettingsPreview() {
+    MaterialTheme(colorScheme = DarkColorScheme) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text(
+                "Manual mode gives you direct shutter control. Use Hold to keep the shutter open while pressing, or Lock to toggle.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Text("MODE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+
+            Surface(shape = RoundedCornerShape(12.dp), tonalElevation = 2.dp) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.TouchApp, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Text("Hold / Lock", style = MaterialTheme.typography.titleSmall)
+                    }
+                    Text(
+                        "Press and hold to keep shutter open, or tap to lock/unlock.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
     }
 }

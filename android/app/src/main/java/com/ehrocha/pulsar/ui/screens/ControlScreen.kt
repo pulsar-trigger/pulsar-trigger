@@ -17,7 +17,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,6 +33,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.ble.TriggerMode
+import com.ehrocha.pulsar.ble.OtaState
+import com.ehrocha.pulsar.update.AppUpdateState
+import com.ehrocha.pulsar.BuildConfig
 import com.ehrocha.pulsar.ui.components.TimePicker
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel.Companion.SAFE_OUTPUT_PINS
@@ -744,11 +749,6 @@ internal fun SettingsPanel(
     var showRenameDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
-    val defInterval by vm.defaultIntervalMs.collectAsState()
-    val defExposure by vm.defaultExposureMs.collectAsState()
-    val defCount by vm.defaultShotCount.collectAsState()
-    val defDelay by vm.defaultDelayMs.collectAsState()
-    val maxShots by vm.maxShotCount.collectAsState()
     val shutterPin by vm.pinShutter.collectAsState()
     val focusPin by vm.pinFocus.collectAsState()
 
@@ -854,99 +854,6 @@ internal fun SettingsPanel(
 
         Spacer(Modifier.height(8.dp))
 
-        Text("INTERVALOMETER DEFAULTS", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            tonalElevation = 2.dp,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Text(
-                    "Set default values for the Intervalometer. These are applied when the app starts.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-
-                TimePicker(
-                    totalMs = defInterval,
-                    onChanged = { vm.saveIntervalometerDefaults(it.coerceAtLeast(500), defExposure, defCount, defDelay) },
-                    label = "Default Interval (gap)",
-                )
-
-                TimePicker(
-                    totalMs = defExposure,
-                    onChanged = { vm.saveIntervalometerDefaults(defInterval, it.coerceAtLeast(50), defCount, defDelay) },
-                    label = "Default Exposure",
-                )
-
-                TimePicker(
-                    totalMs = defDelay,
-                    onChanged = { vm.saveIntervalometerDefaults(defInterval, defExposure, defCount, it) },
-                    label = "Default Start Delay",
-                )
-
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            "Default Shot Count",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Text(
-                            "$defCount",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                    Slider(
-                        value = defCount.toFloat(),
-                        onValueChange = { vm.saveIntervalometerDefaults(defInterval, defExposure, it.toInt().coerceAtLeast(1), defDelay) },
-                        valueRange = 1f..maxShots.toFloat(),
-                    )
-                }
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            "Max Shot Count (slider limit)",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Text(
-                            "$maxShots",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                    Slider(
-                        value = maxShots.toFloat(),
-                        onValueChange = { vm.saveMaxShotCount(it.toInt()) },
-                        valueRange = 10f..9999f,
-                    )
-                }
-
-                OutlinedButton(
-                    onClick = { vm.resetIntervalometerDefaults() },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Text("Reset to Factory Defaults")
-                }
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-
         Text("BACKUP & RESTORE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
 
         Surface(
@@ -988,6 +895,14 @@ internal fun SettingsPanel(
                 }
             }
         }
+
+        Spacer(Modifier.height(8.dp))
+
+        FirmwareUpdateSection(vm = vm, connected = connected)
+
+        Spacer(Modifier.height(8.dp))
+
+        AppUpdateSection(vm = vm)
 
         Spacer(Modifier.height(8.dp))
 
@@ -1077,6 +992,291 @@ private fun RenameDeviceDialog(
     )
 }
 
+@Composable
+private fun FirmwareUpdateSection(vm: PulsarViewModel, connected: Boolean) {
+    val fwManager = vm.firmwareManager
+    val otaState by fwManager.state.collectAsState()
+    val progress by fwManager.progress.collectAsState()
+    val latestRelease by fwManager.latestRelease.collectAsState()
+    val errorMessage by fwManager.errorMessage.collectAsState()
+    val status by vm.status.collectAsState()
+    val currentVersion = status?.fwVersion ?: ""
+
+    Text("FIRMWARE UPDATE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            if (currentVersion.isNotEmpty()) {
+                Text(
+                    "Current: v$currentVersion",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+
+            when (otaState) {
+                OtaState.IDLE -> {
+                    OutlinedButton(
+                        onClick = { fwManager.checkForUpdate(currentVersion) },
+                        enabled = connected,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Icon(Icons.Default.SystemUpdate, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Check for Update")
+                    }
+                }
+
+                OtaState.CHECKING -> {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(12.dp))
+                        Text("Checking GitHub…", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+
+                OtaState.AVAILABLE -> {
+                    latestRelease?.let { release ->
+                        Text(
+                            "New version available: v${release.version}",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        if (release.body.isNotBlank()) {
+                            Text(
+                                release.body.take(200),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Button(
+                            onClick = { fwManager.startUpdate() },
+                            enabled = connected,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                        ) {
+                            Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Install Update")
+                        }
+                    }
+                }
+
+                OtaState.DOWNLOADING -> {
+                    Text("Downloading firmware…", style = MaterialTheme.typography.bodyMedium)
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        "${(progress * 100).toInt()}%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedButton(
+                        onClick = { fwManager.cancel() },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                    ) { Text("Cancel") }
+                }
+
+                OtaState.UPLOADING -> {
+                    Text("Uploading to device…", style = MaterialTheme.typography.bodyMedium)
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        "${(progress * 100).toInt()}%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedButton(
+                        onClick = { fwManager.cancel() },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                    ) { Text("Cancel") }
+                }
+
+                OtaState.VALIDATING -> {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(12.dp))
+                        Text("Validating & rebooting…", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+
+                OtaState.COMPLETE -> {
+                    Text(
+                        "Update complete! Device is rebooting.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    OutlinedButton(
+                        onClick = { fwManager.reset() },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                    ) { Text("Done") }
+                }
+
+                OtaState.ERROR -> {
+                    Text(
+                        errorMessage ?: "Update failed",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    OutlinedButton(
+                        onClick = { fwManager.reset() },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                    ) { Text("Dismiss") }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppUpdateSection(vm: PulsarViewModel) {
+    val updateManager = vm.appUpdateManager
+    val updateState by updateManager.state.collectAsState()
+    val progress by updateManager.progress.collectAsState()
+    val latestRelease by updateManager.latestRelease.collectAsState()
+    val errorMessage by updateManager.errorMessage.collectAsState()
+    val currentVersion = BuildConfig.VERSION_NAME
+
+    Text("APP UPDATE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                "Current: v$currentVersion",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+
+            when (updateState) {
+                AppUpdateState.IDLE -> {
+                    OutlinedButton(
+                        onClick = { updateManager.checkForUpdate(currentVersion) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Icon(Icons.Default.SystemUpdate, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Check for App Update")
+                    }
+                }
+
+                AppUpdateState.CHECKING -> {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(12.dp))
+                        Text("Checking GitHub…", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+
+                AppUpdateState.UP_TO_DATE -> {
+                    Text(
+                        "You're up to date!",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    OutlinedButton(
+                        onClick = { updateManager.reset() },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                    ) { Text("OK") }
+                }
+
+                AppUpdateState.AVAILABLE -> {
+                    latestRelease?.let { release ->
+                        Text(
+                            "New version available: v${release.version}",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        if (release.body.isNotBlank()) {
+                            Text(
+                                release.body.take(200),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Button(
+                            onClick = { updateManager.downloadAndInstall() },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                        ) {
+                            Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Download & Install")
+                        }
+                    }
+                }
+
+                AppUpdateState.DOWNLOADING -> {
+                    Text("Downloading APK…", style = MaterialTheme.typography.bodyMedium)
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        "${(progress * 100).toInt()}%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedButton(
+                        onClick = { updateManager.cancel() },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                    ) { Text("Cancel") }
+                }
+
+                AppUpdateState.READY_TO_INSTALL -> {
+                    Text(
+                        "Download complete — the installer should open automatically.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    OutlinedButton(
+                        onClick = { updateManager.reset() },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                    ) { Text("Done") }
+                }
+
+                AppUpdateState.ERROR -> {
+                    Text(
+                        errorMessage ?: "Update check failed",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                    OutlinedButton(
+                        onClick = { updateManager.reset() },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                    ) { Text("Dismiss") }
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GpioPinSelector(
@@ -1130,5 +1330,137 @@ private fun GpioPinSelector(
                 }
             }
         }
+    }
+}
+
+// ── Per-mode settings panels (accessed via gear icon on main menu) ───────────
+
+@Composable
+internal fun IntervalometerSettingsPanel(vm: PulsarViewModel, connected: Boolean) {
+    val defInterval by vm.defaultIntervalMs.collectAsState()
+    val defExposure by vm.defaultExposureMs.collectAsState()
+    val defCount by vm.defaultShotCount.collectAsState()
+    val defDelay by vm.defaultDelayMs.collectAsState()
+    val maxShots by vm.maxShotCount.collectAsState()
+
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text("DEFAULT VALUES", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = 2.dp,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Text(
+                    "Set default values for the Intervalometer. These are applied when the app starts.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                TimePicker(
+                    totalMs = defInterval,
+                    onChanged = { vm.saveIntervalometerDefaults(it.coerceAtLeast(500), defExposure, defCount, defDelay) },
+                    label = "Default Interval (gap)",
+                )
+
+                TimePicker(
+                    totalMs = defExposure,
+                    onChanged = { vm.saveIntervalometerDefaults(defInterval, it.coerceAtLeast(50), defCount, defDelay) },
+                    label = "Default Exposure",
+                )
+
+                TimePicker(
+                    totalMs = defDelay,
+                    onChanged = { vm.saveIntervalometerDefaults(defInterval, defExposure, defCount, it) },
+                    label = "Default Start Delay",
+                )
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "Default Shot Count",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            "$defCount",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                    Slider(
+                        value = defCount.toFloat(),
+                        onValueChange = { vm.saveIntervalometerDefaults(defInterval, defExposure, it.toInt().coerceAtLeast(1), defDelay) },
+                        valueRange = 1f..maxShots.toFloat(),
+                    )
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "Max Shot Count (slider limit)",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            "$maxShots",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                    Slider(
+                        value = maxShots.toFloat(),
+                        onValueChange = { vm.saveMaxShotCount(it.toInt()) },
+                        valueRange = 10f..9999f,
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = { vm.resetIntervalometerDefaults() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Text("Reset to Factory Defaults")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun AstroSettingsPanel(vm: PulsarViewModel, connected: Boolean) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text(
+            "Astro mode calculates exposure times from your optics. " +
+            "Configure lens and sensor defaults here, or adjust them in the mode screen.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        AstroPanel(vm, enabled = true)
+    }
+}
+
+@Composable
+internal fun ManualSettingsPanel(vm: PulsarViewModel, connected: Boolean) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text(
+            "Manual mode lets you control the shutter directly. " +
+            "Choose between Hold (press and hold) or Lock (toggle on/off) in the mode screen.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        ManualPanel(vm)
     }
 }

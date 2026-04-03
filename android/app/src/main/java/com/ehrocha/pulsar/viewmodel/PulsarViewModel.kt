@@ -50,6 +50,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     private val bleManager = PulsarBleManager(app)
 
+    // ── Firmware OTA ─────────────────────────────────────────────────
+    val firmwareManager = FirmwareUpdateManager(bleManager, viewModelScope)
+
+    // ── App self-update ──────────────────────────────────────────────
+    val appUpdateManager = com.ehrocha.pulsar.update.AppUpdateManager(app, viewModelScope)
+
     // ── Scan state ───────────────────────────────────────────────────────
     private val _scanning = MutableStateFlow(false)
     val scanning: StateFlow<Boolean> = _scanning

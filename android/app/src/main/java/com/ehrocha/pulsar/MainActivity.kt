@@ -22,6 +22,7 @@ import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.ui.screens.MainMenuScreen
 import com.ehrocha.pulsar.ui.screens.ModeScreen
+import com.ehrocha.pulsar.ui.screens.ModeSettingsScreen
 import com.ehrocha.pulsar.ui.screens.ScanScreen
 import com.ehrocha.pulsar.ui.screens.SettingsScreen
 import com.ehrocha.pulsar.ui.theme.DarkColorScheme
@@ -98,6 +99,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
         AppScreen.Menu -> MainMenuScreen(
             vm = vm,
             onModeSelected = { currentScreen = AppScreen.Mode(it) },
+            onModeSettingsSelected = { currentScreen = AppScreen.ModeSettings(it) },
             onSettingsSelected = { currentScreen = AppScreen.Settings },
         )
         is AppScreen.Mode -> {
@@ -115,6 +117,14 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                 onBack = { currentScreen = AppScreen.Menu },
             )
         }
+        is AppScreen.ModeSettings -> {
+            BackHandler { currentScreen = AppScreen.Menu }
+            ModeSettingsScreen(
+                vm = vm,
+                targetMode = screen.mode,
+                onBack = { currentScreen = AppScreen.Menu },
+            )
+        }
     }
 }
 
@@ -122,5 +132,6 @@ private sealed class AppScreen {
     data object Scan : AppScreen()
     data object Menu : AppScreen()
     data class Mode(val mode: TriggerMode) : AppScreen()
+    data class ModeSettings(val mode: TriggerMode) : AppScreen()
     data object Settings : AppScreen()
 }

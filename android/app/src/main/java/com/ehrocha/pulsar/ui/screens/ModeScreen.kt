@@ -231,6 +231,86 @@ fun SettingsScreen(
 }
 
 @Composable
+fun ModeSettingsScreen(
+    vm: PulsarViewModel,
+    targetMode: TriggerMode,
+    onBack: () -> Unit,
+) {
+    val connected by vm.connected.collectAsState()
+    val status by vm.status.collectAsState()
+
+    val title = when (targetMode) {
+        TriggerMode.INTERVALOMETER -> "Intervalometer Settings"
+        TriggerMode.ASTRO -> "Astro Settings"
+        TriggerMode.PRESS_HOLD -> "Manual Settings"
+        else -> "${targetMode.name.replace('_', ' ')} Settings"
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            }
+            Spacer(Modifier.width(4.dp))
+            Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.weight(1f))
+            if (status != null) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Text(
+                            text = "${status!!.batteryPct}%",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = if (status!!.batteryPct < 20) Color(0xFFFF1744)
+                                    else MaterialTheme.colorScheme.onSurface,
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        val battIcon = when {
+                            status!!.batteryPct > 75 -> "󰁹"
+                            status!!.batteryPct > 25 -> "󰁾"
+                            else -> "󰁺"
+                        }
+                        Text(text = battIcon, fontSize = 16.sp)
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            tonalElevation = 1.dp,
+            modifier = Modifier.weight(1f),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+            ) {
+                when (targetMode) {
+                    TriggerMode.INTERVALOMETER -> IntervalometerSettingsPanel(vm, connected)
+                    TriggerMode.ASTRO -> AstroSettingsPanel(vm, connected)
+                    TriggerMode.PRESS_HOLD -> ManualSettingsPanel(vm, connected)
+                    else -> {}
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun RunningStatusContent(
     status: StatusFrame,
     totalShots: Int,
