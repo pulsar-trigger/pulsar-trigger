@@ -22,12 +22,16 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.ehrocha.pulsar.ble.*
+import com.ehrocha.pulsar.model.FlowStep
+import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.service.PulsarNotificationService
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlin.coroutines.coroutineContext
 
 class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -41,6 +45,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         private const val KEY_INTV_MAX_SHOTS = "intv_max_shots"
         private const val KEY_PIN_SHUTTER = "pin_shutter"
         private const val KEY_PIN_FOCUS = "pin_focus"
+        private const val KEY_FLOW_STEPS = "flow_steps"
         const val DEFAULT_PIN_SHUTTER = 25
         const val DEFAULT_PIN_FOCUS = 26
         val SAFE_OUTPUT_PINS = listOf(4, 13, 14, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27)
@@ -118,6 +123,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val pinShutter = MutableStateFlow(DEFAULT_PIN_SHUTTER)
     val pinFocus = MutableStateFlow(DEFAULT_PIN_FOCUS)
 
+    // ── Custom Flow ──────────────────────────────────────────────────────
+    val flowSteps = MutableStateFlow<List<FlowStep>>(emptyList())
+    val flowRunning = MutableStateFlow(false)
+    val flowPaused = MutableStateFlow(false)
+    val flowCurrentStep = MutableStateFlow(-1)
+    private var flowJob: Job? = null
+
     // ── BLE Scan ─────────────────────────────────────────────────────────
     private val btManager = app.getSystemService(BluetoothManager::class.java)
     private val scanner = btManager?.adapter?.bluetoothLeScanner
@@ -151,6 +163,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         maxShotCount.value = prefs.getInt(KEY_INTV_MAX_SHOTS, 999)
         pinShutter.value = prefs.getInt(KEY_PIN_SHUTTER, DEFAULT_PIN_SHUTTER)
         pinFocus.value = prefs.getInt(KEY_PIN_FOCUS, DEFAULT_PIN_FOCUS)
+        // Load custom flow steps
+        flowSteps.value = try {
+            FlowStep.deserializeList(prefs.getString(KEY_FLOW_STEPS, "") ?: "")
+        } catch (_: Exception) { emptyList() }
         // Apply defaults as initial working values
         intervalMs.value = defaultIntervalMs.value
         exposureMs.value = defaultExposureMs.value
@@ -272,6 +288,140 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         bleManager.sendCommand(CommandBuilder.setPins(pinShutter.value, pinFocus.value))
     }
 
+    // ── Custom Flow management ───────────────────────────────────────────
+
+    fun saveFlowSteps(steps: List<FlowStep>) {
+        flowSteps.value = steps
+        prefs.edit().putString(KEY_FLOW_STEPS, FlowStep.serializeList(steps)).apply()
+    }
+
+    fun startFlow() {
+        val steps = flowSteps.value
+        if (steps.isEmpty()) return
+        flowJob?.cancel()
+        flowRunning.value = true
+        flowPaused.value = false
+        flowCurrentStep.value = 0
+        flowJob = viewModelScope.launch {
+            try {
+                for (i in steps.indices) {
+                    flowCurrentStep.value = i
+                    executeFlowStep(steps[i])
+                }
+                // All steps complete
+            } finally {
+                flowRunning.value = false
+                flowPaused.value = false
+                flowCurrentStep.value = -1
+            }
+        }
+    }
+
+    fun continueFlow() {
+        flowPaused.value = false
+    }
+
+    fun stopFlow() {
+        flowJob?.cancel()
+        flowJob = null
+        // Stop the device if it's running
+        if (!_simulatorActive.value) {
+            bleManager.sendCommand(CommandBuilder.stop())
+        }
+        flowRunning.value = false
+        flowPaused.value = false
+        flowCurrentStep.value = -1
+        dismissNotification()
+    }
+
+    private suspend fun executeFlowStep(step: FlowStep) {
+        when (step.type) {
+            FlowStepType.PAUSE -> {
+                flowPaused.value = true
+                // Wait until user taps Continue
+                while (flowPaused.value) {
+                    coroutineContext.ensureActive()
+                    delay(100)
+                }
+            }
+            FlowStepType.INTERVALOMETER -> {
+                sendModeCommand(
+                    CommandBuilder.setIntervalometer(
+                        step.intervalMs, step.exposureMs, step.shotCount, step.delayMs,
+                    )
+                )
+                waitForCompletion(step.shotCount)
+            }
+            FlowStepType.ASTRO -> {
+                val expS = step.ruleDivisor.toDouble() / (step.focalLength * step.cropFactor)
+                val expMs = (expS * 1000).toLong().coerceAtLeast(100)
+                sendModeCommand(
+                    CommandBuilder.setAstro(step.gapMs, expMs, step.shotCount, step.delayMs)
+                )
+                waitForCompletion(step.shotCount)
+            }
+            FlowStepType.SOUND -> {
+                sendModeCommand(
+                    CommandBuilder.setSound(step.soundThreshold, step.exposureMs)
+                )
+                waitForShotCount(step.shotCount)
+            }
+            FlowStepType.LIGHTNING -> {
+                sendModeCommand(
+                    CommandBuilder.setLightning(step.lightningSensitivity, step.exposureMs)
+                )
+                waitForShotCount(step.shotCount)
+            }
+            FlowStepType.LASER -> {
+                sendModeCommand(CommandBuilder.setLaser(step.exposureMs))
+                waitForShotCount(step.shotCount)
+            }
+            FlowStepType.HDR -> {
+                sendModeCommand(CommandBuilder.setHdr(step.hdrExposures))
+                waitForCompletion(step.hdrExposures.size)
+            }
+        }
+    }
+
+    private fun sendModeCommand(packet: ByteArray) {
+        bleManager.sendCommand(packet)
+        bleManager.sendCommand(CommandBuilder.start())
+    }
+
+    /** Wait for firmware to go back to IDLE (modes with built-in completion). */
+    private suspend fun waitForCompletion(expectedShots: Int) {
+        // Wait until we see RUNNING first
+        var sawRunning = false
+        while (true) {
+            coroutineContext.ensureActive()
+            val s = _status.value
+            if (s != null) {
+                if (s.state == DeviceState.RUNNING || s.state == DeviceState.WAITING) {
+                    sawRunning = true
+                }
+                if (sawRunning && s.state == DeviceState.IDLE) break
+            }
+            delay(200)
+        }
+    }
+
+    /** Wait for reactive modes (sound/lightning/laser) to reach N shots, then stop. */
+    private suspend fun waitForShotCount(targetCount: Int) {
+        while (true) {
+            coroutineContext.ensureActive()
+            val s = _status.value
+            if (s != null && s.shotsTaken >= targetCount) {
+                bleManager.sendCommand(CommandBuilder.stop())
+                // Wait for IDLE
+                while (_status.value?.state != DeviceState.IDLE) {
+                    delay(100)
+                }
+                break
+            }
+            delay(200)
+        }
+    }
+
     /** Serialize all persisted settings to JSON for export. */
     fun exportSettingsJson(): String {
         val json = org.json.JSONObject()
@@ -325,6 +475,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             TriggerMode.HDR -> CommandBuilder.setHdr(listOf(100, 200, 400, 800, 1600))
             TriggerMode.PRESS_HOLD -> CommandBuilder.setPressHold()
             TriggerMode.PRESS_LOCK -> CommandBuilder.setPressLock()
+            TriggerMode.CUSTOM_FLOW -> return  // app-orchestrated, no single command
         }
         bleManager.sendCommand(packet)
     }
@@ -521,6 +672,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         super.onCleared()
         stopScan()
         simulatorJob?.cancel()
+        flowJob?.cancel()
         dismissNotification()
         try {
             getApplication<Application>().unregisterReceiver(cancelReceiver)

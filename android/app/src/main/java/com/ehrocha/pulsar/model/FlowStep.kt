@@ -1,0 +1,117 @@
+/*
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Pulsar Trigger contributors
+ */
+
+package com.ehrocha.pulsar.model
+
+import org.json.JSONArray
+import org.json.JSONObject
+import java.util.UUID
+
+enum class FlowStepType {
+    INTERVALOMETER,
+    ASTRO,
+    SOUND,
+    LIGHTNING,
+    LASER,
+    HDR,
+    PAUSE,
+}
+
+data class FlowStep(
+    val id: String = UUID.randomUUID().toString(),
+    val type: FlowStepType = FlowStepType.PAUSE,
+    // Intervalometer / Astro shared params
+    val intervalMs: Long = 5000,
+    val exposureMs: Long = 200,
+    val shotCount: Int = 10,
+    val delayMs: Long = 0,
+    // Astro-specific
+    val focalLength: Int = 24,
+    val cropFactor: Float = 1.0f,
+    val ruleDivisor: Int = 500,
+    val gapMs: Long = 2000,
+    // Sound
+    val soundThreshold: Int = 512,
+    // Lightning
+    val lightningSensitivity: Int = 3,
+    // HDR
+    val hdrExposures: List<Long> = listOf(100, 200, 400, 800, 1600),
+    // Pause
+    val pauseLabel: String = "Adjust camera settings",
+) {
+    fun toJson(): JSONObject = JSONObject().apply {
+        put("id", id)
+        put("type", type.name)
+        put("intervalMs", intervalMs)
+        put("exposureMs", exposureMs)
+        put("shotCount", shotCount)
+        put("delayMs", delayMs)
+        put("focalLength", focalLength)
+        put("cropFactor", cropFactor.toDouble())
+        put("ruleDivisor", ruleDivisor)
+        put("gapMs", gapMs)
+        put("soundThreshold", soundThreshold)
+        put("lightningSensitivity", lightningSensitivity)
+        put("hdrExposures", JSONArray(hdrExposures))
+        put("pauseLabel", pauseLabel)
+    }
+
+    companion object {
+        fun fromJson(json: JSONObject): FlowStep = FlowStep(
+            id = json.optString("id", UUID.randomUUID().toString()),
+            type = FlowStepType.valueOf(json.getString("type")),
+            intervalMs = json.optLong("intervalMs", 5000),
+            exposureMs = json.optLong("exposureMs", 200),
+            shotCount = json.optInt("shotCount", 10),
+            delayMs = json.optLong("delayMs", 0),
+            focalLength = json.optInt("focalLength", 24),
+            cropFactor = json.optDouble("cropFactor", 1.0).toFloat(),
+            ruleDivisor = json.optInt("ruleDivisor", 500),
+            gapMs = json.optLong("gapMs", 2000),
+            soundThreshold = json.optInt("soundThreshold", 512),
+            lightningSensitivity = json.optInt("lightningSensitivity", 3),
+            hdrExposures = json.optJSONArray("hdrExposures")?.let { arr ->
+                (0 until arr.length()).map { arr.getLong(it) }
+            } ?: listOf(100, 200, 400, 800, 1600),
+            pauseLabel = json.optString("pauseLabel", "Adjust camera settings"),
+        )
+
+        fun serializeList(steps: List<FlowStep>): String {
+            val arr = JSONArray()
+            steps.forEach { arr.put(it.toJson()) }
+            return arr.toString()
+        }
+
+        fun deserializeList(json: String): List<FlowStep> {
+            if (json.isBlank()) return emptyList()
+            val arr = JSONArray(json)
+            return (0 until arr.length()).map { fromJson(arr.getJSONObject(it)) }
+        }
+    }
+}
+
+/** Summary label for a step in the flow builder list. */
+fun FlowStep.summaryLabel(): String = when (type) {
+    FlowStepType.INTERVALOMETER -> "$shotCount shots, ${exposureMs}ms exp, ${intervalMs}ms gap"
+    FlowStepType.ASTRO -> {
+        val expS = ruleDivisor.toDouble() / (focalLength * cropFactor)
+        "$shotCount shots, ${String.format("%.1f", expS)}s exp (${focalLength}mm)"
+    }
+    FlowStepType.SOUND -> "$shotCount shots, threshold $soundThreshold"
+    FlowStepType.LIGHTNING -> "$shotCount shots, sensitivity $lightningSensitivity"
+    FlowStepType.LASER -> "$shotCount shots, ${exposureMs}ms exp"
+    FlowStepType.HDR -> "${hdrExposures.size} brackets"
+    FlowStepType.PAUSE -> pauseLabel
+}
+
+fun FlowStepType.displayName(): String = when (this) {
+    FlowStepType.INTERVALOMETER -> "Intervalometer"
+    FlowStepType.ASTRO -> "Astro"
+    FlowStepType.SOUND -> "Sound Trigger"
+    FlowStepType.LIGHTNING -> "Lightning"
+    FlowStepType.LASER -> "Laser Trigger"
+    FlowStepType.HDR -> "HDR Bracket"
+    FlowStepType.PAUSE -> "Pause"
+}

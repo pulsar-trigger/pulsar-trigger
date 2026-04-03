@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,6 +33,7 @@ fun MainMenuScreen(
     onModeSelected: (TriggerMode) -> Unit,
     onModeSettingsSelected: (TriggerMode) -> Unit,
     onSettingsSelected: () -> Unit,
+    onCustomFlowSelected: () -> Unit = {},
 ) {
     val status by vm.status.collectAsState()
     val deviceName by vm.deviceName.collectAsState()
@@ -115,6 +117,12 @@ fun MainMenuScreen(
                 icon = Icons.Default.TouchApp,
                 onClick = { onModeSelected(TriggerMode.PRESS_HOLD) },
                 onGearClick = { onModeSettingsSelected(TriggerMode.PRESS_HOLD) },
+            )
+            MenuCard(
+                title = "Custom Flow",
+                description = "Build multi-step sequences mixing any mode",
+                icon = Icons.AutoMirrored.Filled.ViewList,
+                onClick = onCustomFlowSelected,
             )
         }
 

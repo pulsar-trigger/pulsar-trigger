@@ -41,6 +41,7 @@ enum class TriggerMode(val id: Byte) {
     HDR(0x05),
     PRESS_HOLD(0x06),
     PRESS_LOCK(0x07),
+    CUSTOM_FLOW(0x7F.toByte()),  // app-orchestrated, never sent to firmware
 }
 
 /** Device state reported in the status frame */
