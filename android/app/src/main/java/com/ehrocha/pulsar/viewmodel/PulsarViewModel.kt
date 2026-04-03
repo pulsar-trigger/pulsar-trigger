@@ -31,6 +31,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.coroutines.coroutineContext
 
@@ -193,6 +195,25 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     updateNotification()
                 } else if (frame != null && frame.state == DeviceState.IDLE) {
                     dismissNotification()
+                }
+            }
+        }
+
+        // Auto-check for updates on connect
+        viewModelScope.launch {
+            _connected.collect { isConnected ->
+                if (isConnected) {
+                    // Always check app update
+                    appUpdateManager.checkForUpdate(
+                        com.ehrocha.pulsar.BuildConfig.VERSION_NAME
+                    )
+                    // For real device, check firmware update once status arrives
+                    if (!_simulatorActive.value) {
+                        val frame = _status.filterNotNull().first()
+                        if (frame.fwVersion.isNotEmpty()) {
+                            firmwareManager.checkForUpdate(frame.fwVersion)
+                        }
+                    }
                 }
             }
         }
