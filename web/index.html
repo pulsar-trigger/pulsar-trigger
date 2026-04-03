@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pulsar Trigger – Install Firmware</title>
+  <script
+    type="module"
+    src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"
+  ></script>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --border: #30363d;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2.5rem;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+    }
+    h1 {
+      font-size: 1.75rem;
+      margin-bottom: 0.5rem;
+    }
+    .subtitle {
+      color: var(--muted);
+      margin-bottom: 2rem;
+    }
+    .version {
+      display: inline-block;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.85rem;
+      color: var(--accent);
+      margin-bottom: 1.5rem;
+    }
+    esp-web-install-button {
+      display: block;
+      margin: 1.5rem auto;
+    }
+    esp-web-install-button button {
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      border-radius: 8px;
+      padding: 0.875rem 2rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    esp-web-install-button button:hover {
+      opacity: 0.85;
+    }
+    .steps {
+      text-align: left;
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+    .steps h2 {
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .steps ol {
+      padding-left: 1.25rem;
+      color: var(--muted);
+    }
+    .steps li {
+      margin-bottom: 0.5rem;
+      line-height: 1.5;
+    }
+    .steps li strong {
+      color: var(--text);
+    }
+    .unsupported {
+      display: none;
+      color: #f85149;
+      margin-top: 1rem;
+      padding: 1rem;
+      border: 1px solid #f8514930;
+      border-radius: 8px;
+      background: #f8514910;
+    }
+    footer {
+      margin-top: 2rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Pulsar Trigger</h1>
+    <p class="subtitle">Camera intervalometer &amp; astrophotography controller</p>
+
+    <div class="version" id="version-badge">Loading version…</div>
+
+    <esp-web-install-button manifest="manifest.json">
+      <button slot="activate">Install Firmware</button>
+      <span slot="unsupported">
+        <div class="unsupported" style="display:block">
+          Your browser does not support Web Serial.<br>
+          Please use <strong>Chrome</strong> or <strong>Edge</strong> on desktop.
+        </div>
+      </span>
+      <span slot="not-allowed">
+        <div class="unsupported" style="display:block">
+          Serial access was denied. Please grant permission and try again.
+        </div>
+      </span>
+    </esp-web-install-button>
+
+    <div class="steps">
+      <h2>How to flash</h2>
+      <ol>
+        <li>Connect your <strong>ESP32</strong> to this computer via USB</li>
+        <li>Click <strong>Install Firmware</strong> above</li>
+        <li>Select the serial port when prompted</li>
+        <li>Wait for the flash to complete (~30 seconds)</li>
+        <li>Open the <strong>Pulsar</strong> Android app to connect via BLE</li>
+      </ol>
+    </div>
+  </div>
+
+  <footer>
+    <a href="https://github.com/pulsar-trigger/pulsar-trigger">GitHub</a>
+    &middot; Future updates install over-the-air from the Android app
+  </footer>
+
+  <script>
+    fetch("manifest.json")
+      .then(r => r.json())
+      .then(m => {
+        document.getElementById("version-badge").textContent = "Firmware " + m.version;
+      })
+      .catch(() => {
+        document.getElementById("version-badge").textContent = "Firmware";
+      });
+  </script>
+</body>
+</html>

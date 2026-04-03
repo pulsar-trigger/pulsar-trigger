@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'firmware/**'
+      - 'web/**'
     branches: [master]
   workflow_dispatch:
   schedule:
@@ -11,6 +12,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
   build:
@@ -61,3 +64,58 @@ jobs:
           draft: false
           prerelease: false
           make_latest: true
+
+      - name: Prepare web installer
+        run: |
+          mkdir -p _site
+          cp web/index.html _site/
+
+          # Collect flash binaries
+          BUILD=firmware/.pio/build/esp32
+          cp "$BUILD/firmware.bin"    _site/firmware.bin
+          cp "$BUILD/partitions.bin"  _site/partitions.bin
+          cp "$BUILD/bootloader.bin"  _site/bootloader.bin
+
+          # boot_app0.bin (OTA data init) from Arduino framework
+          BOOT_APP0=$(find ~/.platformio/packages/framework-arduinoespressif32 \
+                      -name boot_app0.bin -print -quit)
+          cp "$BOOT_APP0" _site/boot_app0.bin
+
+      - name: Generate manifest.json
+        run: |
+          cat > _site/manifest.json << EOF
+          {
+            "name": "Pulsar Trigger",
+            "version": "${{ steps.version.outputs.version }}",
+            "builds": [
+              {
+                "chipFamily": "ESP32",
+                "parts": [
+                  { "path": "bootloader.bin",  "offset": 4096 },
+                  { "path": "partitions.bin",  "offset": 32768 },
+                  { "path": "boot_app0.bin",   "offset": 53248 },
+                  { "path": "firmware.bin",    "offset": 65536 }
+                ]
+              }
+            ]
+          }
+          EOF
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy-pages:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
