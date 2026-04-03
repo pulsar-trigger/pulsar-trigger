@@ -6,13 +6,20 @@
 #pragma once
 
 // ── GPIO pins ────────────────────────────────────────────────────────────────
-#define PIN_SHUTTER   GPIO_NUM_25   // optocoupler → camera shutter
-#define PIN_FOCUS     GPIO_NUM_26   // optocoupler → camera focus
+#define DEFAULT_PIN_SHUTTER  25     // optocoupler → camera shutter
+#define DEFAULT_PIN_FOCUS    26     // optocoupler → camera focus
 #define PIN_SOUND     GPIO_NUM_34   // analog — electret mic / sound sensor
 #define PIN_LIGHT     GPIO_NUM_35   // analog — photodiode / lightning sensor
 #define PIN_LASER_RX  GPIO_NUM_32   // analog — laser break-beam receiver
 #define PIN_LED       GPIO_NUM_2    // on-board LED (status)
 #define PIN_BATTERY   GPIO_NUM_33   // analog — battery voltage divider
+
+// ── Safe digital-output pins for shutter / focus ─────────────────────────────
+// Excluded: 0,2,5,12,15 (boot-strapping), 6-11 (flash), 34-39 (input-only)
+static const uint8_t SAFE_OUTPUT_PINS[] = {
+    4, 13, 14, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27
+};
+#define SAFE_OUTPUT_PIN_COUNT  (sizeof(SAFE_OUTPUT_PINS) / sizeof(SAFE_OUTPUT_PINS[0]))
 
 // ── Timing defaults ──────────────────────────────────────────────────────────
 #define DEFAULT_FOCUS_MS      200   // pre-focus hold before shutter

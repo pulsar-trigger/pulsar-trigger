@@ -149,7 +149,7 @@ void triggers_start() {
     } else if (_mode == MODE_PRESS_HOLD || _mode == MODE_PRESS_LOCK) {
         _lock_active = true;
         camera_focus(true);
-        digitalWrite(PIN_SHUTTER, HIGH);
+        camera_shutter_set(true);
     }
 
     status_send(_state, _mode, _shots_taken, 0);
@@ -159,7 +159,7 @@ void triggers_stop() {
     _state = STATE_IDLE;
 
     if (_mode == MODE_PRESS_HOLD || _mode == MODE_PRESS_LOCK) {
-        digitalWrite(PIN_SHUTTER, LOW);
+        camera_shutter_set(false);
         camera_focus(false);
         _lock_active = false;
     }

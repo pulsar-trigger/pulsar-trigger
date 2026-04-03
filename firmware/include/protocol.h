@@ -16,6 +16,7 @@ enum Cmd : uint8_t {
     CMD_STATUS_REQ = 0x05,
     CMD_SET_FOCUS  = 0x06,
     CMD_SET_NAME  = 0x08,
+    CMD_SET_PINS  = 0x09,
 };
 
 // ── Trigger Modes (byte 1) ──────────────────────────────────────────────────

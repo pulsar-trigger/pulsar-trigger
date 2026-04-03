@@ -23,6 +23,7 @@ object Cmd {
     const val STATUS_REQ: Byte = 0x05
     const val SET_FOCUS: Byte  = 0x06
     const val SET_NAME: Byte   = 0x08
+    const val SET_PINS: Byte   = 0x09
 }
 
 /** Trigger modes */

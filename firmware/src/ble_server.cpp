@@ -8,6 +8,7 @@
 #include "protocol.h"
 #include "triggers.h"
 #include "status.h"
+#include "camera.h"
 
 #include <BLEDevice.h>
 #include <BLEServer.h>
@@ -42,6 +43,13 @@ class PulsarServerCB : public BLEServerCallbacks {
     }
 };
 // ── NVS name helpers ─────────────────────────────────────────────────────────
+static bool is_safe_output_pin(uint8_t pin) {
+    for (size_t i = 0; i < SAFE_OUTPUT_PIN_COUNT; i++) {
+        if (SAFE_OUTPUT_PINS[i] == pin) return true;
+    }
+    return false;
+}
+
 static void load_device_name() {
     _prefs.begin("pulsar", true);  // read-only
     String suffix = _prefs.getString("name", "");
@@ -100,6 +108,26 @@ class CmdCharCB : public BLECharacteristicCallbacks {
                 }
                 break;
             }
+            case CMD_SET_PINS: {
+                if (len < 3) return;
+                uint8_t shutter = data[1];
+                uint8_t focus   = data[2];
+                if (!is_safe_output_pin(shutter) || !is_safe_output_pin(focus)) {
+                    Serial.printf("[BLE] SET_PINS rejected: shutter=%u focus=%u\n", shutter, focus);
+                    return;
+                }
+                if (shutter == focus) {
+                    Serial.println("[BLE] SET_PINS rejected: shutter == focus");
+                    return;
+                }
+                _prefs.begin("pulsar", false);
+                _prefs.putUChar("pin_shutter", shutter);
+                _prefs.putUChar("pin_focus", focus);
+                _prefs.end();
+                camera_init_pins(shutter, focus);
+                Serial.printf("[BLE] SET_PINS shutter=%u focus=%u\n", shutter, focus);
+                break;
+            }
             case CMD_SET_NAME: {
                 if (len < 2) return;
                 // Bytes 1..N are the UTF-8 suffix (no "Pulsar-" prefix)
@@ -143,6 +171,17 @@ class CmdCharCB : public BLECharacteristicCallbacks {
 // ── Public API ───────────────────────────────────────────────────────────────
 void ble_init() {
     load_device_name();
+
+    // Load saved GPIO pins and apply them
+    _prefs.begin("pulsar", true);
+    uint8_t shutter = _prefs.getUChar("pin_shutter", DEFAULT_PIN_SHUTTER);
+    uint8_t focus   = _prefs.getUChar("pin_focus",   DEFAULT_PIN_FOCUS);
+    _prefs.end();
+    if (is_safe_output_pin(shutter) && is_safe_output_pin(focus) && shutter != focus) {
+        camera_init_pins(shutter, focus);
+        Serial.printf("[BLE] Loaded pins: shutter=%u focus=%u\n", shutter, focus);
+    }
+
     BLEDevice::init(_deviceName);
 
     // Enable BLE security — require bonding for writes

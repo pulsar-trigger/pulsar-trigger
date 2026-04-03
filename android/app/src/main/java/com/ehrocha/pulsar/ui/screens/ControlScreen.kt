@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.ui.components.TimePicker
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
+import com.ehrocha.pulsar.viewmodel.PulsarViewModel.Companion.SAFE_OUTPUT_PINS
 
 @Composable
 internal fun DefaultActions(vm: PulsarViewModel, connected: Boolean, isRunning: Boolean) {
@@ -748,6 +749,8 @@ internal fun SettingsPanel(
     val defCount by vm.defaultShotCount.collectAsState()
     val defDelay by vm.defaultDelayMs.collectAsState()
     val maxShots by vm.maxShotCount.collectAsState()
+    val shutterPin by vm.pinShutter.collectAsState()
+    val focusPin by vm.pinFocus.collectAsState()
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json"),
@@ -809,6 +812,43 @@ internal fun SettingsPanel(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        Text("GPIO PINS", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = 2.dp,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Text(
+                    "Choose which ESP32 GPIO pins drive the shutter and focus optocouplers. Changes are sent to the device and saved.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                GpioPinSelector(
+                    label = "Shutter Pin",
+                    selectedPin = shutterPin,
+                    disabledPin = focusPin,
+                    onPinSelected = { vm.savePins(it, focusPin) },
+                    enabled = connected,
+                )
+
+                GpioPinSelector(
+                    label = "Focus Pin",
+                    selectedPin = focusPin,
+                    disabledPin = shutterPin,
+                    onPinSelected = { vm.savePins(shutterPin, it) },
+                    enabled = connected,
+                )
             }
         }
 
@@ -1035,4 +1075,60 @@ private fun RenameDeviceDialog(
             }
         },
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GpioPinSelector(
+    label: String,
+    selectedPin: Int,
+    disabledPin: Int,
+    onPinSelected: (Int) -> Unit,
+    enabled: Boolean,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(label, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { if (enabled) expanded = it },
+        ) {
+            OutlinedTextField(
+                value = "GPIO $selectedPin",
+                onValueChange = {},
+                readOnly = true,
+                enabled = enabled,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled).fillMaxWidth(),
+                singleLine = true,
+            )
+
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+            ) {
+                SAFE_OUTPUT_PINS.forEach { pin ->
+                    val isDisabled = pin == disabledPin
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                "GPIO $pin" + if (isDisabled) " (in use)" else "",
+                                color = if (isDisabled) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                        else MaterialTheme.colorScheme.onSurface,
+                            )
+                        },
+                        onClick = {
+                            if (!isDisabled) {
+                                onPinSelected(pin)
+                                expanded = false
+                            }
+                        },
+                        enabled = !isDisabled,
+                    )
+                }
+            }
+        }
+    }
 }

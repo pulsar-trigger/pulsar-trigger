@@ -39,6 +39,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         private const val KEY_INTV_COUNT = "intv_shot_count"
         private const val KEY_INTV_DELAY = "intv_delay_ms"
         private const val KEY_INTV_MAX_SHOTS = "intv_max_shots"
+        private const val KEY_PIN_SHUTTER = "pin_shutter"
+        private const val KEY_PIN_FOCUS = "pin_focus"
+        const val DEFAULT_PIN_SHUTTER = 25
+        const val DEFAULT_PIN_FOCUS = 26
+        val SAFE_OUTPUT_PINS = listOf(4, 13, 14, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27)
     }
 
     private val prefs = app.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -103,6 +108,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val astroDelayMs = MutableStateFlow(5000L)
     val astroGapMs = MutableStateFlow(2000L)          // gap between shots
 
+    // ── GPIO pin config ──────────────────────────────────────────────────
+    val pinShutter = MutableStateFlow(DEFAULT_PIN_SHUTTER)
+    val pinFocus = MutableStateFlow(DEFAULT_PIN_FOCUS)
+
     // ── BLE Scan ─────────────────────────────────────────────────────────
     private val btManager = app.getSystemService(BluetoothManager::class.java)
     private val scanner = btManager?.adapter?.bluetoothLeScanner
@@ -119,7 +128,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     init {
         // Forward BLE manager state to ViewModel flows
         viewModelScope.launch {
-            bleManager.connectionState.collect { _connected.value = it }
+            bleManager.connectionState.collect {
+                _connected.value = it
+                if (it) sendPins()
+            }
         }
         viewModelScope.launch {
             bleManager.status.collect { _status.value = it }
@@ -131,6 +143,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         defaultShotCount.value = prefs.getInt(KEY_INTV_COUNT, 1)
         defaultDelayMs.value = prefs.getLong(KEY_INTV_DELAY, 0L)
         maxShotCount.value = prefs.getInt(KEY_INTV_MAX_SHOTS, 999)
+        pinShutter.value = prefs.getInt(KEY_PIN_SHUTTER, DEFAULT_PIN_SHUTTER)
+        pinFocus.value = prefs.getInt(KEY_PIN_FOCUS, DEFAULT_PIN_FOCUS)
         // Apply defaults as initial working values
         intervalMs.value = defaultIntervalMs.value
         exposureMs.value = defaultExposureMs.value
@@ -237,6 +251,21 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         saveMaxShotCount(999)
     }
 
+    fun savePins(shutter: Int, focus: Int) {
+        pinShutter.value = shutter
+        pinFocus.value = focus
+        prefs.edit()
+            .putInt(KEY_PIN_SHUTTER, shutter)
+            .putInt(KEY_PIN_FOCUS, focus)
+            .apply()
+        sendPins()
+    }
+
+    fun sendPins() {
+        if (_simulatorActive.value) return
+        bleManager.sendCommand(CommandBuilder.setPins(pinShutter.value, pinFocus.value))
+    }
+
     /** Serialize all persisted settings to JSON for export. */
     fun exportSettingsJson(): String {
         val json = org.json.JSONObject()
@@ -245,6 +274,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         json.put("intv_shot_count", defaultShotCount.value)
         json.put("intv_delay_ms", defaultDelayMs.value)
         json.put("intv_max_shots", maxShotCount.value)
+        json.put("pin_shutter", pinShutter.value)
+        json.put("pin_focus", pinFocus.value)
         return json.toString(2)
     }
 
@@ -258,6 +289,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             obj.optInt("intv_shot_count", 1),
             obj.optLong("intv_delay_ms", 0L),
         )
+        val shutter = obj.optInt("pin_shutter", DEFAULT_PIN_SHUTTER)
+        val focus = obj.optInt("pin_focus", DEFAULT_PIN_FOCUS)
+        if (shutter in SAFE_OUTPUT_PINS && focus in SAFE_OUTPUT_PINS && shutter != focus) {
+            savePins(shutter, focus)
+        }
     }
 
     fun sendConfig() {

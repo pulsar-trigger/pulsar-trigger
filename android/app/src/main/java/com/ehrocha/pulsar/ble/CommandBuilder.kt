@@ -100,4 +100,9 @@ object CommandBuilder {
         count: Int = 0,
         delayMs: Long = 0,
     ): ByteArray = setIntervalometer(intervalMs, exposureMs, count, delayMs)
+
+    fun setPins(shutterPin: Int, focusPin: Int): ByteArray {
+        val payload = byteArrayOf(shutterPin.toByte(), focusPin.toByte())
+        return frame(Cmd.SET_PINS, payload)
+    }
 }
