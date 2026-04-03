@@ -35,11 +35,16 @@ jobs:
       - name: Decode keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/pulsar-release.jks
 
+      - name: Create keystore.properties
+        run: |
+          printf '%s\n' \
+            "storeFile=../pulsar-release.jks" \
+            "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" \
+            "keyAlias=${{ secrets.KEY_ALIAS }}" \
+            "keyPassword=${{ secrets.KEY_PASSWORD }}" \
+            > android/keystore.properties
+
       - name: Build release APK
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           cd android
           chmod +x gradlew
