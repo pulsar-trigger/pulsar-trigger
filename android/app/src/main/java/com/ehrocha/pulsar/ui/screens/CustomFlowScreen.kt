@@ -478,9 +478,17 @@ private fun AddStepDialog(
                     )
                     Spacer(Modifier.height(16.dp))
 
+                    val enabledTypes = setOf(
+                        FlowStepType.INTERVALOMETER,
+                        FlowStepType.ASTRO,
+                        FlowStepType.PAUSE,
+                    )
+
                     FlowStepType.entries.forEach { type ->
+                        val enabled = type in enabledTypes
                         Surface(
-                            onClick = { selectedType = type },
+                            onClick = { if (enabled) selectedType = type },
+                            enabled = enabled,
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth(),
                         ) {
@@ -491,11 +499,26 @@ private fun AddStepDialog(
                                 Icon(
                                     stepIcon(type),
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = if (enabled) MaterialTheme.colorScheme.primary
+                                           else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
                                     modifier = Modifier.size(24.dp),
                                 )
                                 Spacer(Modifier.width(12.dp))
-                                Text(type.displayName(), style = MaterialTheme.typography.bodyLarge)
+                                Column {
+                                    Text(
+                                        type.displayName(),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = if (enabled) MaterialTheme.colorScheme.onSurface
+                                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                                    )
+                                    if (!enabled) {
+                                        Text(
+                                            "Coming soon",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
