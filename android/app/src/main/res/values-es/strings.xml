@@ -223,6 +223,31 @@
     <string name="card_forecast">PRONÓSTICO DE NUBES 12 HORAS</string>
     <string name="card_forecast_day">PRONÓSTICO HORARIO</string>
     <string name="date_today">Hoy</string>
+
+    <!-- Sun card -->
+    <string name="card_sun">SOL</string>
+    <string name="label_sunrise">Amanecer</string>
+    <string name="label_sunset">Atardecer</string>
+
+    <!-- Milky Way card -->
+    <string name="card_milky_way">VÍA LÁCTEA</string>
+    <string name="mw_visible">✓ Núcleo visible esta noche durante oscuridad astronómica</string>
+    <string name="mw_not_visible">✗ Núcleo no visible esta noche — sale durante el día o crepúsculo</string>
+    <string name="mw_never_rises">✗ El núcleo de la Vía Láctea nunca sale a esta latitud</string>
+    <string name="label_core_rise">Salida del Núcleo</string>
+    <string name="label_core_set">Ocaso del Núcleo</string>
+    <string name="label_dark_window">Ventana Oscura</string>
+    <string name="mw_season_good">Buena temporada para fotografía de la Vía Láctea</string>
+    <string name="mw_season_off">Fuera de temporada para visibilidad del núcleo de la Vía Láctea</string>
+
+    <!-- Best photo windows -->
+    <string name="card_best_windows">MEJORES VENTANAS PARA FOTOS</string>
+    <string name="window_excellent">Excelente</string>
+    <string name="window_good">Bueno</string>
+    <string name="window_fair">Aceptable</string>
+    <string name="window_cloud">Promedio %1$d%% nubes</string>
+    <string name="window_no_clear">No se encontraron ventanas despejadas para esta noche</string>
+
     <string name="flow_title">Flujo Personalizado</string>
     <string name="flow_no_saved">No hay flujos guardados</string>
     <string name="flow_create_instruction">Crea un flujo para encadenar múltiples modos\nde disparo, pausas y secuencias.</string>

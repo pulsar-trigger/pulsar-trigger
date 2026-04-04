@@ -223,6 +223,31 @@
     <string name="card_forecast">12 小时云量预报</string>
     <string name="card_forecast_day">逐小时预报</string>
     <string name="date_today">今天</string>
+
+    <!-- Sun card -->
+    <string name="card_sun">太阳</string>
+    <string name="label_sunrise">日出</string>
+    <string name="label_sunset">日落</string>
+
+    <!-- Milky Way card -->
+    <string name="card_milky_way">银河</string>
+    <string name="mw_visible">✓ 今晚天文黑夜期间银河核心可见</string>
+    <string name="mw_not_visible">✗ 今晚银河核心不可见 — 在白天或暮光时升起</string>
+    <string name="mw_never_rises">✗ 此纬度银河核心永不升起</string>
+    <string name="label_core_rise">核心升起</string>
+    <string name="label_core_set">核心落下</string>
+    <string name="label_dark_window">黑暗窗口</string>
+    <string name="mw_season_good">银河摄影的好季节</string>
+    <string name="mw_season_off">银河核心可见性的淡季</string>
+
+    <!-- Best photo windows -->
+    <string name="card_best_windows">最佳拍摄时段</string>
+    <string name="window_excellent">优秀</string>
+    <string name="window_good">良好</string>
+    <string name="window_fair">一般</string>
+    <string name="window_cloud">平均 %1$d%% 云量</string>
+    <string name="window_no_clear">今晚未找到晴朗时段</string>
+
     <string name="flow_title">自定义流程</string>
     <string name="flow_no_saved">暂无已保存的流程</string>
     <string name="flow_create_instruction">创建流程以串联多种拍摄\n模式、暂停和序列。</string>

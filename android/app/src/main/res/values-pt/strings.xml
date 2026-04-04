@@ -223,6 +223,31 @@
     <string name="card_forecast">PREVISÃO DE NUVENS 12 HORAS</string>
     <string name="card_forecast_day">PREVISÃO HORÁRIA</string>
     <string name="date_today">Hoje</string>
+
+    <!-- Sun card -->
+    <string name="card_sun">SOL</string>
+    <string name="label_sunrise">Nascer do sol</string>
+    <string name="label_sunset">Pôr do sol</string>
+
+    <!-- Milky Way card -->
+    <string name="card_milky_way">VIA LÁCTEA</string>
+    <string name="mw_visible">✓ Núcleo visível esta noite durante escuridão astronômica</string>
+    <string name="mw_not_visible">✗ Núcleo não visível esta noite — nasce durante o dia ou crepúsculo</string>
+    <string name="mw_never_rises">✗ O núcleo da Via Láctea nunca nasce nesta latitude</string>
+    <string name="label_core_rise">Nascer do Núcleo</string>
+    <string name="label_core_set">Ocaso do Núcleo</string>
+    <string name="label_dark_window">Janela Escura</string>
+    <string name="mw_season_good">Boa temporada para fotografia da Via Láctea</string>
+    <string name="mw_season_off">Fora de temporada para visibilidade do núcleo da Via Láctea</string>
+
+    <!-- Best photo windows -->
+    <string name="card_best_windows">MELHORES JANELAS PARA FOTOS</string>
+    <string name="window_excellent">Excelente</string>
+    <string name="window_good">Bom</string>
+    <string name="window_fair">Razoável</string>
+    <string name="window_cloud">Média %1$d%% nuvens</string>
+    <string name="window_no_clear">Nenhuma janela clara encontrada para esta noite</string>
+
     <string name="flow_title">Fluxo Personalizado</string>
     <string name="flow_no_saved">Nenhum fluxo salvo</string>
     <string name="flow_create_instruction">Crie um fluxo para encadear múltiplos modos\nde disparo, pausas e sequências.</string>

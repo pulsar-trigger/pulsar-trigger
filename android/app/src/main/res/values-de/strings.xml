@@ -223,6 +223,31 @@
     <string name="card_forecast">12-STUNDEN-WOLKENVORHERSAGE</string>
     <string name="card_forecast_day">STÜNDLICHE VORHERSAGE</string>
     <string name="date_today">Heute</string>
+
+    <!-- Sun card -->
+    <string name="card_sun">SONNE</string>
+    <string name="label_sunrise">Sonnenaufgang</string>
+    <string name="label_sunset">Sonnenuntergang</string>
+
+    <!-- Milky Way card -->
+    <string name="card_milky_way">MILCHSTRASSE</string>
+    <string name="mw_visible">✓ Kern heute Nacht während astronomischer Dunkelheit sichtbar</string>
+    <string name="mw_not_visible">✗ Kern heute Nacht nicht sichtbar — geht bei Tageslicht oder Dämmerung auf</string>
+    <string name="mw_never_rises">✗ Milchstraßenkern geht auf diesem Breitengrad nie auf</string>
+    <string name="label_core_rise">Kernaufgang</string>
+    <string name="label_core_set">Kernuntergang</string>
+    <string name="label_dark_window">Dunkelfenster</string>
+    <string name="mw_season_good">Gute Saison für Milchstraßenfotografie</string>
+    <string name="mw_season_off">Nebensaison für die Sichtbarkeit des Milchstraßenkerns</string>
+
+    <!-- Best photo windows -->
+    <string name="card_best_windows">BESTE FOTOFENSTER</string>
+    <string name="window_excellent">Ausgezeichnet</string>
+    <string name="window_good">Gut</string>
+    <string name="window_fair">Mäßig</string>
+    <string name="window_cloud">Durchschn. %1$d%% Wolken</string>
+    <string name="window_no_clear">Keine klaren Fenster für diese Nacht gefunden</string>
+
     <string name="flow_title">Benutzerdefinierter Ablauf</string>
     <string name="flow_no_saved">Keine gespeicherten Abläufe</string>
     <string name="flow_create_instruction">Erstelle einen Ablauf, um mehrere Aufnahme-\nmodi, Pausen und Sequenzen zu verketten.</string>

@@ -223,6 +223,31 @@
     <string name="card_forecast">PRÉVISIONS DE NÉBULOSITÉ SUR 12 H</string>
     <string name="card_forecast_day">PRÉVISIONS HORAIRES</string>
     <string name="date_today">Aujourd\'hui</string>
+
+    <!-- Sun card -->
+    <string name="card_sun">SOLEIL</string>
+    <string name="label_sunrise">Lever du soleil</string>
+    <string name="label_sunset">Coucher du soleil</string>
+
+    <!-- Milky Way card -->
+    <string name="card_milky_way">VOIE LACTÉE</string>
+    <string name="mw_visible">✓ Noyau visible ce soir pendant l\'obscurité astronomique</string>
+    <string name="mw_not_visible">✗ Noyau non visible ce soir — se lève pendant le jour ou le crépuscule</string>
+    <string name="mw_never_rises">✗ Le noyau de la Voie lactée ne se lève jamais à cette latitude</string>
+    <string name="label_core_rise">Lever du noyau</string>
+    <string name="label_core_set">Coucher du noyau</string>
+    <string name="label_dark_window">Fenêtre sombre</string>
+    <string name="mw_season_good">Bonne saison pour la photographie de la Voie lactée</string>
+    <string name="mw_season_off">Hors saison pour la visibilité du noyau de la Voie lactée</string>
+
+    <!-- Best photo windows -->
+    <string name="card_best_windows">MEILLEURES FENÊTRES PHOTO</string>
+    <string name="window_excellent">Excellent</string>
+    <string name="window_good">Bon</string>
+    <string name="window_fair">Passable</string>
+    <string name="window_cloud">Moy. %1$d%% nuages</string>
+    <string name="window_no_clear">Aucune fenêtre dégagée trouvée pour cette nuit</string>
+
     <string name="flow_title">Séquence personnalisée</string>
     <string name="flow_no_saved">Aucune séquence enregistrée</string>
     <string name="flow_create_instruction">Créez une séquence pour enchaîner plusieurs\nmodes de prise de vue, pauses et séquences.</string>

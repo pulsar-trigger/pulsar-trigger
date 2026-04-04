@@ -31,6 +31,9 @@ data class DashboardState(
     val weather: WeatherInfo? = null,
     val moon: MoonInfo? = null,
     val bortle: BortleInfo? = null,
+    val sun: SunInfo? = null,
+    val milkyWay: MilkyWayInfo? = null,
+    val bestWindows: List<PhotoWindow> = emptyList(),
     val loading: Boolean = false,
     val error: String? = null,
     val selectedDate: LocalDate = LocalDate.now(),
@@ -75,6 +78,27 @@ data class BortleInfo(
     val className: String,
     val description: String,
     val color: Long,  // ARGB color
+)
+
+data class SunInfo(
+    val sunrise: String?,
+    val sunset: String?,
+)
+
+data class MilkyWayInfo(
+    val visible: Boolean,
+    val seasonBest: Boolean,
+    val coreRise: String?,
+    val coreSet: String?,
+    val darkWindow: String?,
+)
+
+data class PhotoWindow(
+    val startTime: String,
+    val endTime: String,
+    val hours: Int,
+    val avgCloudPct: Int,
+    val rating: Int,  // 3=Excellent, 2=Good, 1=Fair
 )
 
 // ── Moon phase calculation ───────────────────────────────────────────────────
@@ -182,6 +206,162 @@ object BortleScale {
     fun getClass(number: Int): BortleClass = classes.getOrElse(number - 1) { classes[4] }
 }
 
+// ── Astro calculator (Milky Way + photo windows) ─────────────────────────────
+
+object AstroCalculator {
+    private const val GC_RA_DEG = 266.417   // Galactic center RA (17h 45m 40s)
+    private const val GC_DEC_DEG = -29.008  // Galactic center Dec (-29° 00' 28")
+
+    /** Approximate sun RA & Dec for a given date (accuracy ~1°). */
+    fun sunPosition(date: LocalDate): Pair<Double, Double> {
+        val n = daysSinceJ2000(date)
+        val L = (280.460 + 0.9856474 * n) % 360
+        val g = Math.toRadians((357.528 + 0.9856003 * n) % 360)
+        val eclLon = Math.toRadians(((L + 1.915 * sin(g) + 0.020 * sin(2 * g)) % 360 + 360) % 360)
+        val eps = Math.toRadians(23.439 - 0.0000004 * n)
+        val ra = (Math.toDegrees(atan2(cos(eps) * sin(eclLon), cos(eclLon))) + 360) % 360
+        val dec = Math.toDegrees(asin(sin(eps) * sin(eclLon)))
+        return ra to dec
+    }
+
+    /** Altitude of a celestial object above the horizon (degrees). */
+    fun altitude(latDeg: Double, decDeg: Double, haDeg: Double): Double {
+        val lat = Math.toRadians(latDeg)
+        val dec = Math.toRadians(decDeg)
+        val ha = Math.toRadians(haDeg)
+        return Math.toDegrees(asin(sin(lat) * sin(dec) + cos(lat) * cos(dec) * cos(ha)))
+    }
+
+    /** Local Sidereal Time in degrees. */
+    fun lst(date: LocalDate, utcHours: Double, lonDeg: Double): Double {
+        val d = daysSinceJ2000(date) + utcHours / 24.0
+        val gmst = (280.46061837 + 360.98564736629 * d) % 360
+        return (gmst + lonDeg + 720) % 360
+    }
+
+    private fun daysSinceJ2000(date: LocalDate): Double {
+        var y = date.year; var m = date.monthValue
+        val d0 = date.dayOfMonth.toDouble()
+        if (m <= 2) { y -= 1; m += 12 }
+        val a = y / 100; val b = 2 - a + a / 4
+        val jd = (365.25 * (y + 4716)).toInt() + (30.6001 * (m + 1)).toInt() + d0 + b - 1524.5
+        return jd - 2451545.0
+    }
+
+    fun parseIsoHour(iso: String?): Double? {
+        if (iso.isNullOrEmpty()) return null
+        val time = iso.substringAfter("T", "")
+        if (time.isEmpty()) return null
+        val parts = time.split(":")
+        val h = parts[0].toDoubleOrNull() ?: return null
+        val min = parts.getOrNull(1)?.toDoubleOrNull() ?: 0.0
+        return h + min / 60.0
+    }
+
+    fun fmtHour(h: Double): String {
+        val n = ((h % 24) + 24) % 24
+        return String.format(Locale.US, "%02d:%02d", n.toInt(), ((n - n.toInt()) * 60).toInt())
+    }
+
+    // ── Milky Way core visibility ────────────────────────────────
+
+    fun milkyWayWindow(
+        lat: Double, lon: Double, date: LocalDate,
+        sunriseIso: String?, sunsetIso: String?,
+    ): MilkyWayInfo {
+        val cosH = -tan(Math.toRadians(lat)) * tan(Math.toRadians(GC_DEC_DEG))
+        if (cosH > 1.0) return MilkyWayInfo(false, false, null, null, null)
+
+        val tz = date.atStartOfDay(ZoneId.systemDefault()).offset.totalSeconds / 3600.0
+        val sunsetLocal = parseIsoHour(sunsetIso) ?: 18.0
+        val sunriseLocal = parseIsoHour(sunriseIso) ?: 6.0
+        val sunriseNext = sunriseLocal + 24.0
+        val (sunRa, sunDec) = sunPosition(date)
+
+        var mwStart: Double? = null
+        var mwEnd: Double? = null
+        var gcRise: Double? = null
+        var gcSet: Double? = null
+        var prevGcUp = false
+
+        var t = sunsetLocal - 1.0
+        while (t <= sunriseNext + 1.0) {
+            val utcH = t - tz
+            val siderealTime = lst(date, utcH, lon)
+            val sunAlt = altitude(lat, sunDec, siderealTime - sunRa)
+            val gcAlt = altitude(lat, GC_DEC_DEG, siderealTime - GC_RA_DEG)
+
+            val isDark = sunAlt < -18.0
+            val gcUp = gcAlt > 5.0
+
+            if (gcUp && !prevGcUp) gcRise = t
+            if (!gcUp && prevGcUp) gcSet = t
+            prevGcUp = gcUp
+
+            if (isDark && gcUp) {
+                if (mwStart == null) mwStart = t
+                mwEnd = t
+            }
+            t += 10.0 / 60.0
+        }
+
+        val month = date.monthValue
+        val seasonBest = if (lat >= 0) month in 3..10 else month in 1..4 || month in 9..12
+
+        return MilkyWayInfo(
+            visible = mwStart != null,
+            seasonBest = seasonBest,
+            coreRise = gcRise?.let { fmtHour(it) },
+            coreSet = gcSet?.let { fmtHour(it) },
+            darkWindow = if (mwStart != null && mwEnd != null)
+                "${fmtHour(mwStart)} – ${fmtHour(mwEnd)}" else null,
+        )
+    }
+
+    // ── Best photography windows ─────────────────────────────────
+
+    fun bestPhotoWindows(
+        hourly: List<HourlyForecast>,
+        sunriseIso: String?, sunsetIso: String?,
+    ): List<PhotoWindow> {
+        val sunsetH = parseIsoHour(sunsetIso) ?: return emptyList()
+        val sunriseH = parseIsoHour(sunriseIso) ?: return emptyList()
+        val darkAfter = sunsetH + 1.0
+        val darkBefore = sunriseH - 1.0
+
+        val dark = hourly.filter { h ->
+            val hh = parseIsoHour(h.time) ?: return@filter false
+            (hh >= darkAfter || hh <= darkBefore) && h.precipitationMm <= 0.1
+        }
+        if (dark.isEmpty()) return emptyList()
+
+        val groups = mutableListOf<MutableList<HourlyForecast>>()
+        for (h in dark) {
+            val hh = parseIsoHour(h.time) ?: continue
+            val prev = groups.lastOrNull()?.lastOrNull()?.let { parseIsoHour(it.time) }
+            if (prev != null) {
+                val diff = hh - prev
+                if (diff in 0.5..1.5 || diff + 24 in 0.5..1.5) {
+                    groups.last().add(h); continue
+                }
+            }
+            groups.add(mutableListOf(h))
+        }
+
+        return groups.map { w ->
+            val avgCloud = w.map { it.cloudCoverPct }.average().toInt()
+            val score = 100 - avgCloud
+            PhotoWindow(
+                startTime = w.first().time.substringAfter("T").take(5),
+                endTime = w.last().time.substringAfter("T").take(5),
+                hours = w.size,
+                avgCloudPct = avgCloud,
+                rating = when { score >= 80 -> 3; score >= 50 -> 2; else -> 1 },
+            )
+        }.sortedByDescending { it.hours * (100 - it.avgCloudPct) }.take(3)
+    }
+}
+
 // ── Dashboard manager ────────────────────────────────────────────────────────
 
 class AstroDashboardManager(private val context: Context) {
@@ -228,11 +408,35 @@ class AstroDashboardManager(private val context: Context) {
                 goodForAstro = MoonPhase.goodForAstro(illum),
             )
 
+            val sunInfo = SunInfo(
+                sunrise = astroResult?.optString("sunrise", "")?.takeIf { it.isNotEmpty() },
+                sunset = astroResult?.optString("sunset", "")?.takeIf { it.isNotEmpty() },
+            )
+
+            val milkyWayInfo = AstroCalculator.milkyWayWindow(
+                lat = loc.latitude,
+                lon = loc.longitude,
+                date = date,
+                sunriseIso = sunInfo.sunrise,
+                sunsetIso = sunInfo.sunset,
+            )
+
+            val bestWindows = weatherResult?.let {
+                AstroCalculator.bestPhotoWindows(
+                    hourly = it.hourlyForecast,
+                    sunriseIso = sunInfo.sunrise,
+                    sunsetIso = sunInfo.sunset,
+                )
+            } ?: emptyList()
+
             _state.value = DashboardState(
                 location = locationInfo,
                 weather = weatherResult,
                 moon = moonInfo,
                 bortle = bortleResult,
+                sun = sunInfo,
+                milkyWay = milkyWayInfo,
+                bestWindows = bestWindows,
                 loading = false,
                 selectedDate = date,
             )

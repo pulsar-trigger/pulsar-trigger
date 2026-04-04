@@ -223,6 +223,31 @@
     <string name="card_forecast">12時間雲量予報</string>
     <string name="card_forecast_day">時間別予報</string>
     <string name="date_today">今日</string>
+
+    <!-- Sun card -->
+    <string name="card_sun">太陽</string>
+    <string name="label_sunrise">日の出</string>
+    <string name="label_sunset">日の入り</string>
+
+    <!-- Milky Way card -->
+    <string name="card_milky_way">天の川</string>
+    <string name="mw_visible">✓ 今夜、天文薄明中に天の川の中心部が見えます</string>
+    <string name="mw_not_visible">✗ 今夜は中心部が見えません — 昼間または薄明中に昇ります</string>
+    <string name="mw_never_rises">✗ この緯度では天の川の中心部は昇りません</string>
+    <string name="label_core_rise">中心部の出</string>
+    <string name="label_core_set">中心部の入り</string>
+    <string name="label_dark_window">暗闇の窓</string>
+    <string name="mw_season_good">天の川撮影に良い季節</string>
+    <string name="mw_season_off">天の川中心部の可視性はオフシーズン</string>
+
+    <!-- Best photo windows -->
+    <string name="card_best_windows">最適な撮影時間帯</string>
+    <string name="window_excellent">優秀</string>
+    <string name="window_good">良好</string>
+    <string name="window_fair">普通</string>
+    <string name="window_cloud">平均 %1$d%% 雲量</string>
+    <string name="window_no_clear">今夜は晴れ間が見つかりませんでした</string>
+
     <string name="flow_title">カスタムフロー</string>
     <string name="flow_no_saved">保存済みフローなし</string>
     <string name="flow_create_instruction">フローを作成して複数の撮影\nモード、一時停止、シーケンスを連結します。</string>

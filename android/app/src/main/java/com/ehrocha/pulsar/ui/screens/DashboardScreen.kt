@@ -255,6 +255,31 @@ fun DashboardScreen(
                 }
             }
 
+            // ── Sun card ─────────────────────────────────────────────
+            state.sun?.let { sun ->
+                DashCard(title = stringResource(R.string.card_sun), icon = Icons.Default.WbSunny) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                    ) {
+                        sun.sunrise?.let {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("🌅", fontSize = 32.sp)
+                                Text(formatTime(it), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.label_sunrise), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        sun.sunset?.let {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("🌇", fontSize = 32.sp)
+                                Text(formatTime(it), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.label_sunset), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                }
+            }
+
             // ── Moon card ────────────────────────────────────────────
             state.moon?.let { moon ->
                 DashCard(title = stringResource(R.string.card_moon), icon = Icons.Default.NightsStay) {
@@ -310,6 +335,56 @@ fun DashboardScreen(
                             color = if (moon.goodForAstro) Color(0xFF2E7D32) else Color(0xFFE65100),
                         )
                     }
+                }
+            }
+
+            // ── Milky Way card ───────────────────────────────────────
+            state.milkyWay?.let { mw ->
+                DashCard(title = stringResource(R.string.card_milky_way), icon = Icons.Default.AutoAwesome) {
+                    Surface(
+                        color = if (mw.visible) Color(0xFF2E7D32).copy(alpha = 0.15f)
+                                else Color(0xFFE65100).copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = when {
+                                mw.visible -> stringResource(R.string.mw_visible)
+                                mw.coreRise != null || mw.coreSet != null -> stringResource(R.string.mw_not_visible)
+                                else -> stringResource(R.string.mw_never_rises)
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(8.dp),
+                            color = if (mw.visible) Color(0xFF2E7D32) else Color(0xFFE65100),
+                        )
+                    }
+                    if (mw.coreRise != null || mw.coreSet != null) {
+                        Spacer(Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                        ) {
+                            mw.coreRise?.let { InfoChip(stringResource(R.string.label_core_rise), it) }
+                            mw.coreSet?.let { InfoChip(stringResource(R.string.label_core_set), it) }
+                        }
+                    }
+                    mw.darkWindow?.let { window ->
+                        Spacer(Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                        ) {
+                            InfoChip(stringResource(R.string.label_dark_window), window)
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = if (mw.seasonBest) stringResource(R.string.mw_season_good)
+                               else stringResource(R.string.mw_season_off),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
 
@@ -379,6 +454,66 @@ fun DashboardScreen(
                             },
                         )
                     }
+                }
+            }
+
+            // ── Best photo windows ───────────────────────────────────
+            if (state.bestWindows.isNotEmpty()) {
+                DashCard(title = stringResource(R.string.card_best_windows), icon = Icons.Default.CameraAlt) {
+                    state.bestWindows.forEach { w ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                when (w.rating) { 3 -> "⭐"; 2 -> "👍"; else -> "👌" },
+                                fontSize = 20.sp,
+                                modifier = Modifier.width(32.dp),
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "${w.startTime} – ${w.endTime}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                Text(
+                                    String.format(Locale.US, stringResource(R.string.window_cloud), w.avgCloudPct),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Surface(
+                                color = when (w.rating) {
+                                    3 -> Color(0xFF2E7D32); 2 -> Color(0xFF558B2F); else -> Color(0xFFF9A825)
+                                }.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(8.dp),
+                            ) {
+                                Text(
+                                    text = when (w.rating) {
+                                        3 -> stringResource(R.string.window_excellent)
+                                        2 -> stringResource(R.string.window_good)
+                                        else -> stringResource(R.string.window_fair)
+                                    },
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    color = when (w.rating) {
+                                        3 -> Color(0xFF2E7D32); 2 -> Color(0xFF558B2F); else -> Color(0xFFF9A825)
+                                    },
+                                )
+                            }
+                        }
+                    }
+                }
+            } else if (!state.loading && state.weather != null && state.sun != null) {
+                DashCard(title = stringResource(R.string.card_best_windows), icon = Icons.Default.CameraAlt) {
+                    Text(
+                        stringResource(R.string.window_no_clear),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
 

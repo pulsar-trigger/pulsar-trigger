@@ -268,6 +268,30 @@
     <string name="card_forecast_day">HOURLY FORECAST</string>
     <string name="date_today">Today</string>
 
+    <!-- Sun card -->
+    <string name="card_sun">SUN</string>
+    <string name="label_sunrise">Sunrise</string>
+    <string name="label_sunset">Sunset</string>
+
+    <!-- Milky Way card -->
+    <string name="card_milky_way">MILKY WAY</string>
+    <string name="mw_visible">✓ Core visible tonight during astronomical darkness</string>
+    <string name="mw_not_visible">✗ Core not visible tonight — rises during daylight or twilight</string>
+    <string name="mw_never_rises">✗ Milky Way core never rises at this latitude</string>
+    <string name="label_core_rise">Core Rise</string>
+    <string name="label_core_set">Core Set</string>
+    <string name="label_dark_window">Dark Window</string>
+    <string name="mw_season_good">Good season for Milky Way photography</string>
+    <string name="mw_season_off">Off-season for Milky Way core visibility</string>
+
+    <!-- Best photo windows -->
+    <string name="card_best_windows">BEST PHOTO WINDOWS</string>
+    <string name="window_excellent">Excellent</string>
+    <string name="window_good">Good</string>
+    <string name="window_fair">Fair</string>
+    <string name="window_cloud">Avg %1$d%% cloud</string>
+    <string name="window_no_clear">No clear windows found for this night</string>
+
     <!-- CustomFlowScreen -->
     <string name="flow_title">Custom Flow</string>
     <string name="flow_no_saved">No saved flows</string>
