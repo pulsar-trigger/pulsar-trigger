@@ -51,41 +51,6 @@ object CommandBuilder {
         return frame(Cmd.SET_MODE, payload)
     }
 
-    fun setSound(threshold: Int, exposureMs: Long): ByteArray {
-        val payload = ByteBuffer.allocate(7).order(ByteOrder.LITTLE_ENDIAN)
-            .put(TriggerMode.SOUND.id)
-            .putShort(threshold.toShort())
-            .putInt(exposureMs.toInt())
-            .array()
-        return frame(Cmd.SET_MODE, payload)
-    }
-
-    fun setLightning(sensitivity: Int, exposureMs: Long): ByteArray {
-        val payload = ByteBuffer.allocate(6).order(ByteOrder.LITTLE_ENDIAN)
-            .put(TriggerMode.LIGHTNING.id)
-            .put(sensitivity.toByte())
-            .putInt(exposureMs.toInt())
-            .array()
-        return frame(Cmd.SET_MODE, payload)
-    }
-
-    fun setLaser(exposureMs: Long): ByteArray {
-        val payload = ByteBuffer.allocate(5).order(ByteOrder.LITTLE_ENDIAN)
-            .put(TriggerMode.LASER.id)
-            .putInt(exposureMs.toInt())
-            .array()
-        return frame(Cmd.SET_MODE, payload)
-    }
-
-    fun setHdr(exposuresMs: List<Long>): ByteArray {
-        val count = minOf(exposuresMs.size, 5)
-        val payload = ByteBuffer.allocate(2 + count * 4).order(ByteOrder.LITTLE_ENDIAN)
-            .put(TriggerMode.HDR.id)
-            .put(count.toByte())
-        exposuresMs.take(count).forEach { payload.putInt(it.toInt()) }
-        return frame(Cmd.SET_MODE, payload.array())
-    }
-
     fun setPressHold(): ByteArray {
         return frame(Cmd.SET_MODE, byteArrayOf(TriggerMode.PRESS_HOLD.id))
     }

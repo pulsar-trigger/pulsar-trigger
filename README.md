@@ -33,10 +33,6 @@ An open-source camera intervalometer and trigger system.
 |------|:-----------:|-------------|
 | **Intervalometer** | `0x01` | Time-lapse with configurable interval, exposure, shot count, and start delay |
 | **Astro** | `0x01` | Star photography — auto-calculates max exposure via 500/400 rule. Reuses `INTERVALOMETER` on firmware; the Android app computes exposure from focal length/crop factor and sends it as an intervalometer config |
-| **Sound** | `0x02` | Fires shutter when sound exceeds threshold (e.g. balloon pop, clap) |
-| **Lightning** | `0x03` | Fires on sudden light change (photodiode sensor, 1–5 sensitivity scale) |
-| **Laser** | `0x04` | Fires when a laser beam is broken (break-beam sensor) |
-| **HDR** | `0x05` | Automatic exposure bracketing (2–5 exposures, non-blocking state machine) |
 | **Press & Hold** | `0x06` | Shutter open while START is held |
 | **Press & Lock** | `0x07` | Toggle shutter open/closed |
 | **Custom Flow** | app-only | Multi-step sequence builder — chain any combination of modes and pauses. App-orchestrated; sends individual mode commands to firmware in sequence (see [Custom Flow](#custom-flow)) |
@@ -62,7 +58,7 @@ Single-threaded `loop()` architecture. All trigger modes are driven by `triggers
 | `protocol.h` | Shared enums (`Cmd`, `Mode`, `State`), packed payload structs, `StatusFrame` layout |
 
 **Key design decisions:**
-- All trigger modes are **non-blocking** — sensor triggers use timestamp-based debounce, HDR uses a state-machine bracket index, intervalometer uses `millis()` comparisons
+- All trigger modes are **non-blocking** — intervalometer uses `millis()` comparisons
 - `camera_shutter()` is the only function that blocks (via `interruptible_delay`) and it checks `STATE_IDLE` every 10 ms to allow abort
 - Parameter values from BLE are always **clamped** to safe ranges defined in `config.h`
 - Battery ADC reads are **cached for 5 seconds** to avoid slow ADC reads on every status frame
@@ -122,10 +118,6 @@ Custom Flow is an **app-orchestrated** multi-step shooting sequence. The user bu
 |-----------|-----------|-----------|
 | Intervalometer | interval, exposure, shot count, delay | Sends intervalometer command; waits for firmware IDLE |
 | Astro | focal length, crop factor, rule divisor, gap, count, delay | Computes exposure; sends as intervalometer; waits for IDLE |
-| Sound | threshold, exposure, shot count | Sends sound command; auto-stops after N shots |
-| Lightning | sensitivity, exposure, shot count | Sends lightning command; auto-stops after N shots |
-| Laser | exposure, shot count | Sends laser command; auto-stops after N shots |
-| HDR | exposure list | Sends HDR command; waits for IDLE |
 | Pause | label text | Blocks until user taps "Continue" |
 
 The flow builder lets you add, edit, reorder (move up/down), and delete steps. During execution, the UI highlights the current step and marks completed ones.
@@ -266,9 +258,6 @@ pulsar-trigger/
 |-----------|:----:|:---------:|---------|
 | Shutter optocoupler | 25 | Output | Camera remote shutter |
 | Focus optocoupler | 26 | Output | Camera remote focus |
-| Sound sensor | 34 | Analog In | Electret mic module |
-| Light sensor | 35 | Analog In | Photodiode (lightning) |
-| Laser receiver | 32 | Analog In | Photoresistor (break-beam) |
 | Status LED | 2 | Output | On-board LED |
 | Battery voltage | 33 | Analog In | Resistor divider (2:1), 3.2–4.2 V LiPo |
 

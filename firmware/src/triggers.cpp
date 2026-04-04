@@ -14,18 +14,12 @@ static Mode  _mode  = MODE_NONE;
 static State _state = STATE_IDLE;
 
 static IntervalParams  _interval = {};
-static SoundParams     _sound    = {};
-static LightningParams _lightning = {};
-static LaserParams     _laser    = {};
-static HdrParams       _hdr      = {};
 
 static uint16_t _shots_taken   = 0;
 static uint32_t _next_fire_ms  = 0;
 static uint32_t _focus_ms      = DEFAULT_FOCUS_MS;
 static bool     _lock_active   = false;
 static uint32_t _debounce_until = 0;  // non-blocking debounce timestamp
-static uint8_t  _hdr_index     = 0;   // current HDR bracket index
-static uint32_t _hdr_gap_until = 0;   // HDR inter-bracket gap timer
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 static uint32_t clamp_u32(uint32_t value, uint32_t lower, uint32_t upper) {
@@ -59,9 +53,6 @@ static void fire_and_count(uint32_t exposure_ms) {
 
 // ── Public API ───────────────────────────────────────────────────────────────
 void triggers_init() {
-    pinMode(PIN_SOUND, INPUT);
-    pinMode(PIN_LIGHT, INPUT);
-    pinMode(PIN_LASER_RX, INPUT);
     _mode = MODE_NONE;
     _state = STATE_IDLE;
 }
@@ -85,46 +76,6 @@ bool triggers_set_mode(Mode mode, const uint8_t* payload, size_t len) {
                           _interval.count, _interval.delay_ms);
             return true;
         }
-        case MODE_SOUND: {
-            if (len < sizeof(SoundParams)) return false;
-            _sound.threshold = clamp_u16(read_u16_le(payload), MIN_SOUND_THRESHOLD, MAX_SOUND_THRESHOLD);
-            _sound.exposure_ms = clamp_u32(read_u32_le(payload + 2), MIN_EXPOSURE_MS, MAX_EXPOSURE_MS);
-            _mode = mode;
-            return true;
-        }
-        case MODE_LIGHTNING: {
-            if (len < sizeof(LightningParams)) return false;
-            _lightning.sensitivity = clamp_u32(payload[0], MIN_LIGHTNING_SENS, MAX_LIGHTNING_SENS);
-            _lightning.exposure_ms = clamp_u32(read_u32_le(payload + 1), MIN_EXPOSURE_MS, MAX_EXPOSURE_MS);
-            _mode = mode;
-            return true;
-        }
-        case MODE_LASER: {
-            if (len < sizeof(LaserParams)) return false;
-            _laser.exposure_ms = clamp_u32(read_u32_le(payload), MIN_EXPOSURE_MS, MAX_EXPOSURE_MS);
-            _mode = mode;
-            return true;
-        }
-        case MODE_HDR: {
-            if (len < sizeof(uint8_t)) return false;
-            uint8_t requested = payload[0];
-            if (requested < MIN_HDR_COUNT || requested > MAX_HDR_COUNT) return false;
-            size_t needed = 1 + requested * sizeof(uint32_t);
-            if (len < needed) return false;
-            _hdr.count = requested;
-            for (uint8_t i = 0; i < _hdr.count; i++) {
-                _hdr.exposures[i] = clamp_u32(
-                    read_u32_le(payload + 1 + (i * sizeof(uint32_t))),
-                    MIN_EXPOSURE_MS,
-                    MAX_EXPOSURE_MS
-                );
-            }
-            for (uint8_t i = _hdr.count; i < MAX_HDR_COUNT; i++) {
-                _hdr.exposures[i] = 0;
-            }
-            _mode = mode;
-            return true;
-        }
         case MODE_PRESS_HOLD:
         case MODE_PRESS_LOCK:
             _mode = mode;
@@ -139,8 +90,6 @@ bool triggers_set_mode(Mode mode, const uint8_t* payload, size_t len) {
 void triggers_start() {
     _shots_taken = 0;
     _debounce_until = 0;
-    _hdr_index = 0;
-    _hdr_gap_until = 0;
     _state = STATE_RUNNING;
 
     if (_mode == MODE_INTERVALOMETER) {
@@ -218,63 +167,6 @@ void triggers_tick() {
                     remaining = _interval.interval_ms;  // infinite: gap countdown
                 }
                 status_send(_state, _mode, _shots_taken, remaining);
-            }
-            break;
-        }
-
-        // ── Sound trigger ────────────────────────────────────────────────
-        case MODE_SOUND: {
-            uint16_t val = analogRead(PIN_SOUND);
-            if (val > _sound.threshold) {
-                fire_and_count(_sound.exposure_ms);
-                _debounce_until = millis();
-            }
-            break;
-        }
-
-        // ── Lightning trigger ────────────────────────────────────────────
-        case MODE_LIGHTNING: {
-            // Sensitivity maps to threshold: higher sensitivity = lower threshold
-            uint16_t thresh = 4095 - (_lightning.sensitivity * 800);
-            uint16_t val = analogRead(PIN_LIGHT);
-            if (val > thresh) {
-                fire_and_count(_lightning.exposure_ms);
-                _debounce_until = millis();
-            }
-            break;
-        }
-
-        // ── Laser break-beam ─────────────────────────────────────────────
-        case MODE_LASER: {
-            uint16_t val = analogRead(PIN_LASER_RX);
-            if (val < LASER_BREAK_THRESH) {  // beam broken = low reading
-                fire_and_count(_laser.exposure_ms);
-                _debounce_until = millis();
-            }
-            break;
-        }
-
-        // ── HDR bracket (state-machine, non-blocking) ────────────────────
-        case MODE_HDR: {
-            // Waiting for inter-bracket gap?
-            if (_hdr_gap_until != 0) {
-                if ((now - _hdr_gap_until) < 500) return;  // 500 ms gap
-                _hdr_gap_until = 0;
-            }
-
-            if (_hdr_index < _hdr.count) {
-                camera_shutter(_hdr.exposures[_hdr_index], _focus_ms);
-                _shots_taken++;
-                _hdr_index++;
-                status_send(_state, _mode, _shots_taken, 0);
-
-                if (_hdr_index < _hdr.count) {
-                    _hdr_gap_until = millis();  // start gap timer
-                } else {
-                    // All brackets done
-                    _state = STATE_IDLE;
-                    status_send(_state, _mode, _shots_taken, 0);
-                }
             }
             break;
         }

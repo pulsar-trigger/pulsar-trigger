@@ -22,8 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -764,25 +762,16 @@ private fun FlowStepCard(
                     Spacer(Modifier.weight(1f))
 
                     // Shot counter
-                    if (step.type != FlowStepType.HDR) {
-                        Text(
-                            "Shot ${status.shotsTaken} of ${step.shotCount}",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                    } else {
-                        Text(
-                            "Bracket ${status.shotsTaken} of ${step.hdrExposures.size}",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        )
-                    }
+                    Text(
+                        "Shot ${status.shotsTaken} of ${step.shotCount}",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
                 }
 
                 // Progress bar
-                val targetCount = if (step.type == FlowStepType.HDR) step.hdrExposures.size else step.shotCount
+                val targetCount = step.shotCount
                 if (targetCount > 0) {
                     Spacer(Modifier.height(6.dp))
                     LinearProgressIndicator(
@@ -845,10 +834,6 @@ private fun FlowStepCard(
 private fun stepIcon(type: FlowStepType) = when (type) {
     FlowStepType.INTERVALOMETER -> Icons.Default.Timer
     FlowStepType.ASTRO -> Icons.Default.Stars
-    FlowStepType.SOUND -> Icons.Default.Mic
-    FlowStepType.LIGHTNING -> Icons.Default.FlashOn
-    FlowStepType.LASER -> Icons.Default.Sensors
-    FlowStepType.HDR -> Icons.Default.HdrOn
     FlowStepType.PAUSE -> Icons.Default.PauseCircle
 }
 
@@ -876,17 +861,9 @@ private fun AddStepDialog(
                     )
                     Spacer(Modifier.height(16.dp))
 
-                    val enabledTypes = setOf(
-                        FlowStepType.INTERVALOMETER,
-                        FlowStepType.ASTRO,
-                        FlowStepType.PAUSE,
-                    )
-
                     FlowStepType.entries.forEach { type ->
-                        val enabled = type in enabledTypes
                         Surface(
-                            onClick = { if (enabled) selectedType = type },
-                            enabled = enabled,
+                            onClick = { selectedType = type },
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth(),
                         ) {
@@ -897,26 +874,14 @@ private fun AddStepDialog(
                                 Icon(
                                     stepIcon(type),
                                     contentDescription = null,
-                                    tint = if (enabled) MaterialTheme.colorScheme.primary
-                                           else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(24.dp),
                                 )
                                 Spacer(Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        type.displayName(),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = if (enabled) MaterialTheme.colorScheme.onSurface
-                                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                                    )
-                                    if (!enabled) {
-                                        Text(
-                                            "Coming soon",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                        )
-                                    }
-                                }
+                                Text(
+                                    type.displayName(),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                )
                             }
                         }
                     }
@@ -972,10 +937,6 @@ private fun EditStepDialog(
                 when (step.type) {
                     FlowStepType.INTERVALOMETER -> IntervalometerStepEditor(current) { current = it }
                     FlowStepType.ASTRO -> AstroStepEditor(current) { current = it }
-                    FlowStepType.SOUND -> SoundStepEditor(current) { current = it }
-                    FlowStepType.LIGHTNING -> LightningStepEditor(current) { current = it }
-                    FlowStepType.LASER -> LaserStepEditor(current) { current = it }
-                    FlowStepType.HDR -> HdrStepEditor(current) { current = it }
                     FlowStepType.PAUSE -> PauseStepEditor(current) { current = it }
                 }
 
@@ -1024,108 +985,6 @@ private fun AstroStepEditor(step: FlowStep, onChange: (FlowStep) -> Unit) {
         onGapMsChanged = { onChange(step.copy(gapMs = it.coerceAtLeast(500))) },
         onShotCountChanged = { onChange(step.copy(shotCount = it.coerceAtLeast(1))) },
         onDelayMsChanged = { onChange(step.copy(delayMs = it)) },
-    )
-}
-
-@Composable
-private fun SoundStepEditor(step: FlowStep, onChange: (FlowStep) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        IntStepperField(
-            label = "Sound Threshold",
-            value = step.soundThreshold,
-            onValueChange = { onChange(step.copy(soundThreshold = it)) },
-            min = 0,
-            max = 4095,
-            step = 10,
-        )
-
-        TimePicker(
-            totalMs = step.exposureMs,
-            onChanged = { onChange(step.copy(exposureMs = it.coerceAtLeast(50))) },
-            label = "Exposure duration",
-            showMs = true,
-        )
-
-        IntStepperField(
-            label = "Shots to capture",
-            value = step.shotCount,
-            onValueChange = { onChange(step.copy(shotCount = it.coerceAtLeast(1))) },
-            min = 1,
-            max = 999,
-        )
-    }
-}
-
-@Composable
-private fun LightningStepEditor(step: FlowStep, onChange: (FlowStep) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        IntStepperField(
-            label = "Sensitivity",
-            value = step.lightningSensitivity,
-            onValueChange = { onChange(step.copy(lightningSensitivity = it)) },
-            min = 1,
-            max = 5,
-        )
-
-        TimePicker(
-            totalMs = step.exposureMs,
-            onChanged = { onChange(step.copy(exposureMs = it.coerceAtLeast(50))) },
-            label = "Exposure duration",
-            showMs = true,
-        )
-
-        IntStepperField(
-            label = "Shots to capture",
-            value = step.shotCount,
-            onValueChange = { onChange(step.copy(shotCount = it.coerceAtLeast(1))) },
-            min = 1,
-            max = 999,
-        )
-    }
-}
-
-@Composable
-private fun LaserStepEditor(step: FlowStep, onChange: (FlowStep) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        TimePicker(
-            totalMs = step.exposureMs,
-            onChanged = { onChange(step.copy(exposureMs = it.coerceAtLeast(50))) },
-            label = "Exposure duration",
-            showMs = true,
-        )
-
-        IntStepperField(
-            label = "Shots to capture",
-            value = step.shotCount,
-            onValueChange = { onChange(step.copy(shotCount = it.coerceAtLeast(1))) },
-            min = 1,
-            max = 999,
-        )
-    }
-}
-
-@Composable
-private fun HdrStepEditor(step: FlowStep, onChange: (FlowStep) -> Unit) {
-    Text(
-        "Bracket exposures (ms), comma-separated:",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    var text by remember { mutableStateOf(step.hdrExposures.joinToString(", ")) }
-    OutlinedTextField(
-        value = text,
-        onValueChange = { text = it },
-        label = { Text("Exposures") },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(onDone = {
-            val parsed = text.split(",").mapNotNull { it.trim().toLongOrNull() }.filter { it > 0 }
-            if (parsed.isNotEmpty()) {
-                onChange(step.copy(hdrExposures = parsed.take(5)))
-            }
-        }),
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
-        supportingText = { Text("Max 5 brackets, e.g. 100, 200, 400, 800, 1600") },
     )
 }
 

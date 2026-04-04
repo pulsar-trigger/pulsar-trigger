@@ -12,10 +12,6 @@ import java.util.UUID
 enum class FlowStepType {
     INTERVALOMETER,
     ASTRO,
-    SOUND,
-    LIGHTNING,
-    LASER,
-    HDR,
     PAUSE,
 }
 
@@ -32,12 +28,6 @@ data class FlowStep(
     val cropFactor: Float = 1.0f,
     val ruleDivisor: Int = 500,
     val gapMs: Long = 2000,
-    // Sound
-    val soundThreshold: Int = 512,
-    // Lightning
-    val lightningSensitivity: Int = 3,
-    // HDR
-    val hdrExposures: List<Long> = listOf(100, 200, 400, 800, 1600),
     // Pause
     val pauseLabel: String = "Adjust camera settings",
 ) {
@@ -52,9 +42,6 @@ data class FlowStep(
         put("cropFactor", cropFactor.toDouble())
         put("ruleDivisor", ruleDivisor)
         put("gapMs", gapMs)
-        put("soundThreshold", soundThreshold)
-        put("lightningSensitivity", lightningSensitivity)
-        put("hdrExposures", JSONArray(hdrExposures))
         put("pauseLabel", pauseLabel)
     }
 
@@ -70,11 +57,6 @@ data class FlowStep(
             cropFactor = json.optDouble("cropFactor", 1.0).toFloat(),
             ruleDivisor = json.optInt("ruleDivisor", 500),
             gapMs = json.optLong("gapMs", 2000),
-            soundThreshold = json.optInt("soundThreshold", 512),
-            lightningSensitivity = json.optInt("lightningSensitivity", 3),
-            hdrExposures = json.optJSONArray("hdrExposures")?.let { arr ->
-                (0 until arr.length()).map { arr.getLong(it) }
-            } ?: listOf(100, 200, 400, 800, 1600),
             pauseLabel = json.optString("pauseLabel", "Adjust camera settings"),
         )
 
@@ -99,20 +81,12 @@ fun FlowStep.summaryLabel(): String = when (type) {
         val expS = ruleDivisor.toDouble() / (focalLength * cropFactor)
         "$shotCount shots, ${String.format("%.1f", expS)}s exp (${focalLength}mm)"
     }
-    FlowStepType.SOUND -> "$shotCount shots, threshold $soundThreshold"
-    FlowStepType.LIGHTNING -> "$shotCount shots, sensitivity $lightningSensitivity"
-    FlowStepType.LASER -> "$shotCount shots, ${exposureMs}ms exp"
-    FlowStepType.HDR -> "${hdrExposures.size} brackets"
     FlowStepType.PAUSE -> pauseLabel
 }
 
 fun FlowStepType.displayName(): String = when (this) {
     FlowStepType.INTERVALOMETER -> "Intervalometer"
     FlowStepType.ASTRO -> "Astro"
-    FlowStepType.SOUND -> "Sound Trigger"
-    FlowStepType.LIGHTNING -> "Lightning"
-    FlowStepType.LASER -> "Laser Trigger"
-    FlowStepType.HDR -> "HDR Bracket"
     FlowStepType.PAUSE -> "Pause"
 }
 

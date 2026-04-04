@@ -24,10 +24,6 @@ enum Cmd : uint8_t {
 enum Mode : uint8_t {
     MODE_NONE          = 0x00,
     MODE_INTERVALOMETER = 0x01,
-    MODE_SOUND         = 0x02,
-    MODE_LIGHTNING     = 0x03,
-    MODE_LASER         = 0x04,
-    MODE_HDR           = 0x05,
     MODE_PRESS_HOLD    = 0x06,
     MODE_PRESS_LOCK    = 0x07,
 };
@@ -46,25 +42,6 @@ struct __attribute__((packed)) IntervalParams {
     uint32_t exposure_ms;
     uint16_t count;        // 0 = infinite
     uint32_t delay_ms;     // initial delay before first shot
-};
-
-struct __attribute__((packed)) SoundParams {
-    uint16_t threshold;
-    uint32_t exposure_ms;
-};
-
-struct __attribute__((packed)) LightningParams {
-    uint8_t  sensitivity;  // 1-5
-    uint32_t exposure_ms;
-};
-
-struct __attribute__((packed)) LaserParams {
-    uint32_t exposure_ms;
-};
-
-struct __attribute__((packed)) HdrParams {
-    uint8_t  count;        // number of exposures (max 5)
-    uint32_t exposures[5]; // ms per bracket
 };
 
 // ── OTA control commands ─────────────────────────────────────────────────────

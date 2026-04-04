@@ -34,10 +34,6 @@ Bytes 2-19  : Payload (mode-specific, zero-padded)
 | MODE | Name | Payload layout |
 |------|------|----------------|
 | 0x01 | INTERVALOMETER | interval_ms(u32 LE), exposure_ms(u32 LE), count(u16 LE), delay_ms(u32 LE) |
-| 0x02 | SOUND | threshold(u16 LE), exposure_ms(u32 LE) |
-| 0x03 | LIGHTNING | sensitivity(u8), exposure_ms(u32 LE) |
-| 0x04 | LASER | exposure_ms(u32 LE) |
-| 0x05 | HDR | exposures[] array: count(u8), then up to 5x u32 LE ms values |
 | 0x06 | PRESS_HOLD | (no params — trigger while button held via START/STOP) |
 | 0x07 | PRESS_LOCK | (no params — toggle on START, off on STOP) |
 

@@ -36,10 +36,6 @@ object Cmd {
 enum class TriggerMode(val id: Byte) {
     INTERVALOMETER(0x01),
     ASTRO(0x01),          // uses intervalometer on firmware
-    SOUND(0x02),
-    LIGHTNING(0x03),
-    LASER(0x04),
-    HDR(0x05),
     PRESS_HOLD(0x06),
     PRESS_LOCK(0x07),
     CUSTOM_FLOW(0x7F.toByte()),  // app-orchestrated, never sent to firmware

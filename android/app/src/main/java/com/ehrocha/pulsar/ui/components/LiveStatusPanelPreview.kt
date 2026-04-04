@@ -104,7 +104,7 @@ fun LiveStatusPanelPreview() {
                     batteryPct = 10,
                     errorCode = 1,
                 ),
-                currentMode = TriggerMode.SOUND,
+                currentMode = TriggerMode.INTERVALOMETER,
                 deviceName = "Pulsar",
             )
         }

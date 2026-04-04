@@ -109,16 +109,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val defaultDelayMs = MutableStateFlow(0L)
     val maxShotCount = MutableStateFlow(999)
 
-    // ── Sound params ─────────────────────────────────────────────────────
-    val soundThreshold = MutableStateFlow(512)
-    val soundExposureMs = MutableStateFlow(200L)
-
-    // ── Lightning params ─────────────────────────────────────────────────
-    val lightningSensitivity = MutableStateFlow(3)
-    val lightningExposureMs = MutableStateFlow(200L)
-
-    // ── Mode params (generic) ────────────────────────────────────────────
-    val laserExposureMs = MutableStateFlow(200L)
 
     // ── Astro params ─────────────────────────────────────────────────────
     val astroFocalLength = MutableStateFlow(24)       // mm
@@ -432,42 +422,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     waitForCompletion(step.shotCount)
                 }
             }
-            FlowStepType.SOUND -> {
-                if (_simulatorActive.value) {
-                    simulateShots(step.shotCount, step.exposureMs, 1000L, 0L)
-                } else {
-                    sendModeCommand(
-                        CommandBuilder.setSound(step.soundThreshold, step.exposureMs)
-                    )
-                    waitForShotCount(step.shotCount)
-                }
-            }
-            FlowStepType.LIGHTNING -> {
-                if (_simulatorActive.value) {
-                    simulateShots(step.shotCount, step.exposureMs, 1000L, 0L)
-                } else {
-                    sendModeCommand(
-                        CommandBuilder.setLightning(step.lightningSensitivity, step.exposureMs)
-                    )
-                    waitForShotCount(step.shotCount)
-                }
-            }
-            FlowStepType.LASER -> {
-                if (_simulatorActive.value) {
-                    simulateShots(step.shotCount, step.exposureMs, 1000L, 0L)
-                } else {
-                    sendModeCommand(CommandBuilder.setLaser(step.exposureMs))
-                    waitForShotCount(step.shotCount)
-                }
-            }
-            FlowStepType.HDR -> {
-                if (_simulatorActive.value) {
-                    simulateHdr(step.hdrExposures)
-                } else {
-                    sendModeCommand(CommandBuilder.setHdr(step.hdrExposures))
-                    waitForCompletion(step.hdrExposures.size)
-                }
-            }
         }
     }
 
@@ -498,23 +452,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
     }
 
-    /** Simulate HDR bracket sequence in simulator. */
-    private suspend fun simulateHdr(exposures: List<Long>) {
-        for ((i, expMs) in exposures.withIndex()) {
-            coroutineContext.ensureActive()
-            _status.value = _status.value?.copy(
-                state = DeviceState.RUNNING, shotsTaken = i, timeRemainingMs = expMs,
-            )
-            delay(expMs)
-            _status.value = _status.value?.copy(shotsTaken = i + 1, timeRemainingMs = 0L)
-            if (i < exposures.lastIndex) {
-                _status.value = _status.value?.copy(state = DeviceState.WAITING)
-                delay(500) // brief gap between HDR brackets
-            }
-        }
-        _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
-    }
-
     private fun sendModeCommand(packet: ByteArray) {
         bleManager.sendCommand(packet)
         bleManager.sendCommand(CommandBuilder.start())
@@ -531,23 +468,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     sawRunning = true
                 }
                 if (sawRunning && s.state == DeviceState.IDLE) break
-            }
-            delay(200)
-        }
-    }
-
-    /** Wait for reactive modes (sound/lightning/laser) to reach N shots, then stop. */
-    private suspend fun waitForShotCount(targetCount: Int) {
-        while (true) {
-            coroutineContext.ensureActive()
-            val s = _status.value
-            if (s != null && s.shotsTaken >= targetCount) {
-                bleManager.sendCommand(CommandBuilder.stop())
-                // Wait for IDLE
-                while (_status.value?.state != DeviceState.IDLE) {
-                    delay(100)
-                }
-                break
             }
             delay(200)
         }
@@ -611,14 +531,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     astroGapMs.value, exposureMs, astroShotCount.value, astroDelayMs.value
                 )
             }
-            TriggerMode.SOUND -> CommandBuilder.setSound(
-                soundThreshold.value, soundExposureMs.value
-            )
-            TriggerMode.LIGHTNING -> CommandBuilder.setLightning(
-                lightningSensitivity.value, lightningExposureMs.value
-            )
-            TriggerMode.LASER -> CommandBuilder.setLaser(laserExposureMs.value)
-            TriggerMode.HDR -> CommandBuilder.setHdr(listOf(100, 200, 400, 800, 1600))
             TriggerMode.PRESS_HOLD -> CommandBuilder.setPressHold()
             TriggerMode.PRESS_LOCK -> CommandBuilder.setPressLock()
             TriggerMode.CUSTOM_FLOW -> return  // app-orchestrated, no single command

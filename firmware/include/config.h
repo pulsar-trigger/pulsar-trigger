@@ -8,9 +8,6 @@
 // ── GPIO pins ────────────────────────────────────────────────────────────────
 #define DEFAULT_PIN_SHUTTER  25     // optocoupler → camera shutter
 #define DEFAULT_PIN_FOCUS    26     // optocoupler → camera focus
-#define PIN_SOUND     GPIO_NUM_34   // analog — electret mic / sound sensor
-#define PIN_LIGHT     GPIO_NUM_35   // analog — photodiode / lightning sensor
-#define PIN_LASER_RX  GPIO_NUM_32   // analog — laser break-beam receiver
 #define PIN_LED       GPIO_NUM_2    // on-board LED (status)
 #define PIN_BATTERY   GPIO_NUM_33   // analog — battery voltage divider
 
@@ -36,12 +33,7 @@ static const uint8_t SAFE_OUTPUT_PINS[] = {
 #define MAX_SHOT_COUNT        9999
 #define MIN_DELAY_MS          0
 #define MAX_DELAY_MS          3600000   // 1 hour
-#define MIN_SOUND_THRESHOLD   1
-#define MAX_SOUND_THRESHOLD   4095
-#define MIN_LIGHTNING_SENS    1
-#define MAX_LIGHTNING_SENS    5
-#define MIN_HDR_COUNT         2
-#define MAX_HDR_COUNT         5
+
 
 // ── Firmware version ──────────────────────────────────────────────────────────
 #ifndef FW_VERSION_MAJOR
@@ -66,11 +58,6 @@ static const uint8_t SAFE_OUTPUT_PINS[] = {
 #define OTA_SERVICE_UUID      "0000ff10-0000-1000-8000-00805f9b34fb"
 #define OTA_CONTROL_UUID      "0000ff11-0000-1000-8000-00805f9b34fb"
 #define OTA_DATA_UUID         "0000ff12-0000-1000-8000-00805f9b34fb"
-
-// ── Sensor thresholds ────────────────────────────────────────────────────────
-#define SOUND_DEFAULT_THRESH  512
-#define LIGHT_DEFAULT_SENS    3     // 1-5 scale
-#define LASER_BREAK_THRESH    200
 
 // ── Battery ──────────────────────────────────────────────────────────────────
 #define BATTERY_FULL_MV       4200

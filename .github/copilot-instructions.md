@@ -18,7 +18,7 @@ Open-source BLE camera intervalometer/trigger: ESP32 firmware + Android companio
 
 ## Conventions
 
-- **Non-blocking firmware**: sensor triggers use timestamp-based debounce, HDR uses bracket-index state machine, intervalometer uses `millis()` comparisons. Never use `delay()` in trigger tick.
+- **Non-blocking firmware**: intervalometer uses `millis()` comparisons. Never use `delay()` in trigger tick.
 - **millis() wraparound**: use unsigned subtraction pattern `(now - target) < 0x80000000UL`
 - **Parameter clamping**: all BLE parameter values must be clamped to ranges in `config.h`
 - **BLE packets**: always 20 bytes (ATT MTU). See `CommandBuilder.kt` for format.
