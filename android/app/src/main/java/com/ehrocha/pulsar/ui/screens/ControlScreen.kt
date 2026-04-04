@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -944,6 +945,8 @@ internal fun SettingsPanel(
 
         // ── About ────────────────────────────────────────────────────────
         CollapsibleSection("ABOUT") {
+            val uriHandler = LocalUriHandler.current
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
@@ -963,6 +966,39 @@ internal fun SettingsPanel(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+            }
+
+            Text(
+                "v${BuildConfig.VERSION_NAME}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Text(
+                "Created by Eduardo Rocha",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+
+            Text(
+                "Licensed under GPL-3.0-or-later",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            OutlinedButton(
+                onClick = { uriHandler.openUri("https://github.com/pulsar-trigger/pulsar-trigger") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Text("View on GitHub")
+            }
+
+            OutlinedButton(
+                onClick = { uriHandler.openUri("https://instagram.com/ehrocha.br") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Text("@ehrocha.br on Instagram")
             }
         }
     }
