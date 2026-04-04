@@ -8,6 +8,9 @@ package com.ehrocha.pulsar.ui.screens
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -19,6 +22,8 @@ import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
@@ -741,6 +746,56 @@ internal fun formatDuration(ms: Long): String {
     }
 }
 
+// ─── Collapsible section ─────────────────────────────────────────────────────
+
+@Composable
+private fun CollapsibleSection(
+    title: String,
+    initiallyExpanded: Boolean = false,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    var expanded by remember { mutableStateOf(initiallyExpanded) }
+
+    Surface(
+        onClick = { expanded = !expanded },
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            ) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically(),
+                exit = shrinkVertically(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    content = content,
+                )
+            }
+        }
+    }
+}
+
 @Composable
 internal fun SettingsPanel(
     vm: PulsarViewModel,
@@ -749,6 +804,8 @@ internal fun SettingsPanel(
 ) {
     var showRenameDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
+    val simulatorActive by vm.simulatorActive.collectAsState()
+    val hwConnected = connected && !simulatorActive
 
     val shutterPin by vm.pinShutter.collectAsState()
     val focusPin by vm.pinFocus.collectAsState()
@@ -784,19 +841,14 @@ internal fun SettingsPanel(
         }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("DEVICE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            tonalElevation = 2.dp,
-        ) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // ── Device ───────────────────────────────────────────────────────
+        CollapsibleSection("DEVICE", initiallyExpanded = true) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable(enabled = connected) { showRenameDialog = true }
-                    .padding(16.dp),
+                    .clickable(enabled = hwConnected) { showRenameDialog = true },
             ) {
                 Icon(
                     Icons.Default.Edit,
@@ -816,112 +868,85 @@ internal fun SettingsPanel(
             }
         }
 
-        Spacer(Modifier.height(8.dp))
+        // ── GPIO Pins ────────────────────────────────────────────────────
+        CollapsibleSection("GPIO PINS") {
+            Text(
+                "Choose which ESP32 GPIO pins drive the shutter and focus optocouplers. Changes are sent to the device and saved.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
-        Text("GPIO PINS", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            GpioPinSelector(
+                label = "Shutter Pin",
+                selectedPin = shutterPin,
+                disabledPin = focusPin,
+                onPinSelected = { vm.savePins(it, focusPin) },
+                enabled = hwConnected,
+            )
 
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            tonalElevation = 2.dp,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
+            GpioPinSelector(
+                label = "Focus Pin",
+                selectedPin = focusPin,
+                disabledPin = shutterPin,
+                onPinSelected = { vm.savePins(shutterPin, it) },
+                enabled = hwConnected,
+            )
+
+            if (simulatorActive) {
                 Text(
-                    "Choose which ESP32 GPIO pins drive the shutter and focus optocouplers. Changes are sent to the device and saved.",
+                    "GPIO configuration not available in simulator mode",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-
-                GpioPinSelector(
-                    label = "Shutter Pin",
-                    selectedPin = shutterPin,
-                    disabledPin = focusPin,
-                    onPinSelected = { vm.savePins(it, focusPin) },
-                    enabled = connected,
-                )
-
-                GpioPinSelector(
-                    label = "Focus Pin",
-                    selectedPin = focusPin,
-                    disabledPin = shutterPin,
-                    onPinSelected = { vm.savePins(shutterPin, it) },
-                    enabled = connected,
                 )
             }
         }
 
-        Spacer(Modifier.height(8.dp))
-
-        Text("BACKUP & RESTORE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            tonalElevation = 2.dp,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+        // ── Backup & Restore ─────────────────────────────────────────────
+        CollapsibleSection("BACKUP & RESTORE") {
+            Text(
+                "Export settings to Google Drive or local storage, and import them on another device.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(
-                    "Export settings to Google Drive or local storage, and import them on another device.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth(),
+                OutlinedButton(
+                    onClick = { exportLauncher.launch("pulsar-settings.json") },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
                 ) {
-                    OutlinedButton(
-                        onClick = { exportLauncher.launch("pulsar-settings.json") },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                    ) {
-                        Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Export")
-                    }
-                    OutlinedButton(
-                        onClick = { importLauncher.launch(arrayOf("application/json")) },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                    ) {
-                        Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Import")
-                    }
+                    Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Export")
+                }
+                OutlinedButton(
+                    onClick = { importLauncher.launch(arrayOf("application/json")) },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Import")
                 }
             }
         }
 
-        Spacer(Modifier.height(8.dp))
+        // ── Firmware Update ──────────────────────────────────────────────
+        FirmwareUpdateSection(vm = vm, connected = hwConnected)
 
-        FirmwareUpdateSection(vm = vm, connected = connected)
-
-        Spacer(Modifier.height(8.dp))
-
+        // ── App Update ───────────────────────────────────────────────────
         AppUpdateSection(vm = vm)
 
-        Spacer(Modifier.height(8.dp))
+        // ── Device Hardware ──────────────────────────────────────────────
+        DeviceInfoSection(vm = vm, connected = hwConnected)
 
-        DeviceInfoSection(vm = vm, connected = connected)
-
-        Spacer(Modifier.height(8.dp))
-
-        Text("ABOUT", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            tonalElevation = 2.dp,
-        ) {
+        // ── About ────────────────────────────────────────────────────────
+        CollapsibleSection("ABOUT") {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(
                     Icons.Outlined.Info,
@@ -1007,25 +1032,15 @@ private fun FirmwareUpdateSection(vm: PulsarViewModel, connected: Boolean) {
     val status by vm.status.collectAsState()
     val currentVersion = status?.fwVersion ?: ""
 
-    Text("FIRMWARE UPDATE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+    CollapsibleSection("FIRMWARE UPDATE") {
+        if (currentVersion.isNotEmpty()) {
+            Text(
+                "Current: v$currentVersion",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
 
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            if (currentVersion.isNotEmpty()) {
-                Text(
-                    "Current: v$currentVersion",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-
-            when (otaState) {
+        when (otaState) {
                 OtaState.IDLE -> {
                     OutlinedButton(
                         onClick = { fwManager.checkForUpdate(currentVersion) },
@@ -1145,7 +1160,6 @@ private fun FirmwareUpdateSection(vm: PulsarViewModel, connected: Boolean) {
                     ) { Text("Dismiss") }
                 }
             }
-        }
     }
 }
 
@@ -1158,23 +1172,13 @@ private fun AppUpdateSection(vm: PulsarViewModel) {
     val errorMessage by updateManager.errorMessage.collectAsState()
     val currentVersion = BuildConfig.VERSION_NAME
 
-    Text("APP UPDATE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+    CollapsibleSection("APP UPDATE") {
+        Text(
+            "Current: v$currentVersion",
+            style = MaterialTheme.typography.bodyMedium,
+        )
 
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(
-                "Current: v$currentVersion",
-                style = MaterialTheme.typography.bodyMedium,
-            )
-
-            when (updateState) {
+        when (updateState) {
                 AppUpdateState.IDLE -> {
                     OutlinedButton(
                         onClick = { updateManager.checkForUpdate(currentVersion) },
@@ -1278,7 +1282,6 @@ private fun AppUpdateSection(vm: PulsarViewModel) {
                     ) { Text("Dismiss") }
                 }
             }
-        }
     }
 }
 
@@ -1475,54 +1478,43 @@ private fun DeviceInfoSection(vm: PulsarViewModel, connected: Boolean) {
     val info by vm.deviceInfo.collectAsState()
     val simulatorActive by vm.simulatorActive.collectAsState()
 
-    Text("DEVICE HARDWARE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            if (simulatorActive) {
-                Text(
-                    "Hardware info not available in simulator mode",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else if (info != null) {
-                val i = info!!
-                InfoRow("Chip", "${i.chipModel} rev ${i.chipRevision}")
-                InfoRow("CPU", "${i.cpuFreqMhz} MHz")
-                InfoRow("Flash", formatKb(i.flashSizeKb))
-                InfoRow("Free Heap", formatKb(i.freeHeapKb))
-                if (i.psramKb > 0) {
-                    InfoRow("PSRAM", formatKb(i.psramKb.toLong()))
-                }
-                InfoRow("GPIO Pins", "${i.gpioCount} total, ${i.safeOutputCount} configurable outputs")
-                InfoRow("Uptime", formatUptime(i.uptimeMinutes))
-
-                Spacer(Modifier.height(4.dp))
-                OutlinedButton(
-                    onClick = { vm.requestDeviceInfo() },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                ) { Text("Refresh") }
-            } else if (connected) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                    Spacer(Modifier.width(12.dp))
-                    Text("Querying device…", style = MaterialTheme.typography.bodySmall)
-                }
-            } else {
-                Text(
-                    "Connect to a device to see hardware info",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+    CollapsibleSection("DEVICE HARDWARE") {
+        if (simulatorActive) {
+            Text(
+                "Hardware info not available in simulator mode",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else if (info != null) {
+            val i = info!!
+            InfoRow("Chip", "${i.chipModel} rev ${i.chipRevision}")
+            InfoRow("CPU", "${i.cpuFreqMhz} MHz")
+            InfoRow("Flash", formatKb(i.flashSizeKb))
+            InfoRow("Free Heap", formatKb(i.freeHeapKb))
+            if (i.psramKb > 0) {
+                InfoRow("PSRAM", formatKb(i.psramKb.toLong()))
             }
+            InfoRow("GPIO Pins", "${i.gpioCount} total, ${i.safeOutputCount} configurable outputs")
+            InfoRow("Uptime", formatUptime(i.uptimeMinutes))
+
+            Spacer(Modifier.height(4.dp))
+            OutlinedButton(
+                onClick = { vm.requestDeviceInfo() },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+            ) { Text("Refresh") }
+        } else if (connected) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(12.dp))
+                Text("Querying device…", style = MaterialTheme.typography.bodySmall)
+            }
+        } else {
+            Text(
+                "Connect to a device to see hardware info",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

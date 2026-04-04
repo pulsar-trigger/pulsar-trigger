@@ -6,7 +6,6 @@
 package com.ehrocha.pulsar.ui.screens
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,6 +28,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.ehrocha.pulsar.ble.DeviceState
+import com.ehrocha.pulsar.ble.StatusFrame
 import com.ehrocha.pulsar.model.FlowStep
 import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.model.SavedFlow
@@ -36,6 +37,8 @@ import com.ehrocha.pulsar.model.displayName
 import com.ehrocha.pulsar.model.summaryLabel
 import com.ehrocha.pulsar.ui.components.TimePicker
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
+
+private enum class FlowScreenState { LIBRARY, EDITOR }
 
 @Composable
 fun CustomFlowScreen(
@@ -50,12 +53,305 @@ fun CustomFlowScreen(
     val paused by vm.flowPaused.collectAsState()
     val currentStep by vm.flowCurrentStep.collectAsState()
 
+    var screenState by remember { mutableStateOf(FlowScreenState.LIBRARY) }
+    var editingFlowName by remember { mutableStateOf<String?>(null) }
+
+    // When a flow is running, always show the editor
+    LaunchedEffect(running) {
+        if (running) screenState = FlowScreenState.EDITOR
+    }
+
+    BackHandler(enabled = running || screenState == FlowScreenState.EDITOR) {
+        if (!running) {
+            screenState = FlowScreenState.LIBRARY
+            editingFlowName = null
+        }
+    }
+
+    when (screenState) {
+        FlowScreenState.LIBRARY -> FlowLibraryView(
+            saved = saved,
+            status = status,
+            connected = connected,
+            onBack = onBack,
+            onNewFlow = {
+                vm.saveFlowSteps(emptyList())
+                editingFlowName = null
+                screenState = FlowScreenState.EDITOR
+            },
+            onEditFlow = { flow ->
+                vm.loadSavedFlow(flow.name)
+                editingFlowName = flow.name
+                screenState = FlowScreenState.EDITOR
+            },
+            onDeleteFlow = { name -> vm.deleteSavedFlow(name) },
+            onRunFlow = { flow ->
+                vm.loadSavedFlow(flow.name)
+                editingFlowName = flow.name
+                screenState = FlowScreenState.EDITOR
+                vm.startFlow()
+            },
+        )
+        FlowScreenState.EDITOR -> FlowEditorView(
+            vm = vm,
+            steps = steps,
+            saved = saved,
+            status = status,
+            connected = connected,
+            running = running,
+            paused = paused,
+            currentStep = currentStep,
+            editingFlowName = editingFlowName,
+            onBack = {
+                screenState = FlowScreenState.LIBRARY
+                editingFlowName = null
+            },
+            onFlowNameChanged = { editingFlowName = it },
+        )
+    }
+}
+
+// ─── Flow Library (landing page) ─────────────────────────────────────────────
+
+@Composable
+private fun FlowLibraryView(
+    saved: List<SavedFlow>,
+    status: StatusFrame?,
+    connected: Boolean,
+    onBack: () -> Unit,
+    onNewFlow: () -> Unit,
+    onEditFlow: (SavedFlow) -> Unit,
+    onDeleteFlow: (String) -> Unit,
+    onRunFlow: (SavedFlow) -> Unit,
+) {
+    var confirmDelete by remember { mutableStateOf<String?>(null) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+    ) {
+        // ── Header ───────────────────────────────────────────────────────
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            }
+            Spacer(Modifier.width(4.dp))
+            Text("Custom Flow", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.weight(1f))
+            BatteryIndicator(status)
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        // ── Saved flows list ─────────────────────────────────────────────
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            tonalElevation = 1.dp,
+            modifier = Modifier.weight(1f),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (saved.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 48.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.PlaylistAdd,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                "No saved flows",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "Create a flow to chain multiple shooting\nmodes, pauses, and sequences.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+                }
+
+                saved.forEach { flow ->
+                    SavedFlowCard(
+                        flow = flow,
+                        connected = connected,
+                        onEdit = { onEditFlow(flow) },
+                        onDelete = { confirmDelete = flow.name },
+                        onRun = { onRunFlow(flow) },
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // ── New flow button ──────────────────────────────────────────────
+        Button(
+            onClick = onNewFlow,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+        ) {
+            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("NEW FLOW", fontWeight = FontWeight.Bold)
+        }
+
+        Spacer(Modifier.height(8.dp))
+    }
+
+    // ── Delete confirmation dialog ───────────────────────────────────────
+    if (confirmDelete != null) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = null },
+            title = { Text("Delete Flow") },
+            text = { Text("Delete \"$confirmDelete\"? This cannot be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDeleteFlow(confirmDelete!!)
+                    confirmDelete = null
+                }) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDelete = null }) { Text("Cancel") }
+            },
+        )
+    }
+}
+
+@Composable
+private fun SavedFlowCard(
+    flow: SavedFlow,
+    connected: Boolean,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    onRun: () -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        flow.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        "${flow.steps.size} step${if (flow.steps.size != 1) "s" else ""}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(20.dp))
+                }
+                IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        Icons.Default.Delete, contentDescription = "Delete",
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                }
+                IconButton(
+                    onClick = onRun,
+                    enabled = connected && flow.steps.isNotEmpty(),
+                    modifier = Modifier.size(36.dp),
+                ) {
+                    Icon(
+                        Icons.Default.PlayArrow, contentDescription = "Run",
+                        modifier = Modifier.size(20.dp),
+                        tint = if (connected && flow.steps.isNotEmpty())
+                            MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                    )
+                }
+            }
+
+            // Step type summary chips
+            if (flow.steps.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    flow.steps.take(6).forEach { step ->
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            ) {
+                                Icon(
+                                    stepIcon(step.type),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(12.dp),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                                Spacer(Modifier.width(3.dp))
+                                Text(
+                                    step.type.displayName(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
+                            }
+                        }
+                    }
+                    if (flow.steps.size > 6) {
+                        Text(
+                            "+${flow.steps.size - 6}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.align(Alignment.CenterVertically),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─── Flow Editor (step list + execution) ─────────────────────────────────────
+
+@Composable
+private fun FlowEditorView(
+    vm: PulsarViewModel,
+    steps: List<FlowStep>,
+    saved: List<SavedFlow>,
+    status: StatusFrame?,
+    connected: Boolean,
+    running: Boolean,
+    paused: Boolean,
+    currentStep: Int,
+    editingFlowName: String?,
+    onBack: () -> Unit,
+    onFlowNameChanged: (String?) -> Unit,
+) {
     var showAddDialog by remember { mutableStateOf(false) }
     var editingIndex by remember { mutableIntStateOf(-1) }
     var showSaveDialog by remember { mutableStateOf(false) }
-    var showLoadDialog by remember { mutableStateOf(false) }
-
-    BackHandler(enabled = running) { /* block back while running */ }
 
     Column(
         modifier = Modifier
@@ -68,34 +364,22 @@ fun CustomFlowScreen(
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
             }
             Spacer(Modifier.width(4.dp))
-            Text("Custom Flow", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.weight(1f))
-            if (status != null) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(8.dp),
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    ) {
-                        Text(
-                            text = "${status!!.batteryPct}%",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = if (status!!.batteryPct < 20) Color(0xFFFF1744)
-                                    else MaterialTheme.colorScheme.onSurface,
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        val battIcon = when {
-                            status!!.batteryPct > 75 -> "󰁹"
-                            status!!.batteryPct > 25 -> "󰁾"
-                            else -> "󰁺"
-                        }
-                        Text(text = battIcon, fontSize = 16.sp)
-                    }
+            Column {
+                Text(
+                    if (editingFlowName != null) editingFlowName else "New Flow",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+                if (editingFlowName != null) {
+                    Text(
+                        "${steps.size} step${if (steps.size != 1) "s" else ""}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
+            Spacer(Modifier.weight(1f))
+            BatteryIndicator(status)
         }
 
         Spacer(Modifier.height(12.dp))
@@ -155,6 +439,7 @@ fun CustomFlowScreen(
                         isCurrent = isCurrent,
                         isDone = isDone,
                         isPaused = isCurrent && paused,
+                        status = if (isCurrent) status else null,
                         enabled = !running,
                         onEdit = { editingIndex = index },
                         onDelete = {
@@ -198,32 +483,22 @@ fun CustomFlowScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // ── Save / Load buttons ──────────────────────────────────────────
-        if (!running) {
-            Row(
+        // ── Save button ──────────────────────────────────────────────────
+        if (!running && steps.isNotEmpty()) {
+            OutlinedButton(
+                onClick = {
+                    if (editingFlowName != null) {
+                        vm.saveFlowAs(editingFlowName)
+                    } else {
+                        showSaveDialog = true
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                shape = RoundedCornerShape(12.dp),
             ) {
-                OutlinedButton(
-                    onClick = { showSaveDialog = true },
-                    enabled = steps.isNotEmpty(),
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Save Flow")
-                }
-                OutlinedButton(
-                    onClick = { showLoadDialog = true },
-                    enabled = saved.isNotEmpty(),
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Load Flow")
-                }
+                Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(if (editingFlowName != null) "Save" else "Save As…")
             }
 
             Spacer(Modifier.height(8.dp))
@@ -287,21 +562,42 @@ fun CustomFlowScreen(
             onDismiss = { showSaveDialog = false },
             onSave = { name ->
                 vm.saveFlowAs(name)
+                onFlowNameChanged(name)
                 showSaveDialog = false
             },
         )
     }
+}
 
-    if (showLoadDialog) {
-        LoadFlowDialog(
-            flows = saved,
-            onDismiss = { showLoadDialog = false },
-            onLoad = { name ->
-                vm.loadSavedFlow(name)
-                showLoadDialog = false
-            },
-            onDelete = { name -> vm.deleteSavedFlow(name) },
-        )
+// ─── Battery indicator (shared) ──────────────────────────────────────────────
+
+@Composable
+private fun BatteryIndicator(status: StatusFrame?) {
+    if (status != null) {
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            shape = RoundedCornerShape(8.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            ) {
+                Text(
+                    text = "${status.batteryPct}%",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = if (status.batteryPct < 20) Color(0xFFFF1744)
+                            else MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(Modifier.width(4.dp))
+                val battIcon = when {
+                    status.batteryPct > 75 -> "󰁹"
+                    status.batteryPct > 25 -> "󰁾"
+                    else -> "󰁺"
+                }
+                Text(text = battIcon, fontSize = 16.sp)
+            }
+        }
     }
 }
 
@@ -315,6 +611,7 @@ private fun FlowStepCard(
     isCurrent: Boolean,
     isDone: Boolean,
     isPaused: Boolean,
+    status: StatusFrame?,
     enabled: Boolean,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -427,9 +724,109 @@ private fun FlowStepCard(
                 }
             }
 
+            // ── Live execution info ──────────────────────────────────
+            if (isCurrent && status != null && step.type != FlowStepType.PAUSE) {
+                Spacer(Modifier.height(8.dp))
+
+                // State label
+                val stateLabel = when (status.state) {
+                    DeviceState.RUNNING -> "Exposing"
+                    DeviceState.WAITING -> "Waiting"
+                    DeviceState.IDLE -> "Idle"
+                    DeviceState.ERROR -> "Error"
+                }
+                val stateColor = when (status.state) {
+                    DeviceState.RUNNING -> Color(0xFF4CAF50)
+                    DeviceState.WAITING -> Color(0xFFFFA726)
+                    DeviceState.IDLE -> MaterialTheme.colorScheme.onSurfaceVariant
+                    DeviceState.ERROR -> Color(0xFFFF1744)
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // State badge
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = stateColor.copy(alpha = 0.15f),
+                    ) {
+                        Text(
+                            stateLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = stateColor,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        )
+                    }
+
+                    Spacer(Modifier.weight(1f))
+
+                    // Shot counter
+                    if (step.type != FlowStepType.HDR) {
+                        Text(
+                            "Shot ${status.shotsTaken} of ${step.shotCount}",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    } else {
+                        Text(
+                            "Bracket ${status.shotsTaken} of ${step.hdrExposures.size}",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
+                }
+
+                // Progress bar
+                val targetCount = if (step.type == FlowStepType.HDR) step.hdrExposures.size else step.shotCount
+                if (targetCount > 0) {
+                    Spacer(Modifier.height(6.dp))
+                    LinearProgressIndicator(
+                        progress = { (status.shotsTaken.toFloat() / targetCount).coerceIn(0f, 1f) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp),
+                        color = stateColor,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    )
+                }
+
+                // Time remaining
+                if (status.timeRemainingMs > 0) {
+                    Spacer(Modifier.height(4.dp))
+                    val secs = status.timeRemainingMs / 1000
+                    val timeStr = if (secs >= 60) "${secs / 60}m ${secs % 60}s remaining"
+                                  else "${secs}s remaining"
+                    Text(
+                        timeStr,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                    )
+                }
+            }
+
             // Pause continue button
             if (isPaused) {
                 Spacer(Modifier.height(8.dp))
+
+                // Pause step gets a "Waiting for user" badge
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color(0xFFFFA726).copy(alpha = 0.15f),
+                    modifier = Modifier.padding(bottom = 8.dp),
+                ) {
+                    Text(
+                        "Waiting for user",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFFFA726),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                    )
+                }
+
                 Button(
                     onClick = onContinue,
                     modifier = Modifier.fillMaxWidth(),
@@ -861,70 +1258,4 @@ private fun SaveFlowDialog(
     }
 }
 
-// ─── Load Flow dialog ────────────────────────────────────────────────────────
 
-@Composable
-private fun LoadFlowDialog(
-    flows: List<SavedFlow>,
-    onDismiss: () -> Unit,
-    onLoad: (String) -> Unit,
-    onDelete: (String) -> Unit,
-) {
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            tonalElevation = 6.dp,
-        ) {
-            Column(modifier = Modifier.padding(24.dp)) {
-                Text("Load Flow", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(16.dp))
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 300.dp)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    flows.forEach { flow ->
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            tonalElevation = 2.dp,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(flow.name, fontWeight = FontWeight.Bold)
-                                    Text(
-                                        "${flow.steps.size} step${if (flow.steps.size != 1) "s" else ""}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                IconButton(onClick = { onDelete(flow.name) }) {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = "Delete",
-                                        tint = MaterialTheme.colorScheme.error,
-                                    )
-                                }
-                                IconButton(onClick = { onLoad(flow.name) }) {
-                                    Icon(Icons.Default.FileOpen, contentDescription = "Load")
-                                }
-                            }
-                        }
-                    }
-                }
-                Spacer(Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                ) {
-                    TextButton(onClick = onDismiss) { Text("Close") }
-                }
-            }
-        }
-    }
-}
