@@ -17,6 +17,7 @@ enum Cmd : uint8_t {
     CMD_SET_FOCUS  = 0x06,
     CMD_SET_NAME  = 0x08,
     CMD_SET_PINS  = 0x09,
+    CMD_DEVICE_INFO = 0x0A,
 };
 
 // ── Trigger Modes (byte 1) ──────────────────────────────────────────────────
@@ -96,4 +97,20 @@ struct __attribute__((packed)) StatusFrame {
     uint8_t  fw_minor;
     uint8_t  fw_patch;
     uint8_t  reserved[7];
+};
+
+// ── Device info frame (20 bytes, sent in response to CMD_DEVICE_INFO) ───────
+// Byte 0     = 0xFF marker (distinguishes from StatusFrame whose byte 0 is 0x00–0x03)
+// Bytes 1–19 = hardware info fields
+struct __attribute__((packed)) DeviceInfoFrame {
+    uint8_t  marker;             // always 0xFF
+    uint8_t  chip_model;         // 1=ESP32, 2=ESP32-S2, 3=ESP32-S3, 4=ESP32-C3
+    uint8_t  chip_revision;      // silicon revision
+    uint8_t  cpu_freq_mhz;      // CPU freq / 1 (e.g. 240)
+    uint32_t flash_size_kb;      // flash size in KB
+    uint32_t free_heap_kb;       // available heap in KB
+    uint16_t psram_kb;           // PSRAM in KB (0 if none)
+    uint8_t  gpio_count;         // total GPIO pins
+    uint8_t  safe_output_count;  // configurable output pins
+    uint16_t uptime_minutes;     // device uptime in minutes
 };

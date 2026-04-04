@@ -22,6 +22,7 @@ object CommandBuilder {
     fun stop(): ByteArray = frame(Cmd.STOP)
     fun shutter(): ByteArray = frame(Cmd.SHUTTER)
     fun statusRequest(): ByteArray = frame(Cmd.STATUS_REQ)
+    fun deviceInfoRequest(): ByteArray = frame(Cmd.DEVICE_INFO)
 
     fun setName(suffix: String): ByteArray {
         val bytes = suffix.toByteArray(Charsets.UTF_8)

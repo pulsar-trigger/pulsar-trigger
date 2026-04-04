@@ -29,6 +29,7 @@ object Cmd {
     const val SET_FOCUS: Byte  = 0x06
     const val SET_NAME: Byte   = 0x08
     const val SET_PINS: Byte   = 0x09
+    const val DEVICE_INFO: Byte = 0x0A
 }
 
 /** Trigger modes */
@@ -113,4 +114,48 @@ private fun ByteArray.readU32LE(offset: Int): Long {
             ((this[offset + 1].toLong() and 0xFF) shl 8) or
             ((this[offset + 2].toLong() and 0xFF) shl 16) or
             ((this[offset + 3].toLong() and 0xFF) shl 24)
+}
+
+private fun ByteArray.readU16LE(offset: Int): Int {
+    return (this[offset].toInt() and 0xFF) or
+            ((this[offset + 1].toInt() and 0xFF) shl 8)
+}
+
+/** Device hardware info from CMD_DEVICE_INFO response (marker byte 0xFF) */
+data class DeviceInfo(
+    val chipModel: String,
+    val chipRevision: Int,
+    val cpuFreqMhz: Int,
+    val flashSizeKb: Long,
+    val freeHeapKb: Long,
+    val psramKb: Int,
+    val gpioCount: Int,
+    val safeOutputCount: Int,
+    val uptimeMinutes: Int,
+) {
+    companion object {
+        /** Try to parse a DeviceInfoFrame (20 bytes, marker 0xFF). Returns null if not a device info frame. */
+        fun parse(data: ByteArray): DeviceInfo? {
+            if (data.size < 18) return null
+            if ((data[0].toInt() and 0xFF) != 0xFF) return null
+            val model = when (data[1].toInt() and 0xFF) {
+                1 -> "ESP32"
+                2 -> "ESP32-S2"
+                3 -> "ESP32-S3"
+                4 -> "ESP32-C3"
+                else -> "Unknown"
+            }
+            return DeviceInfo(
+                chipModel = model,
+                chipRevision = data[2].toInt() and 0xFF,
+                cpuFreqMhz = data[3].toInt() and 0xFF,
+                flashSizeKb = data.readU32LE(4),
+                freeHeapKb = data.readU32LE(8),
+                psramKb = data.readU16LE(12),
+                gpioCount = data[14].toInt() and 0xFF,
+                safeOutputCount = data[15].toInt() and 0xFF,
+                uptimeMinutes = data.readU16LE(16),
+            )
+        }
+    }
 }

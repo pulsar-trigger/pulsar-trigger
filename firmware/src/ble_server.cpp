@@ -18,6 +18,9 @@
 #include <Preferences.h>
 #include <esp_gap_ble_api.h>
 #include <esp_bt_main.h>
+#include <esp_chip_info.h>
+#include <esp_system.h>
+#include <esp_spi_flash.h>
 
 static Preferences _prefs;
 static char _deviceName[7 + BLE_NAME_SUFFIX_MAX + 1]; // "Pulsar-" + suffix + NUL
@@ -162,6 +165,36 @@ class CmdCharCB : public BLECharacteristicCallbacks {
                 // Defer BLE reinit to main loop (unsafe from callback context)
                 _pendingReinit = true;
                 Serial.printf("[BLE] SET_NAME → %s (reinit pending)\n", _deviceName);
+                break;
+            }
+            case CMD_DEVICE_INFO: {
+                DeviceInfoFrame info = {};
+                info.marker = 0xFF;
+
+                esp_chip_info_t chip;
+                esp_chip_info(&chip);
+                switch (chip.model) {
+                    case CHIP_ESP32:   info.chip_model = 1; break;
+                    case CHIP_ESP32S2: info.chip_model = 2; break;
+                    case CHIP_ESP32S3: info.chip_model = 3; break;
+                    case CHIP_ESP32C3: info.chip_model = 4; break;
+                    default:           info.chip_model = 0; break;
+                }
+                info.chip_revision = chip.revision;
+                info.cpu_freq_mhz = (uint8_t)(getCpuFrequencyMhz());
+                info.flash_size_kb = (uint32_t)(spi_flash_get_chip_size() / 1024);
+                info.free_heap_kb = (uint32_t)(esp_get_free_heap_size() / 1024);
+                #if CONFIG_SPIRAM
+                info.psram_kb = (uint16_t)(esp_spiram_get_size() / 1024);
+                #else
+                info.psram_kb = 0;
+                #endif
+                info.gpio_count = (uint8_t)GPIO_NUM_MAX;
+                info.safe_output_count = SAFE_OUTPUT_PIN_COUNT;
+                info.uptime_minutes = (uint16_t)(millis() / 60000UL);
+
+                ble_notify(reinterpret_cast<const uint8_t*>(&info), sizeof(info));
+                Serial.println("[BLE] DEVICE_INFO sent");
                 break;
             }
             default:

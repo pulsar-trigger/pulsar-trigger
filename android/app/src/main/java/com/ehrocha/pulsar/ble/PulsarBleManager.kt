@@ -36,6 +36,9 @@ class PulsarBleManager(context: Context) : BleManager(context) {
     private val _status = MutableStateFlow<StatusFrame?>(null)
     val status: StateFlow<StatusFrame?> = _status
 
+    private val _deviceInfo = MutableStateFlow<DeviceInfo?>(null)
+    val deviceInfo: StateFlow<DeviceInfo?> = _deviceInfo
+
     private val _connectionState = MutableStateFlow(false)
     val connectionState: StateFlow<Boolean> = _connectionState
 
@@ -65,7 +68,12 @@ class PulsarBleManager(context: Context) : BleManager(context) {
 
         setNotificationCallback(statusChar).with { _, data ->
             data.value?.let { bytes ->
-                StatusFrame.parse(bytes)?.let { _status.value = it }
+                // DeviceInfoFrame has marker 0xFF in byte 0
+                if (bytes.isNotEmpty() && (bytes[0].toInt() and 0xFF) == 0xFF) {
+                    DeviceInfo.parse(bytes)?.let { _deviceInfo.value = it }
+                } else {
+                    StatusFrame.parse(bytes)?.let { _status.value = it }
+                }
             }
         }
         enableNotifications(statusChar).enqueue()

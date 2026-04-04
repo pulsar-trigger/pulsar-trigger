@@ -907,6 +907,10 @@ internal fun SettingsPanel(
 
         Spacer(Modifier.height(8.dp))
 
+        DeviceInfoSection(vm = vm, connected = connected)
+
+        Spacer(Modifier.height(8.dp))
+
         Text("ABOUT", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
 
         Surface(
@@ -1462,4 +1466,85 @@ internal fun ManualSettingsPanel(vm: PulsarViewModel, connected: Boolean) {
 
         ManualPanel(vm)
     }
+}
+
+// ── Device Hardware Info ─────────────────────────────────────────────────────
+
+@Composable
+private fun DeviceInfoSection(vm: PulsarViewModel, connected: Boolean) {
+    val info by vm.deviceInfo.collectAsState()
+    val simulatorActive by vm.simulatorActive.collectAsState()
+
+    Text("DEVICE HARDWARE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (simulatorActive) {
+                Text(
+                    "Hardware info not available in simulator mode",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else if (info != null) {
+                val i = info!!
+                InfoRow("Chip", "${i.chipModel} rev ${i.chipRevision}")
+                InfoRow("CPU", "${i.cpuFreqMhz} MHz")
+                InfoRow("Flash", formatKb(i.flashSizeKb))
+                InfoRow("Free Heap", formatKb(i.freeHeapKb))
+                if (i.psramKb > 0) {
+                    InfoRow("PSRAM", formatKb(i.psramKb.toLong()))
+                }
+                InfoRow("GPIO Pins", "${i.gpioCount} total, ${i.safeOutputCount} configurable outputs")
+                InfoRow("Uptime", formatUptime(i.uptimeMinutes))
+
+                Spacer(Modifier.height(4.dp))
+                OutlinedButton(
+                    onClick = { vm.requestDeviceInfo() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                ) { Text("Refresh") }
+            } else if (connected) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(12.dp))
+                    Text("Querying device…", style = MaterialTheme.typography.bodySmall)
+                }
+            } else {
+                Text(
+                    "Connect to a device to see hardware info",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun InfoRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+    }
+}
+
+private fun formatKb(kb: Long): String = when {
+    kb >= 1024 -> "${kb / 1024} MB"
+    else -> "$kb KB"
+}
+
+private fun formatUptime(minutes: Int): String {
+    val h = minutes / 60
+    val m = minutes % 60
+    return if (h > 0) "${h}h ${m}m" else "${m}m"
 }

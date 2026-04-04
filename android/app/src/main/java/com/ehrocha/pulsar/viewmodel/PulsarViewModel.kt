@@ -82,6 +82,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val _status = MutableStateFlow<StatusFrame?>(null)
     val status: StateFlow<StatusFrame?> = _status
 
+    val deviceInfo: StateFlow<DeviceInfo?> = bleManager.deviceInfo
+
     // ── Simulator ────────────────────────────────────────────────────────
     private val _simulatorActive = MutableStateFlow(false)
     val simulatorActive: StateFlow<Boolean> = _simulatorActive
@@ -206,6 +208,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _connected.collect { isConnected ->
                 if (isConnected) {
+                    // Request device hardware info from real device
+                    if (!_simulatorActive.value) {
+                        bleManager.sendCommand(CommandBuilder.deviceInfoRequest())
+                    }
                     // Always check app update
                     appUpdateManager.checkForUpdate(
                         com.ehrocha.pulsar.BuildConfig.VERSION_NAME
@@ -228,6 +234,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             if (_devices.value.none { it.address == dev.address }) {
                 _devices.value = _devices.value + dev
             }
+        }
+    }
+
+    fun requestDeviceInfo() {
+        if (!_simulatorActive.value) {
+            bleManager.sendCommand(CommandBuilder.deviceInfoRequest())
         }
     }
 
