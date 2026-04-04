@@ -257,12 +257,16 @@
     <string name="moon_bright">⚠ Moon is bright — better for planetary/lunar imaging</string>
     <string name="card_weather">CURRENT WEATHER</string>
     <string name="weather_cloud">Cloud</string>
+    <string name="weather_rain">Rain</string>
     <string name="weather_humidity">Humidity</string>
     <string name="weather_wind">Wind</string>
     <string name="weather_clear">✓ Clear skies — great for astrophotography!</string>
     <string name="weather_partly_cloudy">◐ Partly cloudy — may have clear windows</string>
     <string name="weather_too_cloudy">✗ Too cloudy for astrophotography</string>
+    <string name="weather_rain_bad">✗ Rain/precipitation — not suitable for astrophotography</string>
     <string name="card_forecast">12-HOUR CLOUD FORECAST</string>
+    <string name="card_forecast_day">HOURLY FORECAST</string>
+    <string name="date_today">Today</string>
 
     <!-- CustomFlowScreen -->
     <string name="flow_title">Custom Flow</string>

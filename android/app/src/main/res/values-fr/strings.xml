@@ -213,12 +213,16 @@
     <string name="moon_bright">⚠ Lune brillante — mieux pour l\'imagerie planétaire/lunaire</string>
     <string name="card_weather">MÉTÉO ACTUELLE</string>
     <string name="weather_cloud">Nuages</string>
+    <string name="weather_rain">Pluie</string>
     <string name="weather_humidity">Humidité</string>
     <string name="weather_wind">Vent</string>
     <string name="weather_clear">✓ Ciel dégagé — idéal pour l\'astrophotographie !</string>
     <string name="weather_partly_cloudy">◐ Partiellement nuageux — des éclaircies possibles</string>
     <string name="weather_too_cloudy">✗ Trop nuageux pour l\'astrophotographie</string>
+    <string name="weather_rain_bad">✗ Pluie/précipitations — pas adapté à l\'astrophotographie</string>
     <string name="card_forecast">PRÉVISIONS DE NÉBULOSITÉ SUR 12 H</string>
+    <string name="card_forecast_day">PRÉVISIONS HORAIRES</string>
+    <string name="date_today">Aujourd\'hui</string>
     <string name="flow_title">Séquence personnalisée</string>
     <string name="flow_no_saved">Aucune séquence enregistrée</string>
     <string name="flow_create_instruction">Créez une séquence pour enchaîner plusieurs\nmodes de prise de vue, pauses et séquences.</string>

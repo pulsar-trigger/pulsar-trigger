@@ -33,6 +33,7 @@ data class DashboardState(
     val bortle: BortleInfo? = null,
     val loading: Boolean = false,
     val error: String? = null,
+    val selectedDate: LocalDate = LocalDate.now(),
 )
 
 data class LocationInfo(
@@ -45,6 +46,7 @@ data class WeatherInfo(
     val temperatureC: Double,
     val humidity: Int,
     val cloudCoverPct: Int,
+    val precipitationMm: Double,
     val windSpeedKmh: Double,
     val weatherCode: Int,
     val hourlyForecast: List<HourlyForecast>,
@@ -192,8 +194,8 @@ class AstroDashboardManager(private val context: Context) {
     val state: StateFlow<DashboardState> = _state
 
     @SuppressLint("MissingPermission")
-    suspend fun refresh() {
-        _state.value = _state.value.copy(loading = true, error = null)
+    suspend fun refresh(date: LocalDate = LocalDate.now()) {
+        _state.value = _state.value.copy(loading = true, error = null, selectedDate = date)
         try {
             val loc = getLocation()
             if (loc == null) {
@@ -205,14 +207,15 @@ class AstroDashboardManager(private val context: Context) {
             }
 
             val locationInfo = LocationInfo(loc.latitude, loc.longitude, loc.altitude)
+            val isToday = date == LocalDate.now()
 
-            // Moon
-            val moonAge = MoonPhase.moonAge()
+            // Moon — use selected date
+            val moonAge = MoonPhase.moonAge(date)
             val illum = MoonPhase.illumination(moonAge)
 
-            // Fetch weather + astronomy from Open-Meteo (parallel would be nice but keeping simple)
-            val weatherResult = fetchWeather(loc.latitude, loc.longitude)
-            val astroResult = fetchAstronomy(loc.latitude, loc.longitude)
+            // Fetch weather + astronomy from Open-Meteo
+            val weatherResult = fetchWeather(loc.latitude, loc.longitude, date, isToday)
+            val astroResult = fetchAstronomy(loc.latitude, loc.longitude, date)
             val bortleResult = fetchLightPollution(loc.latitude, loc.longitude)
 
             val moonInfo = MoonInfo(
@@ -231,6 +234,7 @@ class AstroDashboardManager(private val context: Context) {
                 moon = moonInfo,
                 bortle = bortleResult,
                 loading = false,
+                selectedDate = date,
             )
         } catch (e: Exception) {
             Log.e(TAG, "Dashboard refresh failed", e)
@@ -246,23 +250,32 @@ class AstroDashboardManager(private val context: Context) {
             ?: lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
     }
 
-    private suspend fun fetchWeather(lat: Double, lon: Double): WeatherInfo? =
+    private suspend fun fetchWeather(
+        lat: Double, lon: Double, date: LocalDate, isToday: Boolean,
+    ): WeatherInfo? =
         withContext(Dispatchers.IO) {
             try {
-                val url = URL(
+                val dateStr = date.format(DateTimeFormatter.ISO_LOCAL_DATE)
+                val urlStr = if (isToday) {
                     "https://api.open-meteo.com/v1/forecast" +
                         "?latitude=$lat&longitude=$lon" +
-                        "&current=temperature_2m,relative_humidity_2m,cloud_cover,wind_speed_10m,weather_code" +
+                        "&current=temperature_2m,relative_humidity_2m,cloud_cover,precipitation,wind_speed_10m,weather_code" +
                         "&hourly=temperature_2m,cloud_cover,precipitation,weather_code" +
                         "&forecast_hours=12" +
                         "&timezone=auto"
-                )
+                } else {
+                    "https://api.open-meteo.com/v1/forecast" +
+                        "?latitude=$lat&longitude=$lon" +
+                        "&hourly=temperature_2m,cloud_cover,precipitation,weather_code" +
+                        "&start_date=$dateStr&end_date=$dateStr" +
+                        "&timezone=auto"
+                }
+                val url = URL(urlStr)
                 val conn = url.openConnection() as HttpURLConnection
                 conn.connectTimeout = 10_000
                 conn.readTimeout = 10_000
                 try {
                     val json = JSONObject(conn.inputStream.bufferedReader().readText())
-                    val current = json.getJSONObject("current")
 
                     val hourly = json.optJSONObject("hourly")
                     val hourlyList = mutableListOf<HourlyForecast>()
@@ -272,7 +285,8 @@ class AstroDashboardManager(private val context: Context) {
                         val clouds = hourly.getJSONArray("cloud_cover")
                         val precip = hourly.getJSONArray("precipitation")
                         val codes = hourly.getJSONArray("weather_code")
-                        for (i in 0 until minOf(times.length(), 12)) {
+                        val count = if (isToday) minOf(times.length(), 12) else times.length()
+                        for (i in 0 until count) {
                             hourlyList.add(
                                 HourlyForecast(
                                     time = times.getString(i),
@@ -285,14 +299,35 @@ class AstroDashboardManager(private val context: Context) {
                         }
                     }
 
-                    WeatherInfo(
-                        temperatureC = current.getDouble("temperature_2m"),
-                        humidity = current.getInt("relative_humidity_2m"),
-                        cloudCoverPct = current.getInt("cloud_cover"),
-                        windSpeedKmh = current.getDouble("wind_speed_10m"),
-                        weatherCode = current.getInt("weather_code"),
-                        hourlyForecast = hourlyList,
-                    )
+                    if (isToday) {
+                        val current = json.getJSONObject("current")
+                        WeatherInfo(
+                            temperatureC = current.getDouble("temperature_2m"),
+                            humidity = current.getInt("relative_humidity_2m"),
+                            cloudCoverPct = current.getInt("cloud_cover"),
+                            precipitationMm = current.getDouble("precipitation"),
+                            windSpeedKmh = current.getDouble("wind_speed_10m"),
+                            weatherCode = current.getInt("weather_code"),
+                            hourlyForecast = hourlyList,
+                        )
+                    } else {
+                        // For future dates, summarize from hourly data
+                        val avgTemp = hourlyList.map { it.temperatureC }.average()
+                        val avgCloud = hourlyList.map { it.cloudCoverPct }.average().toInt()
+                        val totalPrecip = hourlyList.sumOf { it.precipitationMm }
+                        val avgWind = 0.0 // not available in this query
+                        val dominantCode = hourlyList.groupBy { it.weatherCode }
+                            .maxByOrNull { it.value.size }?.key ?: 0
+                        WeatherInfo(
+                            temperatureC = avgTemp,
+                            humidity = 0, // not available for forecast-only
+                            cloudCoverPct = avgCloud,
+                            precipitationMm = totalPrecip,
+                            windSpeedKmh = avgWind,
+                            weatherCode = dominantCode,
+                            hourlyForecast = hourlyList,
+                        )
+                    }
                 } finally {
                     conn.disconnect()
                 }
@@ -302,15 +337,15 @@ class AstroDashboardManager(private val context: Context) {
             }
         }
 
-    private suspend fun fetchAstronomy(lat: Double, lon: Double): JSONObject? =
+    private suspend fun fetchAstronomy(lat: Double, lon: Double, date: LocalDate): JSONObject? =
         withContext(Dispatchers.IO) {
             try {
-                val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+                val dateStr = date.format(DateTimeFormatter.ISO_LOCAL_DATE)
                 val url = URL(
                     "https://api.open-meteo.com/v1/forecast" +
                         "?latitude=$lat&longitude=$lon" +
                         "&daily=sunrise,sunset,moonrise,moonset" +
-                        "&start_date=$today&end_date=$today" +
+                        "&start_date=$dateStr&end_date=$dateStr" +
                         "&timezone=auto"
                 )
                 val conn = url.openConnection() as HttpURLConnection

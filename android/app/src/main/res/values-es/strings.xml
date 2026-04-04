@@ -213,12 +213,16 @@
     <string name="moon_bright">⚠ Luna brillante — mejor para imagen planetaria/lunar</string>
     <string name="card_weather">CLIMA ACTUAL</string>
     <string name="weather_cloud">Nubes</string>
+    <string name="weather_rain">Lluvia</string>
     <string name="weather_humidity">Humedad</string>
     <string name="weather_wind">Viento</string>
     <string name="weather_clear">✓ Cielos despejados — ¡excelente para astrofotografía!</string>
     <string name="weather_partly_cloudy">◐ Parcialmente nublado — puede haber ventanas despejadas</string>
     <string name="weather_too_cloudy">✗ Demasiado nublado para astrofotografía</string>
+    <string name="weather_rain_bad">✗ Lluvia/precipitación — no apto para astrofotografía</string>
     <string name="card_forecast">PRONÓSTICO DE NUBES 12 HORAS</string>
+    <string name="card_forecast_day">PRONÓSTICO HORARIO</string>
+    <string name="date_today">Hoy</string>
     <string name="flow_title">Flujo Personalizado</string>
     <string name="flow_no_saved">No hay flujos guardados</string>
     <string name="flow_create_instruction">Crea un flujo para encadenar múltiples modos\nde disparo, pausas y secuencias.</string>

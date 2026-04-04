@@ -6,6 +6,7 @@
 package com.ehrocha.pulsar.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -29,8 +30,12 @@ import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.astro.*
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     dashboardManager: AstroDashboardManager,
@@ -38,9 +43,40 @@ fun DashboardScreen(
 ) {
     val state by dashboardManager.state.collectAsState()
     val scope = rememberCoroutineScope()
+    var showDatePicker by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         dashboardManager.refresh()
+    }
+
+    // ── Date picker dialog ───────────────────────────────────────
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = state.selectedDate
+                .atStartOfDay(java.time.ZoneId.of("UTC"))
+                .toInstant().toEpochMilli()
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDatePicker = false
+                    datePickerState.selectedDateMillis?.let { millis ->
+                        val picked = java.time.Instant.ofEpochMilli(millis)
+                            .atZone(java.time.ZoneId.of("UTC"))
+                            .toLocalDate()
+                        scope.launch { dashboardManager.refresh(picked) }
+                    }
+                }) { Text(stringResource(R.string.ok)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        ) {
+            DatePicker(state = datePickerState)
+        }
     }
 
     Column(
@@ -62,8 +98,53 @@ fun DashboardScreen(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
             )
-            IconButton(onClick = { scope.launch { dashboardManager.refresh() } }) {
+            IconButton(onClick = { scope.launch { dashboardManager.refresh(state.selectedDate) } }) {
                 Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.refresh))
+            }
+        }
+
+        // ── Date selector chip ───────────────────────────────────────
+        val isToday = state.selectedDate == LocalDate.now()
+        val dateLabel = if (isToday)
+            stringResource(R.string.date_today)
+        else
+            state.selectedDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                modifier = Modifier.clickable { showDatePicker = true },
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        Icons.Default.CalendarMonth,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                    Text(
+                        dateLabel,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                }
+            }
+            if (!isToday) {
+                Spacer(Modifier.width(8.dp))
+                TextButton(onClick = { scope.launch { dashboardManager.refresh(LocalDate.now()) } }) {
+                    Text(stringResource(R.string.date_today))
+                }
             }
         }
 
@@ -264,23 +345,26 @@ fun DashboardScreen(
                         horizontalArrangement = Arrangement.SpaceEvenly,
                     ) {
                         WeatherStat("☁️", "${weather.cloudCoverPct}%", stringResource(R.string.weather_cloud))
+                        WeatherStat("🌧️", String.format(Locale.US, "%.1f mm", weather.precipitationMm), stringResource(R.string.weather_rain))
                         WeatherStat("💧", "${weather.humidity}%", stringResource(R.string.weather_humidity))
                         WeatherStat("💨", String.format(Locale.US, "%.0f km/h", weather.windSpeedKmh), stringResource(R.string.weather_wind))
                     }
 
-                    // Cloud cover verdict for astronomy
+                    // Weather verdict for astronomy
                     Spacer(Modifier.height(8.dp))
+                    val hasRain = weather.precipitationMm > 0.1
                     Surface(
                         color = when {
-                            weather.cloudCoverPct <= 20 -> Color(0xFF2E7D32).copy(alpha = 0.15f)
-                            weather.cloudCoverPct <= 50 -> Color(0xFFF9A825).copy(alpha = 0.15f)
-                            else -> Color(0xFFE65100).copy(alpha = 0.15f)
+                            hasRain || weather.cloudCoverPct > 50 -> Color(0xFFE65100).copy(alpha = 0.15f)
+                            weather.cloudCoverPct <= 20 && !hasRain -> Color(0xFF2E7D32).copy(alpha = 0.15f)
+                            else -> Color(0xFFF9A825).copy(alpha = 0.15f)
                         },
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(
                             text = when {
+                                hasRain -> stringResource(R.string.weather_rain_bad)
                                 weather.cloudCoverPct <= 20 -> stringResource(R.string.weather_clear)
                                 weather.cloudCoverPct <= 50 -> stringResource(R.string.weather_partly_cloudy)
                                 else -> stringResource(R.string.weather_too_cloudy)
@@ -289,9 +373,9 @@ fun DashboardScreen(
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.padding(8.dp),
                             color = when {
+                                hasRain || weather.cloudCoverPct > 50 -> Color(0xFFE65100)
                                 weather.cloudCoverPct <= 20 -> Color(0xFF2E7D32)
-                                weather.cloudCoverPct <= 50 -> Color(0xFFF9A825)
-                                else -> Color(0xFFE65100)
+                                else -> Color(0xFFF9A825)
                             },
                         )
                     }
@@ -300,7 +384,12 @@ fun DashboardScreen(
 
             // ── Hourly forecast ──────────────────────────────────────
             state.weather?.hourlyForecast?.takeIf { it.isNotEmpty() }?.let { hours ->
-                DashCard(title = stringResource(R.string.card_forecast), icon = Icons.Default.Schedule) {
+                val isToday2 = state.selectedDate == LocalDate.now()
+                DashCard(
+                    title = if (isToday2) stringResource(R.string.card_forecast)
+                            else stringResource(R.string.card_forecast_day),
+                    icon = Icons.Default.Schedule,
+                ) {
                     hours.forEach { h ->
                         Row(
                             modifier = Modifier
@@ -346,6 +435,18 @@ fun DashboardScreen(
                                 modifier = Modifier.width(36.dp),
                                 textAlign = TextAlign.End,
                             )
+                            // Precipitation
+                            if (h.precipitationMm > 0.0) {
+                                Text(
+                                    String.format(Locale.US, "%.1f", h.precipitationMm),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF1565C0),
+                                    modifier = Modifier.width(36.dp),
+                                    textAlign = TextAlign.End,
+                                )
+                            } else {
+                                Spacer(Modifier.width(36.dp))
+                            }
                         }
                     }
                 }

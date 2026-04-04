@@ -213,12 +213,16 @@
     <string name="moon_bright">⚠ 月が明るい — 惑星・月面撮影向き</string>
     <string name="card_weather">現在の天気</string>
     <string name="weather_cloud">雲量</string>
+    <string name="weather_rain">降水</string>
     <string name="weather_humidity">湿度</string>
     <string name="weather_wind">風速</string>
     <string name="weather_clear">✓ 快晴 — 天体撮影に最適！</string>
     <string name="weather_partly_cloudy">◐ 曇り時々晴れ — 晴れ間が期待できます</string>
     <string name="weather_too_cloudy">✗ 曇りすぎて天体撮影には不向き</string>
+    <string name="weather_rain_bad">✗ 雨/降水 — 天体写真には不向き</string>
     <string name="card_forecast">12時間雲量予報</string>
+    <string name="card_forecast_day">時間別予報</string>
+    <string name="date_today">今日</string>
     <string name="flow_title">カスタムフロー</string>
     <string name="flow_no_saved">保存済みフローなし</string>
     <string name="flow_create_instruction">フローを作成して複数の撮影\nモード、一時停止、シーケンスを連結します。</string>

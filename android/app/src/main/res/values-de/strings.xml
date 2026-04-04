@@ -213,12 +213,16 @@
     <string name="moon_bright">⚠ Mond ist hell — besser für Planeten-/Mondfotografie</string>
     <string name="card_weather">AKTUELLES WETTER</string>
     <string name="weather_cloud">Bewölkung</string>
+    <string name="weather_rain">Regen</string>
     <string name="weather_humidity">Luftfeuchtigkeit</string>
     <string name="weather_wind">Wind</string>
     <string name="weather_clear">✓ Klarer Himmel — ideal für Astrofotografie!</string>
     <string name="weather_partly_cloudy">◐ Teilweise bewölkt — möglicherweise klare Abschnitte</string>
     <string name="weather_too_cloudy">✗ Zu bewölkt für Astrofotografie</string>
+    <string name="weather_rain_bad">✗ Regen/Niederschlag — nicht geeignet für Astrofotografie</string>
     <string name="card_forecast">12-STUNDEN-WOLKENVORHERSAGE</string>
+    <string name="card_forecast_day">STÜNDLICHE VORHERSAGE</string>
+    <string name="date_today">Heute</string>
     <string name="flow_title">Benutzerdefinierter Ablauf</string>
     <string name="flow_no_saved">Keine gespeicherten Abläufe</string>
     <string name="flow_create_instruction">Erstelle einen Ablauf, um mehrere Aufnahme-\nmodi, Pausen und Sequenzen zu verketten.</string>

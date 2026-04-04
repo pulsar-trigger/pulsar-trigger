@@ -213,12 +213,16 @@
     <string name="moon_bright">⚠ 月光较亮 — 更适合行星/月球摄影</string>
     <string name="card_weather">当前天气</string>
     <string name="weather_cloud">云量</string>
+    <string name="weather_rain">降雨</string>
     <string name="weather_humidity">湿度</string>
     <string name="weather_wind">风速</string>
     <string name="weather_clear">✓ 晴空万里 — 非常适合天文摄影！</string>
     <string name="weather_partly_cloudy">◐ 多云间晴 — 可能有晴朗时段</string>
     <string name="weather_too_cloudy">✗ 云层过厚，不适合天文摄影</string>
+    <string name="weather_rain_bad">✗ 雨/降水 — 不适合天文摄影</string>
     <string name="card_forecast">12 小时云量预报</string>
+    <string name="card_forecast_day">逐小时预报</string>
+    <string name="date_today">今天</string>
     <string name="flow_title">自定义流程</string>
     <string name="flow_no_saved">暂无已保存的流程</string>
     <string name="flow_create_instruction">创建流程以串联多种拍摄\n模式、暂停和序列。</string>
