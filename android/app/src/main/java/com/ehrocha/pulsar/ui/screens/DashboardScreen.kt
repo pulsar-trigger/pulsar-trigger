@@ -23,8 +23,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.astro.*
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -52,16 +54,16 @@ fun DashboardScreen(
             modifier = Modifier.padding(vertical = 8.dp),
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
             }
             Text(
-                "Astro Dashboard",
+                stringResource(R.string.dashboard_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
             )
             IconButton(onClick = { scope.launch { dashboardManager.refresh() } }) {
-                Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.refresh))
             }
         }
 
@@ -70,7 +72,7 @@ fun DashboardScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator()
                     Spacer(Modifier.height(16.dp))
-                    Text("Fetching location & data…")
+                    Text(stringResource(R.string.status_fetching_data))
                 }
             }
             return
@@ -89,7 +91,7 @@ fun DashboardScreen(
                     Text(state.error!!, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(16.dp))
                     OutlinedButton(onClick = { scope.launch { dashboardManager.refresh() } }) {
-                        Text("Retry")
+                        Text(stringResource(R.string.retry))
                     }
                 }
             }
@@ -104,20 +106,20 @@ fun DashboardScreen(
         ) {
             // ── Location card ────────────────────────────────────────
             state.location?.let { loc ->
-                DashCard(title = "LOCATION", icon = Icons.Default.MyLocation) {
+                DashCard(title = stringResource(R.string.card_location), icon = Icons.Default.MyLocation) {
                     Text(
                         String.format(Locale.US, "%.4f° %s, %.4f° %s",
                             abs(loc.latitude),
-                            if (loc.latitude >= 0) "N" else "S",
+                            if (loc.latitude >= 0) stringResource(R.string.location_north) else stringResource(R.string.location_south),
                             abs(loc.longitude),
-                            if (loc.longitude >= 0) "E" else "W",
+                            if (loc.longitude >= 0) stringResource(R.string.location_east) else stringResource(R.string.location_west),
                         ),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Medium,
                     )
                     loc.altitude?.let { alt ->
                         Text(
-                            String.format(Locale.US, "Altitude: %.0f m", alt),
+                            String.format(Locale.US, stringResource(R.string.location_altitude), alt),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -127,7 +129,7 @@ fun DashboardScreen(
 
             // ── Bortle card ──────────────────────────────────────────
             state.bortle?.let { bortle ->
-                DashCard(title = "LIGHT POLLUTION (BORTLE)", icon = Icons.Default.DarkMode) {
+                DashCard(title = stringResource(R.string.card_bortle), icon = Icons.Default.DarkMode) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
@@ -162,9 +164,9 @@ fun DashboardScreen(
                 }
             } ?: run {
                 if (!state.loading) {
-                    DashCard(title = "LIGHT POLLUTION (BORTLE)", icon = Icons.Default.DarkMode) {
+                    DashCard(title = stringResource(R.string.card_bortle), icon = Icons.Default.DarkMode) {
                         Text(
-                            "Light pollution data unavailable for this location",
+                            stringResource(R.string.bortle_unavailable),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -174,7 +176,7 @@ fun DashboardScreen(
 
             // ── Moon card ────────────────────────────────────────────
             state.moon?.let { moon ->
-                DashCard(title = "MOON PHASE", icon = Icons.Default.NightsStay) {
+                DashCard(title = stringResource(R.string.card_moon), icon = Icons.Default.NightsStay) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(moon.emoji, fontSize = 48.sp)
                         Spacer(Modifier.width(16.dp))
@@ -185,11 +187,11 @@ fun DashboardScreen(
                                 fontWeight = FontWeight.Bold,
                             )
                             Text(
-                                String.format(Locale.US, "%.0f%% illuminated", moon.illuminationPct),
+                                String.format(Locale.US, stringResource(R.string.moon_illuminated), moon.illuminationPct),
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                             Text(
-                                String.format(Locale.US, "Age: %.1f days", moon.ageInDays),
+                                String.format(Locale.US, stringResource(R.string.moon_age), moon.ageInDays),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -201,10 +203,10 @@ fun DashboardScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         moon.rise?.let {
-                            InfoChip("Moonrise", formatTime(it))
+                            InfoChip(stringResource(R.string.label_moonrise), formatTime(it))
                         }
                         moon.set?.let {
-                            InfoChip("Moonset", formatTime(it))
+                            InfoChip(stringResource(R.string.label_moonset), formatTime(it))
                         }
                     }
                     Spacer(Modifier.height(8.dp))
@@ -218,9 +220,9 @@ fun DashboardScreen(
                     ) {
                         Text(
                             text = if (moon.goodForAstro)
-                                "✓ Good conditions for deep-sky photography"
+                                stringResource(R.string.moon_good)
                             else
-                                "⚠ Moon is bright — better for planetary/lunar imaging",
+                                stringResource(R.string.moon_bright),
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.padding(8.dp),
@@ -232,7 +234,7 @@ fun DashboardScreen(
 
             // ── Weather card ─────────────────────────────────────────
             state.weather?.let { weather ->
-                DashCard(title = "CURRENT WEATHER", icon = Icons.Default.Cloud) {
+                DashCard(title = stringResource(R.string.card_weather), icon = Icons.Default.Cloud) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -261,9 +263,9 @@ fun DashboardScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly,
                     ) {
-                        WeatherStat("☁️", "${weather.cloudCoverPct}%", "Cloud")
-                        WeatherStat("💧", "${weather.humidity}%", "Humidity")
-                        WeatherStat("💨", String.format(Locale.US, "%.0f km/h", weather.windSpeedKmh), "Wind")
+                        WeatherStat("☁️", "${weather.cloudCoverPct}%", stringResource(R.string.weather_cloud))
+                        WeatherStat("💧", "${weather.humidity}%", stringResource(R.string.weather_humidity))
+                        WeatherStat("💨", String.format(Locale.US, "%.0f km/h", weather.windSpeedKmh), stringResource(R.string.weather_wind))
                     }
 
                     // Cloud cover verdict for astronomy
@@ -279,9 +281,9 @@ fun DashboardScreen(
                     ) {
                         Text(
                             text = when {
-                                weather.cloudCoverPct <= 20 -> "✓ Clear skies — great for astrophotography!"
-                                weather.cloudCoverPct <= 50 -> "◐ Partly cloudy — may have clear windows"
-                                else -> "✗ Too cloudy for astrophotography"
+                                weather.cloudCoverPct <= 20 -> stringResource(R.string.weather_clear)
+                                weather.cloudCoverPct <= 50 -> stringResource(R.string.weather_partly_cloudy)
+                                else -> stringResource(R.string.weather_too_cloudy)
                             },
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Medium,
@@ -298,7 +300,7 @@ fun DashboardScreen(
 
             // ── Hourly forecast ──────────────────────────────────────
             state.weather?.hourlyForecast?.takeIf { it.isNotEmpty() }?.let { hours ->
-                DashCard(title = "12-HOUR CLOUD FORECAST", icon = Icons.Default.Schedule) {
+                DashCard(title = stringResource(R.string.card_forecast), icon = Icons.Default.Schedule) {
                     hours.forEach { h ->
                         Row(
                             modifier = Modifier

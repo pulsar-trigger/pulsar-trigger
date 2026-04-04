@@ -22,9 +22,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 
@@ -89,7 +91,7 @@ fun MainMenuScreen(
         Spacer(Modifier.height(16.dp))
 
         Text(
-            "MODES",
+            stringResource(R.string.section_modes),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
         )
@@ -100,35 +102,35 @@ fun MainMenuScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             MenuCard(
-                title = "Intervalometer",
-                description = "Automate timelapse sequences with precision timing",
+                title = stringResource(R.string.mode_intervalometer),
+                description = stringResource(R.string.mode_intervalometer_desc),
                 icon = Icons.Default.Timer,
                 onClick = { onModeSelected(TriggerMode.INTERVALOMETER) },
                 onGearClick = { onModeSettingsSelected(TriggerMode.INTERVALOMETER) },
             )
             MenuCard(
-                title = "Astro",
-                description = "Star photography with calculated exposure times",
+                title = stringResource(R.string.mode_astro),
+                description = stringResource(R.string.mode_astro_desc),
                 icon = Icons.Default.Stars,
                 onClick = { onModeSelected(TriggerMode.ASTRO) },
                 onGearClick = { onModeSettingsSelected(TriggerMode.ASTRO) },
             )
             MenuCard(
-                title = "Manual",
-                description = "Direct shutter control — hold or lock mode",
+                title = stringResource(R.string.mode_manual),
+                description = stringResource(R.string.mode_manual_desc),
                 icon = Icons.Default.TouchApp,
                 onClick = { onModeSelected(TriggerMode.PRESS_HOLD) },
                 onGearClick = { onModeSettingsSelected(TriggerMode.PRESS_HOLD) },
             )
             MenuCard(
-                title = "Custom Flow",
-                description = "Build multi-step sequences mixing any mode",
+                title = stringResource(R.string.mode_custom_flow),
+                description = stringResource(R.string.mode_custom_flow_desc),
                 icon = Icons.AutoMirrored.Filled.ViewList,
                 onClick = onCustomFlowSelected,
             )
             MenuCard(
-                title = "Astro Dashboard",
-                description = "Weather, moon phase, Bortle scale & sky conditions",
+                title = stringResource(R.string.mode_astro_dashboard),
+                description = stringResource(R.string.mode_astro_dashboard_desc),
                 icon = Icons.Default.NightsStay,
                 onClick = onDashboardSelected,
             )
@@ -137,8 +139,8 @@ fun MainMenuScreen(
         Spacer(Modifier.weight(1f))
 
         MenuCard(
-            title = "Settings",
-            description = "Device configuration and info",
+            title = stringResource(R.string.menu_settings),
+            description = stringResource(R.string.menu_settings_desc),
             icon = Icons.Default.Settings,
             onClick = onSettingsSelected,
         )
@@ -148,7 +150,7 @@ fun MainMenuScreen(
         TextButton(
             onClick = { vm.disconnect() },
             modifier = Modifier.fillMaxWidth(),
-        ) { Text("Disconnect") }
+        ) { Text(stringResource(R.string.disconnect)) }
     }
 }
 

@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -43,6 +44,7 @@ import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.ble.OtaState
 import com.ehrocha.pulsar.update.AppUpdateState
 import com.ehrocha.pulsar.BuildConfig
+import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ui.components.IntStepperField
 import com.ehrocha.pulsar.ui.components.TimePicker
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
@@ -83,7 +85,7 @@ internal fun DefaultActionsContent(
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.height(56.dp).weight(1f)
             ) {
-                Text("SINGLE", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.btn_single), style = MaterialTheme.typography.labelLarge)
             }
 
             Button(
@@ -97,7 +99,7 @@ internal fun DefaultActionsContent(
                 modifier = Modifier.height(56.dp).weight(2f)
             ) {
                 Text(
-                    text = if (isRunning) "STOP" else "START",
+                    text = if (isRunning) stringResource(R.string.btn_stop) else stringResource(R.string.btn_start),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -105,7 +107,7 @@ internal fun DefaultActionsContent(
         }
 
         Text(
-            text = if (isRunning) "Sequence running…" else "Ready to start sequence",
+            text = if (isRunning) stringResource(R.string.status_sequence_running) else stringResource(R.string.status_ready_start),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -150,14 +152,14 @@ internal fun ManualActionsContent(
                 selected = mode == TriggerMode.PRESS_HOLD,
                 onClick = { onModeSelected(TriggerMode.PRESS_HOLD) },
                 enabled = connected,
-                label = { Text("HOLD MODE", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                label = { Text(stringResource(R.string.chip_hold_mode), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
                 modifier = Modifier.weight(1f)
             )
             FilterChip(
                 selected = mode == TriggerMode.PRESS_LOCK,
                 onClick = { onModeSelected(TriggerMode.PRESS_LOCK) },
                 enabled = connected,
-                label = { Text("LOCK MODE", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                label = { Text(stringResource(R.string.chip_lock_mode), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
                 modifier = Modifier.weight(1f)
             )
         }
@@ -201,9 +203,9 @@ internal fun ManualActionsContent(
             Box(contentAlignment = Alignment.Center) {
                 Text(
                     text = if (isHold) {
-                        if (active) "RELEASE SHUTTER" else "HOLD SHUTTER"
+                        if (active) stringResource(R.string.btn_release_shutter) else stringResource(R.string.btn_hold_shutter)
                     } else {
-                        if (active) "CLOSE SHUTTER" else "OPEN SHUTTER"
+                        if (active) stringResource(R.string.btn_close_shutter) else stringResource(R.string.btn_open_shutter)
                     },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
@@ -215,9 +217,9 @@ internal fun ManualActionsContent(
 
         Text(
             text = if (isHold) {
-                if (active) "Shutter open…" else "Press and hold button"
+                if (active) stringResource(R.string.status_shutter_open) else stringResource(R.string.status_press_hold)
             } else {
-                if (active) "Shutter locked open" else "Tap button to toggle"
+                if (active) stringResource(R.string.status_shutter_locked) else stringResource(R.string.status_tap_toggle)
             },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -261,14 +263,14 @@ internal fun AstroActionsContent(
                 selected = ruleDivisor == 500,
                 onClick = { onRuleChanged(500) },
                 enabled = connected && !isRunning,
-                label = { Text("500 RULE", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                label = { Text(stringResource(R.string.chip_500_rule), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
                 modifier = Modifier.weight(1f)
             )
             FilterChip(
                 selected = ruleDivisor == 400,
                 onClick = { onRuleChanged(400) },
                 enabled = connected && !isRunning,
-                label = { Text("400 RULE", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                label = { Text(stringResource(R.string.chip_400_rule), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
                 modifier = Modifier.weight(1f)
             )
         }
@@ -338,9 +340,9 @@ internal fun IntervalometerPanelContent(
 
     Column(verticalArrangement = Arrangement.spacedBy(24.dp), modifier = modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Intervalometer", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.panel_intervalometer), style = MaterialTheme.typography.titleLarge)
             Text(
-                "Automate complex timelapse sequences or burst captures with precision timing.",
+                stringResource(R.string.panel_intervalometer_desc),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -350,7 +352,7 @@ internal fun IntervalometerPanelContent(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    "Configure individual timings below. For bulb mode, ensure the interval is longer than the exposure.",
+                    stringResource(R.string.panel_intervalometer_tip),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(12.dp),
@@ -365,7 +367,7 @@ internal fun IntervalometerPanelContent(
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
-                    "SEQUENCE ESTIMATE",
+                    stringResource(R.string.label_sequence_estimate),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -373,11 +375,11 @@ internal fun IntervalometerPanelContent(
                 
                 Row(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("SHOTS", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.label_shots), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("$shotCount", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
                     }
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("TOTAL DURATION", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.label_total_duration), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(formatDuration(totalSequenceTimeMs), style = MaterialTheme.typography.headlineLarge)
                     }
                 }
@@ -391,7 +393,7 @@ internal fun IntervalometerPanelContent(
                 )
                 
                 Text(
-                    "Duty Cycle: ${(exposureMs.toFloat() / (exposureMs + intervalMs) * 100).toInt()}% active exposure",
+                    stringResource(R.string.label_duty_cycle, (exposureMs.toFloat() / (exposureMs + intervalMs) * 100).toInt()),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.alpha(0.7f)
@@ -400,19 +402,19 @@ internal fun IntervalometerPanelContent(
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text("TIMING PARAMETERS", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.label_timing_parameters), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             
             TimePicker(
                 totalMs = intervalMs,
                 onChanged = { onIntervalChanged(it) },
-                label = "Interval (time between shots)",
+                label = stringResource(R.string.label_interval),
                 enabled = enabled,
             )
 
             TimePicker(
                 totalMs = exposureMs,
                 onChanged = { onExposureChanged(it) },
-                label = "Exposure duration",
+                label = stringResource(R.string.label_exposure),
                 showMs = true,
                 enabled = enabled,
             )
@@ -420,12 +422,12 @@ internal fun IntervalometerPanelContent(
             TimePicker(
                 totalMs = delayMs,
                 onChanged = { onDelayChanged(it) },
-                label = "Start Delay",
+                label = stringResource(R.string.label_start_delay),
                 enabled = enabled,
             )
 
             IntStepperField(
-                label = "Number of Shots",
+                label = stringResource(R.string.label_number_of_shots),
                 value = shotCount,
                 onValueChange = { onShotCountChanged(it.coerceAtLeast(1)) },
                 min = 1,
@@ -452,10 +454,10 @@ internal fun ManualPanelContent(
         verticalArrangement = Arrangement.spacedBy(20.dp),
         modifier = modifier
     ) {
-        Text("Manual Shutter", style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.panel_manual), style = MaterialTheme.typography.titleLarge)
 
         Text(
-            "Control the shutter directly. Choose Hold (press and hold) or Lock (toggle on/off).",
+            stringResource(R.string.panel_manual_desc),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -467,15 +469,15 @@ internal fun ManualPanelContent(
         ) {
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    "Toggle behaviour using the chips in the action area below.",
+                    stringResource(R.string.panel_manual_tip),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = if (isLock)
-                        "LOCK: Tap the center button once to open the shutter, tap again to close. Best for long bulb exposures."
+                        stringResource(R.string.panel_manual_lock_info)
                     else
-                        "HOLD: Shutter remains open as long as the center button is pressed. Ideal for quick bursts.",
+                        stringResource(R.string.panel_manual_hold_info),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -533,9 +535,9 @@ internal fun AstroPanelContent(
 
     Column(verticalArrangement = Arrangement.spacedBy(24.dp), modifier = modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Astro Mode", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.panel_astro), style = MaterialTheme.typography.titleLarge)
             Text(
-                "Pinpoint stars by calculating the maximum shutter speed to prevent trails.",
+                stringResource(R.string.panel_astro_desc),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -545,7 +547,7 @@ internal fun AstroPanelContent(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    "Switch rules at the bottom. Rule 400 is ideal for high-resolution sensors.",
+                    stringResource(R.string.panel_astro_tip),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(12.dp),
@@ -561,7 +563,7 @@ internal fun AstroPanelContent(
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "$ruleDivisor RULE READOUT",
+                        stringResource(R.string.label_rule_readout, ruleDivisor),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -572,7 +574,7 @@ internal fun AstroPanelContent(
                         shape = RoundedCornerShape(4.dp)
                     ) {
                         Text(
-                            "${"%.1f".format(focalLength * cropFactor)}mm Effective", 
+                            stringResource(R.string.label_effective_focal, "%.1f".format(focalLength * cropFactor)), 
                             style = MaterialTheme.typography.labelSmall,
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
@@ -581,11 +583,11 @@ internal fun AstroPanelContent(
                 
                 Row(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("MAX EXPOSURE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.label_max_exposure), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(formatDuration(maxExposureMs), style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
                     }
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("TOTAL TIME", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.label_total_time), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(formatDuration(totalTimeMs), style = MaterialTheme.typography.headlineLarge)
                     }
                 }
@@ -599,7 +601,7 @@ internal fun AstroPanelContent(
                 )
 
                 Text(
-                    "Formula: $ruleDivisor / ($focalLength mm * ${cropFactor}x) = ${"%.1f".format(maxExposureS)}s",
+                    stringResource(R.string.label_astro_formula, ruleDivisor, focalLength, "$cropFactor", "%.1f".format(maxExposureS)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -609,10 +611,10 @@ internal fun AstroPanelContent(
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text("OPTICS CONFIGURATION", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.label_optics_configuration), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Sensor Preset", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.label_sensor_preset), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -622,14 +624,14 @@ internal fun AstroPanelContent(
                             selected = cropFactor == preset.crop,
                             onClick = { if (enabled) onCropFactorChanged(preset.crop) },
                             enabled = enabled,
-                            label = { Text(preset.label, style = MaterialTheme.typography.labelMedium) },
+                            label = { Text(stringResource(preset.labelRes), style = MaterialTheme.typography.labelMedium) },
                         )
                     }
                 }
             }
 
             IntStepperField(
-                label = "Lens Focal Length",
+                label = stringResource(R.string.label_focal_length),
                 value = focalLength,
                 onValueChange = { onFocalLengthChanged(it) },
                 min = 8,
@@ -641,24 +643,24 @@ internal fun AstroPanelContent(
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text("CAPTURE SEQUENCE", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.label_capture_sequence), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             
             TimePicker(
                 totalMs = gapMs,
                 onChanged = { onGapMsChanged(it) },
-                label = "Gap between shots",
+                label = stringResource(R.string.label_gap_between_shots),
                 enabled = enabled,
             )
 
             TimePicker(
                 totalMs = delayMs,
                 onChanged = { onDelayMsChanged(it) },
-                label = "Start Delay",
+                label = stringResource(R.string.label_start_delay),
                 enabled = enabled,
             )
 
             IntStepperField(
-                label = "Number of Shots",
+                label = stringResource(R.string.label_number_of_shots),
                 value = shotCount,
                 onValueChange = { onShotCountChanged(it.coerceAtLeast(1)) },
                 min = 1,
@@ -669,13 +671,13 @@ internal fun AstroPanelContent(
     }
 }
 
-private data class SensorPreset(val label: String, val crop: Float)
+private data class SensorPreset(val labelRes: Int, val crop: Float)
 
 private val SENSOR_PRESETS = listOf(
-    SensorPreset("Full Frame", 1.0f),
-    SensorPreset("APS-C (Canon)", 1.6f),
-    SensorPreset("APS-C (Nikon/Sony)", 1.5f),
-    SensorPreset("Micro 4/3", 2.0f),
+    SensorPreset(R.string.preset_full_frame, 1.0f),
+    SensorPreset(R.string.preset_aps_c_canon, 1.6f),
+    SensorPreset(R.string.preset_aps_c_nikon_sony, 1.5f),
+    SensorPreset(R.string.preset_micro_43, 2.0f),
 )
 
 internal fun formatDuration(ms: Long): String {
@@ -724,7 +726,7 @@ private fun CollapsibleSection(
                 )
                 Icon(
                     if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    contentDescription = if (expanded) stringResource(R.string.cd_collapse) else stringResource(R.string.cd_expand),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp),
                 )
@@ -767,9 +769,9 @@ internal fun SettingsPanel(
                 context.contentResolver.openOutputStream(uri)?.use { stream ->
                     stream.write(vm.exportSettingsJson().toByteArray())
                 }
-                Toast.makeText(context, "Settings exported", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.toast_settings_exported), Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
-                Toast.makeText(context, "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, context.getString(R.string.toast_export_failed, e.message), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -783,16 +785,16 @@ internal fun SettingsPanel(
                     val json = stream.bufferedReader().readText()
                     vm.importSettingsJson(json)
                 }
-                Toast.makeText(context, "Settings imported", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.toast_settings_imported), Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
-                Toast.makeText(context, "Import failed: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, context.getString(R.string.toast_import_failed, e.message), Toast.LENGTH_LONG).show()
             }
         }
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // ── Device ───────────────────────────────────────────────────────
-        CollapsibleSection("DEVICE", initiallyExpanded = true) {
+        CollapsibleSection(stringResource(R.string.section_device), initiallyExpanded = true) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -807,7 +809,7 @@ internal fun SettingsPanel(
                 )
                 Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Device Name", style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.label_device_name), style = MaterialTheme.typography.titleSmall)
                     Text(
                         deviceName,
                         style = MaterialTheme.typography.bodyMedium,
@@ -818,15 +820,15 @@ internal fun SettingsPanel(
         }
 
         // ── GPIO Pins ────────────────────────────────────────────────────
-        CollapsibleSection("GPIO PINS") {
+        CollapsibleSection(stringResource(R.string.section_gpio_pins)) {
             Text(
-                "Choose which ESP32 GPIO pins drive the shutter and focus optocouplers. Changes are sent to the device and saved.",
+                stringResource(R.string.gpio_pins_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             GpioPinSelector(
-                label = "Shutter Pin",
+                label = stringResource(R.string.label_shutter_pin),
                 selectedPin = shutterPin,
                 disabledPin = focusPin,
                 onPinSelected = { vm.savePins(it, focusPin) },
@@ -834,7 +836,7 @@ internal fun SettingsPanel(
             )
 
             GpioPinSelector(
-                label = "Focus Pin",
+                label = stringResource(R.string.label_focus_pin),
                 selectedPin = focusPin,
                 disabledPin = shutterPin,
                 onPinSelected = { vm.savePins(shutterPin, it) },
@@ -843,7 +845,7 @@ internal fun SettingsPanel(
 
             if (simulatorActive) {
                 Text(
-                    "GPIO configuration not available in simulator mode",
+                    stringResource(R.string.gpio_simulator_note),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -851,9 +853,9 @@ internal fun SettingsPanel(
         }
 
         // ── Backup & Restore ─────────────────────────────────────────────
-        CollapsibleSection("BACKUP & RESTORE") {
+        CollapsibleSection(stringResource(R.string.section_backup_restore)) {
             Text(
-                "Export settings to Google Drive or local storage, and import them on another device.",
+                stringResource(R.string.backup_restore_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -868,7 +870,7 @@ internal fun SettingsPanel(
                 ) {
                     Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Export")
+                    Text(stringResource(R.string.export_label))
                 }
                 OutlinedButton(
                     onClick = { importLauncher.launch(arrayOf("application/json")) },
@@ -877,7 +879,7 @@ internal fun SettingsPanel(
                 ) {
                     Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Import")
+                    Text(stringResource(R.string.import_label))
                 }
             }
         }
@@ -901,7 +903,7 @@ internal fun SettingsPanel(
             val uriHandler = LocalUriHandler.current
 
             Text(
-                "ABOUT",
+                stringResource(R.string.section_about),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -918,9 +920,9 @@ internal fun SettingsPanel(
                 )
                 Spacer(Modifier.width(16.dp))
                 Column {
-                    Text("Pulsar Trigger", style = MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.about_app_name), style = MaterialTheme.typography.titleSmall)
                     Text(
-                        "BLE Camera Remote Control",
+                        stringResource(R.string.about_tagline),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -934,12 +936,12 @@ internal fun SettingsPanel(
             )
 
             Text(
-                "Created by Eduardo Rocha",
+                stringResource(R.string.about_author),
                 style = MaterialTheme.typography.bodyMedium,
             )
 
             Text(
-                "Licensed under GPL-3.0-or-later",
+                stringResource(R.string.about_license),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -949,7 +951,7 @@ internal fun SettingsPanel(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
             ) {
-                Text("View on GitHub")
+                Text(stringResource(R.string.about_github))
             }
 
             OutlinedButton(
@@ -957,7 +959,7 @@ internal fun SettingsPanel(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
             ) {
-                Text("@ehrocha.br on Instagram")
+                Text(stringResource(R.string.about_instagram))
             }
             }
         }
@@ -984,35 +986,34 @@ private fun RenameDeviceDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Rename Device") },
+        title = { Text(stringResource(R.string.dialog_rename_device)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    "Enter a custom name. The device will advertise as \"Pulsar-<name>\". " +
-                    "Leave empty to reset to \"Pulsar\".",
+                    stringResource(R.string.dialog_rename_instructions),
                     style = MaterialTheme.typography.bodySmall,
                 )
                 OutlinedTextField(
                     value = text,
                     onValueChange = { if (it.length <= maxLen) text = it },
-                    label = { Text("Device name") },
-                    prefix = { Text("Pulsar-") },
+                    label = { Text(stringResource(R.string.label_device_name_input)) },
+                    prefix = { Text(stringResource(R.string.prefix_pulsar)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { onConfirm(text) }),
-                    supportingText = { Text("${text.length}/$maxLen characters") },
+                    supportingText = { Text(stringResource(R.string.char_count, text.length, maxLen)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(text) }) {
-                Text("Rename")
+                Text(stringResource(R.string.rename))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         },
     )
@@ -1037,13 +1038,13 @@ private fun UpdatesSection(vm: PulsarViewModel, connected: Boolean) {
     val appError by updateManager.errorMessage.collectAsState()
     val appVersion = BuildConfig.VERSION_NAME
 
-    CollapsibleSection("UPDATES") {
+    CollapsibleSection(stringResource(R.string.section_updates)) {
         // ── Firmware ─────────────────────────────────────────────────
-        Text("Firmware", style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.label_firmware), style = MaterialTheme.typography.titleSmall)
 
         if (fwVersion.isNotEmpty()) {
             Text(
-                "Current: v$fwVersion",
+                stringResource(R.string.label_current_version, fwVersion),
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
@@ -1058,7 +1059,7 @@ private fun UpdatesSection(vm: PulsarViewModel, connected: Boolean) {
                 ) {
                     Icon(Icons.Default.SystemUpdate, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Check for Firmware Update")
+                    Text(stringResource(R.string.btn_check_firmware))
                 }
             }
 
@@ -1066,14 +1067,14 @@ private fun UpdatesSection(vm: PulsarViewModel, connected: Boolean) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(12.dp))
-                    Text("Checking GitHub…", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.status_checking_github), style = MaterialTheme.typography.bodyMedium)
                 }
             }
 
             OtaState.AVAILABLE -> {
                 fwRelease?.let { release ->
                     Text(
-                        "New version available: v${release.version}",
+                        stringResource(R.string.label_new_version, release.version),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                     )
@@ -1092,13 +1093,13 @@ private fun UpdatesSection(vm: PulsarViewModel, connected: Boolean) {
                     ) {
                         Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Install Update")
+                        Text(stringResource(R.string.btn_install_update))
                     }
                 }
             }
 
             OtaState.DOWNLOADING -> {
-                Text("Downloading firmware…", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.status_downloading_firmware), style = MaterialTheme.typography.bodyMedium)
                 LinearProgressIndicator(
                     progress = { fwProgress },
                     modifier = Modifier.fillMaxWidth(),
@@ -1112,11 +1113,11 @@ private fun UpdatesSection(vm: PulsarViewModel, connected: Boolean) {
                     onClick = { fwManager.cancel() },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                ) { Text("Cancel") }
+                ) { Text(stringResource(R.string.cancel)) }
             }
 
             OtaState.UPLOADING -> {
-                Text("Uploading to device…", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.status_uploading_device), style = MaterialTheme.typography.bodyMedium)
                 LinearProgressIndicator(
                     progress = { fwProgress },
                     modifier = Modifier.fillMaxWidth(),
@@ -1130,20 +1131,20 @@ private fun UpdatesSection(vm: PulsarViewModel, connected: Boolean) {
                     onClick = { fwManager.cancel() },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                ) { Text("Cancel") }
+                ) { Text(stringResource(R.string.cancel)) }
             }
 
             OtaState.VALIDATING -> {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(12.dp))
-                    Text("Validating & rebooting…", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.status_validating_rebooting), style = MaterialTheme.typography.bodyMedium)
                 }
             }
 
             OtaState.COMPLETE -> {
                 Text(
-                    "Update complete! Device is rebooting.",
+                    stringResource(R.string.status_update_complete),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
@@ -1152,12 +1153,12 @@ private fun UpdatesSection(vm: PulsarViewModel, connected: Boolean) {
                     onClick = { fwManager.reset() },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                ) { Text("Done") }
+                ) { Text(stringResource(R.string.done)) }
             }
 
             OtaState.ERROR -> {
                 Text(
-                    fwError ?: "Update failed",
+                    fwError ?: stringResource(R.string.status_update_failed),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -1165,7 +1166,7 @@ private fun UpdatesSection(vm: PulsarViewModel, connected: Boolean) {
                     onClick = { fwManager.reset() },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                ) { Text("Dismiss") }
+                ) { Text(stringResource(R.string.dismiss)) }
             }
         }
 
@@ -1188,7 +1189,7 @@ private fun UpdatesSection(vm: PulsarViewModel, connected: Boolean) {
                 ) {
                     Icon(Icons.Default.SystemUpdate, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Check for App Update")
+                    Text(stringResource(R.string.btn_check_app_update))
                 }
             }
 
@@ -1196,13 +1197,13 @@ private fun UpdatesSection(vm: PulsarViewModel, connected: Boolean) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(12.dp))
-                    Text("Checking GitHub…", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.status_checking_github), style = MaterialTheme.typography.bodyMedium)
                 }
             }
 
             AppUpdateState.UP_TO_DATE -> {
                 Text(
-                    "You're up to date!",
+                    stringResource(R.string.status_up_to_date),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -1210,13 +1211,13 @@ private fun UpdatesSection(vm: PulsarViewModel, connected: Boolean) {
                     onClick = { updateManager.reset() },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                ) { Text("OK") }
+                ) { Text(stringResource(R.string.ok)) }
             }
 
             AppUpdateState.AVAILABLE -> {
                 appRelease?.let { release ->
                     Text(
-                        "New version available: v${release.version}",
+                        stringResource(R.string.label_new_version, release.version),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                     )
@@ -1234,13 +1235,13 @@ private fun UpdatesSection(vm: PulsarViewModel, connected: Boolean) {
                     ) {
                         Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Download & Install")
+                        Text(stringResource(R.string.btn_download_install))
                     }
                 }
             }
 
             AppUpdateState.DOWNLOADING -> {
-                Text("Downloading APK…", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.status_downloading_apk), style = MaterialTheme.typography.bodyMedium)
                 LinearProgressIndicator(
                     progress = { appProgress },
                     modifier = Modifier.fillMaxWidth(),
@@ -1254,12 +1255,12 @@ private fun UpdatesSection(vm: PulsarViewModel, connected: Boolean) {
                     onClick = { updateManager.cancel() },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                ) { Text("Cancel") }
+                ) { Text(stringResource(R.string.cancel)) }
             }
 
             AppUpdateState.READY_TO_INSTALL -> {
                 Text(
-                    "Download complete — the installer should open automatically.",
+                    stringResource(R.string.status_download_complete),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -1267,12 +1268,12 @@ private fun UpdatesSection(vm: PulsarViewModel, connected: Boolean) {
                     onClick = { updateManager.reset() },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                ) { Text("Done") }
+                ) { Text(stringResource(R.string.done)) }
             }
 
             AppUpdateState.ERROR -> {
                 Text(
-                    appError ?: "Update check failed",
+                    appError ?: stringResource(R.string.status_update_check_failed),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -1280,7 +1281,7 @@ private fun UpdatesSection(vm: PulsarViewModel, connected: Boolean) {
                     onClick = { updateManager.reset() },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                ) { Text("Dismiss") }
+                ) { Text(stringResource(R.string.dismiss)) }
             }
         }
     }
@@ -1305,7 +1306,7 @@ private fun GpioPinSelector(
             onExpandedChange = { if (enabled) expanded = it },
         ) {
             OutlinedTextField(
-                value = "GPIO $selectedPin",
+                value = stringResource(R.string.gpio_value, selectedPin),
                 onValueChange = {},
                 readOnly = true,
                 enabled = enabled,
@@ -1323,7 +1324,8 @@ private fun GpioPinSelector(
                     DropdownMenuItem(
                         text = {
                             Text(
-                                "GPIO $pin" + if (isDisabled) " (in use)" else "",
+                                if (isDisabled) stringResource(R.string.gpio_in_use, pin)
+                                else stringResource(R.string.gpio_value, pin),
                                 color = if (isDisabled) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                                         else MaterialTheme.colorScheme.onSurface,
                             )
@@ -1353,7 +1355,7 @@ internal fun IntervalometerSettingsPanel(vm: PulsarViewModel, connected: Boolean
     val maxShots by vm.maxShotCount.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("DEFAULT VALUES", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        Text(stringResource(R.string.section_default_values), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
 
         Surface(
             shape = RoundedCornerShape(12.dp),
@@ -1365,7 +1367,7 @@ internal fun IntervalometerSettingsPanel(vm: PulsarViewModel, connected: Boolean
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Text(
-                    "Set default values for the Intervalometer. These are applied when the app starts.",
+                    stringResource(R.string.default_values_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1373,20 +1375,20 @@ internal fun IntervalometerSettingsPanel(vm: PulsarViewModel, connected: Boolean
                 TimePicker(
                     totalMs = defInterval,
                     onChanged = { vm.saveIntervalometerDefaults(it.coerceAtLeast(500), defExposure, defCount, defDelay) },
-                    label = "Default Interval (gap)",
+                    label = stringResource(R.string.label_default_interval),
                 )
 
                 TimePicker(
                     totalMs = defExposure,
                     onChanged = { vm.saveIntervalometerDefaults(defInterval, it.coerceAtLeast(50), defCount, defDelay) },
-                    label = "Default Exposure",
+                    label = stringResource(R.string.label_default_exposure),
                     showMs = true,
                 )
 
                 TimePicker(
                     totalMs = defDelay,
                     onChanged = { vm.saveIntervalometerDefaults(defInterval, defExposure, defCount, it) },
-                    label = "Default Start Delay",
+                    label = stringResource(R.string.label_default_start_delay),
                 )
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1394,7 +1396,7 @@ internal fun IntervalometerSettingsPanel(vm: PulsarViewModel, connected: Boolean
                     OutlinedTextField(
                         value = defCountText,
                         onValueChange = { defCountText = it.filter { c -> c.isDigit() } },
-                        label = { Text("Default Shot Count") },
+                        label = { Text(stringResource(R.string.label_default_shot_count)) },
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Number,
                             imeAction = ImeAction.Done,
@@ -1406,7 +1408,7 @@ internal fun IntervalometerSettingsPanel(vm: PulsarViewModel, connected: Boolean
                         }),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        supportingText = { Text("1 – $maxShots") },
+                        supportingText = { Text(stringResource(R.string.range_shot_count, maxShots)) },
                     )
                 }
 
@@ -1417,7 +1419,7 @@ internal fun IntervalometerSettingsPanel(vm: PulsarViewModel, connected: Boolean
                     OutlinedTextField(
                         value = maxShotsText,
                         onValueChange = { maxShotsText = it.filter { c -> c.isDigit() } },
-                        label = { Text("Max Shot Count") },
+                        label = { Text(stringResource(R.string.label_max_shot_count)) },
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Number,
                             imeAction = ImeAction.Done,
@@ -1429,7 +1431,7 @@ internal fun IntervalometerSettingsPanel(vm: PulsarViewModel, connected: Boolean
                         }),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        supportingText = { Text("10 – 9999") },
+                        supportingText = { Text(stringResource(R.string.range_max_shot_count)) },
                     )
                 }
 
@@ -1438,7 +1440,7 @@ internal fun IntervalometerSettingsPanel(vm: PulsarViewModel, connected: Boolean
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                 ) {
-                    Text("Reset to Factory Defaults")
+                    Text(stringResource(R.string.btn_reset_defaults))
                 }
             }
         }
@@ -1449,8 +1451,7 @@ internal fun IntervalometerSettingsPanel(vm: PulsarViewModel, connected: Boolean
 internal fun AstroSettingsPanel(vm: PulsarViewModel, connected: Boolean) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
-            "Astro mode calculates exposure times from your optics. " +
-            "Configure lens and sensor defaults here, or adjust them in the mode screen.",
+            stringResource(R.string.settings_astro_desc),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -1463,8 +1464,7 @@ internal fun AstroSettingsPanel(vm: PulsarViewModel, connected: Boolean) {
 internal fun ManualSettingsPanel(vm: PulsarViewModel, connected: Boolean) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
-            "Manual mode lets you control the shutter directly. " +
-            "Choose between Hold (press and hold) or Lock (toggle on/off) in the mode screen.",
+            stringResource(R.string.settings_manual_desc),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -1480,40 +1480,40 @@ private fun DeviceInfoSection(vm: PulsarViewModel, connected: Boolean) {
     val info by vm.deviceInfo.collectAsState()
     val simulatorActive by vm.simulatorActive.collectAsState()
 
-    CollapsibleSection("DEVICE HARDWARE") {
+    CollapsibleSection(stringResource(R.string.section_device_hardware)) {
         if (simulatorActive) {
             Text(
-                "Hardware info not available in simulator mode",
+                stringResource(R.string.hw_simulator_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else if (info != null) {
             val i = info!!
-            InfoRow("Chip", "${i.chipModel} rev ${i.chipRevision}")
-            InfoRow("CPU", "${i.cpuFreqMhz} MHz")
-            InfoRow("Flash", formatKb(i.flashSizeKb))
-            InfoRow("Free Heap", formatKb(i.freeHeapKb))
+            InfoRow(stringResource(R.string.hw_chip), stringResource(R.string.hw_chip_value, i.chipModel, i.chipRevision))
+            InfoRow(stringResource(R.string.hw_cpu), stringResource(R.string.hw_cpu_value, i.cpuFreqMhz))
+            InfoRow(stringResource(R.string.hw_flash), formatKb(i.flashSizeKb))
+            InfoRow(stringResource(R.string.hw_free_heap), formatKb(i.freeHeapKb))
             if (i.psramKb > 0) {
-                InfoRow("PSRAM", formatKb(i.psramKb.toLong()))
+                InfoRow(stringResource(R.string.hw_psram), formatKb(i.psramKb.toLong()))
             }
-            InfoRow("GPIO Pins", "${i.gpioCount} total, ${i.safeOutputCount} configurable outputs")
-            InfoRow("Uptime", formatUptime(i.uptimeMinutes))
+            InfoRow(stringResource(R.string.hw_gpio), stringResource(R.string.hw_gpio_value, i.gpioCount, i.safeOutputCount))
+            InfoRow(stringResource(R.string.hw_uptime), formatUptime(i.uptimeMinutes))
 
             Spacer(Modifier.height(4.dp))
             OutlinedButton(
                 onClick = { vm.requestDeviceInfo() },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-            ) { Text("Refresh") }
+            ) { Text(stringResource(R.string.refresh)) }
         } else if (connected) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                 Spacer(Modifier.width(12.dp))
-                Text("Querying device…", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.status_querying_device), style = MaterialTheme.typography.bodySmall)
             }
         } else {
             Text(
-                "Connect to a device to see hardware info",
+                stringResource(R.string.hw_connect_prompt),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -29,9 +29,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 
 @SuppressLint("MissingPermission")
@@ -71,14 +73,14 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
             Spacer(Modifier.width(16.dp))
             Column {
                 Text(
-                    "Pulsar",
+                    stringResource(R.string.app_name),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 2.sp,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    "BLE Remote Trigger",
+                    stringResource(R.string.app_tagline),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                     letterSpacing = 1.sp
@@ -89,12 +91,12 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
         Spacer(Modifier.height(48.dp))
 
         Text(
-            "Available Devices",
+            stringResource(R.string.available_devices),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold
         )
         Text(
-            "Select your Pulsar trigger to begin control session.",
+            stringResource(R.string.select_device_prompt),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -120,7 +122,7 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
                 )
                 Spacer(Modifier.width(12.dp))
                 Text(
-                    if (scanning) "STOP SCANNING" else "SEARCH FOR DEVICES",
+                    if (scanning) stringResource(R.string.stop_scanning) else stringResource(R.string.search_for_devices),
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
                 )
@@ -176,12 +178,12 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
                 Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        "Use Simulator",
+                        stringResource(R.string.use_simulator),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        "Explore the app without a real device",
+                        stringResource(R.string.simulator_description),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -209,7 +211,7 @@ private fun DeviceCard(device: BluetoothDevice, onClick: () -> Unit) {
         ) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    device.name ?: "Unknown Device",
+                    device.name ?: stringResource(R.string.unknown_device),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )

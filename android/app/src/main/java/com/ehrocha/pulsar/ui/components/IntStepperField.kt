@@ -18,11 +18,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.ehrocha.pulsar.R
 import kotlin.math.roundToInt
 
 /**
@@ -76,7 +78,7 @@ fun IntStepperField(
                 enabled = enabled && value > min,
                 modifier = Modifier.size(40.dp),
             ) {
-                Icon(Icons.Default.Remove, contentDescription = "Decrease")
+                Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.cd_decrease))
             }
 
             OutlinedTextField(
@@ -108,7 +110,7 @@ fun IntStepperField(
                 enabled = enabled && value < max,
                 modifier = Modifier.size(40.dp),
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Increase")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_increase))
             }
         }
 

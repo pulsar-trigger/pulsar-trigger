@@ -5,9 +5,11 @@
 
 package com.ehrocha.pulsar.model
 
+import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
+import com.ehrocha.pulsar.R
 
 enum class FlowStepType {
     INTERVALOMETER,
@@ -75,19 +77,19 @@ data class FlowStep(
 }
 
 /** Summary label for a step in the flow builder list. */
-fun FlowStep.summaryLabel(): String = when (type) {
-    FlowStepType.INTERVALOMETER -> "$shotCount shots, ${exposureMs}ms exp, ${intervalMs}ms gap"
+fun FlowStep.summaryLabel(context: Context): String = when (type) {
+    FlowStepType.INTERVALOMETER -> context.getString(R.string.step_summary_intervalometer, shotCount, exposureMs, intervalMs)
     FlowStepType.ASTRO -> {
         val expS = ruleDivisor.toDouble() / (focalLength * cropFactor)
-        "$shotCount shots, ${String.format("%.1f", expS)}s exp (${focalLength}mm)"
+        context.getString(R.string.step_summary_astro, shotCount, String.format("%.1f", expS), focalLength)
     }
     FlowStepType.PAUSE -> pauseLabel
 }
 
-fun FlowStepType.displayName(): String = when (this) {
-    FlowStepType.INTERVALOMETER -> "Intervalometer"
-    FlowStepType.ASTRO -> "Astro"
-    FlowStepType.PAUSE -> "Pause"
+fun FlowStepType.displayName(context: Context): String = when (this) {
+    FlowStepType.INTERVALOMETER -> context.getString(R.string.step_type_intervalometer)
+    FlowStepType.ASTRO -> context.getString(R.string.step_type_astro)
+    FlowStepType.PAUSE -> context.getString(R.string.step_type_pause)
 }
 
 // ── Saved Flow (named flow preset) ──────────────────────────────────────────

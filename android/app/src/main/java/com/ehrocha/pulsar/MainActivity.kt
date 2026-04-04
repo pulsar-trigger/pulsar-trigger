@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ehrocha.pulsar.ble.DeviceState
@@ -106,18 +107,18 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
     if (connected && (hasFwUpdate || hasAppUpdate) && !dismissedUpdateDialog) {
         AlertDialog(
             onDismissRequest = { dismissedUpdateDialog = true },
-            title = { Text("Updates Available") },
+            title = { Text(stringResource(R.string.dialog_updates_available)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     if (hasFwUpdate) {
-                        Text("Firmware v${fwRelease!!.version} is available")
+                        Text(stringResource(R.string.update_firmware_available, fwRelease!!.version))
                     }
                     if (hasAppUpdate) {
-                        Text("App v${appRelease!!.version} is available")
+                        Text(stringResource(R.string.update_app_available, appRelease!!.version))
                     }
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "Go to Settings to install updates.",
+                        stringResource(R.string.update_go_to_settings),
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
@@ -126,10 +127,10 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                 TextButton(onClick = {
                     dismissedUpdateDialog = true
                     currentScreen = AppScreen.Settings
-                }) { Text("Go to Settings") }
+                }) { Text(stringResource(R.string.btn_go_to_settings)) }
             },
             dismissButton = {
-                TextButton(onClick = { dismissedUpdateDialog = true }) { Text("Later") }
+                TextButton(onClick = { dismissedUpdateDialog = true }) { Text(stringResource(R.string.btn_later)) }
             },
         )
     }

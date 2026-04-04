@@ -1,3 +1,312 @@
 <resources>
     <string name="app_name">Pulsar</string>
+
+    <!-- ScanScreen -->
+    <string name="app_tagline">BLE Remote Trigger</string>
+    <string name="available_devices">Available Devices</string>
+    <string name="select_device_prompt">Select your Pulsar trigger to begin control session.</string>
+    <string name="stop_scanning">STOP SCANNING</string>
+    <string name="search_for_devices">SEARCH FOR DEVICES</string>
+    <string name="use_simulator">Use Simulator</string>
+    <string name="simulator_description">Explore the app without a real device</string>
+    <string name="unknown_device">Unknown Device</string>
+
+    <!-- MainMenuScreen -->
+    <string name="section_modes">MODES</string>
+    <string name="mode_intervalometer">Intervalometer</string>
+    <string name="mode_intervalometer_desc">Automate timelapse sequences with precision timing</string>
+    <string name="mode_astro">Astro</string>
+    <string name="mode_astro_desc">Star photography with calculated exposure times</string>
+    <string name="mode_manual">Manual</string>
+    <string name="mode_manual_desc">Direct shutter control — hold or lock mode</string>
+    <string name="mode_custom_flow">Custom Flow</string>
+    <string name="mode_custom_flow_desc">Build multi-step sequences mixing any mode</string>
+    <string name="mode_astro_dashboard">Astro Dashboard</string>
+    <string name="mode_astro_dashboard_desc">Weather, moon phase, Bortle scale &amp; sky conditions</string>
+    <string name="menu_settings">Settings</string>
+    <string name="menu_settings_desc">Device configuration and info</string>
+    <string name="disconnect">Disconnect</string>
+
+    <!-- Common actions / labels -->
+    <string name="back">Back</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    <string name="done">Done</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="ok">OK</string>
+    <string name="retry">Retry</string>
+    <string name="refresh">Refresh</string>
+    <string name="export_label">Export</string>
+    <string name="import_label">Import</string>
+    <string name="rename">Rename</string>
+    <string name="replace">Replace</string>
+    <string name="edit">Edit</string>
+    <string name="run">Run</string>
+    <string name="continue_label">Continue</string>
+
+    <!-- Content descriptions -->
+    <string name="cd_decrease">Decrease</string>
+    <string name="cd_increase">Increase</string>
+    <string name="cd_collapse">Collapse</string>
+    <string name="cd_expand">Expand</string>
+    <string name="cd_move_up">Move up</string>
+    <string name="cd_move_down">Move down</string>
+    <string name="cd_settings">Settings</string>
+
+    <!-- DefaultActions -->
+    <string name="btn_single">SINGLE</string>
+    <string name="btn_stop">STOP</string>
+    <string name="btn_start">START</string>
+    <string name="status_sequence_running">Sequence running…</string>
+    <string name="status_ready_start">Ready to start sequence</string>
+
+    <!-- ManualActions -->
+    <string name="chip_hold_mode">HOLD MODE</string>
+    <string name="chip_lock_mode">LOCK MODE</string>
+    <string name="btn_hold_shutter">HOLD SHUTTER</string>
+    <string name="btn_release_shutter">RELEASE SHUTTER</string>
+    <string name="btn_open_shutter">OPEN SHUTTER</string>
+    <string name="btn_close_shutter">CLOSE SHUTTER</string>
+    <string name="status_shutter_open">Shutter open…</string>
+    <string name="status_press_hold">Press and hold button</string>
+    <string name="status_shutter_locked">Shutter locked open</string>
+    <string name="status_tap_toggle">Tap button to toggle</string>
+
+    <!-- AstroActions -->
+    <string name="chip_500_rule">500 RULE</string>
+    <string name="chip_400_rule">400 RULE</string>
+    <string name="btn_stop_astro">STOP ASTRO</string>
+    <string name="btn_start_astro">START ASTRO</string>
+    <string name="status_capturing_stars">Capturing stars…</string>
+    <string name="status_ready_astro">Ready for astro sequence</string>
+
+    <!-- IntervalometerPanel -->
+    <string name="panel_intervalometer">Intervalometer</string>
+    <string name="panel_intervalometer_desc">Automate complex timelapse sequences or burst captures with precision timing.</string>
+    <string name="panel_intervalometer_tip">Configure individual timings below. For bulb mode, ensure the interval is longer than the exposure.</string>
+    <string name="label_sequence_estimate">SEQUENCE ESTIMATE</string>
+    <string name="label_shots">SHOTS</string>
+    <string name="label_total_duration">TOTAL DURATION</string>
+    <string name="label_duty_cycle">Duty Cycle: %1$d%% active exposure</string>
+    <string name="label_timing_parameters">TIMING PARAMETERS</string>
+    <string name="label_interval">Interval (time between shots)</string>
+    <string name="label_exposure">Exposure duration</string>
+    <string name="label_start_delay">Start Delay</string>
+    <string name="label_number_of_shots">Number of Shots</string>
+
+    <!-- ManualPanel -->
+    <string name="panel_manual">Manual Shutter</string>
+    <string name="panel_manual_desc">Control the shutter directly. Choose Hold (press and hold) or Lock (toggle on/off).</string>
+    <string name="panel_manual_tip">Toggle behaviour using the chips in the action area below.</string>
+    <string name="panel_manual_lock_info">LOCK: Tap the center button once to open the shutter, tap again to close. Best for long bulb exposures.</string>
+    <string name="panel_manual_hold_info">HOLD: Shutter remains open as long as the center button is pressed. Ideal for quick bursts.</string>
+
+    <!-- AstroPanel -->
+    <string name="panel_astro">Astro Mode</string>
+    <string name="panel_astro_desc">Pinpoint stars by calculating the maximum shutter speed to prevent trails.</string>
+    <string name="panel_astro_tip">Switch rules at the bottom. Rule 400 is ideal for high-resolution sensors.</string>
+    <string name="label_rule_readout">%1$d RULE READOUT</string>
+    <string name="label_effective_focal">%1$smm Effective</string>
+    <string name="label_max_exposure">MAX EXPOSURE</string>
+    <string name="label_total_time">TOTAL TIME</string>
+    <string name="label_astro_formula">Formula: %1$d / (%2$d mm × %3$sx) = %4$ss</string>
+    <string name="label_optics_configuration">OPTICS CONFIGURATION</string>
+    <string name="label_sensor_preset">Sensor Preset</string>
+    <string name="preset_full_frame">Full Frame</string>
+    <string name="preset_aps_c_canon">APS-C (Canon)</string>
+    <string name="preset_aps_c_nikon_sony">APS-C (Nikon/Sony)</string>
+    <string name="preset_micro_43">Micro 4/3</string>
+    <string name="label_focal_length">Lens Focal Length</string>
+    <string name="label_capture_sequence">CAPTURE SEQUENCE</string>
+    <string name="label_gap_between_shots">Gap between shots</string>
+
+    <!-- SettingsPanel -->
+    <string name="section_device">DEVICE</string>
+    <string name="label_device_name">Device Name</string>
+    <string name="section_gpio_pins">GPIO PINS</string>
+    <string name="gpio_pins_desc">Choose which ESP32 GPIO pins drive the shutter and focus optocouplers. Changes are sent to the device and saved.</string>
+    <string name="label_shutter_pin">Shutter Pin</string>
+    <string name="label_focus_pin">Focus Pin</string>
+    <string name="gpio_simulator_note">GPIO configuration not available in simulator mode</string>
+    <string name="section_backup_restore">BACKUP &amp; RESTORE</string>
+    <string name="backup_restore_desc">Export settings to Google Drive or local storage, and import them on another device.</string>
+    <string name="toast_settings_exported">Settings exported</string>
+    <string name="toast_export_failed">Export failed: %1$s</string>
+    <string name="toast_settings_imported">Settings imported</string>
+    <string name="toast_import_failed">Import failed: %1$s</string>
+
+    <!-- About -->
+    <string name="section_about">ABOUT</string>
+    <string name="about_app_name">Pulsar Trigger</string>
+    <string name="about_tagline">BLE Camera Remote Control</string>
+    <string name="about_author">Created by Eduardo Rocha</string>
+    <string name="about_license">Licensed under GPL-3.0-or-later</string>
+    <string name="about_github">View on GitHub</string>
+    <string name="about_instagram">@ehrocha.br on Instagram</string>
+
+    <!-- Rename dialog -->
+    <string name="dialog_rename_device">Rename Device</string>
+    <string name="dialog_rename_instructions">Enter a custom name. The device will advertise as \"Pulsar-&lt;name&gt;\". Leave empty to reset to \"Pulsar\".</string>
+    <string name="label_device_name_input">Device name</string>
+    <string name="prefix_pulsar">Pulsar-</string>
+    <string name="char_count">%1$d/%2$d characters</string>
+
+    <!-- Updates section -->
+    <string name="section_updates">UPDATES</string>
+    <string name="label_firmware">Firmware</string>
+    <string name="label_current_version">Current: v%1$s</string>
+    <string name="btn_check_firmware">Check for Firmware Update</string>
+    <string name="status_checking_github">Checking GitHub…</string>
+    <string name="label_new_version">New version available: v%1$s</string>
+    <string name="btn_install_update">Install Update</string>
+    <string name="status_downloading_firmware">Downloading firmware…</string>
+    <string name="status_uploading_device">Uploading to device…</string>
+    <string name="status_validating_rebooting">Validating &amp; rebooting…</string>
+    <string name="status_update_complete">Update complete! Device is rebooting.</string>
+    <string name="status_update_failed">Update failed</string>
+    <string name="label_app">App</string>
+    <string name="btn_check_app_update">Check for App Update</string>
+    <string name="status_up_to_date">You\'re up to date!</string>
+    <string name="btn_download_install">Download &amp; Install</string>
+    <string name="status_downloading_apk">Downloading APK…</string>
+    <string name="status_download_complete">Download complete — the installer should open automatically.</string>
+    <string name="status_update_check_failed">Update check failed</string>
+
+    <!-- Default values settings -->
+    <string name="section_default_values">DEFAULT VALUES</string>
+    <string name="default_values_desc">Set default values for the Intervalometer. These are applied when the app starts.</string>
+    <string name="label_default_interval">Default Interval (gap)</string>
+    <string name="label_default_exposure">Default Exposure</string>
+    <string name="label_default_start_delay">Default Start Delay</string>
+    <string name="label_default_shot_count">Default Shot Count</string>
+    <string name="range_shot_count">1 – %1$d</string>
+    <string name="label_max_shot_count">Max Shot Count</string>
+    <string name="range_max_shot_count">10 – 9999</string>
+    <string name="btn_reset_defaults">Reset to Factory Defaults</string>
+
+    <!-- Device hardware -->
+    <string name="section_device_hardware">DEVICE HARDWARE</string>
+    <string name="hw_simulator_note">Hardware info not available in simulator mode</string>
+    <string name="hw_connect_prompt">Connect to a device to see hardware info</string>
+    <string name="status_querying_device">Querying device…</string>
+    <string name="hw_chip">Chip</string>
+    <string name="hw_chip_value">%1$s rev %2$d</string>
+    <string name="hw_cpu">CPU</string>
+    <string name="hw_cpu_value">%1$d MHz</string>
+    <string name="hw_flash">Flash</string>
+    <string name="hw_free_heap">Free Heap</string>
+    <string name="hw_psram">PSRAM</string>
+    <string name="hw_gpio">GPIO Pins</string>
+    <string name="hw_gpio_value">%1$d total, %2$d configurable outputs</string>
+    <string name="hw_uptime">Uptime</string>
+
+    <!-- GPIO selector -->
+    <string name="gpio_value">GPIO %1$d</string>
+    <string name="gpio_in_use">GPIO %1$d (in use)</string>
+
+    <!-- OTA Overlay (ModeScreen) -->
+    <string name="ota_downloading">Downloading Firmware…</string>
+    <string name="ota_uploading">Uploading to Device…</string>
+    <string name="ota_validating">Validating &amp; Rebooting…</string>
+    <string name="ota_do_not_close">Do not close the app.</string>
+    <string name="ota_do_not_disconnect">Do not disconnect the device.</string>
+    <string name="ota_validating_info">The device is verifying the firmware and will reboot automatically.</string>
+    <string name="ota_complete_check">✓</string>
+    <string name="ota_update_complete">Update Complete!</string>
+    <string name="ota_rebooting_info">Device is rebooting. You will be returned to the scan screen.</string>
+
+    <!-- ModeScreen running status -->
+    <string name="state_exposing">EXPOSING</string>
+    <string name="state_waiting">WAITING</string>
+    <string name="status_of_shots">of %1$d shots</string>
+    <string name="status_remaining">remaining</string>
+
+    <!-- ModeSettingsScreen -->
+    <string name="settings_intervalometer">Intervalometer Settings</string>
+    <string name="settings_astro">Astro Settings</string>
+    <string name="settings_manual">Manual Settings</string>
+    <string name="settings_astro_desc">Astro mode calculates exposure times from your optics. Configure lens and sensor defaults here, or adjust them in the mode screen.</string>
+    <string name="settings_manual_desc">Manual mode lets you control the shutter directly. Choose between Hold (press and hold) or Lock (toggle on/off) in the mode screen.</string>
+
+    <!-- MainActivity update dialog -->
+    <string name="dialog_updates_available">Updates Available</string>
+    <string name="update_firmware_available">Firmware v%1$s is available</string>
+    <string name="update_app_available">App v%1$s is available</string>
+    <string name="update_go_to_settings">Go to Settings to install updates.</string>
+    <string name="btn_go_to_settings">Go to Settings</string>
+    <string name="btn_later">Later</string>
+
+    <!-- DashboardScreen -->
+    <string name="dashboard_title">Astro Dashboard</string>
+    <string name="status_fetching_data">Fetching location &amp; data…</string>
+    <string name="card_location">LOCATION</string>
+    <string name="location_north">N</string>
+    <string name="location_south">S</string>
+    <string name="location_east">E</string>
+    <string name="location_west">W</string>
+    <string name="location_altitude">Altitude: %.0f m</string>
+    <string name="card_bortle">LIGHT POLLUTION (BORTLE)</string>
+    <string name="bortle_unavailable">Light pollution data unavailable for this location</string>
+    <string name="card_moon">MOON PHASE</string>
+    <string name="moon_illuminated">%.0f%% illuminated</string>
+    <string name="moon_age">Age: %.1f days</string>
+    <string name="label_moonrise">Moonrise</string>
+    <string name="label_moonset">Moonset</string>
+    <string name="moon_good">✓ Good conditions for deep-sky photography</string>
+    <string name="moon_bright">⚠ Moon is bright — better for planetary/lunar imaging</string>
+    <string name="card_weather">CURRENT WEATHER</string>
+    <string name="weather_cloud">Cloud</string>
+    <string name="weather_humidity">Humidity</string>
+    <string name="weather_wind">Wind</string>
+    <string name="weather_clear">✓ Clear skies — great for astrophotography!</string>
+    <string name="weather_partly_cloudy">◐ Partly cloudy — may have clear windows</string>
+    <string name="weather_too_cloudy">✗ Too cloudy for astrophotography</string>
+    <string name="card_forecast">12-HOUR CLOUD FORECAST</string>
+
+    <!-- CustomFlowScreen -->
+    <string name="flow_title">Custom Flow</string>
+    <string name="flow_no_saved">No saved flows</string>
+    <string name="flow_create_instruction">Create a flow to chain multiple shooting\nmodes, pauses, and sequences.</string>
+    <string name="btn_new_flow">NEW FLOW</string>
+    <string name="dialog_delete_flow">Delete Flow</string>
+    <string name="dialog_delete_flow_msg">Delete \"%1$s\"? This cannot be undone.</string>
+    <string name="flow_new">New Flow</string>
+    <string name="flow_step_count">%1$d step</string>
+    <string name="flow_step_count_plural">%1$d steps</string>
+    <string name="flow_no_steps">No steps yet</string>
+    <string name="flow_add_steps_instruction">Add steps to build your custom shooting flow.\nMix modes, pauses, and sequences.</string>
+    <string name="btn_add_step">Add Step</string>
+    <string name="btn_save_as">Save As…</string>
+    <string name="btn_stop_flow">STOP FLOW</string>
+    <string name="btn_start_flow">START FLOW</string>
+    <string name="flow_state_exposing">Exposing</string>
+    <string name="flow_state_waiting">Waiting</string>
+    <string name="flow_state_idle">Idle</string>
+    <string name="flow_state_error">Error</string>
+    <string name="flow_shot_count">Shot %1$d of %2$d</string>
+    <string name="flow_time_remaining_long">%1$dm %2$ds remaining</string>
+    <string name="flow_time_remaining_short">%1$ds remaining</string>
+    <string name="flow_waiting_for_user">Waiting for user</string>
+    <string name="label_pause_message">Pause message</string>
+    <string name="pause_message_hint">Shown when flow reaches this step</string>
+    <string name="dialog_save_flow">Save Flow</string>
+    <string name="label_flow_name">Flow name</string>
+    <string name="flow_name_exists">A flow with this name already exists and will be replaced.</string>
+
+    <!-- FlowStep model (used via context) -->
+    <string name="step_type_intervalometer">Intervalometer</string>
+    <string name="step_type_astro">Astro</string>
+    <string name="step_type_pause">Pause</string>
+    <string name="step_summary_intervalometer">%1$d shots, %2$dms exp, %3$dms gap</string>
+    <string name="step_summary_astro">%1$d shots, %2$ss exp (%3$dmm)</string>
+    <string name="default_pause_label">Adjust camera settings</string>
+
+    <!-- LiveStatusPanel -->
+    <string name="status_system_offline">SYSTEM OFFLINE</string>
+    <string name="status_disconnected">Disconnected</string>
+    <string name="status_syncing">Syncing…</string>
+    <string name="stat_mode">MODE</string>
+    <string name="stat_captured">CAPTURED</string>
+    <string name="stat_est_remaining">EST. REMAINING</string>
 </resources>

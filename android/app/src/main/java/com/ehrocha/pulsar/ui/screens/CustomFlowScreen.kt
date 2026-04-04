@@ -21,11 +21,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.ble.StatusFrame
 import com.ehrocha.pulsar.model.FlowStep
@@ -133,10 +136,10 @@ private fun FlowLibraryView(
         // ── Header ───────────────────────────────────────────────────────
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
             }
             Spacer(Modifier.width(4.dp))
-            Text("Custom Flow", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.flow_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
             BatteryIndicator(status)
         }
@@ -172,13 +175,13 @@ private fun FlowLibraryView(
                             )
                             Spacer(Modifier.height(12.dp))
                             Text(
-                                "No saved flows",
+                                stringResource(R.string.flow_no_saved),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                "Create a flow to chain multiple shooting\nmodes, pauses, and sequences.",
+                                stringResource(R.string.flow_create_instruction),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
@@ -209,7 +212,7 @@ private fun FlowLibraryView(
         ) {
             Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
-            Text("NEW FLOW", fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.btn_new_flow), fontWeight = FontWeight.Bold)
         }
 
         Spacer(Modifier.height(8.dp))
@@ -219,18 +222,18 @@ private fun FlowLibraryView(
     if (confirmDelete != null) {
         AlertDialog(
             onDismissRequest = { confirmDelete = null },
-            title = { Text("Delete Flow") },
-            text = { Text("Delete \"$confirmDelete\"? This cannot be undone.") },
+            title = { Text(stringResource(R.string.dialog_delete_flow)) },
+            text = { Text(stringResource(R.string.dialog_delete_flow_msg, confirmDelete!!)) },
             confirmButton = {
                 TextButton(onClick = {
                     onDeleteFlow(confirmDelete!!)
                     confirmDelete = null
                 }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirmDelete = null }) { Text("Cancel") }
+                TextButton(onClick = { confirmDelete = null }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -258,17 +261,18 @@ private fun SavedFlowCard(
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
-                        "${flow.steps.size} step${if (flow.steps.size != 1) "s" else ""}",
+                        if (flow.steps.size != 1) stringResource(R.string.flow_step_count_plural, flow.steps.size)
+                        else stringResource(R.string.flow_step_count, flow.steps.size),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit), modifier = Modifier.size(20.dp))
                 }
                 IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
                     Icon(
-                        Icons.Default.Delete, contentDescription = "Delete",
+                        Icons.Default.Delete, contentDescription = stringResource(R.string.delete),
                         modifier = Modifier.size(20.dp),
                         tint = MaterialTheme.colorScheme.error,
                     )
@@ -279,7 +283,7 @@ private fun SavedFlowCard(
                     modifier = Modifier.size(36.dp),
                 ) {
                     Icon(
-                        Icons.Default.PlayArrow, contentDescription = "Run",
+                        Icons.Default.PlayArrow, contentDescription = stringResource(R.string.run),
                         modifier = Modifier.size(20.dp),
                         tint = if (connected && flow.steps.isNotEmpty())
                             MaterialTheme.colorScheme.primary
@@ -296,6 +300,7 @@ private fun SavedFlowCard(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     flow.steps.take(6).forEach { step ->
+                        val context = LocalContext.current
                         Surface(
                             shape = RoundedCornerShape(6.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant,
@@ -312,7 +317,7 @@ private fun SavedFlowCard(
                                 )
                                 Spacer(Modifier.width(3.dp))
                                 Text(
-                                    step.type.displayName(),
+                                    step.type.displayName(context),
                                     style = MaterialTheme.typography.labelSmall,
                                 )
                             }
@@ -360,18 +365,19 @@ private fun FlowEditorView(
         // ── Header ───────────────────────────────────────────────────────
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack, enabled = !running) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
             }
             Spacer(Modifier.width(4.dp))
             Column {
                 Text(
-                    if (editingFlowName != null) editingFlowName else "New Flow",
+                    if (editingFlowName != null) editingFlowName else stringResource(R.string.flow_new),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                 )
                 if (editingFlowName != null) {
                     Text(
-                        "${steps.size} step${if (steps.size != 1) "s" else ""}",
+                        if (steps.size != 1) stringResource(R.string.flow_step_count_plural, steps.size)
+                        else stringResource(R.string.flow_step_count, steps.size),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -412,13 +418,13 @@ private fun FlowEditorView(
                             )
                             Spacer(Modifier.height(12.dp))
                             Text(
-                                "No steps yet",
+                                stringResource(R.string.flow_no_steps),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                "Add steps to build your custom shooting flow.\nMix modes, pauses, and sequences.",
+                                stringResource(R.string.flow_add_steps_instruction),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
@@ -474,7 +480,7 @@ private fun FlowEditorView(
                     ) {
                         Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Add Step")
+                        Text(stringResource(R.string.btn_add_step))
                     }
                 }
             }
@@ -497,7 +503,7 @@ private fun FlowEditorView(
             ) {
                 Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(if (editingFlowName != null) "Save" else "Save As…")
+                Text(if (editingFlowName != null) stringResource(R.string.save) else stringResource(R.string.btn_save_as))
             }
 
             Spacer(Modifier.height(8.dp))
@@ -513,7 +519,7 @@ private fun FlowEditorView(
             ) {
                 Icon(Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("STOP FLOW", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.btn_stop_flow), fontWeight = FontWeight.Bold)
             }
         } else {
             Button(
@@ -524,7 +530,7 @@ private fun FlowEditorView(
             ) {
                 Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("START FLOW", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.btn_start_flow), fontWeight = FontWeight.Bold)
             }
         }
 
@@ -663,6 +669,7 @@ private fun FlowStepCard(
                 Spacer(Modifier.width(12.dp))
 
                 Column(Modifier.weight(1f)) {
+                    val context = LocalContext.current
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             stepIcon(step.type),
@@ -672,7 +679,7 @@ private fun FlowStepCard(
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            step.type.displayName(),
+                            step.type.displayName(context),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                         )
@@ -685,7 +692,7 @@ private fun FlowStepCard(
                         }
                     }
                     Text(
-                        step.summaryLabel(),
+                        step.summaryLabel(context),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -699,7 +706,7 @@ private fun FlowStepCard(
                             enabled = index > 0,
                             modifier = Modifier.size(28.dp),
                         ) {
-                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Move up",
+                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = stringResource(R.string.cd_move_up),
                                 modifier = Modifier.size(18.dp))
                         }
                         IconButton(
@@ -707,16 +714,16 @@ private fun FlowStepCard(
                             enabled = index < totalSteps - 1,
                             modifier = Modifier.size(28.dp),
                         ) {
-                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Move down",
+                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.cd_move_down),
                                 modifier = Modifier.size(18.dp))
                         }
                     }
                     IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit",
+                        Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit),
                             modifier = Modifier.size(18.dp))
                     }
                     IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete",
+                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete),
                             modifier = Modifier.size(18.dp),
                             tint = MaterialTheme.colorScheme.error)
                     }
@@ -729,10 +736,10 @@ private fun FlowStepCard(
 
                 // State label
                 val stateLabel = when (status.state) {
-                    DeviceState.RUNNING -> "Exposing"
-                    DeviceState.WAITING -> "Waiting"
-                    DeviceState.IDLE -> "Idle"
-                    DeviceState.ERROR -> "Error"
+                    DeviceState.RUNNING -> stringResource(R.string.flow_state_exposing)
+                    DeviceState.WAITING -> stringResource(R.string.flow_state_waiting)
+                    DeviceState.IDLE -> stringResource(R.string.flow_state_idle)
+                    DeviceState.ERROR -> stringResource(R.string.flow_state_error)
                 }
                 val stateColor = when (status.state) {
                     DeviceState.RUNNING -> Color(0xFF4CAF50)
@@ -763,7 +770,7 @@ private fun FlowStepCard(
 
                     // Shot counter
                     Text(
-                        "Shot ${status.shotsTaken} of ${step.shotCount}",
+                        stringResource(R.string.flow_shot_count, status.shotsTaken, step.shotCount),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -788,8 +795,8 @@ private fun FlowStepCard(
                 if (status.timeRemainingMs > 0) {
                     Spacer(Modifier.height(4.dp))
                     val secs = status.timeRemainingMs / 1000
-                    val timeStr = if (secs >= 60) "${secs / 60}m ${secs % 60}s remaining"
-                                  else "${secs}s remaining"
+                    val timeStr = if (secs >= 60) stringResource(R.string.flow_time_remaining_long, secs / 60, secs % 60)
+                                  else stringResource(R.string.flow_time_remaining_short, secs)
                     Text(
                         timeStr,
                         style = MaterialTheme.typography.bodySmall,
@@ -809,7 +816,7 @@ private fun FlowStepCard(
                     modifier = Modifier.padding(bottom = 8.dp),
                 ) {
                     Text(
-                        "Waiting for user",
+                        stringResource(R.string.flow_waiting_for_user),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFFFA726),
@@ -824,7 +831,7 @@ private fun FlowStepCard(
                 ) {
                     Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Continue", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.continue_label), fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -855,13 +862,14 @@ private fun AddStepDialog(
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {
                     Text(
-                        "Add Step",
+                        stringResource(R.string.btn_add_step),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                     )
                     Spacer(Modifier.height(16.dp))
 
                     FlowStepType.entries.forEach { type ->
+                        val context = LocalContext.current
                         Surface(
                             onClick = { selectedType = type },
                             shape = RoundedCornerShape(12.dp),
@@ -879,7 +887,7 @@ private fun AddStepDialog(
                                 )
                                 Spacer(Modifier.width(12.dp))
                                 Text(
-                                    type.displayName(),
+                                    type.displayName(context),
                                     style = MaterialTheme.typography.bodyLarge,
                                 )
                             }
@@ -888,7 +896,7 @@ private fun AddStepDialog(
 
                     Spacer(Modifier.height(8.dp))
                     TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.cancel))
                     }
                 }
             }
@@ -927,8 +935,9 @@ private fun EditStepDialog(
             ) {
                 // Intervalometer/Astro panels include their own title
                 if (step.type != FlowStepType.INTERVALOMETER && step.type != FlowStepType.ASTRO) {
+                    val context = LocalContext.current
                     Text(
-                        step.type.displayName(),
+                        step.type.displayName(context),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                     )
@@ -944,10 +953,10 @@ private fun EditStepDialog(
                     horizontalArrangement = Arrangement.End,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
                     Spacer(Modifier.width(8.dp))
                     Button(onClick = { onSave(current) }, shape = RoundedCornerShape(12.dp)) {
-                        Text("Save")
+                        Text(stringResource(R.string.save))
                     }
                 }
             }
@@ -993,10 +1002,10 @@ private fun PauseStepEditor(step: FlowStep, onChange: (FlowStep) -> Unit) {
     OutlinedTextField(
         value = step.pauseLabel,
         onValueChange = { onChange(step.copy(pauseLabel = it)) },
-        label = { Text("Pause message") },
+        label = { Text(stringResource(R.string.label_pause_message)) },
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
-        supportingText = { Text("Shown when flow reaches this step") },
+        supportingText = { Text(stringResource(R.string.pause_message_hint)) },
     )
 }
 
@@ -1017,19 +1026,19 @@ private fun SaveFlowDialog(
             tonalElevation = 6.dp,
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
-                Text("Save Flow", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.dialog_save_flow), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(16.dp))
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Flow name") },
+                    label = { Text(stringResource(R.string.label_flow_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (nameExists) {
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "A flow with this name already exists and will be replaced.",
+                        stringResource(R.string.flow_name_exists),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                     )
@@ -1039,12 +1048,12 @@ private fun SaveFlowDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                 ) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
                     Spacer(Modifier.width(8.dp))
                     Button(
                         onClick = { onSave(name.trim()) },
                         enabled = name.isNotBlank(),
-                    ) { Text(if (nameExists) "Replace" else "Save") }
+                    ) { Text(if (nameExists) stringResource(R.string.replace) else stringResource(R.string.save)) }
                 }
             }
         }

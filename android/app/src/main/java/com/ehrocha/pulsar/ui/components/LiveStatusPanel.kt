@@ -22,9 +22,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.ble.StatusFrame
 import com.ehrocha.pulsar.ble.TriggerMode
@@ -81,15 +83,15 @@ fun LiveStatusPanel(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = if (!connected) "SYSTEM OFFLINE" else deviceName.uppercase(),
+                        text = if (!connected) stringResource(R.string.status_system_offline) else deviceName.uppercase(),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         letterSpacing = 1.sp
                     )
                     Text(
                         text = when {
-                            !connected -> "Disconnected"
-                            status == null -> "Syncing…"
+                            !connected -> stringResource(R.string.status_disconnected)
+                            status == null -> stringResource(R.string.status_syncing)
                             else -> status.state.name
                         },
                         style = MaterialTheme.typography.titleMedium,
@@ -134,10 +136,10 @@ fun LiveStatusPanel(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    StatusStat("MODE", currentMode.name.replace('_', ' '))
-                    StatusStat("CAPTURED", "${status.shotsTaken}")
+                    StatusStat(stringResource(R.string.stat_mode), currentMode.name.replace('_', ' '))
+                    StatusStat(stringResource(R.string.stat_captured), "${status.shotsTaken}")
                     if (status.timeRemainingMs > 0) {
-                        StatusStat("EST. REMAINING", formatTimeRemaining(status.timeRemainingMs))
+                        StatusStat(stringResource(R.string.stat_est_remaining), formatTimeRemaining(status.timeRemainingMs))
                     }
                 }
             }

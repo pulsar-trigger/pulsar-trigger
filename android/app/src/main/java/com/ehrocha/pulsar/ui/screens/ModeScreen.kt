@@ -25,7 +25,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
+import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.ble.OtaState
 import com.ehrocha.pulsar.ble.StatusFrame
@@ -57,13 +59,13 @@ fun ModeScreen(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack, enabled = !isRunning) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
             }
             Spacer(Modifier.width(4.dp))
             val title = when (targetMode) {
-                TriggerMode.INTERVALOMETER -> "Intervalometer"
-                TriggerMode.ASTRO -> "Astro"
-                TriggerMode.PRESS_HOLD -> "Manual"
+                TriggerMode.INTERVALOMETER -> stringResource(R.string.mode_intervalometer)
+                TriggerMode.ASTRO -> stringResource(R.string.mode_astro)
+                TriggerMode.PRESS_HOLD -> stringResource(R.string.mode_manual)
                 else -> targetMode.name.replace('_', ' ')
             }
             Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -222,10 +224,10 @@ fun SettingsScreen(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
             }
             Spacer(Modifier.width(4.dp))
-            Text("Settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.menu_settings), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
             if (status != null) {
                 Surface(
@@ -296,47 +298,47 @@ fun SettingsScreen(
                         when (otaState) {
                             OtaState.DOWNLOADING -> {
                                 CircularProgressIndicator()
-                                Text("Downloading Firmware…", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.ota_downloading), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                 LinearProgressIndicator(
                                     progress = { otaProgress },
                                     modifier = Modifier.fillMaxWidth(),
                                 )
                                 Text("${(otaProgress * 100).toInt()}%", style = MaterialTheme.typography.bodyMedium)
                                 Text(
-                                    "Do not close the app.",
+                                    stringResource(R.string.ota_do_not_close),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                             OtaState.UPLOADING -> {
                                 CircularProgressIndicator()
-                                Text("Uploading to Device…", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.ota_uploading), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                 LinearProgressIndicator(
                                     progress = { otaProgress },
                                     modifier = Modifier.fillMaxWidth(),
                                 )
                                 Text("${(otaProgress * 100).toInt()}%", style = MaterialTheme.typography.bodyMedium)
                                 Text(
-                                    "Do not disconnect the device.",
+                                    stringResource(R.string.ota_do_not_disconnect),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                             OtaState.VALIDATING -> {
                                 CircularProgressIndicator()
-                                Text("Validating & Rebooting…", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.ota_validating), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                 Text(
-                                    "The device is verifying the firmware and will reboot automatically.",
+                                    stringResource(R.string.ota_validating_info),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                 )
                             }
                             OtaState.COMPLETE -> {
-                                Text("✓", style = MaterialTheme.typography.displayMedium, color = MaterialTheme.colorScheme.primary)
-                                Text("Update Complete!", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.ota_complete_check), style = MaterialTheme.typography.displayMedium, color = MaterialTheme.colorScheme.primary)
+                                Text(stringResource(R.string.ota_update_complete), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                 Text(
-                                    "Device is rebooting. You will be returned to the scan screen.",
+                                    stringResource(R.string.ota_rebooting_info),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -344,7 +346,7 @@ fun SettingsScreen(
                                 OutlinedButton(
                                     onClick = { vm.firmwareManager.reset() },
                                     shape = RoundedCornerShape(12.dp),
-                                ) { Text("Done") }
+                                ) { Text(stringResource(R.string.done)) }
                             }
                             else -> {}
                         }
@@ -365,9 +367,9 @@ fun ModeSettingsScreen(
     val status by vm.status.collectAsState()
 
     val title = when (targetMode) {
-        TriggerMode.INTERVALOMETER -> "Intervalometer Settings"
-        TriggerMode.ASTRO -> "Astro Settings"
-        TriggerMode.PRESS_HOLD -> "Manual Settings"
+        TriggerMode.INTERVALOMETER -> stringResource(R.string.settings_intervalometer)
+        TriggerMode.ASTRO -> stringResource(R.string.settings_astro)
+        TriggerMode.PRESS_HOLD -> stringResource(R.string.settings_manual)
         else -> "${targetMode.name.replace('_', ' ')} Settings"
     }
 
@@ -378,7 +380,7 @@ fun ModeSettingsScreen(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
             }
             Spacer(Modifier.width(4.dp))
             Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -513,8 +515,8 @@ private fun RunningStatusContent(
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = when (status.state) {
-                        DeviceState.RUNNING -> "EXPOSING"
-                        DeviceState.WAITING -> "WAITING"
+                        DeviceState.RUNNING -> stringResource(R.string.state_exposing)
+                        DeviceState.WAITING -> stringResource(R.string.state_waiting)
                         else -> status.state.name
                     },
                     style = MaterialTheme.typography.labelLarge,
@@ -534,7 +536,7 @@ private fun RunningStatusContent(
             color = MaterialTheme.colorScheme.primary,
         )
         Text(
-            text = "of $totalShots shots",
+            text = stringResource(R.string.status_of_shots, totalShots),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -562,7 +564,7 @@ private fun RunningStatusContent(
                 fontWeight = FontWeight.Bold,
             )
             Text(
-                text = "remaining",
+                text = stringResource(R.string.status_remaining),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
