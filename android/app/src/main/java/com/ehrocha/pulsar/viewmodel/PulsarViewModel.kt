@@ -406,42 +406,113 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             FlowStepType.INTERVALOMETER -> {
-                sendModeCommand(
-                    CommandBuilder.setIntervalometer(
-                        step.intervalMs, step.exposureMs, step.shotCount, step.delayMs,
+                val expMs = step.exposureMs
+                val gapMs = step.intervalMs
+                val shots = step.shotCount
+                if (_simulatorActive.value) {
+                    simulateShots(shots, expMs, gapMs, step.delayMs)
+                } else {
+                    sendModeCommand(
+                        CommandBuilder.setIntervalometer(
+                            step.intervalMs, step.exposureMs, step.shotCount, step.delayMs,
+                        )
                     )
-                )
-                waitForCompletion(step.shotCount)
+                    waitForCompletion(step.shotCount)
+                }
             }
             FlowStepType.ASTRO -> {
                 val expS = step.ruleDivisor.toDouble() / (step.focalLength * step.cropFactor)
                 val expMs = (expS * 1000).toLong().coerceAtLeast(100)
-                sendModeCommand(
-                    CommandBuilder.setAstro(step.gapMs, expMs, step.shotCount, step.delayMs)
-                )
-                waitForCompletion(step.shotCount)
+                if (_simulatorActive.value) {
+                    simulateShots(step.shotCount, expMs, step.gapMs, step.delayMs)
+                } else {
+                    sendModeCommand(
+                        CommandBuilder.setAstro(step.gapMs, expMs, step.shotCount, step.delayMs)
+                    )
+                    waitForCompletion(step.shotCount)
+                }
             }
             FlowStepType.SOUND -> {
-                sendModeCommand(
-                    CommandBuilder.setSound(step.soundThreshold, step.exposureMs)
-                )
-                waitForShotCount(step.shotCount)
+                if (_simulatorActive.value) {
+                    simulateShots(step.shotCount, step.exposureMs, 1000L, 0L)
+                } else {
+                    sendModeCommand(
+                        CommandBuilder.setSound(step.soundThreshold, step.exposureMs)
+                    )
+                    waitForShotCount(step.shotCount)
+                }
             }
             FlowStepType.LIGHTNING -> {
-                sendModeCommand(
-                    CommandBuilder.setLightning(step.lightningSensitivity, step.exposureMs)
-                )
-                waitForShotCount(step.shotCount)
+                if (_simulatorActive.value) {
+                    simulateShots(step.shotCount, step.exposureMs, 1000L, 0L)
+                } else {
+                    sendModeCommand(
+                        CommandBuilder.setLightning(step.lightningSensitivity, step.exposureMs)
+                    )
+                    waitForShotCount(step.shotCount)
+                }
             }
             FlowStepType.LASER -> {
-                sendModeCommand(CommandBuilder.setLaser(step.exposureMs))
-                waitForShotCount(step.shotCount)
+                if (_simulatorActive.value) {
+                    simulateShots(step.shotCount, step.exposureMs, 1000L, 0L)
+                } else {
+                    sendModeCommand(CommandBuilder.setLaser(step.exposureMs))
+                    waitForShotCount(step.shotCount)
+                }
             }
             FlowStepType.HDR -> {
-                sendModeCommand(CommandBuilder.setHdr(step.hdrExposures))
-                waitForCompletion(step.hdrExposures.size)
+                if (_simulatorActive.value) {
+                    simulateHdr(step.hdrExposures)
+                } else {
+                    sendModeCommand(CommandBuilder.setHdr(step.hdrExposures))
+                    waitForCompletion(step.hdrExposures.size)
+                }
             }
         }
+    }
+
+    /** Simulate a sequence of shots by updating _status directly (for flow steps in simulator). */
+    private suspend fun simulateShots(totalShots: Int, expMs: Long, gapMs: Long, startDelayMs: Long) {
+        if (startDelayMs > 0) {
+            _status.value = _status.value?.copy(
+                state = DeviceState.WAITING, shotsTaken = 0,
+                timeRemainingMs = startDelayMs + totalShots * (expMs + gapMs) - gapMs,
+            )
+            delay(startDelayMs)
+        }
+        for (shot in 1..totalShots) {
+            coroutineContext.ensureActive()
+            val remaining = (totalShots - shot + 1) * (expMs + gapMs) - gapMs
+            _status.value = _status.value?.copy(
+                state = DeviceState.RUNNING, shotsTaken = shot - 1, timeRemainingMs = remaining,
+            )
+            delay(expMs)
+            _status.value = _status.value?.copy(
+                shotsTaken = shot, timeRemainingMs = remaining - expMs,
+            )
+            if (shot < totalShots) {
+                _status.value = _status.value?.copy(state = DeviceState.WAITING)
+                delay(gapMs)
+            }
+        }
+        _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
+    }
+
+    /** Simulate HDR bracket sequence in simulator. */
+    private suspend fun simulateHdr(exposures: List<Long>) {
+        for ((i, expMs) in exposures.withIndex()) {
+            coroutineContext.ensureActive()
+            _status.value = _status.value?.copy(
+                state = DeviceState.RUNNING, shotsTaken = i, timeRemainingMs = expMs,
+            )
+            delay(expMs)
+            _status.value = _status.value?.copy(shotsTaken = i + 1, timeRemainingMs = 0L)
+            if (i < exposures.lastIndex) {
+                _status.value = _status.value?.copy(state = DeviceState.WAITING)
+                delay(500) // brief gap between HDR brackets
+            }
+        }
+        _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
     }
 
     private fun sendModeCommand(packet: ByteArray) {
@@ -451,7 +522,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Wait for firmware to go back to IDLE (modes with built-in completion). */
     private suspend fun waitForCompletion(expectedShots: Int) {
-        // Wait until we see RUNNING first
         var sawRunning = false
         while (true) {
             coroutineContext.ensureActive()

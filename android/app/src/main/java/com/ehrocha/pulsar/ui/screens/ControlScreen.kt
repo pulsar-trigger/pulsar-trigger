@@ -43,6 +43,7 @@ import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.ble.OtaState
 import com.ehrocha.pulsar.update.AppUpdateState
 import com.ehrocha.pulsar.BuildConfig
+import com.ehrocha.pulsar.ui.components.IntStepperField
 import com.ehrocha.pulsar.ui.components.TimePicker
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel.Companion.SAFE_OUTPUT_PINS
@@ -412,6 +413,7 @@ internal fun IntervalometerPanelContent(
                 totalMs = exposureMs,
                 onChanged = { onExposureChanged(it) },
                 label = "Exposure duration",
+                showMs = true,
                 enabled = enabled,
             )
 
@@ -422,28 +424,14 @@ internal fun IntervalometerPanelContent(
                 enabled = enabled,
             )
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "Number of Shots",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text(
-                        text = "$shotCount",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-                Slider(
-                    value = shotCount.toFloat(),
-                    onValueChange = { onShotCountChanged(it.toInt()) },
-                    valueRange = 1f..maxShotCount.toFloat(),
-                    enabled = enabled,
-                )
-            }
+            IntStepperField(
+                label = "Number of Shots",
+                value = shotCount,
+                onValueChange = { onShotCountChanged(it.coerceAtLeast(1)) },
+                min = 1,
+                max = maxShotCount,
+                enabled = enabled,
+            )
         }
     }
 }
@@ -640,42 +628,16 @@ internal fun AstroPanelContent(
                 }
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "Lens Focal Length",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text(
-                        text = "$focalLength mm",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                
-                Slider(
-                    value = focalLength.toFloat(),
-                    onValueChange = { onFocalLengthChanged(it.toInt()) },
-                    valueRange = 8f..600f,
-                    enabled = enabled,
-                )
-
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    listOf(14, 24, 35, 50, 85, 135, 200, 400, 600).forEach { mm ->
-                        SuggestionChip(
-                            onClick = { if (enabled) onFocalLengthChanged(mm) },
-                            label = { Text("${mm}mm", style = MaterialTheme.typography.labelSmall) },
-                            enabled = enabled,
-                        )
-                    }
-                }
-            }
+            IntStepperField(
+                label = "Lens Focal Length",
+                value = focalLength,
+                onValueChange = { onFocalLengthChanged(it) },
+                min = 8,
+                max = 600,
+                enabled = enabled,
+                presets = listOf(14, 24, 35, 50, 85, 135, 200, 400, 600),
+                presetLabel = { "${it}mm" },
+            )
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -695,28 +657,14 @@ internal fun AstroPanelContent(
                 enabled = enabled,
             )
 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "Number of Shots",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text(
-                        text = "$shotCount",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-                Slider(
-                    value = shotCount.toFloat(),
-                    onValueChange = { onShotCountChanged(it.toInt()) },
-                    valueRange = 1f..999f,
-                    enabled = enabled,
-                )
-            }
+            IntStepperField(
+                label = "Number of Shots",
+                value = shotCount,
+                onValueChange = { onShotCountChanged(it.coerceAtLeast(1)) },
+                min = 1,
+                max = 999,
+                enabled = enabled,
+            )
         }
     }
 }
@@ -934,18 +882,29 @@ internal fun SettingsPanel(
             }
         }
 
-        // ── Firmware Update ──────────────────────────────────────────────
-        FirmwareUpdateSection(vm = vm, connected = hwConnected)
-
-        // ── App Update ───────────────────────────────────────────────────
-        AppUpdateSection(vm = vm)
+        // ── Updates ───────────────────────────────────────────────────────
+        UpdatesSection(vm = vm, connected = hwConnected)
 
         // ── Device Hardware ──────────────────────────────────────────────
         DeviceInfoSection(vm = vm, connected = hwConnected)
 
         // ── About ────────────────────────────────────────────────────────
-        CollapsibleSection("ABOUT") {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = 2.dp,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
             val uriHandler = LocalUriHandler.current
+
+            Text(
+                "ABOUT",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -999,6 +958,7 @@ internal fun SettingsPanel(
                 shape = RoundedCornerShape(12.dp),
             ) {
                 Text("@ehrocha.br on Instagram")
+            }
             }
         }
     }
@@ -1059,265 +1019,270 @@ private fun RenameDeviceDialog(
 }
 
 @Composable
-private fun FirmwareUpdateSection(vm: PulsarViewModel, connected: Boolean) {
+private fun UpdatesSection(vm: PulsarViewModel, connected: Boolean) {
+    // Firmware state
     val fwManager = vm.firmwareManager
     val otaState by fwManager.state.collectAsState()
-    val progress by fwManager.progress.collectAsState()
-    val latestRelease by fwManager.latestRelease.collectAsState()
-    val errorMessage by fwManager.errorMessage.collectAsState()
+    val fwProgress by fwManager.progress.collectAsState()
+    val fwRelease by fwManager.latestRelease.collectAsState()
+    val fwError by fwManager.errorMessage.collectAsState()
     val status by vm.status.collectAsState()
-    val currentVersion = status?.fwVersion ?: ""
+    val fwVersion = status?.fwVersion ?: ""
 
-    CollapsibleSection("FIRMWARE UPDATE") {
-        if (currentVersion.isNotEmpty()) {
+    // App state
+    val updateManager = vm.appUpdateManager
+    val updateState by updateManager.state.collectAsState()
+    val appProgress by updateManager.progress.collectAsState()
+    val appRelease by updateManager.latestRelease.collectAsState()
+    val appError by updateManager.errorMessage.collectAsState()
+    val appVersion = BuildConfig.VERSION_NAME
+
+    CollapsibleSection("UPDATES") {
+        // ── Firmware ─────────────────────────────────────────────────
+        Text("Firmware", style = MaterialTheme.typography.titleSmall)
+
+        if (fwVersion.isNotEmpty()) {
             Text(
-                "Current: v$currentVersion",
+                "Current: v$fwVersion",
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
 
         when (otaState) {
-                OtaState.IDLE -> {
-                    OutlinedButton(
-                        onClick = { fwManager.checkForUpdate(currentVersion) },
+            OtaState.IDLE -> {
+                OutlinedButton(
+                    onClick = { fwManager.checkForUpdate(fwVersion) },
+                    enabled = connected,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Icon(Icons.Default.SystemUpdate, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Check for Firmware Update")
+                }
+            }
+
+            OtaState.CHECKING -> {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(12.dp))
+                    Text("Checking GitHub…", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+
+            OtaState.AVAILABLE -> {
+                fwRelease?.let { release ->
+                    Text(
+                        "New version available: v${release.version}",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    if (release.body.isNotBlank()) {
+                        Text(
+                            release.body.take(200),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Button(
+                        onClick = { fwManager.startUpdate() },
                         enabled = connected,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                     ) {
-                        Icon(Icons.Default.SystemUpdate, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Check for Update")
+                        Text("Install Update")
                     }
-                }
-
-                OtaState.CHECKING -> {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                        Spacer(Modifier.width(12.dp))
-                        Text("Checking GitHub…", style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-
-                OtaState.AVAILABLE -> {
-                    latestRelease?.let { release ->
-                        Text(
-                            "New version available: v${release.version}",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        if (release.body.isNotBlank()) {
-                            Text(
-                                release.body.take(200),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Button(
-                            onClick = { fwManager.startUpdate() },
-                            enabled = connected,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                        ) {
-                            Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Install Update")
-                        }
-                    }
-                }
-
-                OtaState.DOWNLOADING -> {
-                    Text("Downloading firmware…", style = MaterialTheme.typography.bodyMedium)
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Text(
-                        "${(progress * 100).toInt()}%",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    OutlinedButton(
-                        onClick = { fwManager.cancel() },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                    ) { Text("Cancel") }
-                }
-
-                OtaState.UPLOADING -> {
-                    Text("Uploading to device…", style = MaterialTheme.typography.bodyMedium)
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Text(
-                        "${(progress * 100).toInt()}%",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    OutlinedButton(
-                        onClick = { fwManager.cancel() },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                    ) { Text("Cancel") }
-                }
-
-                OtaState.VALIDATING -> {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                        Spacer(Modifier.width(12.dp))
-                        Text("Validating & rebooting…", style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-
-                OtaState.COMPLETE -> {
-                    Text(
-                        "Update complete! Device is rebooting.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    OutlinedButton(
-                        onClick = { fwManager.reset() },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                    ) { Text("Done") }
-                }
-
-                OtaState.ERROR -> {
-                    Text(
-                        errorMessage ?: "Update failed",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                    OutlinedButton(
-                        onClick = { fwManager.reset() },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                    ) { Text("Dismiss") }
                 }
             }
-    }
-}
 
-@Composable
-private fun AppUpdateSection(vm: PulsarViewModel) {
-    val updateManager = vm.appUpdateManager
-    val updateState by updateManager.state.collectAsState()
-    val progress by updateManager.progress.collectAsState()
-    val latestRelease by updateManager.latestRelease.collectAsState()
-    val errorMessage by updateManager.errorMessage.collectAsState()
-    val currentVersion = BuildConfig.VERSION_NAME
+            OtaState.DOWNLOADING -> {
+                Text("Downloading firmware…", style = MaterialTheme.typography.bodyMedium)
+                LinearProgressIndicator(
+                    progress = { fwProgress },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    "${(fwProgress * 100).toInt()}%",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedButton(
+                    onClick = { fwManager.cancel() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                ) { Text("Cancel") }
+            }
 
-    CollapsibleSection("APP UPDATE") {
+            OtaState.UPLOADING -> {
+                Text("Uploading to device…", style = MaterialTheme.typography.bodyMedium)
+                LinearProgressIndicator(
+                    progress = { fwProgress },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    "${(fwProgress * 100).toInt()}%",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedButton(
+                    onClick = { fwManager.cancel() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                ) { Text("Cancel") }
+            }
+
+            OtaState.VALIDATING -> {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(12.dp))
+                    Text("Validating & rebooting…", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+
+            OtaState.COMPLETE -> {
+                Text(
+                    "Update complete! Device is rebooting.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                )
+                OutlinedButton(
+                    onClick = { fwManager.reset() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                ) { Text("Done") }
+            }
+
+            OtaState.ERROR -> {
+                Text(
+                    fwError ?: "Update failed",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                OutlinedButton(
+                    onClick = { fwManager.reset() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                ) { Text("Dismiss") }
+            }
+        }
+
+        HorizontalDivider()
+
+        // ── App ──────────────────────────────────────────────────────
+        Text("App", style = MaterialTheme.typography.titleSmall)
+
         Text(
-            "Current: v$currentVersion",
+            "Current: v$appVersion",
             style = MaterialTheme.typography.bodyMedium,
         )
 
         when (updateState) {
-                AppUpdateState.IDLE -> {
-                    OutlinedButton(
-                        onClick = { updateManager.checkForUpdate(currentVersion) },
+            AppUpdateState.IDLE -> {
+                OutlinedButton(
+                    onClick = { updateManager.checkForUpdate(appVersion) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Icon(Icons.Default.SystemUpdate, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Check for App Update")
+                }
+            }
+
+            AppUpdateState.CHECKING -> {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(12.dp))
+                    Text("Checking GitHub…", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+
+            AppUpdateState.UP_TO_DATE -> {
+                Text(
+                    "You're up to date!",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                OutlinedButton(
+                    onClick = { updateManager.reset() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                ) { Text("OK") }
+            }
+
+            AppUpdateState.AVAILABLE -> {
+                appRelease?.let { release ->
+                    Text(
+                        "New version available: v${release.version}",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    if (release.body.isNotBlank()) {
+                        Text(
+                            release.body.take(200),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Button(
+                        onClick = { updateManager.downloadAndInstall() },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                     ) {
-                        Icon(Icons.Default.SystemUpdate, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Check for App Update")
+                        Text("Download & Install")
                     }
-                }
-
-                AppUpdateState.CHECKING -> {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                        Spacer(Modifier.width(12.dp))
-                        Text("Checking GitHub…", style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-
-                AppUpdateState.UP_TO_DATE -> {
-                    Text(
-                        "You're up to date!",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    OutlinedButton(
-                        onClick = { updateManager.reset() },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                    ) { Text("OK") }
-                }
-
-                AppUpdateState.AVAILABLE -> {
-                    latestRelease?.let { release ->
-                        Text(
-                            "New version available: v${release.version}",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        if (release.body.isNotBlank()) {
-                            Text(
-                                release.body.take(200),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Button(
-                            onClick = { updateManager.downloadAndInstall() },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                        ) {
-                            Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Download & Install")
-                        }
-                    }
-                }
-
-                AppUpdateState.DOWNLOADING -> {
-                    Text("Downloading APK…", style = MaterialTheme.typography.bodyMedium)
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Text(
-                        "${(progress * 100).toInt()}%",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    OutlinedButton(
-                        onClick = { updateManager.cancel() },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                    ) { Text("Cancel") }
-                }
-
-                AppUpdateState.READY_TO_INSTALL -> {
-                    Text(
-                        "Download complete — the installer should open automatically.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    OutlinedButton(
-                        onClick = { updateManager.reset() },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                    ) { Text("Done") }
-                }
-
-                AppUpdateState.ERROR -> {
-                    Text(
-                        errorMessage ?: "Update check failed",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                    OutlinedButton(
-                        onClick = { updateManager.reset() },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                    ) { Text("Dismiss") }
                 }
             }
+
+            AppUpdateState.DOWNLOADING -> {
+                Text("Downloading APK…", style = MaterialTheme.typography.bodyMedium)
+                LinearProgressIndicator(
+                    progress = { appProgress },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    "${(appProgress * 100).toInt()}%",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedButton(
+                    onClick = { updateManager.cancel() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                ) { Text("Cancel") }
+            }
+
+            AppUpdateState.READY_TO_INSTALL -> {
+                Text(
+                    "Download complete — the installer should open automatically.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                OutlinedButton(
+                    onClick = { updateManager.reset() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                ) { Text("Done") }
+            }
+
+            AppUpdateState.ERROR -> {
+                Text(
+                    appError ?: "Update check failed",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+                OutlinedButton(
+                    onClick = { updateManager.reset() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                ) { Text("Dismiss") }
+            }
+        }
     }
 }
 
@@ -1415,6 +1380,7 @@ internal fun IntervalometerSettingsPanel(vm: PulsarViewModel, connected: Boolean
                     totalMs = defExposure,
                     onChanged = { vm.saveIntervalometerDefaults(defInterval, it.coerceAtLeast(50), defCount, defDelay) },
                     label = "Default Exposure",
+                    showMs = true,
                 )
 
                 TimePicker(

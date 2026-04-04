@@ -35,6 +35,7 @@ import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.model.SavedFlow
 import com.ehrocha.pulsar.model.displayName
 import com.ehrocha.pulsar.model.summaryLabel
+import com.ehrocha.pulsar.ui.components.IntStepperField
 import com.ehrocha.pulsar.ui.components.TimePicker
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 
@@ -1029,111 +1030,57 @@ private fun AstroStepEditor(step: FlowStep, onChange: (FlowStep) -> Unit) {
 @Composable
 private fun SoundStepEditor(step: FlowStep, onChange: (FlowStep) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "Sound Threshold",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    "${step.soundThreshold}",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-            Slider(
-                value = step.soundThreshold.toFloat(),
-                onValueChange = { onChange(step.copy(soundThreshold = it.toInt())) },
-                valueRange = 0f..4095f,
-            )
-        }
+        IntStepperField(
+            label = "Sound Threshold",
+            value = step.soundThreshold,
+            onValueChange = { onChange(step.copy(soundThreshold = it)) },
+            min = 0,
+            max = 4095,
+            step = 10,
+        )
 
         TimePicker(
             totalMs = step.exposureMs,
             onChanged = { onChange(step.copy(exposureMs = it.coerceAtLeast(50))) },
             label = "Exposure duration",
+            showMs = true,
         )
 
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "Shots to capture",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    "${step.shotCount}",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-            Slider(
-                value = step.shotCount.toFloat(),
-                onValueChange = { onChange(step.copy(shotCount = it.toInt().coerceAtLeast(1))) },
-                valueRange = 1f..999f,
-            )
-        }
+        IntStepperField(
+            label = "Shots to capture",
+            value = step.shotCount,
+            onValueChange = { onChange(step.copy(shotCount = it.coerceAtLeast(1))) },
+            min = 1,
+            max = 999,
+        )
     }
 }
 
 @Composable
 private fun LightningStepEditor(step: FlowStep, onChange: (FlowStep) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "Sensitivity",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    "${step.lightningSensitivity}",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-            Slider(
-                value = step.lightningSensitivity.toFloat(),
-                onValueChange = { onChange(step.copy(lightningSensitivity = it.toInt())) },
-                valueRange = 1f..5f,
-                steps = 3,
-            )
-        }
+        IntStepperField(
+            label = "Sensitivity",
+            value = step.lightningSensitivity,
+            onValueChange = { onChange(step.copy(lightningSensitivity = it)) },
+            min = 1,
+            max = 5,
+        )
 
         TimePicker(
             totalMs = step.exposureMs,
             onChanged = { onChange(step.copy(exposureMs = it.coerceAtLeast(50))) },
             label = "Exposure duration",
+            showMs = true,
         )
 
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "Shots to capture",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    "${step.shotCount}",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-            Slider(
-                value = step.shotCount.toFloat(),
-                onValueChange = { onChange(step.copy(shotCount = it.toInt().coerceAtLeast(1))) },
-                valueRange = 1f..999f,
-            )
-        }
+        IntStepperField(
+            label = "Shots to capture",
+            value = step.shotCount,
+            onValueChange = { onChange(step.copy(shotCount = it.coerceAtLeast(1))) },
+            min = 1,
+            max = 999,
+        )
     }
 }
 
@@ -1144,29 +1091,16 @@ private fun LaserStepEditor(step: FlowStep, onChange: (FlowStep) -> Unit) {
             totalMs = step.exposureMs,
             onChanged = { onChange(step.copy(exposureMs = it.coerceAtLeast(50))) },
             label = "Exposure duration",
+            showMs = true,
         )
 
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "Shots to capture",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    "${step.shotCount}",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-            Slider(
-                value = step.shotCount.toFloat(),
-                onValueChange = { onChange(step.copy(shotCount = it.toInt().coerceAtLeast(1))) },
-                valueRange = 1f..999f,
-            )
-        }
+        IntStepperField(
+            label = "Shots to capture",
+            value = step.shotCount,
+            onValueChange = { onChange(step.copy(shotCount = it.coerceAtLeast(1))) },
+            min = 1,
+            max = 999,
+        )
     }
 }
 
