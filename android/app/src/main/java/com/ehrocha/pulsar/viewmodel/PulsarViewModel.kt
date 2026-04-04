@@ -59,6 +59,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     private val bleManager = PulsarBleManager(app)
 
+    // ── Astro dashboard ──────────────────────────────────────────────
+    val dashboardManager = com.ehrocha.pulsar.astro.AstroDashboardManager(app)
+
     // ── Firmware OTA ─────────────────────────────────────────────────
     val firmwareManager = FirmwareUpdateManager(bleManager, viewModelScope)
 

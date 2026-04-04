@@ -36,6 +36,7 @@ import com.ehrocha.pulsar.ui.screens.ModeSettingsScreen
 import com.ehrocha.pulsar.ui.screens.ScanScreen
 import com.ehrocha.pulsar.ui.screens.SettingsScreen
 import com.ehrocha.pulsar.ui.screens.CustomFlowScreen
+import com.ehrocha.pulsar.ui.screens.DashboardScreen
 import com.ehrocha.pulsar.ui.theme.DarkColorScheme
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -159,6 +160,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
             onModeSettingsSelected = { currentScreen = AppScreen.ModeSettings(it) },
             onSettingsSelected = { currentScreen = AppScreen.Settings },
             onCustomFlowSelected = { currentScreen = AppScreen.CustomFlow },
+            onDashboardSelected = { currentScreen = AppScreen.Dashboard },
         )
         is AppScreen.Mode -> {
             BackHandler { currentScreen = AppScreen.Menu }
@@ -190,6 +192,13 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                 onBack = { currentScreen = AppScreen.Menu },
             )
         }
+        AppScreen.Dashboard -> {
+            BackHandler { currentScreen = AppScreen.Menu }
+            DashboardScreen(
+                dashboardManager = vm.dashboardManager,
+                onBack = { currentScreen = AppScreen.Menu },
+            )
+        }
     }
 }
 
@@ -200,4 +209,5 @@ private sealed class AppScreen {
     data class ModeSettings(val mode: TriggerMode) : AppScreen()
     data object Settings : AppScreen()
     data object CustomFlow : AppScreen()
+    data object Dashboard : AppScreen()
 }

@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.automirrored.filled.ViewList
@@ -34,6 +35,7 @@ fun MainMenuScreen(
     onModeSettingsSelected: (TriggerMode) -> Unit,
     onSettingsSelected: () -> Unit,
     onCustomFlowSelected: () -> Unit = {},
+    onDashboardSelected: () -> Unit = {},
 ) {
     val status by vm.status.collectAsState()
     val deviceName by vm.deviceName.collectAsState()
@@ -123,6 +125,12 @@ fun MainMenuScreen(
                 description = "Build multi-step sequences mixing any mode",
                 icon = Icons.AutoMirrored.Filled.ViewList,
                 onClick = onCustomFlowSelected,
+            )
+            MenuCard(
+                title = "Astro Dashboard",
+                description = "Weather, moon phase, Bortle scale & sky conditions",
+                icon = Icons.Default.NightsStay,
+                onClick = onDashboardSelected,
             )
         }
 
