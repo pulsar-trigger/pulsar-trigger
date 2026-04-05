@@ -18,7 +18,7 @@
     <string name="mode_custom_flow">自定义流程</string>
     <string name="mode_custom_flow_desc">组合多种模式构建多步骤序列</string>
     <string name="mode_astro_dashboard">天文仪表盘</string>
-    <string name="mode_astro_dashboard_desc">天气、月相、Bortle 等级及天空状况</string>
+    <string name="mode_astro_dashboard_desc">天气、月相及天空状况</string>
     <string name="menu_settings">设置</string>
     <string name="menu_settings_desc">设备配置与信息</string>
     <string name="disconnect">断开连接</string>
@@ -211,13 +211,10 @@
     <string name="verdict_partly">多云间晴</string>
     <string name="verdict_cloudy">云层过厚</string>
     <string name="verdict_rain">降雨</string>
-    <string name="verdict_bortle">Bortle %1$d</string>
     <string name="verdict_mw_visible">银河可见</string>
     <string name="verdict_mw_not_visible">银河不可见</string>
     <string name="verdict_best_window">最佳：%1$s – %2$s</string>
 
-    <string name="card_bortle">光污染（Bortle）</string>
-    <string name="bortle_unavailable">该位置暂无光污染数据</string>
     <string name="card_moon">月相</string>
     <string name="moon_illuminated">%.0f%% 照明</string>
     <string name="moon_age">月龄：%.1f 天</string>

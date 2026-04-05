@@ -178,12 +178,19 @@ fun SettingsScreen(
     val otaProgress by vm.firmwareManager.progress.collectAsState()
     val otaError by vm.firmwareManager.errorMessage.collectAsState()
 
+    var currentSection by remember { mutableStateOf<SettingsSection?>(null) }
+
     val otaActive = otaState in listOf(
         OtaState.DOWNLOADING, OtaState.UPLOADING, OtaState.VALIDATING, OtaState.COMPLETE,
     )
 
     // Block back navigation while OTA is in progress
     BackHandler(enabled = otaActive && otaState != OtaState.COMPLETE) { /* swallow */ }
+
+    // Sub-section back navigation
+    BackHandler(enabled = currentSection != null && !(otaActive && otaState != OtaState.COMPLETE)) {
+        currentSection = null
+    }
 
     // Post OTA notifications on state changes
     LaunchedEffect(otaState, otaProgress) {
@@ -224,11 +231,18 @@ fun SettingsScreen(
             .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
+            IconButton(onClick = {
+                if (currentSection != null) currentSection = null else onBack()
+            }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
             }
             Spacer(Modifier.width(4.dp))
-            Text(stringResource(R.string.menu_settings), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(
+                if (currentSection != null) stringResource(currentSection!!.titleRes)
+                else stringResource(R.string.menu_settings),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
             Spacer(Modifier.weight(1f))
             if (status != null) {
                 Surface(
@@ -271,7 +285,15 @@ fun SettingsScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp),
             ) {
-                SettingsPanel(vm, deviceName, connected)
+                when (currentSection) {
+                    null -> SettingsMenu(onSectionSelected = { currentSection = it })
+                    SettingsSection.DEVICE -> DeviceSectionContent(vm, deviceName, connected)
+                    SettingsSection.GPIO_PINS -> GpioPinsSectionContent(vm, connected)
+                    SettingsSection.BACKUP_RESTORE -> BackupRestoreSectionContent(vm)
+                    SettingsSection.UPDATES -> UpdatesSectionContent(vm, connected)
+                    SettingsSection.DEVICE_INFO -> DeviceInfoSectionContent(vm, connected)
+                    SettingsSection.ABOUT -> AboutSectionContent()
+                }
             }
         }
     }

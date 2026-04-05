@@ -22,7 +22,7 @@
     <string name="mode_custom_flow">Custom Flow</string>
     <string name="mode_custom_flow_desc">Build multi-step sequences mixing any mode</string>
     <string name="mode_astro_dashboard">Astro Dashboard</string>
-    <string name="mode_astro_dashboard_desc">Weather, moon phase, Bortle scale &amp; sky conditions</string>
+    <string name="mode_astro_dashboard_desc">Weather, moon phase &amp; sky conditions</string>
     <string name="menu_settings">Settings</string>
     <string name="menu_settings_desc">Device configuration and info</string>
     <string name="disconnect">Disconnect</string>
@@ -255,13 +255,10 @@
     <string name="verdict_partly">Partly Cloudy</string>
     <string name="verdict_cloudy">Too Cloudy</string>
     <string name="verdict_rain">Rain</string>
-    <string name="verdict_bortle">Bortle %1$d</string>
     <string name="verdict_mw_visible">MW Visible</string>
     <string name="verdict_mw_not_visible">MW Not Visible</string>
     <string name="verdict_best_window">Best: %1$s – %2$s</string>
 
-    <string name="card_bortle">LIGHT POLLUTION (BORTLE)</string>
-    <string name="bortle_unavailable">Light pollution data unavailable for this location</string>
     <string name="card_moon">MOON PHASE</string>
     <string name="moon_illuminated">%.0f%% illuminated</string>
     <string name="moon_age">Age: %.1f days</string>

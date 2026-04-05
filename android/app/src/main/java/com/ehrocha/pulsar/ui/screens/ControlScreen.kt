@@ -45,6 +45,13 @@ import com.ehrocha.pulsar.ble.OtaState
 import com.ehrocha.pulsar.update.AppUpdateState
 import com.ehrocha.pulsar.BuildConfig
 import com.ehrocha.pulsar.R
+import androidx.annotation.StringRes
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.DeveloperBoard
+import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.SaveAlt
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.ehrocha.pulsar.ui.components.IntStepperField
 import com.ehrocha.pulsar.ui.components.TimePicker
 import com.ehrocha.pulsar.AppConfig
@@ -747,19 +754,145 @@ private fun CollapsibleSection(
     }
 }
 
+// ── Settings section enum & menu ─────────────────────────────────────────────
+
+internal enum class SettingsSection(val icon: ImageVector, @StringRes val titleRes: Int) {
+    DEVICE(Icons.Default.PhoneAndroid, R.string.section_device),
+    GPIO_PINS(Icons.Default.Memory, R.string.section_gpio_pins),
+    BACKUP_RESTORE(Icons.Default.SaveAlt, R.string.section_backup_restore),
+    UPDATES(Icons.Default.SystemUpdate, R.string.section_updates),
+    DEVICE_INFO(Icons.Default.DeveloperBoard, R.string.section_device_hardware),
+    ABOUT(Icons.Outlined.Info, R.string.section_about),
+}
+
 @Composable
-internal fun SettingsPanel(
+internal fun SettingsMenu(onSectionSelected: (SettingsSection) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        SettingsSection.entries.forEach { section ->
+            Surface(
+                onClick = { onSectionSelected(section) },
+                shape = RoundedCornerShape(12.dp),
+                tonalElevation = 2.dp,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(16.dp),
+                ) {
+                    Icon(
+                        section.icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp),
+                    )
+                    Spacer(Modifier.width(16.dp))
+                    Text(
+                        stringResource(section.titleRes),
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ── Individual settings section content ──────────────────────────────────────
+
+@Composable
+internal fun DeviceSectionContent(
     vm: PulsarViewModel,
     deviceName: String,
     connected: Boolean,
 ) {
     var showRenameDialog by remember { mutableStateOf(false) }
-    val context = LocalContext.current
     val simulatorActive by vm.simulatorActive.collectAsState()
     val hwConnected = connected && !simulatorActive
 
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = hwConnected) { showRenameDialog = true },
+        ) {
+            Icon(
+                Icons.Default.Edit,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.label_device_name), style = MaterialTheme.typography.titleSmall)
+                Text(
+                    deviceName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+
+    if (showRenameDialog) {
+        RenameDeviceDialog(
+            onDismiss = { showRenameDialog = false },
+            onConfirm = { suffix ->
+                vm.renameDevice(suffix)
+                showRenameDialog = false
+            },
+        )
+    }
+}
+
+@Composable
+internal fun GpioPinsSectionContent(vm: PulsarViewModel, connected: Boolean) {
+    val simulatorActive by vm.simulatorActive.collectAsState()
+    val hwConnected = connected && !simulatorActive
     val shutterPin by vm.pinShutter.collectAsState()
     val focusPin by vm.pinFocus.collectAsState()
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            stringResource(R.string.gpio_pins_desc),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        GpioPinSelector(
+            label = stringResource(R.string.label_shutter_pin),
+            selectedPin = shutterPin,
+            disabledPin = focusPin,
+            onPinSelected = { vm.savePins(it, focusPin) },
+            enabled = hwConnected,
+        )
+
+        GpioPinSelector(
+            label = stringResource(R.string.label_focus_pin),
+            selectedPin = focusPin,
+            disabledPin = shutterPin,
+            onPinSelected = { vm.savePins(shutterPin, it) },
+            enabled = hwConnected,
+        )
+
+        if (simulatorActive) {
+            Text(
+                stringResource(R.string.gpio_simulator_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+internal fun BackupRestoreSectionContent(vm: PulsarViewModel) {
+    val context = LocalContext.current
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json"),
@@ -793,186 +926,146 @@ internal fun SettingsPanel(
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        // ── Device ───────────────────────────────────────────────────────
-        CollapsibleSection(stringResource(R.string.section_device), initiallyExpanded = true) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(enabled = hwConnected) { showRenameDialog = true },
+        Text(
+            stringResource(R.string.backup_restore_desc),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            OutlinedButton(
+                onClick = { exportLauncher.launch("pulsar-settings.json") },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp),
             ) {
-                Icon(
-                    Icons.Default.Edit,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp),
-                )
-                Spacer(Modifier.width(16.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.label_device_name), style = MaterialTheme.typography.titleSmall)
-                    Text(
-                        deviceName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.export_label))
+            }
+            OutlinedButton(
+                onClick = { importLauncher.launch(arrayOf("application/json")) },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.import_label))
             }
         }
+    }
+}
 
-        // ── GPIO Pins ────────────────────────────────────────────────────
-        CollapsibleSection(stringResource(R.string.section_gpio_pins)) {
+@Composable
+internal fun UpdatesSectionContent(vm: PulsarViewModel, connected: Boolean) {
+    UpdatesSection(vm = vm, connected = connected)
+}
+
+@Composable
+internal fun DeviceInfoSectionContent(vm: PulsarViewModel, connected: Boolean) {
+    val info by vm.deviceInfo.collectAsState()
+    val simulatorActive by vm.simulatorActive.collectAsState()
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (simulatorActive) {
             Text(
-                stringResource(R.string.gpio_pins_desc),
+                stringResource(R.string.hw_simulator_note),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        } else if (info != null) {
+            val i = info!!
+            InfoRow(stringResource(R.string.hw_chip), stringResource(R.string.hw_chip_value, i.chipModel, i.chipRevision))
+            InfoRow(stringResource(R.string.hw_cpu), stringResource(R.string.hw_cpu_value, i.cpuFreqMhz))
+            InfoRow(stringResource(R.string.hw_flash), formatKb(i.flashSizeKb))
+            InfoRow(stringResource(R.string.hw_free_heap), formatKb(i.freeHeapKb))
+            if (i.psramKb > 0) {
+                InfoRow(stringResource(R.string.hw_psram), formatKb(i.psramKb.toLong()))
+            }
+            InfoRow(stringResource(R.string.hw_gpio), stringResource(R.string.hw_gpio_value, i.gpioCount, i.safeOutputCount))
+            InfoRow(stringResource(R.string.hw_uptime), formatUptime(i.uptimeMinutes))
 
-            GpioPinSelector(
-                label = stringResource(R.string.label_shutter_pin),
-                selectedPin = shutterPin,
-                disabledPin = focusPin,
-                onPinSelected = { vm.savePins(it, focusPin) },
-                enabled = hwConnected,
+            Spacer(Modifier.height(4.dp))
+            OutlinedButton(
+                onClick = { vm.requestDeviceInfo() },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+            ) { Text(stringResource(R.string.refresh)) }
+        } else if (connected) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(12.dp))
+                Text(stringResource(R.string.status_querying_device), style = MaterialTheme.typography.bodySmall)
+            }
+        } else {
+            Text(
+                stringResource(R.string.hw_connect_prompt),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
 
-            GpioPinSelector(
-                label = stringResource(R.string.label_focus_pin),
-                selectedPin = focusPin,
-                disabledPin = shutterPin,
-                onPinSelected = { vm.savePins(shutterPin, it) },
-                enabled = hwConnected,
+@Composable
+internal fun AboutSectionContent() {
+    val uriHandler = LocalUriHandler.current
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(
+                Icons.Outlined.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp),
             )
-
-            if (simulatorActive) {
+            Spacer(Modifier.width(16.dp))
+            Column {
+                Text(stringResource(R.string.about_app_name), style = MaterialTheme.typography.titleSmall)
                 Text(
-                    stringResource(R.string.gpio_simulator_note),
-                    style = MaterialTheme.typography.bodySmall,
+                    stringResource(R.string.about_tagline),
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
 
-        // ── Backup & Restore ─────────────────────────────────────────────
-        CollapsibleSection(stringResource(R.string.section_backup_restore)) {
-            Text(
-                stringResource(R.string.backup_restore_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                OutlinedButton(
-                    onClick = { exportLauncher.launch("pulsar-settings.json") },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.export_label))
-                }
-                OutlinedButton(
-                    onClick = { importLauncher.launch(arrayOf("application/json")) },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.import_label))
-                }
-            }
-        }
-
-        // ── Updates ───────────────────────────────────────────────────────
-        UpdatesSection(vm = vm, connected = hwConnected)
-
-        // ── Device Hardware ──────────────────────────────────────────────
-        DeviceInfoSection(vm = vm, connected = hwConnected)
-
-        // ── About ────────────────────────────────────────────────────────
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            tonalElevation = 2.dp,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-            val uriHandler = LocalUriHandler.current
-
-            Text(
-                stringResource(R.string.section_about),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(
-                    Icons.Outlined.Info,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp),
-                )
-                Spacer(Modifier.width(16.dp))
-                Column {
-                    Text(stringResource(R.string.about_app_name), style = MaterialTheme.typography.titleSmall)
-                    Text(
-                        stringResource(R.string.about_tagline),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            Text(
-                "v${BuildConfig.VERSION_NAME}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            Text(
-                stringResource(R.string.about_author),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-
-            Text(
-                stringResource(R.string.about_license),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            OutlinedButton(
-                onClick = { uriHandler.openUri("https://github.com/pulsar-trigger/pulsar-trigger") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Text(stringResource(R.string.about_github))
-            }
-
-            OutlinedButton(
-                onClick = { uriHandler.openUri("https://instagram.com/ehrocha.br") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Text(stringResource(R.string.about_instagram))
-            }
-            }
-        }
-    }
-
-    if (showRenameDialog) {
-        RenameDeviceDialog(
-            onDismiss = { showRenameDialog = false },
-            onConfirm = { suffix ->
-                vm.renameDevice(suffix)
-                showRenameDialog = false
-            },
+        Text(
+            "v${BuildConfig.VERSION_NAME}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+
+        Text(
+            stringResource(R.string.about_author),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+
+        Text(
+            stringResource(R.string.about_license),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        OutlinedButton(
+            onClick = { uriHandler.openUri("https://github.com/pulsar-trigger/pulsar-trigger") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+        ) {
+            Text(stringResource(R.string.about_github))
+        }
+
+        OutlinedButton(
+            onClick = { uriHandler.openUri("https://instagram.com/ehrocha.br") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+        ) {
+            Text(stringResource(R.string.about_instagram))
+        }
     }
 }
 
@@ -1038,7 +1131,7 @@ private fun UpdatesSection(vm: PulsarViewModel, connected: Boolean) {
     val appError by updateManager.errorMessage.collectAsState()
     val appVersion = BuildConfig.VERSION_NAME
 
-    CollapsibleSection(stringResource(R.string.section_updates)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // ── Firmware ─────────────────────────────────────────────────
         Text(stringResource(R.string.label_firmware), style = MaterialTheme.typography.titleSmall)
 

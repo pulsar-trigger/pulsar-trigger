@@ -32,7 +32,6 @@ data class DashboardState(
     val location: LocationInfo? = null,
     val weather: WeatherInfo? = null,
     val moon: MoonInfo? = null,
-    val bortle: BortleInfo? = null,
     val sun: SunInfo? = null,
     val milkyWay: MilkyWayInfo? = null,
     val bestWindows: List<PhotoWindow> = emptyList(),
@@ -74,13 +73,6 @@ data class MoonInfo(
     val rise: String?,
     val set: String?,
     val goodForAstro: Boolean,
-)
-
-data class BortleInfo(
-    val classNumber: Int,
-    val className: String,
-    val description: String,
-    val color: Long,  // ARGB color
 )
 
 data class SunInfo(
@@ -168,52 +160,70 @@ object MoonPhase {
     }
 }
 
-// ── Bortle scale ─────────────────────────────────────────────────────────────
-
-object BortleScale {
-
-    data class BortleClass(
-        val number: Int,
-        val name: String,
-        val description: String,
-        val color: Long,
-    )
-
-    val classes = listOf(
-        BortleClass(1, "Excellent Dark Sky", "Zodiacal light, gegenschein visible; Milky Way casts shadows", 0xFF000000),
-        BortleClass(2, "Typical Dark Sky", "Airglow visible; Milky Way highly structured", 0xFF1A1A2E),
-        BortleClass(3, "Rural Sky", "Some light pollution on horizon; Milky Way still appears complex", 0xFF16213E),
-        BortleClass(4, "Rural/Suburban", "Light pollution domes visible; Milky Way visible but lacks detail", 0xFF0F3460),
-        BortleClass(5, "Suburban Sky", "Milky Way very weak; only bright Messier objects visible", 0xFF533483),
-        BortleClass(6, "Bright Suburban", "Milky Way only visible near zenith; sky glows whitish", 0xFF8B5E3C),
-        BortleClass(7, "Suburban/Urban", "Milky Way invisible; sky has veil of light", 0xFFE94560),
-        BortleClass(8, "City Sky", "Sky glows white or orange; only bright planets visible", 0xFFFF6600),
-        BortleClass(9, "Inner City Sky", "Only Moon, planets, and brightest stars visible", 0xFFFFFFFF),
-    )
-
-    fun fromRadiance(radiance: Double): BortleClass {
-        // Approximate mapping from VIIRS radiance (nW/cm²/sr) to Bortle class
-        return when {
-            radiance < 0.25  -> classes[0]   // Bortle 1
-            radiance < 0.40  -> classes[1]   // Bortle 2
-            radiance < 0.80  -> classes[2]   // Bortle 3
-            radiance < 1.50  -> classes[3]   // Bortle 4
-            radiance < 3.00  -> classes[4]   // Bortle 5
-            radiance < 6.00  -> classes[5]   // Bortle 6
-            radiance < 15.0  -> classes[6]   // Bortle 7
-            radiance < 40.0  -> classes[7]   // Bortle 8
-            else             -> classes[8]   // Bortle 9
-        }
-    }
-
-    fun getClass(number: Int): BortleClass = classes.getOrElse(number - 1) { classes[4] }
-}
-
 // ── Astro calculator (Milky Way + photo windows) ─────────────────────────────
 
 object AstroCalculator {
     private const val GC_RA_DEG = 266.417   // Galactic center RA (17h 45m 40s)
     private const val GC_DEC_DEG = -29.008  // Galactic center Dec (-29° 00' 28")
+
+    /** Approximate moon RA & Dec for a given date + UTC hour (low-precision). */
+    fun moonPosition(date: LocalDate, utcHours: Double = 12.0): Pair<Double, Double> {
+        val d = daysSinceJ2000(date) + utcHours / 24.0
+        // Orbital elements (simplified)
+        val L0 = (218.316 + 13.176396 * d) % 360          // mean longitude
+        val M  = Math.toRadians(((134.963 + 13.064993 * d) % 360 + 360) % 360)  // mean anomaly
+        val F  = Math.toRadians(((93.272 + 13.229350 * d)  % 360 + 360) % 360)  // argument of latitude
+        val eclLon = Math.toRadians(((L0 + 6.289 * sin(M)) % 360 + 360) % 360)
+        val eclLat = Math.toRadians(5.128 * sin(F))
+        val eps = Math.toRadians(23.439 - 0.0000004 * d)
+
+        val ra = (Math.toDegrees(
+            atan2(
+                sin(eclLon) * cos(eps) - tan(eclLat) * sin(eps),
+                cos(eclLon),
+            )
+        ) + 360) % 360
+        val dec = Math.toDegrees(
+            asin(sin(eclLat) * cos(eps) + cos(eclLat) * sin(eps) * sin(eclLon))
+        )
+        return ra to dec
+    }
+
+    /**
+     * Compute approximate moon rise and set times (local hours) for a date.
+     * Returns pair of (rise, set) formatted strings, each nullable.
+     */
+    fun moonRiseSet(lat: Double, lon: Double, date: LocalDate): Pair<String?, String?> {
+        val tz = date.atStartOfDay(ZoneId.systemDefault()).offset.totalSeconds / 3600.0
+        var rise: Double? = null
+        var set: Double? = null
+        var prevAlt: Double? = null
+
+        // Scan 0..24h local time in small steps
+        var t = 0.0
+        while (t <= 24.5) {
+            val utcH = t - tz
+            val (moonRa, moonDec) = moonPosition(date, utcH)
+            val siderealTime = lst(date, utcH, lon)
+            val alt = altitude(lat, moonDec, siderealTime - moonRa)
+
+            if (prevAlt != null) {
+                if (prevAlt < 0 && alt >= 0 && rise == null) {
+                    // Linear interpolation for rise
+                    val frac = -prevAlt / (alt - prevAlt)
+                    rise = (t - 0.25) + frac * 0.25
+                }
+                if (prevAlt >= 0 && alt < 0 && set == null) {
+                    val frac = prevAlt / (prevAlt - alt)
+                    set = (t - 0.25) + frac * 0.25
+                }
+            }
+            prevAlt = alt
+            t += 0.25 // 15-minute steps
+        }
+
+        return Pair(rise?.let { fmtHour(it) }, set?.let { fmtHour(it) })
+    }
 
     /** Approximate sun RA & Dec for a given date (accuracy ~1°). */
     fun sunPosition(date: LocalDate): Pair<Double, Double> {
@@ -402,15 +412,17 @@ class AstroDashboardManager(private val context: Context) {
             // Fetch weather + astronomy from Open-Meteo
             val weatherResult = fetchWeather(loc.latitude, loc.longitude, date, isToday)
             val astroResult = fetchAstronomy(loc.latitude, loc.longitude, date)
-            val bortleResult = fetchLightPollution(loc.latitude, loc.longitude)
+
+            // Moon rise/set computed locally
+            val (moonRise, moonSet) = AstroCalculator.moonRiseSet(loc.latitude, loc.longitude, date)
 
             val moonInfo = MoonInfo(
                 phaseName = MoonPhase.phaseName(moonAge),
                 illuminationPct = illum,
                 ageInDays = moonAge,
                 emoji = MoonPhase.emoji(moonAge),
-                rise = astroResult?.optString("moonrise", "")?.takeIf { it.isNotEmpty() },
-                set = astroResult?.optString("moonset", "")?.takeIf { it.isNotEmpty() },
+                rise = moonRise,
+                set = moonSet,
                 goodForAstro = MoonPhase.goodForAstro(illum),
             )
 
@@ -439,7 +451,6 @@ class AstroDashboardManager(private val context: Context) {
                 location = locationInfo,
                 weather = weatherResult,
                 moon = moonInfo,
-                bortle = bortleResult,
                 sun = sunInfo,
                 milkyWay = milkyWayInfo,
                 bestWindows = bestWindows,
@@ -570,7 +581,7 @@ class AstroDashboardManager(private val context: Context) {
                 val url = URL(
                     "https://api.open-meteo.com/v1/forecast" +
                         "?latitude=$lat&longitude=$lon" +
-                        "&daily=sunrise,sunset,moonrise,moonset" +
+                        "&daily=sunrise,sunset" +
                         "&start_date=$dateStr&end_date=$dateStr" +
                         "&timezone=auto"
                 )
@@ -583,49 +594,12 @@ class AstroDashboardManager(private val context: Context) {
                     JSONObject().apply {
                         put("sunrise", daily.getJSONArray("sunrise").optString(0, ""))
                         put("sunset", daily.getJSONArray("sunset").optString(0, ""))
-                        put("moonrise", daily.getJSONArray("moonrise").optString(0, ""))
-                        put("moonset", daily.getJSONArray("moonset").optString(0, ""))
                     }
                 } finally {
                     conn.disconnect()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Astronomy fetch failed", e)
-                null
-            }
-        }
-
-    private suspend fun fetchLightPollution(lat: Double, lon: Double): BortleInfo? =
-        withContext(Dispatchers.IO) {
-            try {
-                // Use lightpollutionmap.info VIIRS data
-                val url = URL(
-                    "https://www.lightpollutionmap.info/QueryRaster/" +
-                        "?ql=wa_2015&qt=point&qd=$lon,$lat"
-                )
-                val conn = url.openConnection() as HttpURLConnection
-                conn.connectTimeout = AppConfig.API_CONNECT_TIMEOUT_MS
-                conn.readTimeout = AppConfig.API_READ_TIMEOUT_MS
-                conn.setRequestProperty("User-Agent", "PulsarTrigger/1.0")
-                try {
-                    val response = conn.inputStream.bufferedReader().readText().trim()
-                    val radiance = response.toDoubleOrNull()
-                    if (radiance != null) {
-                        val bortle = BortleScale.fromRadiance(radiance)
-                        BortleInfo(
-                            classNumber = bortle.number,
-                            className = bortle.name,
-                            description = bortle.description,
-                            color = bortle.color,
-                        )
-                    } else {
-                        null
-                    }
-                } finally {
-                    conn.disconnect()
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Light pollution fetch failed", e)
                 null
             }
         }

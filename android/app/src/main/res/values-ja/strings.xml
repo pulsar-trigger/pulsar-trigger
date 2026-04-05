@@ -18,7 +18,7 @@
     <string name="mode_custom_flow">カスタムフロー</string>
     <string name="mode_custom_flow_desc">任意のモードを組み合わせたマルチステップシーケンスを作成</string>
     <string name="mode_astro_dashboard">天体ダッシュボード</string>
-    <string name="mode_astro_dashboard_desc">天気、月齢、Bortle スケール＆空の状態</string>
+    <string name="mode_astro_dashboard_desc">天気、月齢＆空の状態</string>
     <string name="menu_settings">設定</string>
     <string name="menu_settings_desc">デバイスの設定と情報</string>
     <string name="disconnect">切断</string>
@@ -211,13 +211,10 @@
     <string name="verdict_partly">曇り時々晴れ</string>
     <string name="verdict_cloudy">曇りすぎ</string>
     <string name="verdict_rain">雨</string>
-    <string name="verdict_bortle">Bortle %1$d</string>
     <string name="verdict_mw_visible">天の川 可視</string>
     <string name="verdict_mw_not_visible">天の川 不可視</string>
     <string name="verdict_best_window">最適: %1$s – %2$s</string>
 
-    <string name="card_bortle">光害 (BORTLE)</string>
-    <string name="bortle_unavailable">この場所の光害データは利用できません</string>
     <string name="card_moon">月齢</string>
     <string name="moon_illuminated">%.0f%% 照度</string>
     <string name="moon_age">月齢: %.1f 日</string>

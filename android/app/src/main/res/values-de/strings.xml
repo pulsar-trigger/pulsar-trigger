@@ -18,7 +18,7 @@
     <string name="mode_custom_flow">Benutzerdefinierter Ablauf</string>
     <string name="mode_custom_flow_desc">Mehrstufige Sequenzen aus beliebigen Modi zusammenstellen</string>
     <string name="mode_astro_dashboard">Astro-Dashboard</string>
-    <string name="mode_astro_dashboard_desc">Wetter, Mondphase, Bortle-Skala &amp; Himmelsbedingungen</string>
+    <string name="mode_astro_dashboard_desc">Wetter, Mondphase &amp; Himmelsbedingungen</string>
     <string name="menu_settings">Einstellungen</string>
     <string name="menu_settings_desc">Gerätekonfiguration und Infos</string>
     <string name="disconnect">Trennen</string>
@@ -211,13 +211,10 @@
     <string name="verdict_partly">Teilweise Bewölkt</string>
     <string name="verdict_cloudy">Zu Bewölkt</string>
     <string name="verdict_rain">Regen</string>
-    <string name="verdict_bortle">Bortle %1$d</string>
     <string name="verdict_mw_visible">MW Sichtbar</string>
     <string name="verdict_mw_not_visible">MW Nicht Sichtbar</string>
     <string name="verdict_best_window">Optimal: %1$s – %2$s</string>
 
-    <string name="card_bortle">LICHTVERSCHMUTZUNG (BORTLE)</string>
-    <string name="bortle_unavailable">Lichtverschmutzungsdaten für diesen Standort nicht verfügbar</string>
     <string name="card_moon">MONDPHASE</string>
     <string name="moon_illuminated">%.0f%% beleuchtet</string>
     <string name="moon_age">Alter: %.1f Tage</string>

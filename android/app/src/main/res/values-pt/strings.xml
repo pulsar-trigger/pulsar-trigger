@@ -18,7 +18,7 @@
     <string name="mode_custom_flow">Fluxo Personalizado</string>
     <string name="mode_custom_flow_desc">Monte sequências combinando qualquer modo</string>
     <string name="mode_astro_dashboard">Painel Astro</string>
-    <string name="mode_astro_dashboard_desc">Clima, fase lunar, escala Bortle &amp; condições do céu</string>
+    <string name="mode_astro_dashboard_desc">Clima, fase lunar &amp; condições do céu</string>
     <string name="menu_settings">Configurações</string>
     <string name="menu_settings_desc">Configuração e informações do dispositivo</string>
     <string name="disconnect">Desconectar</string>
@@ -211,13 +211,10 @@
     <string name="verdict_partly">Parcialm. Nublado</string>
     <string name="verdict_cloudy">Muito Nublado</string>
     <string name="verdict_rain">Chuva</string>
-    <string name="verdict_bortle">Bortle %1$d</string>
     <string name="verdict_mw_visible">VL Visível</string>
     <string name="verdict_mw_not_visible">VL Não Visível</string>
     <string name="verdict_best_window">Melhor: %1$s – %2$s</string>
 
-    <string name="card_bortle">POLUIÇÃO LUMINOSA (BORTLE)</string>
-    <string name="bortle_unavailable">Dados de poluição luminosa indisponíveis para esta localização</string>
     <string name="card_moon">FASE DA LUA</string>
     <string name="moon_illuminated">%.0f%% iluminada</string>
     <string name="moon_age">Idade: %.1f dias</string>

@@ -9,7 +9,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -290,15 +289,6 @@ fun DashboardScreen(
                         )
                     }
 
-                    // Bortle
-                    state.bortle?.let { bortle ->
-                        VerdictRow(
-                            "🔦",
-                            String.format(stringResource(R.string.verdict_bortle), bortle.classNumber),
-                            bortle.classNumber <= 5,
-                        )
-                    }
-
                     // Milky Way
                     state.milkyWay?.let { mw ->
                         val times = listOfNotNull(
@@ -367,53 +357,6 @@ fun DashboardScreen(
                         Spacer(Modifier.height(8.dp))
                         Text(
                             stringResource(R.string.window_no_clear),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-
-            // ── Bortle card ──────────────────────────────────────────
-            state.bortle?.let { bortle ->
-                DashCard(title = stringResource(R.string.card_bortle), icon = Icons.Default.DarkMode) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(Color(bortle.color)),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                "${bortle.classNumber}",
-                                fontWeight = FontWeight.Black,
-                                fontSize = 20.sp,
-                                color = if (bortle.classNumber <= 4) Color.White else Color.Black,
-                            )
-                        }
-                        Spacer(Modifier.width(16.dp))
-                        Column {
-                            Text(
-                                "Class ${bortle.classNumber} — ${bortle.className}",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            Text(
-                                bortle.description,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    AstroRating(bortle.classNumber)
-                }
-            } ?: run {
-                if (!state.loading) {
-                    DashCard(title = stringResource(R.string.card_bortle), icon = Icons.Default.DarkMode) {
-                        Text(
-                            stringResource(R.string.bortle_unavailable),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -742,37 +685,6 @@ private fun WeatherStat(emoji: String, value: String, label: String) {
 }
 
 @Composable
-private fun AstroRating(bortleClass: Int) {
-    val rating = when {
-        bortleClass <= 2 -> "Excellent"
-        bortleClass <= 3 -> "Very Good"
-        bortleClass <= 4 -> "Good"
-        bortleClass <= 5 -> "Fair"
-        bortleClass <= 6 -> "Poor"
-        else -> "Not Recommended"
-    }
-    val color = when {
-        bortleClass <= 2 -> Color(0xFF2E7D32)
-        bortleClass <= 4 -> Color(0xFF558B2F)
-        bortleClass <= 5 -> Color(0xFFF9A825)
-        bortleClass <= 6 -> Color(0xFFE65100)
-        else -> Color(0xFFC62828)
-    }
-    Surface(
-        color = color.copy(alpha = 0.15f),
-        shape = RoundedCornerShape(8.dp),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text(
-            "Astrophotography: $rating",
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Medium,
-            color = color,
-            modifier = Modifier.padding(8.dp),
-        )
-    }
-}
-
 private fun formatTime(isoTime: String): String {
     // Handles "2026-04-03T14:00" → "14:00"
     return isoTime.substringAfter("T", isoTime).take(5)
