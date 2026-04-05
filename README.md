@@ -10,7 +10,6 @@ An open-source camera intervalometer and trigger system.
 
 > 📷 See my photography on Instagram: [**@ehrocha.br**](https://www.instagram.com/ehrocha.br/)
 
-| | |
 |---|---|
 | Email | [ehrocha@gmail.com](mailto:ehrocha@gmail.com) |
 | GitHub | [github.com/ehrocha](https://github.com/ehrocha) |
