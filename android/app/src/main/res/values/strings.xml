@@ -5,14 +5,14 @@
     <string name="app_tagline">BLE Remote Trigger</string>
     <string name="available_devices">Available Devices</string>
     <string name="select_device_prompt">Select your Pulsar trigger to begin control session.</string>
-    <string name="stop_scanning">STOP SCANNING</string>
-    <string name="search_for_devices">SEARCH FOR DEVICES</string>
+    <string name="stop_scanning">Stop Scanning</string>
+    <string name="search_for_devices">Search for Devices</string>
     <string name="use_simulator">Use Simulator</string>
     <string name="simulator_description">Explore the app without a real device</string>
     <string name="unknown_device">Unknown Device</string>
 
     <!-- MainMenuScreen -->
-    <string name="section_modes">MODES</string>
+    <string name="section_modes">Modes</string>
     <string name="mode_intervalometer">Intervalometer</string>
     <string name="mode_intervalometer_desc">Automate timelapse sequences with precision timing</string>
     <string name="mode_astro">Astro</string>
@@ -55,28 +55,28 @@
     <string name="cd_settings">Settings</string>
 
     <!-- DefaultActions -->
-    <string name="btn_stop">STOP</string>
-    <string name="btn_start">START</string>
+    <string name="btn_stop">Stop</string>
+    <string name="btn_start">Start</string>
     <string name="status_sequence_running">Sequence running…</string>
     <string name="status_ready_start">Ready to start sequence</string>
 
     <!-- ManualActions -->
-    <string name="chip_hold_mode">HOLD MODE</string>
-    <string name="chip_lock_mode">LOCK MODE</string>
-    <string name="btn_hold_shutter">HOLD SHUTTER</string>
-    <string name="btn_release_shutter">RELEASE SHUTTER</string>
-    <string name="btn_open_shutter">OPEN SHUTTER</string>
-    <string name="btn_close_shutter">CLOSE SHUTTER</string>
+    <string name="chip_hold_mode">Hold Mode</string>
+    <string name="chip_lock_mode">Lock Mode</string>
+    <string name="btn_hold_shutter">Hold Shutter</string>
+    <string name="btn_release_shutter">Release Shutter</string>
+    <string name="btn_open_shutter">Open Shutter</string>
+    <string name="btn_close_shutter">Close Shutter</string>
     <string name="status_shutter_open">Shutter open…</string>
     <string name="status_press_hold">Press and hold button</string>
     <string name="status_shutter_locked">Shutter locked open</string>
     <string name="status_tap_toggle">Tap button to toggle</string>
 
     <!-- AstroActions -->
-    <string name="chip_500_rule">500 RULE</string>
-    <string name="chip_400_rule">400 RULE</string>
-    <string name="btn_stop_astro">STOP ASTRO</string>
-    <string name="btn_start_astro">START ASTRO</string>
+    <string name="chip_500_rule">500 Rule</string>
+    <string name="chip_400_rule">400 Rule</string>
+    <string name="btn_stop_astro">Stop Astro</string>
+    <string name="btn_start_astro">Start Astro</string>
     <string name="status_capturing_stars">Capturing stars…</string>
     <string name="status_ready_astro">Ready for astro sequence</string>
 
@@ -84,11 +84,11 @@
     <string name="panel_intervalometer">Intervalometer</string>
     <string name="panel_intervalometer_desc">Automate complex timelapse sequences or burst captures with precision timing.</string>
     <string name="panel_intervalometer_tip">Configure individual timings below. For bulb mode, ensure the interval is longer than the exposure.</string>
-    <string name="label_sequence_estimate">SEQUENCE ESTIMATE</string>
-    <string name="label_shots">SHOTS</string>
-    <string name="label_total_duration">TOTAL DURATION</string>
+    <string name="label_sequence_estimate">Sequence Estimate</string>
+    <string name="label_shots">Shots</string>
+    <string name="label_total_duration">Total Duration</string>
     <string name="label_duty_cycle">Duty Cycle: %1$d%% active exposure</string>
-    <string name="label_timing_parameters">TIMING PARAMETERS</string>
+    <string name="label_timing_parameters">Timing Parameters</string>
     <string name="label_interval">Interval (time between shots)</string>
     <string name="label_exposure">Exposure duration</string>
     <string name="label_start_delay">Start Delay</string>
@@ -105,32 +105,32 @@
     <string name="panel_astro">Astro Mode</string>
     <string name="panel_astro_desc">Pinpoint stars by calculating the maximum shutter speed to prevent trails.</string>
     <string name="panel_astro_tip">Switch rules at the bottom. Rule 400 is ideal for high-resolution sensors.</string>
-    <string name="label_rule_readout">%1$d RULE READOUT</string>
+    <string name="label_rule_readout">%1$d Rule Readout</string>
     <string name="label_effective_focal">%1$smm Effective</string>
-    <string name="label_max_exposure">MAX EXPOSURE</string>
-    <string name="label_total_time">TOTAL TIME</string>
+    <string name="label_max_exposure">Max Exposure</string>
+    <string name="label_total_time">Total Time</string>
     <string name="label_astro_formula">Formula: %1$d / (%2$d mm × %3$sx) = %4$ss</string>
-    <string name="label_optics_configuration">OPTICS CONFIGURATION</string>
+    <string name="label_optics_configuration">Optics Configuration</string>
     <string name="label_sensor_preset">Sensor Preset</string>
     <string name="preset_full_frame">Full Frame</string>
     <string name="preset_aps_c_canon">APS-C (Canon)</string>
     <string name="preset_aps_c_nikon_sony">APS-C (Nikon/Sony)</string>
     <string name="preset_micro_43">Micro 4/3</string>
     <string name="label_focal_length">Lens Focal Length</string>
-    <string name="label_capture_sequence">CAPTURE SEQUENCE</string>
+    <string name="label_capture_sequence">Capture Sequence</string>
     <string name="label_gap_between_shots">Gap between shots</string>
 
     <!-- SettingsPanel -->
-    <string name="section_language">LANGUAGE</string>
+    <string name="section_language">Language</string>
     <string name="lang_system_default">System default</string>
-    <string name="section_device">DEVICE</string>
+    <string name="section_device">Device</string>
     <string name="label_device_name">Device Name</string>
-    <string name="section_gpio_pins">GPIO PINS</string>
+    <string name="section_gpio_pins">GPIO Pins</string>
     <string name="gpio_pins_desc">Choose which ESP32 GPIO pins drive the shutter and focus optocouplers. Changes are sent to the device and saved.</string>
     <string name="label_shutter_pin">Shutter Pin</string>
     <string name="label_focus_pin">Focus Pin</string>
     <string name="gpio_simulator_note">GPIO configuration not available in simulator mode</string>
-    <string name="section_backup_restore">BACKUP &amp; RESTORE</string>
+    <string name="section_backup_restore">Backup &amp; Restore</string>
     <string name="backup_restore_desc">Export settings to Google Drive or local storage, and import them on another device.</string>
     <string name="toast_settings_exported">Settings exported</string>
     <string name="toast_export_failed">Export failed: %1$s</string>
@@ -138,7 +138,7 @@
     <string name="toast_import_failed">Import failed: %1$s</string>
 
     <!-- About -->
-    <string name="section_about">ABOUT</string>
+    <string name="section_about">About</string>
     <string name="about_app_name">Pulsar Trigger</string>
     <string name="about_tagline">BLE Camera Remote Control</string>
     <string name="about_author">Created by Eduardo Rocha</string>
@@ -156,7 +156,7 @@
     <string name="char_count">%1$d/%2$d characters</string>
 
     <!-- Updates section -->
-    <string name="section_updates">UPDATES</string>
+    <string name="section_updates">Updates</string>
     <string name="label_firmware">Firmware</string>
     <string name="label_current_version">Current: v%1$s</string>
     <string name="btn_check_firmware">Check for Firmware Update</string>
@@ -177,7 +177,7 @@
     <string name="status_update_check_failed">Update check failed</string>
 
     <!-- Default values settings -->
-    <string name="section_default_values">DEFAULT VALUES</string>
+    <string name="section_default_values">Default Values</string>
     <string name="default_values_desc">Set default values for the Intervalometer. These are applied when the app starts.</string>
     <string name="label_default_interval">Default Interval (gap)</string>
     <string name="label_default_exposure">Default Exposure</string>
@@ -189,7 +189,7 @@
     <string name="btn_reset_defaults">Reset to Factory Defaults</string>
 
     <!-- Device hardware -->
-    <string name="section_device_hardware">DEVICE HARDWARE</string>
+    <string name="section_device_hardware">Device Hardware</string>
     <string name="hw_simulator_note">Hardware info not available in simulator mode</string>
     <string name="hw_connect_prompt">Connect to a device to see hardware info</string>
     <string name="status_querying_device">Querying device…</string>
@@ -220,8 +220,8 @@
     <string name="ota_rebooting_info">Device is rebooting. You will be returned to the scan screen.</string>
 
     <!-- ModeScreen running status -->
-    <string name="state_exposing">EXPOSING</string>
-    <string name="state_waiting">WAITING</string>
+    <string name="state_exposing">Exposing</string>
+    <string name="state_waiting">Waiting</string>
     <string name="status_of_shots">of %1$d shots</string>
     <string name="status_remaining">remaining</string>
 
@@ -241,8 +241,8 @@
     <!-- DashboardScreen -->
     <string name="dashboard_title">Astro Dashboard</string>
     <string name="status_fetching_data">Fetching location &amp; data…</string>
-    <string name="card_location">LOCATION</string>
-    <string name="card_summary">SUMMARY</string>
+    <string name="card_location">Location</string>
+    <string name="card_summary">Summary</string>
     <string name="location_north">N</string>
     <string name="location_south">S</string>
     <string name="location_east">E</string>
@@ -261,14 +261,14 @@
     <string name="verdict_bortle">Bortle %1$d</string>
     <string name="verdict_best_window">Best: %1$s – %2$s</string>
 
-    <string name="card_moon">MOON PHASE</string>
+    <string name="card_moon">Moon Phase</string>
     <string name="moon_illuminated">%.0f%% illuminated</string>
     <string name="moon_age">Age: %.1f days</string>
     <string name="label_moonrise">Moonrise</string>
     <string name="label_moonset">Moonset</string>
     <string name="moon_good">✓ Good conditions for deep-sky photography</string>
     <string name="moon_bright">⚠ Moon is bright — better for planetary/lunar imaging</string>
-    <string name="card_weather">CURRENT WEATHER</string>
+    <string name="card_weather">Current Weather</string>
     <string name="weather_cloud">Cloud</string>
     <string name="weather_rain">Rain</string>
     <string name="weather_humidity">Humidity</string>
@@ -277,23 +277,23 @@
     <string name="weather_partly_cloudy">◐ Partly cloudy — may have clear windows</string>
     <string name="weather_too_cloudy">✗ Too cloudy for astrophotography</string>
     <string name="weather_rain_bad">✗ Rain/precipitation — not suitable for astrophotography</string>
-    <string name="card_forecast">12-HOUR CLOUD FORECAST</string>
-    <string name="card_forecast_day">HOURLY FORECAST</string>
+    <string name="card_forecast">12-Hour Cloud Forecast</string>
+    <string name="card_forecast_day">Hourly Forecast</string>
     <string name="date_today">Today</string>
 
     <!-- Sun card -->
-    <string name="card_sun">SUN</string>
+    <string name="card_sun">Sun</string>
     <string name="label_sunrise">Sunrise</string>
     <string name="label_sunset">Sunset</string>
 
     <!-- Milky Way card -->
-    <string name="card_bortle">LIGHT POLLUTION</string>
+    <string name="card_bortle">Light Pollution</string>
     <string name="bortle_class">Bortle Class %1$d</string>
     <string name="bortle_label_category">Category</string>
     <string name="bortle_label_mw">Milky Way</string>
     <string name="bortle_good">✓ Dark skies — excellent for deep-sky astrophotography</string>
     <string name="bortle_poor">⚠ Light pollution present — use narrowband filters or travel darker</string>
-    <string name="card_milky_way">MILKY WAY</string>
+    <string name="card_milky_way">Milky Way</string>
     <string name="mw_visible">✓ Core visible tonight during astronomical darkness</string>
     <string name="mw_not_visible">✗ Core not visible tonight — rises during daylight or twilight</string>
     <string name="mw_never_rises">✗ Milky Way core never rises at this latitude</string>
@@ -302,10 +302,10 @@
     <string name="label_dark_window">Dark Window</string>
     <string name="mw_season_good">Good season for Milky Way photography</string>
     <string name="mw_season_off">Off-season for Milky Way core visibility</string>
-    <string name="label_rise_set">RISE / SET</string>
+    <string name="label_rise_set">Rise / Set</string>
 
     <!-- Best photo windows -->
-    <string name="card_best_windows">BEST PHOTO WINDOWS</string>
+    <string name="card_best_windows">Best Photo Windows</string>
     <string name="window_excellent">Excellent</string>
     <string name="window_good">Good</string>
     <string name="window_fair">Fair</string>
@@ -316,7 +316,7 @@
     <string name="flow_title">Custom Flow</string>
     <string name="flow_no_saved">No saved flows</string>
     <string name="flow_create_instruction">Create a flow to chain multiple shooting\nmodes, pauses, and sequences.</string>
-    <string name="btn_new_flow">NEW FLOW</string>
+    <string name="btn_new_flow">New Flow</string>
     <string name="dialog_delete_flow">Delete Flow</string>
     <string name="dialog_delete_flow_msg">Delete \"%1$s\"? This cannot be undone.</string>
     <string name="flow_new">New Flow</string>
@@ -326,8 +326,8 @@
     <string name="flow_add_steps_instruction">Add steps to build your custom shooting flow.\nMix modes, pauses, and sequences.</string>
     <string name="btn_add_step">Add Step</string>
     <string name="btn_save_as">Save As…</string>
-    <string name="btn_stop_flow">STOP FLOW</string>
-    <string name="btn_start_flow">START FLOW</string>
+    <string name="btn_stop_flow">Stop Flow</string>
+    <string name="btn_start_flow">Start Flow</string>
     <string name="flow_state_exposing">Exposing</string>
     <string name="flow_state_waiting">Waiting</string>
     <string name="flow_state_idle">Idle</string>
@@ -351,11 +351,11 @@
     <string name="default_pause_label">Adjust camera settings</string>
 
     <!-- LiveStatusPanel -->
-    <string name="status_system_offline">SYSTEM OFFLINE</string>
+    <string name="status_system_offline">System Offline</string>
     <string name="status_disconnected">Disconnected</string>
     <string name="status_syncing">Syncing…</string>
-    <string name="stat_mode">MODE</string>
-    <string name="stat_captured">CAPTURED</string>
-    <string name="stat_est_remaining">EST. REMAINING</string>
+    <string name="stat_mode">Mode</string>
+    <string name="stat_captured">Captured</string>
+    <string name="stat_est_remaining">Est. Remaining</string>
     <string name="notif_update_available">Version %1$s is available — open to update</string>
 </resources>
