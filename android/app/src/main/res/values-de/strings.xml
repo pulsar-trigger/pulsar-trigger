@@ -99,6 +99,8 @@
     <string name="label_focal_length">Brennweite des Objektivs</string>
     <string name="label_capture_sequence">AUFNAHMESEQUENZ</string>
     <string name="label_gap_between_shots">Pause zwischen Aufnahmen</string>
+    <string name="section_language">SPRACHE</string>
+    <string name="lang_system_default">Systemstandard</string>
     <string name="section_device">GERÄT</string>
     <string name="label_device_name">Gerätename</string>
     <string name="section_gpio_pins">GPIO-PINS</string>

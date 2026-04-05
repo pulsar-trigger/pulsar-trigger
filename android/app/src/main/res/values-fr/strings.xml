@@ -99,6 +99,8 @@
     <string name="label_focal_length">Longueur focale de l\'objectif</string>
     <string name="label_capture_sequence">SÉQUENCE DE CAPTURE</string>
     <string name="label_gap_between_shots">Écart entre les prises</string>
+    <string name="section_language">LANGUE</string>
+    <string name="lang_system_default">Langue du système</string>
     <string name="section_device">APPAREIL</string>
     <string name="label_device_name">Nom de l\'appareil</string>
     <string name="section_gpio_pins">BROCHES GPIO</string>

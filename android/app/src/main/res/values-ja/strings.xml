@@ -99,6 +99,8 @@
     <string name="label_focal_length">レンズ焦点距離</string>
     <string name="label_capture_sequence">撮影シーケンス</string>
     <string name="label_gap_between_shots">撮影間の間隔</string>
+    <string name="section_language">言語</string>
+    <string name="lang_system_default">システムのデフォルト</string>
     <string name="section_device">デバイス</string>
     <string name="label_device_name">デバイス名</string>
     <string name="section_gpio_pins">GPIO ピン</string>

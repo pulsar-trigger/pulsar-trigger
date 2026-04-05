@@ -121,6 +121,8 @@
     <string name="label_gap_between_shots">Gap between shots</string>
 
     <!-- SettingsPanel -->
+    <string name="section_language">LANGUAGE</string>
+    <string name="lang_system_default">System default</string>
     <string name="section_device">DEVICE</string>
     <string name="label_device_name">Device Name</string>
     <string name="section_gpio_pins">GPIO PINS</string>

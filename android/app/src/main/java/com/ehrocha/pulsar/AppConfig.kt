@@ -162,6 +162,17 @@ object AppConfig {
     // Timeouts for HTTP calls to Open-Meteo (weather/astronomy) and
     // lightpollutionmap.info (Bortle class).
 
+    // ── Supported languages ───────────────────────────────────────────
+    val SUPPORTED_LOCALES = listOf(
+        "en" to "English",
+        "pt" to "Português",
+        "es" to "Español",
+        "fr" to "Français",
+        "de" to "Deutsch",
+        "ja" to "日本語",
+        "zh" to "中文",
+    )
+
     /** TCP connection timeout for all API calls (ms). */
     const val API_CONNECT_TIMEOUT_MS = 10_000
 

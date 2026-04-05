@@ -99,6 +99,8 @@
     <string name="label_focal_length">镜头焦距</string>
     <string name="label_capture_sequence">拍摄序列</string>
     <string name="label_gap_between_shots">拍摄间隔</string>
+    <string name="section_language">语言</string>
+    <string name="lang_system_default">系统默认</string>
     <string name="section_device">设备</string>
     <string name="label_device_name">设备名称</string>
     <string name="section_gpio_pins">GPIO 引脚</string>

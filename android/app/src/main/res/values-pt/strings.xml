@@ -99,6 +99,8 @@
     <string name="label_focal_length">Distância Focal da Lente</string>
     <string name="label_capture_sequence">SEQUÊNCIA DE CAPTURA</string>
     <string name="label_gap_between_shots">Intervalo entre fotos</string>
+    <string name="section_language">IDIOMA</string>
+    <string name="lang_system_default">Padrão do sistema</string>
     <string name="section_device">DISPOSITIVO</string>
     <string name="label_device_name">Nome do Dispositivo</string>
     <string name="section_gpio_pins">PINOS GPIO</string>

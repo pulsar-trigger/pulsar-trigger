@@ -238,6 +238,7 @@ fun SettingsScreen(
             ) {
                 when (currentSection) {
                     null -> SettingsMenu(onSectionSelected = { currentSection = it })
+                    SettingsSection.LANGUAGE -> LanguageSectionContent()
                     SettingsSection.DEVICE -> DeviceSectionContent(vm, deviceName, connected)
                     SettingsSection.GPIO_PINS -> GpioPinsSectionContent(vm, connected)
                     SettingsSection.BACKUP_RESTORE -> BackupRestoreSectionContent(vm)

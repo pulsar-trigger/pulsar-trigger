@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
@@ -741,6 +742,7 @@ private fun CollapsibleSection(
 // ── Settings section enum & menu ─────────────────────────────────────────────
 
 internal enum class SettingsSection(val icon: ImageVector, @StringRes val titleRes: Int) {
+    LANGUAGE(Icons.Default.Language, R.string.section_language),
     DEVICE(Icons.Default.PhoneAndroid, R.string.section_device),
     GPIO_PINS(Icons.Default.Memory, R.string.section_gpio_pins),
     BACKUP_RESTORE(Icons.Default.SaveAlt, R.string.section_backup_restore),
@@ -787,6 +789,97 @@ internal fun SettingsMenu(onSectionSelected: (SettingsSection) -> Unit) {
 }
 
 // ── Individual settings section content ──────────────────────────────────────
+
+@Composable
+internal fun LanguageSectionContent() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val currentLocale = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales()
+    val currentTag = if (currentLocale.isEmpty) "" else currentLocale.toLanguageTags()
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // System default option
+        val isSystemDefault = currentTag.isEmpty()
+        Surface(
+            onClick = {
+                androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
+                    androidx.core.os.LocaleListCompat.getEmptyLocaleList()
+                )
+            },
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = if (isSystemDefault) 4.dp else 1.dp,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(16.dp),
+            ) {
+                RadioButton(selected = isSystemDefault, onClick = null)
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    stringResource(R.string.lang_system_default),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+            }
+        }
+
+        // Each supported language
+        com.ehrocha.pulsar.AppConfig.SUPPORTED_LOCALES.forEach { (tag, label) ->
+            val selected = currentTag.startsWith(tag)
+            Surface(
+                onClick = {
+                    androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
+                        androidx.core.os.LocaleListCompat.forLanguageTags(tag)
+                    )
+                },
+                shape = RoundedCornerShape(12.dp),
+                tonalElevation = if (selected) 4.dp else 1.dp,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(16.dp),
+                ) {
+                    RadioButton(selected = selected, onClick = null)
+                    Spacer(Modifier.width(12.dp))
+                    Text(label, style = MaterialTheme.typography.bodyLarge)
+                    if (tag != "en") {
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "(${java.util.Locale(tag).getDisplayLanguage(java.util.Locale.ENGLISH)})",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+        HorizontalDivider()
+        Spacer(Modifier.height(8.dp))
+
+        // Panic button — always in English for discoverability
+        OutlinedButton(
+            onClick = {
+                androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
+                    androidx.core.os.LocaleListCompat.forLanguageTags("en")
+                )
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.error,
+            ),
+        ) {
+            Text("Reset to English", fontWeight = FontWeight.Bold)
+        }
+        Text(
+            "If the app is in a language you can't read, tap the button above.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
 
 @Composable
 internal fun DeviceSectionContent(
