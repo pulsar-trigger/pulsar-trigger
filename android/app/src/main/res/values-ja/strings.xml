@@ -302,4 +302,5 @@
     <string name="stat_mode">モード</string>
     <string name="stat_captured">撮影済み</string>
     <string name="stat_est_remaining">残り時間（推定）</string>
+    <string name="notif_update_available">バージョン %1$s が利用可能です — 開いて更新</string>
 </resources>

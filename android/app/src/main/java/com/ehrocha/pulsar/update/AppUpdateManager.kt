@@ -136,8 +136,8 @@ class AppUpdateManager(
         val url = URL("$RELEASES_URL?per_page=10")
         val conn = url.openConnection() as HttpURLConnection
         conn.setRequestProperty("Accept", "application/vnd.github+json")
-        conn.connectTimeout = 10_000
-        conn.readTimeout = 10_000
+        conn.connectTimeout = AppConfig.API_CONNECT_TIMEOUT_MS
+        conn.readTimeout = AppConfig.API_READ_TIMEOUT_MS
         try {
             if (conn.responseCode != 200) {
                 throw Exception("GitHub API returned ${conn.responseCode}")
@@ -177,8 +177,8 @@ class AppUpdateManager(
 
         val url = URL(downloadUrl)
         val conn = url.openConnection() as HttpURLConnection
-        conn.connectTimeout = 30_000
-        conn.readTimeout = 60_000
+        conn.connectTimeout = AppConfig.DOWNLOAD_CONNECT_TIMEOUT_MS
+        conn.readTimeout = AppConfig.DOWNLOAD_READ_TIMEOUT_MS
         try {
             if (conn.responseCode != 200) {
                 throw Exception("Download failed: HTTP ${conn.responseCode}")

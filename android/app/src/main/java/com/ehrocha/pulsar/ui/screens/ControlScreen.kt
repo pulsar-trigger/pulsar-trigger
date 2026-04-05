@@ -261,15 +261,15 @@ internal fun AstroActionsContent(
             modifier = Modifier.fillMaxWidth()
         ) {
             FilterChip(
-                selected = ruleDivisor == 500,
-                onClick = { onRuleChanged(500) },
+                selected = ruleDivisor == AppConfig.DEFAULT_RULE_DIVISOR,
+                onClick = { onRuleChanged(AppConfig.DEFAULT_RULE_DIVISOR) },
                 enabled = connected && !isRunning,
                 label = { Text(stringResource(R.string.chip_500_rule), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
                 modifier = Modifier.weight(1f)
             )
             FilterChip(
-                selected = ruleDivisor == 400,
-                onClick = { onRuleChanged(400) },
+                selected = ruleDivisor == AppConfig.TIGHT_RULE_DIVISOR,
+                onClick = { onRuleChanged(AppConfig.TIGHT_RULE_DIVISOR) },
                 enabled = connected && !isRunning,
                 label = { Text(stringResource(R.string.chip_400_rule), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
                 modifier = Modifier.weight(1f)
@@ -1401,7 +1401,7 @@ internal fun IntervalometerSettingsPanel(vm: PulsarViewModel, connected: Boolean
                             imeAction = ImeAction.Done,
                         ),
                         keyboardActions = KeyboardActions(onDone = {
-                            val v = defCountText.toIntOrNull()?.coerceIn(1, maxShots) ?: defCount
+                            val v = defCountText.toIntOrNull()?.coerceIn(AppConfig.MIN_SHOT_COUNT, maxShots) ?: defCount
                             defCountText = v.toString()
                             vm.saveIntervalometerDefaults(defInterval, defExposure, v, defDelay)
                         }),
@@ -1424,7 +1424,7 @@ internal fun IntervalometerSettingsPanel(vm: PulsarViewModel, connected: Boolean
                             imeAction = ImeAction.Done,
                         ),
                         keyboardActions = KeyboardActions(onDone = {
-                            val v = maxShotsText.toIntOrNull()?.coerceIn(10, 9999) ?: maxShots
+                            val v = maxShotsText.toIntOrNull()?.coerceIn(AppConfig.MIN_MAX_SHOTS, AppConfig.MAX_MAX_SHOTS) ?: maxShots
                             maxShotsText = v.toString()
                             vm.saveMaxShotCount(v)
                         }),

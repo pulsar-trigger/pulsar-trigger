@@ -27,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.astro.*
 import kotlinx.coroutines.launch
@@ -209,101 +210,166 @@ fun DashboardScreen(
 
                     Spacer(Modifier.height(12.dp))
 
-                    // Verdict chips grid
+                    // Verdict rows — one per line with rise/set times
                     @Composable
-                    fun VerdictChip(emoji: String, label: String, good: Boolean) {
-                        Surface(
-                            color = if (good) Color(0xFF2E7D32).copy(alpha = 0.12f)
-                                    else Color(0xFFE65100).copy(alpha = 0.12f),
-                            shape = RoundedCornerShape(8.dp),
+                    fun VerdictRow(emoji: String, label: String, good: Boolean, extra: String? = null) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            Surface(
+                                color = if (good) Color(0xFF2E7D32).copy(alpha = 0.12f)
+                                        else Color(0xFFE65100).copy(alpha = 0.12f),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f),
                             ) {
-                                Text(emoji, fontSize = 14.sp)
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    Text(emoji, fontSize = 14.sp)
+                                    Text(
+                                        label,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Medium,
+                                        color = if (good) Color(0xFF2E7D32) else Color(0xFFE65100),
+                                    )
+                                }
+                            }
+                            if (extra != null) {
+                                Spacer(Modifier.width(8.dp))
                                 Text(
-                                    label,
+                                    extra,
                                     style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Medium,
-                                    color = if (good) Color(0xFF2E7D32) else Color(0xFFE65100),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
                     }
 
-                    // Row 1: Moon, Weather
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        state.moon?.let { moon ->
-                            VerdictChip(
-                                moon.emoji,
-                                if (moon.goodForAstro) stringResource(R.string.verdict_moon_good)
-                                else stringResource(R.string.verdict_moon_bright),
-                                moon.goodForAstro,
-                            )
-                        }
-                        state.weather?.let { weather ->
-                            val hasRain = weather.precipitationMm > 0.1
-                            val good = weather.cloudCoverPct <= 20 && !hasRain
-                            val bad = hasRain || weather.cloudCoverPct > 50
-                            VerdictChip(
-                                weatherEmoji(weather.weatherCode),
-                                when {
-                                    hasRain -> stringResource(R.string.verdict_rain)
-                                    weather.cloudCoverPct <= 20 -> stringResource(R.string.verdict_clear)
-                                    weather.cloudCoverPct <= 50 -> stringResource(R.string.verdict_partly)
-                                    else -> stringResource(R.string.verdict_cloudy)
-                                },
-                                good,
-                            )
-                        }
+                    // Sun
+                    state.sun?.let { sun ->
+                        val times = listOfNotNull(
+                            sun.sunrise?.let { "↑${formatTime(it)}" },
+                            sun.sunset?.let { "↓${formatTime(it)}" },
+                        ).joinToString("  ")
+                        VerdictRow("☀️", stringResource(R.string.label_sunrise) + " / " + stringResource(R.string.label_sunset), true, times.ifEmpty { null })
                     }
 
-                    Spacer(Modifier.height(6.dp))
-
-                    // Row 2: Bortle, Milky Way
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        state.bortle?.let { bortle ->
-                            VerdictChip(
-                                "🔦",
-                                String.format(stringResource(R.string.verdict_bortle), bortle.classNumber),
-                                bortle.classNumber <= 5,
-                            )
-                        }
-                        state.milkyWay?.let { mw ->
-                            VerdictChip(
-                                "🌌",
-                                if (mw.visible) stringResource(R.string.verdict_mw_visible)
-                                else stringResource(R.string.verdict_mw_not_visible),
-                                mw.visible,
-                            )
-                        }
+                    // Moon
+                    state.moon?.let { moon ->
+                        val times = listOfNotNull(
+                            moon.rise?.let { "↑${formatTime(it)}" },
+                            moon.set?.let { "↓${formatTime(it)}" },
+                        ).joinToString("  ")
+                        VerdictRow(
+                            moon.emoji,
+                            if (moon.goodForAstro) stringResource(R.string.verdict_moon_good)
+                            else stringResource(R.string.verdict_moon_bright),
+                            moon.goodForAstro,
+                            times.ifEmpty { null },
+                        )
                     }
 
-                    // Best window summary
+                    // Weather
+                    state.weather?.let { weather ->
+                        val hasRain = weather.precipitationMm > 0.1
+                        val good = weather.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD && !hasRain
+                        VerdictRow(
+                            weatherEmoji(weather.weatherCode),
+                            when {
+                                hasRain -> stringResource(R.string.verdict_rain)
+                                weather.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD -> stringResource(R.string.verdict_clear)
+                                weather.cloudCoverPct <= AppConfig.CLOUD_COVER_PARTLY_THRESHOLD -> stringResource(R.string.verdict_partly)
+                                else -> stringResource(R.string.verdict_cloudy)
+                            },
+                            good,
+                        )
+                    }
+
+                    // Bortle
+                    state.bortle?.let { bortle ->
+                        VerdictRow(
+                            "🔦",
+                            String.format(stringResource(R.string.verdict_bortle), bortle.classNumber),
+                            bortle.classNumber <= 5,
+                        )
+                    }
+
+                    // Milky Way
+                    state.milkyWay?.let { mw ->
+                        val times = listOfNotNull(
+                            mw.coreRise?.let { "↑$it" },
+                            mw.coreSet?.let { "↓$it" },
+                        ).joinToString("  ")
+                        VerdictRow(
+                            "🌌",
+                            if (mw.visible) stringResource(R.string.verdict_mw_visible)
+                            else stringResource(R.string.verdict_mw_not_visible),
+                            mw.visible,
+                            times.ifEmpty { null },
+                        )
+                    }
+
+                    // Best photo windows
                     if (state.bestWindows.isNotEmpty()) {
-                        Spacer(Modifier.height(6.dp))
-                        val best = state.bestWindows.first()
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            VerdictChip(
-                                "📷",
-                                String.format(
-                                    stringResource(R.string.verdict_best_window),
-                                    best.startTime, best.endTime,
-                                ),
-                                best.rating >= 2,
-                            )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            stringResource(R.string.card_best_windows),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        state.bestWindows.forEach { w ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 3.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    when (w.rating) { 3 -> "⭐"; 2 -> "👍"; else -> "👌" },
+                                    fontSize = 16.sp,
+                                    modifier = Modifier.width(28.dp),
+                                )
+                                Text(
+                                    "${w.startTime} – ${w.endTime}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Surface(
+                                    color = when (w.rating) {
+                                        3 -> Color(0xFF2E7D32); 2 -> Color(0xFF558B2F); else -> Color(0xFFF9A825)
+                                    }.copy(alpha = 0.15f),
+                                    shape = RoundedCornerShape(8.dp),
+                                ) {
+                                    Text(
+                                        text = when (w.rating) {
+                                            3 -> stringResource(R.string.window_excellent)
+                                            2 -> stringResource(R.string.window_good)
+                                            else -> stringResource(R.string.window_fair)
+                                        },
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        color = when (w.rating) {
+                                            3 -> Color(0xFF2E7D32); 2 -> Color(0xFF558B2F); else -> Color(0xFFF9A825)
+                                        },
+                                    )
+                                }
+                            }
                         }
+                    } else if (!state.loading && state.weather != null && state.sun != null) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            stringResource(R.string.window_no_clear),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
@@ -530,8 +596,8 @@ fun DashboardScreen(
                     val hasRain = weather.precipitationMm > 0.1
                     Surface(
                         color = when {
-                            hasRain || weather.cloudCoverPct > 50 -> Color(0xFFE65100).copy(alpha = 0.15f)
-                            weather.cloudCoverPct <= 20 && !hasRain -> Color(0xFF2E7D32).copy(alpha = 0.15f)
+                            hasRain || weather.cloudCoverPct > AppConfig.CLOUD_COVER_PARTLY_THRESHOLD -> Color(0xFFE65100).copy(alpha = 0.15f)
+                            weather.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD && !hasRain -> Color(0xFF2E7D32).copy(alpha = 0.15f)
                             else -> Color(0xFFF9A825).copy(alpha = 0.15f)
                         },
                         shape = RoundedCornerShape(8.dp),
@@ -540,80 +606,20 @@ fun DashboardScreen(
                         Text(
                             text = when {
                                 hasRain -> stringResource(R.string.weather_rain_bad)
-                                weather.cloudCoverPct <= 20 -> stringResource(R.string.weather_clear)
-                                weather.cloudCoverPct <= 50 -> stringResource(R.string.weather_partly_cloudy)
+                                weather.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD -> stringResource(R.string.weather_clear)
+                                weather.cloudCoverPct <= AppConfig.CLOUD_COVER_PARTLY_THRESHOLD -> stringResource(R.string.weather_partly_cloudy)
                                 else -> stringResource(R.string.weather_too_cloudy)
                             },
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.padding(8.dp),
                             color = when {
-                                hasRain || weather.cloudCoverPct > 50 -> Color(0xFFE65100)
-                                weather.cloudCoverPct <= 20 -> Color(0xFF2E7D32)
+                                hasRain || weather.cloudCoverPct > AppConfig.CLOUD_COVER_PARTLY_THRESHOLD -> Color(0xFFE65100)
+                                weather.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD -> Color(0xFF2E7D32)
                                 else -> Color(0xFFF9A825)
                             },
                         )
                     }
-                }
-            }
-
-            // ── Best photo windows ───────────────────────────────────
-            if (state.bestWindows.isNotEmpty()) {
-                DashCard(title = stringResource(R.string.card_best_windows), icon = Icons.Default.CameraAlt) {
-                    state.bestWindows.forEach { w ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                when (w.rating) { 3 -> "⭐"; 2 -> "👍"; else -> "👌" },
-                                fontSize = 20.sp,
-                                modifier = Modifier.width(32.dp),
-                            )
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    "${w.startTime} – ${w.endTime}",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Bold,
-                                )
-                                Text(
-                                    String.format(Locale.US, stringResource(R.string.window_cloud), w.avgCloudPct),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            Surface(
-                                color = when (w.rating) {
-                                    3 -> Color(0xFF2E7D32); 2 -> Color(0xFF558B2F); else -> Color(0xFFF9A825)
-                                }.copy(alpha = 0.15f),
-                                shape = RoundedCornerShape(8.dp),
-                            ) {
-                                Text(
-                                    text = when (w.rating) {
-                                        3 -> stringResource(R.string.window_excellent)
-                                        2 -> stringResource(R.string.window_good)
-                                        else -> stringResource(R.string.window_fair)
-                                    },
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                    color = when (w.rating) {
-                                        3 -> Color(0xFF2E7D32); 2 -> Color(0xFF558B2F); else -> Color(0xFFF9A825)
-                                    },
-                                )
-                            }
-                        }
-                    }
-                }
-            } else if (!state.loading && state.weather != null && state.sun != null) {
-                DashCard(title = stringResource(R.string.card_best_windows), icon = Icons.Default.CameraAlt) {
-                    Text(
-                        stringResource(R.string.window_no_clear),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
             }
 
@@ -657,8 +663,8 @@ fun DashboardScreen(
                                         .clip(RoundedCornerShape(4.dp))
                                         .background(
                                             when {
-                                                h.cloudCoverPct <= 20 -> Color(0xFF2E7D32)
-                                                h.cloudCoverPct <= 50 -> Color(0xFFF9A825)
+                                                h.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD -> Color(0xFF2E7D32)
+                                                h.cloudCoverPct <= AppConfig.CLOUD_COVER_PARTLY_THRESHOLD -> Color(0xFFF9A825)
                                                 else -> Color(0xFFE65100)
                                             }
                                         ),

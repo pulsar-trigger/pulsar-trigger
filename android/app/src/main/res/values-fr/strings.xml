@@ -302,4 +302,5 @@
     <string name="stat_mode">MODE</string>
     <string name="stat_captured">CAPTURÉES</string>
     <string name="stat_est_remaining">EST. RESTANT</string>
+    <string name="notif_update_available">Version %1$s disponible — ouvrez pour mettre à jour</string>
 </resources>

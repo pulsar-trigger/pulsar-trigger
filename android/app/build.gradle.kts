@@ -20,8 +20,8 @@ android {
         applicationId = "com.ehrocha.pulsar"
         minSdk = 26
         targetSdk = 35
-        versionCode = 11
-        versionName = "0.11.0"
+        versionCode = 12
+        versionName = "0.12.0"
     }
 
     signingConfigs {
@@ -79,4 +79,7 @@ dependencies {
 
     // Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.36.0")
+
+    // WorkManager — periodic background update checks
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 }

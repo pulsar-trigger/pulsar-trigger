@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.ble.StatusFrame
 import com.ehrocha.pulsar.ble.TriggerMode
@@ -79,7 +80,7 @@ private fun IntervalometerPanelPreview() {
 private fun AstroPanelPreview() {
     var focalLength by remember { mutableIntStateOf(24) }
     var cropFactor by remember { mutableFloatStateOf(1.0f) }
-    var ruleDivisor by remember { mutableIntStateOf(500) }
+    var ruleDivisor by remember { mutableIntStateOf(AppConfig.DEFAULT_RULE_DIVISOR) }
     var shotCount by remember { mutableIntStateOf(100) }
     var delayMs by remember { mutableLongStateOf(5_000L) }
     var gapMs by remember { mutableLongStateOf(2_000L) }

@@ -302,4 +302,5 @@
     <string name="stat_mode">MODUS</string>
     <string name="stat_captured">AUFGENOMMEN</string>
     <string name="stat_est_remaining">GESCHÄTZT VERBL.</string>
+    <string name="notif_update_available">Version %1$s verfügbar — öffnen zum Aktualisieren</string>
 </resources>

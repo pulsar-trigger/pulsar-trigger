@@ -86,9 +86,26 @@ fun MainMenuScreen(
                     }
                 }
             }
+            Spacer(Modifier.width(4.dp))
+            IconButton(onClick = onSettingsSelected) {
+                Icon(
+                    Icons.Default.Settings,
+                    contentDescription = stringResource(R.string.menu_settings),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
 
         Spacer(Modifier.height(16.dp))
+
+        MenuCard(
+            title = stringResource(R.string.mode_astro_dashboard),
+            description = stringResource(R.string.mode_astro_dashboard_desc),
+            icon = Icons.Default.NightsStay,
+            onClick = onDashboardSelected,
+        )
+
+        Spacer(Modifier.height(20.dp))
 
         Text(
             stringResource(R.string.section_modes),
@@ -128,24 +145,9 @@ fun MainMenuScreen(
                 icon = Icons.AutoMirrored.Filled.ViewList,
                 onClick = onCustomFlowSelected,
             )
-            MenuCard(
-                title = stringResource(R.string.mode_astro_dashboard),
-                description = stringResource(R.string.mode_astro_dashboard_desc),
-                icon = Icons.Default.NightsStay,
-                onClick = onDashboardSelected,
-            )
         }
 
         Spacer(Modifier.weight(1f))
-
-        MenuCard(
-            title = stringResource(R.string.menu_settings),
-            description = stringResource(R.string.menu_settings_desc),
-            icon = Icons.Default.Settings,
-            onClick = onSettingsSelected,
-        )
-
-        Spacer(Modifier.height(12.dp))
 
         TextButton(
             onClick = { vm.disconnect() },

@@ -302,4 +302,5 @@
     <string name="stat_mode">MODO</string>
     <string name="stat_captured">CAPTURADAS</string>
     <string name="stat_est_remaining">TEMPO RESTANTE</string>
+    <string name="notif_update_available">Versão %1$s disponível — abra para atualizar</string>
 </resources>
