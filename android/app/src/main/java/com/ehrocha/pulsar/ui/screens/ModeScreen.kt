@@ -392,7 +392,6 @@ fun ModeSettingsScreen(
     val title = when (targetMode) {
         TriggerMode.INTERVALOMETER -> stringResource(R.string.settings_intervalometer)
         TriggerMode.ASTRO -> stringResource(R.string.settings_astro)
-        TriggerMode.PRESS_HOLD -> stringResource(R.string.settings_manual)
         else -> "${targetMode.name.replace('_', ' ')} Settings"
     }
 
@@ -452,7 +451,6 @@ fun ModeSettingsScreen(
                 when (targetMode) {
                     TriggerMode.INTERVALOMETER -> IntervalometerSettingsPanel(vm, connected)
                     TriggerMode.ASTRO -> AstroSettingsPanel(vm, connected)
-                    TriggerMode.PRESS_HOLD -> ManualSettingsPanel(vm, connected)
                     else -> {}
                 }
             }

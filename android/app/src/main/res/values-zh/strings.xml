@@ -45,7 +45,6 @@
     <string name="cd_move_up">上移</string>
     <string name="cd_move_down">下移</string>
     <string name="cd_settings">设置</string>
-    <string name="btn_single">单拍</string>
     <string name="btn_stop">停止</string>
     <string name="btn_start">开始</string>
     <string name="status_sequence_running">序列运行中…</string>
@@ -187,9 +186,7 @@
     <string name="status_remaining">剩余</string>
     <string name="settings_intervalometer">间隔计时器设置</string>
     <string name="settings_astro">天文设置</string>
-    <string name="settings_manual">手动设置</string>
     <string name="settings_astro_desc">天文模式根据您的光学配置计算曝光时间。在此配置镜头和传感器默认值，也可在模式界面中调整。</string>
-    <string name="settings_manual_desc">手动模式允许您直接控制快门。在模式界面中选择按住（按住不放）或锁定（切换开/关）。</string>
     <string name="dialog_updates_available">有可用更新</string>
     <string name="update_firmware_available">固件 v%1$s 可用</string>
     <string name="update_app_available">应用 v%1$s 可用</string>

@@ -55,7 +55,6 @@
     <string name="cd_settings">Settings</string>
 
     <!-- DefaultActions -->
-    <string name="btn_single">SINGLE</string>
     <string name="btn_stop">STOP</string>
     <string name="btn_start">START</string>
     <string name="status_sequence_running">Sequence running…</string>
@@ -227,9 +226,7 @@
     <!-- ModeSettingsScreen -->
     <string name="settings_intervalometer">Intervalometer Settings</string>
     <string name="settings_astro">Astro Settings</string>
-    <string name="settings_manual">Manual Settings</string>
     <string name="settings_astro_desc">Astro mode calculates exposure times from your optics. Configure lens and sensor defaults here, or adjust them in the mode screen.</string>
-    <string name="settings_manual_desc">Manual mode lets you control the shutter directly. Choose between Hold (press and hold) or Lock (toggle on/off) in the mode screen.</string>
 
     <!-- MainActivity update dialog -->
     <string name="dialog_updates_available">Updates Available</string>

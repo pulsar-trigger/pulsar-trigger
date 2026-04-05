@@ -45,7 +45,6 @@
     <string name="cd_move_up">Nach oben</string>
     <string name="cd_move_down">Nach unten</string>
     <string name="cd_settings">Einstellungen</string>
-    <string name="btn_single">EINZELBILD</string>
     <string name="btn_stop">STOPP</string>
     <string name="btn_start">START</string>
     <string name="status_sequence_running">Sequenz läuft…</string>
@@ -187,9 +186,7 @@
     <string name="status_remaining">verbleibend</string>
     <string name="settings_intervalometer">Intervalltimer-Einstellungen</string>
     <string name="settings_astro">Astro-Einstellungen</string>
-    <string name="settings_manual">Manuelle Einstellungen</string>
     <string name="settings_astro_desc">Der Astro-Modus berechnet Belichtungszeiten anhand deiner Optik. Konfiguriere hier Objektiv- und Sensorvorgaben oder passe sie im Modusbildschirm an.</string>
-    <string name="settings_manual_desc">Im manuellen Modus steuerst du den Verschluss direkt. Wähle zwischen Halten (gedrückt halten) oder Sperren (ein-/ausschalten) im Modusbildschirm.</string>
     <string name="dialog_updates_available">Updates verfügbar</string>
     <string name="update_firmware_available">Firmware v%1$s ist verfügbar</string>
     <string name="update_app_available">App v%1$s ist verfügbar</string>

@@ -45,7 +45,6 @@
     <string name="cd_move_up">Mover para cima</string>
     <string name="cd_move_down">Mover para baixo</string>
     <string name="cd_settings">Configurações</string>
-    <string name="btn_single">ÚNICO</string>
     <string name="btn_stop">PARAR</string>
     <string name="btn_start">INICIAR</string>
     <string name="status_sequence_running">Sequência em execução…</string>
@@ -187,9 +186,7 @@
     <string name="status_remaining">restante</string>
     <string name="settings_intervalometer">Configurações do Intervalômetro</string>
     <string name="settings_astro">Configurações Astro</string>
-    <string name="settings_manual">Configurações Manual</string>
     <string name="settings_astro_desc">O modo Astro calcula tempos de exposição a partir das suas ópticas. Configure padrões de lente e sensor aqui, ou ajuste na tela do modo.</string>
-    <string name="settings_manual_desc">O modo Manual permite controlar o obturador diretamente. Escolha entre Segurar (pressionar e segurar) ou Travar (alternar liga/desliga) na tela do modo.</string>
     <string name="dialog_updates_available">Atualizações Disponíveis</string>
     <string name="update_firmware_available">Firmware v%1$s está disponível</string>
     <string name="update_app_available">App v%1$s está disponível</string>

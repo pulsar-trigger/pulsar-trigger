@@ -137,7 +137,6 @@ fun MainMenuScreen(
                 description = stringResource(R.string.mode_manual_desc),
                 icon = Icons.Default.TouchApp,
                 onClick = { onModeSelected(TriggerMode.PRESS_HOLD) },
-                onGearClick = { onModeSettingsSelected(TriggerMode.PRESS_HOLD) },
             )
             MenuCard(
                 title = stringResource(R.string.mode_custom_flow),

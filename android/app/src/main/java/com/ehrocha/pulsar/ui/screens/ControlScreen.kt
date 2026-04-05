@@ -65,7 +65,6 @@ internal fun DefaultActions(vm: PulsarViewModel, connected: Boolean, isRunning: 
         isRunning = isRunning,
         onStart = { vm.start() },
         onStop = { vm.stop() },
-        onSingleShot = { vm.singleShot() }
     )
 }
 
@@ -75,7 +74,6 @@ internal fun DefaultActionsContent(
     isRunning: Boolean,
     onStart: () -> Unit,
     onStop: () -> Unit,
-    onSingleShot: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -83,35 +81,21 @@ internal fun DefaultActionsContent(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        Button(
+            onClick = { if (isRunning) onStop() else onStart() },
+            enabled = connected,
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isRunning) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.primary
+            ),
+            modifier = Modifier.height(56.dp).fillMaxWidth()
         ) {
-            OutlinedButton(
-                onClick = onSingleShot,
-                enabled = connected && !isRunning,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.height(56.dp).weight(1f)
-            ) {
-                Text(stringResource(R.string.btn_single), style = MaterialTheme.typography.labelLarge)
-            }
-
-            Button(
-                onClick = { if (isRunning) onStop() else onStart() },
-                enabled = connected,
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isRunning) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.primary
-                ),
-                modifier = Modifier.height(56.dp).weight(2f)
-            ) {
-                Text(
-                    text = if (isRunning) stringResource(R.string.btn_stop) else stringResource(R.string.btn_start),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            Text(
+                text = if (isRunning) stringResource(R.string.btn_stop) else stringResource(R.string.btn_start),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
         }
 
         Text(
@@ -1563,19 +1547,6 @@ internal fun AstroSettingsPanel(vm: PulsarViewModel, connected: Boolean) {
         )
 
         AstroPanel(vm, enabled = true)
-    }
-}
-
-@Composable
-internal fun ManualSettingsPanel(vm: PulsarViewModel, connected: Boolean) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text(
-            stringResource(R.string.settings_manual_desc),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        ManualPanel(vm)
     }
 }
 
