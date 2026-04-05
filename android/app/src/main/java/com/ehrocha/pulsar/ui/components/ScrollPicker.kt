@@ -5,19 +5,16 @@
 
 package com.ehrocha.pulsar.ui.components
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,10 +30,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 /**
- * Scrollable wheel number picker with 3 visible rows.
+ * Tap-to-step number picker with ▲/▼ buttons instead of scroll wheels.
  * Tap the centre value to type via keyboard.
+ * This prevents accidental value changes when the user scrolls the page.
  */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ScrollPicker(
     value: Int,
@@ -47,11 +44,7 @@ fun ScrollPicker(
     label: String? = null,
     format: (Int) -> String = { "%02d".format(it) },
 ) {
-    val items = remember(range) { range.toList() }
     val haptic = LocalHapticFeedback.current
-    val initialIndex = (value - range.first).coerceIn(0, items.lastIndex)
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialIndex)
-    val itemHeight = 36.dp
     val alpha = if (enabled) 1f else 0.4f
 
     var editing by remember { mutableStateOf(false) }
@@ -59,26 +52,12 @@ fun ScrollPicker(
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
 
-    // Sync external value → scroll position
-    LaunchedEffect(value) {
-        val idx = (value - range.first).coerceIn(0, items.lastIndex)
-        if (!listState.isScrollInProgress && listState.firstVisibleItemIndex != idx) {
-            listState.animateScrollToItem(idx)
-        }
-    }
-
-    // Scroll settled → notify value change
-    LaunchedEffect(listState) {
-        snapshotFlow {
-            listState.firstVisibleItemIndex to listState.isScrollInProgress
-        }.collect { (idx, scrolling) ->
-            if (!scrolling) {
-                val newVal = items.getOrElse(idx) { value }
-                if (newVal != value) {
-                    onValueChange(newVal)
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                }
-            }
+    fun step(delta: Int) {
+        if (!enabled) return
+        val newVal = (value + delta).coerceIn(range)
+        if (newVal != value) {
+            onValueChange(newVal)
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         }
     }
 
@@ -102,6 +81,22 @@ fun ScrollPicker(
             Spacer(Modifier.height(2.dp))
         }
 
+        // ▲ button
+        FilledTonalIconButton(
+            onClick = { step(1) },
+            enabled = enabled && value < range.last,
+            modifier = Modifier.size(36.dp),
+        ) {
+            Icon(
+                Icons.Default.KeyboardArrowUp,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+
+        Spacer(Modifier.height(2.dp))
+
+        // Centre value — tap to type
         if (editing) {
             BasicTextField(
                 value = editText,
@@ -118,7 +113,7 @@ fun ScrollPicker(
                 keyboardActions = KeyboardActions(onDone = { commitEdit() }),
                 modifier = Modifier
                     .widthIn(min = 52.dp)
-                    .height(itemHeight)
+                    .height(36.dp)
                     .focusRequester(focusRequester)
                     .onFocusChanged { if (!it.isFocused && editing) commitEdit() },
                 decorationBox = { inner ->
@@ -135,67 +130,46 @@ fun ScrollPicker(
             )
             LaunchedEffect(Unit) { focusRequester.requestFocus() }
         } else {
-            Box(
-                modifier = Modifier
-                    .height(itemHeight * 3)
-                    .widthIn(min = 52.dp),
-            ) {
-                // Centre-row highlight (drawn behind the list)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(itemHeight)
-                        .offset(y = itemHeight)
-                        .background(
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
-                            RoundedCornerShape(8.dp),
-                        ),
-                )
-
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    flingBehavior = rememberSnapFlingBehavior(lazyListState = listState),
-                    userScrollEnabled = enabled,
-                ) {
-                    // Top spacer so item 0 can sit in the centre row
-                    item { Spacer(Modifier.height(itemHeight).fillMaxWidth()) }
-
-                    items(items.size) { index ->
-                        val isCenter = index == listState.firstVisibleItemIndex
-                        Box(
-                            modifier = Modifier
-                                .height(itemHeight)
-                                .fillMaxWidth()
-                                .then(
-                                    if (enabled && isCenter) Modifier.clickable {
-                                        editText = value.toString()
-                                        editing = true
-                                    } else Modifier
-                                ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = format(items[index]),
-                                style = if (isCenter)
-                                    MaterialTheme.typography.titleLarge
-                                else
-                                    MaterialTheme.typography.bodyMedium,
-                                color = if (isCenter)
-                                    MaterialTheme.colorScheme.primary.copy(alpha = alpha)
-                                else
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                                        alpha = alpha * 0.4f,
-                                    ),
-                                textAlign = TextAlign.Center,
-                            )
-                        }
+            Surface(
+                onClick = {
+                    if (enabled) {
+                        editText = value.toString()
+                        editing = true
                     }
-
-                    // Bottom spacer so the last item can sit in the centre row
-                    item { Spacer(Modifier.height(itemHeight).fillMaxWidth()) }
+                },
+                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier
+                    .widthIn(min = 52.dp)
+                    .height(36.dp),
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    Text(
+                        text = format(value),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
+                        textAlign = TextAlign.Center,
+                    )
                 }
             }
+        }
+
+        Spacer(Modifier.height(2.dp))
+
+        // ▼ button
+        FilledTonalIconButton(
+            onClick = { step(-1) },
+            enabled = enabled && value > range.first,
+            modifier = Modifier.size(36.dp),
+        ) {
+            Icon(
+                Icons.Default.KeyboardArrowDown,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+            )
         }
     }
 }
