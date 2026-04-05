@@ -104,7 +104,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
     val hasFwUpdate = fwState == OtaState.AVAILABLE && fwRelease != null
     val hasAppUpdate = appState == AppUpdateState.AVAILABLE && appRelease != null
 
-    if (connected && (hasFwUpdate || hasAppUpdate) && !dismissedUpdateDialog) {
+    if (connected && (hasFwUpdate || hasAppUpdate) && !dismissedUpdateDialog && currentScreen != AppScreen.Settings) {
         AlertDialog(
             onDismissRequest = { dismissedUpdateDialog = true },
             title = { Text(stringResource(R.string.dialog_updates_available)) },
