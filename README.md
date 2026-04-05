@@ -6,7 +6,7 @@ An open-source camera intervalometer and trigger system.
 
 ### Author
 
-**Eduardo Henrique Rocha** — Global System Z Infrastructure Architect at Kyndryl, passionate about mainframe modernization, cloud architecture, electronics, and photography.
+**Eduardo Henrique Rocha** — Global System Z Infrastructure Architect, passionate about mainframe modernization, cloud architecture, electronics, and photography.
 
 > 📷 See my photography on Instagram: [**@ehrocha.br**](https://www.instagram.com/ehrocha.br/)
 
