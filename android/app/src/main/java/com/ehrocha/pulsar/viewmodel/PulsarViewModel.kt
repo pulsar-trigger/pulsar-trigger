@@ -98,37 +98,59 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val currentMode: StateFlow<TriggerMode> = _currentMode
 
     // ── Intervalometer params ────────────────────────────────────────────
-    val intervalMs = MutableStateFlow(AppConfig.DEFAULT_INTERVAL_MS)
-    val exposureMs = MutableStateFlow(AppConfig.DEFAULT_EXPOSURE_MS)
-    val shotCount = MutableStateFlow(AppConfig.DEFAULT_SHOT_COUNT)
-    val delayMs = MutableStateFlow(AppConfig.DEFAULT_DELAY_MS)
+    private val _intervalMs = MutableStateFlow(AppConfig.DEFAULT_INTERVAL_MS)
+    val intervalMs: StateFlow<Long> = _intervalMs
+    private val _exposureMs = MutableStateFlow(AppConfig.DEFAULT_EXPOSURE_MS)
+    val exposureMs: StateFlow<Long> = _exposureMs
+    private val _shotCount = MutableStateFlow(AppConfig.DEFAULT_SHOT_COUNT)
+    val shotCount: StateFlow<Int> = _shotCount
+    private val _delayMs = MutableStateFlow(AppConfig.DEFAULT_DELAY_MS)
+    val delayMs: StateFlow<Long> = _delayMs
 
     // ── Intervalometer defaults (persisted) ──────────────────────────────
-    val defaultIntervalMs = MutableStateFlow(AppConfig.DEFAULT_INTERVAL_MS)
-    val defaultExposureMs = MutableStateFlow(AppConfig.DEFAULT_EXPOSURE_MS)
-    val defaultShotCount = MutableStateFlow(AppConfig.DEFAULT_SHOT_COUNT)
-    val defaultDelayMs = MutableStateFlow(AppConfig.DEFAULT_DELAY_MS)
-    val maxShotCount = MutableStateFlow(AppConfig.DEFAULT_MAX_SHOTS)
+    private val _defaultIntervalMs = MutableStateFlow(AppConfig.DEFAULT_INTERVAL_MS)
+    val defaultIntervalMs: StateFlow<Long> = _defaultIntervalMs
+    private val _defaultExposureMs = MutableStateFlow(AppConfig.DEFAULT_EXPOSURE_MS)
+    val defaultExposureMs: StateFlow<Long> = _defaultExposureMs
+    private val _defaultShotCount = MutableStateFlow(AppConfig.DEFAULT_SHOT_COUNT)
+    val defaultShotCount: StateFlow<Int> = _defaultShotCount
+    private val _defaultDelayMs = MutableStateFlow(AppConfig.DEFAULT_DELAY_MS)
+    val defaultDelayMs: StateFlow<Long> = _defaultDelayMs
+    private val _maxShotCount = MutableStateFlow(AppConfig.DEFAULT_MAX_SHOTS)
+    val maxShotCount: StateFlow<Int> = _maxShotCount
 
 
     // ── Astro params ─────────────────────────────────────────────────────
-    val astroFocalLength = MutableStateFlow(AppConfig.DEFAULT_FOCAL_LENGTH)       // mm
-    val astroCropFactor = MutableStateFlow(AppConfig.DEFAULT_CROP_FACTOR)      // Full Frame default
-    val astroRuleDivisor = MutableStateFlow(AppConfig.DEFAULT_RULE_DIVISOR)      // 500 or 400
-    val astroShotCount = MutableStateFlow(AppConfig.DEFAULT_SHOT_COUNT)
-    val astroDelayMs = MutableStateFlow(AppConfig.DEFAULT_ASTRO_DELAY_MS)
-    val astroGapMs = MutableStateFlow(AppConfig.DEFAULT_ASTRO_GAP_MS)          // gap between shots
+    private val _astroFocalLength = MutableStateFlow(AppConfig.DEFAULT_FOCAL_LENGTH)       // mm
+    val astroFocalLength: StateFlow<Int> = _astroFocalLength
+    private val _astroCropFactor = MutableStateFlow(AppConfig.DEFAULT_CROP_FACTOR)      // Full Frame default
+    val astroCropFactor: StateFlow<Float> = _astroCropFactor
+    private val _astroRuleDivisor = MutableStateFlow(AppConfig.DEFAULT_RULE_DIVISOR)      // 500 or 400
+    val astroRuleDivisor: StateFlow<Int> = _astroRuleDivisor
+    private val _astroShotCount = MutableStateFlow(AppConfig.DEFAULT_SHOT_COUNT)
+    val astroShotCount: StateFlow<Int> = _astroShotCount
+    private val _astroDelayMs = MutableStateFlow(AppConfig.DEFAULT_ASTRO_DELAY_MS)
+    val astroDelayMs: StateFlow<Long> = _astroDelayMs
+    private val _astroGapMs = MutableStateFlow(AppConfig.DEFAULT_ASTRO_GAP_MS)          // gap between shots
+    val astroGapMs: StateFlow<Long> = _astroGapMs
 
     // ── GPIO pin config ──────────────────────────────────────────────────
-    val pinShutter = MutableStateFlow(DEFAULT_PIN_SHUTTER)
-    val pinFocus = MutableStateFlow(DEFAULT_PIN_FOCUS)
+    private val _pinShutter = MutableStateFlow(DEFAULT_PIN_SHUTTER)
+    val pinShutter: StateFlow<Int> = _pinShutter
+    private val _pinFocus = MutableStateFlow(DEFAULT_PIN_FOCUS)
+    val pinFocus: StateFlow<Int> = _pinFocus
 
     // ── Custom Flow ──────────────────────────────────────────────────────
-    val flowSteps = MutableStateFlow<List<FlowStep>>(emptyList())
-    val savedFlows = MutableStateFlow<List<SavedFlow>>(emptyList())
-    val flowRunning = MutableStateFlow(false)
-    val flowPaused = MutableStateFlow(false)
-    val flowCurrentStep = MutableStateFlow(-1)
+    private val _flowSteps = MutableStateFlow<List<FlowStep>>(emptyList())
+    val flowSteps: StateFlow<List<FlowStep>> = _flowSteps
+    private val _savedFlows = MutableStateFlow<List<SavedFlow>>(emptyList())
+    val savedFlows: StateFlow<List<SavedFlow>> = _savedFlows
+    private val _flowRunning = MutableStateFlow(false)
+    val flowRunning: StateFlow<Boolean> = _flowRunning
+    private val _flowPaused = MutableStateFlow(false)
+    val flowPaused: StateFlow<Boolean> = _flowPaused
+    private val _flowCurrentStep = MutableStateFlow(-1)
+    val flowCurrentStep: StateFlow<Int> = _flowCurrentStep
     private var flowJob: Job? = null
 
     // ── BLE Scan ─────────────────────────────────────────────────────────
@@ -157,26 +179,26 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
 
         // Load persisted intervalometer defaults
-        defaultIntervalMs.value = prefs.getLong(KEY_INTV_INTERVAL, AppConfig.DEFAULT_INTERVAL_MS)
-        defaultExposureMs.value = prefs.getLong(KEY_INTV_EXPOSURE, AppConfig.DEFAULT_EXPOSURE_MS)
-        defaultShotCount.value = prefs.getInt(KEY_INTV_COUNT, AppConfig.DEFAULT_SHOT_COUNT)
-        defaultDelayMs.value = prefs.getLong(KEY_INTV_DELAY, AppConfig.DEFAULT_DELAY_MS)
-        maxShotCount.value = prefs.getInt(KEY_INTV_MAX_SHOTS, AppConfig.DEFAULT_MAX_SHOTS)
-        pinShutter.value = prefs.getInt(KEY_PIN_SHUTTER, DEFAULT_PIN_SHUTTER)
-        pinFocus.value = prefs.getInt(KEY_PIN_FOCUS, DEFAULT_PIN_FOCUS)
+        _defaultIntervalMs.value = prefs.getLong(KEY_INTV_INTERVAL, AppConfig.DEFAULT_INTERVAL_MS)
+        _defaultExposureMs.value = prefs.getLong(KEY_INTV_EXPOSURE, AppConfig.DEFAULT_EXPOSURE_MS)
+        _defaultShotCount.value = prefs.getInt(KEY_INTV_COUNT, AppConfig.DEFAULT_SHOT_COUNT)
+        _defaultDelayMs.value = prefs.getLong(KEY_INTV_DELAY, AppConfig.DEFAULT_DELAY_MS)
+        _maxShotCount.value = prefs.getInt(KEY_INTV_MAX_SHOTS, AppConfig.DEFAULT_MAX_SHOTS)
+        _pinShutter.value = prefs.getInt(KEY_PIN_SHUTTER, DEFAULT_PIN_SHUTTER)
+        _pinFocus.value = prefs.getInt(KEY_PIN_FOCUS, DEFAULT_PIN_FOCUS)
         // Load custom flow steps
-        flowSteps.value = try {
+        _flowSteps.value = try {
             FlowStep.deserializeList(prefs.getString(KEY_FLOW_STEPS, "") ?: "")
         } catch (_: Exception) { emptyList() }
         // Load saved flows library
-        savedFlows.value = try {
+        _savedFlows.value = try {
             SavedFlow.deserializeList(prefs.getString(KEY_SAVED_FLOWS, "") ?: "")
         } catch (_: Exception) { emptyList() }
         // Apply defaults as initial working values
-        intervalMs.value = defaultIntervalMs.value
-        exposureMs.value = defaultExposureMs.value
-        shotCount.value = defaultShotCount.value
-        delayMs.value = defaultDelayMs.value
+        _intervalMs.value = _defaultIntervalMs.value
+        _exposureMs.value = _defaultExposureMs.value
+        _shotCount.value = _defaultShotCount.value
+        _delayMs.value = _defaultDelayMs.value
 
         app.registerReceiver(
             cancelReceiver,
@@ -269,16 +291,29 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         bleManager.disconnectDevice()
     }
 
+
+    // ── Field setters (encapsulation) ────────────────────────────────────
+    fun setIntervalMs(v: Long) { _intervalMs.value = v.coerceAtLeast(AppConfig.MIN_INTERVAL_MS) }
+    fun setExposureMs(v: Long) { _exposureMs.value = v.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS) }
+    fun setShotCount(v: Int) { _shotCount.value = v.coerceAtLeast(AppConfig.MIN_SHOT_COUNT) }
+    fun setDelayMs(v: Long) { _delayMs.value = v }
+    fun setAstroFocalLength(v: Int) { _astroFocalLength.value = v }
+    fun setAstroCropFactor(v: Float) { _astroCropFactor.value = v }
+    fun setAstroRuleDivisor(v: Int) { _astroRuleDivisor.value = v }
+    fun setAstroGapMs(v: Long) { _astroGapMs.value = v.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS) }
+    fun setAstroShotCount(v: Int) { _astroShotCount.value = v.coerceAtLeast(AppConfig.MIN_SHOT_COUNT) }
+    fun setAstroDelayMs(v: Long) { _astroDelayMs.value = v }
+
     // ── Commands ─────────────────────────────────────────────────────────
     fun selectMode(mode: TriggerMode) {
         _currentMode.value = mode
     }
 
     fun saveIntervalometerDefaults(interval: Long, exposure: Long, count: Int, delay: Long) {
-        defaultIntervalMs.value = interval
-        defaultExposureMs.value = exposure
-        defaultShotCount.value = count
-        defaultDelayMs.value = delay
+        _defaultIntervalMs.value = interval
+        _defaultExposureMs.value = exposure
+        _defaultShotCount.value = count
+        _defaultDelayMs.value = delay
         prefs.edit()
             .putLong(KEY_INTV_INTERVAL, interval)
             .putLong(KEY_INTV_EXPOSURE, exposure)
@@ -286,19 +321,19 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             .putLong(KEY_INTV_DELAY, delay)
             .apply()
         // Apply to working values
-        intervalMs.value = interval
-        exposureMs.value = exposure
-        shotCount.value = count
-        delayMs.value = delay
+        _intervalMs.value = interval
+        _exposureMs.value = exposure
+        _shotCount.value = count
+        _delayMs.value = delay
     }
 
     fun saveMaxShotCount(max: Int) {
-        maxShotCount.value = max.coerceIn(AppConfig.MIN_MAX_SHOTS, AppConfig.MAX_MAX_SHOTS)
-        prefs.edit().putInt(KEY_INTV_MAX_SHOTS, maxShotCount.value).apply()
+        _maxShotCount.value = max.coerceIn(AppConfig.MIN_MAX_SHOTS, AppConfig.MAX_MAX_SHOTS)
+        prefs.edit().putInt(KEY_INTV_MAX_SHOTS, _maxShotCount.value).apply()
         // Clamp current values if they exceed the new max
-        if (shotCount.value > maxShotCount.value) shotCount.value = maxShotCount.value
-        if (defaultShotCount.value > maxShotCount.value) {
-            saveIntervalometerDefaults(defaultIntervalMs.value, defaultExposureMs.value, maxShotCount.value, defaultDelayMs.value)
+        if (_shotCount.value > _maxShotCount.value) _shotCount.value = _maxShotCount.value
+        if (_defaultShotCount.value > _maxShotCount.value) {
+            saveIntervalometerDefaults(_defaultIntervalMs.value, _defaultExposureMs.value, _maxShotCount.value, _defaultDelayMs.value)
         }
     }
 
@@ -308,8 +343,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun savePins(shutter: Int, focus: Int) {
-        pinShutter.value = shutter
-        pinFocus.value = focus
+        _pinShutter.value = shutter
+        _pinFocus.value = focus
         prefs.edit()
             .putInt(KEY_PIN_SHUTTER, shutter)
             .putInt(KEY_PIN_FOCUS, focus)
@@ -319,58 +354,58 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun sendPins() {
         if (_simulatorActive.value) return
-        bleManager.sendCommand(CommandBuilder.setPins(pinShutter.value, pinFocus.value))
+        bleManager.sendCommand(CommandBuilder.setPins(_pinShutter.value, _pinFocus.value))
     }
 
     // ── Custom Flow management ───────────────────────────────────────────
 
     fun saveFlowSteps(steps: List<FlowStep>) {
-        flowSteps.value = steps
+        _flowSteps.value = steps
         prefs.edit().putString(KEY_FLOW_STEPS, FlowStep.serializeList(steps)).apply()
     }
 
     fun saveFlowAs(name: String) {
-        val flow = SavedFlow(name = name, steps = flowSteps.value)
-        val updated = savedFlows.value.filter { it.name != name } + flow
-        savedFlows.value = updated
+        val flow = SavedFlow(name = name, steps = _flowSteps.value)
+        val updated = _savedFlows.value.filter { it.name != name } + flow
+        _savedFlows.value = updated
         prefs.edit().putString(KEY_SAVED_FLOWS, SavedFlow.serializeList(updated)).apply()
     }
 
     fun loadSavedFlow(name: String) {
-        val flow = savedFlows.value.firstOrNull { it.name == name } ?: return
+        val flow = _savedFlows.value.firstOrNull { it.name == name } ?: return
         saveFlowSteps(flow.steps)
     }
 
     fun deleteSavedFlow(name: String) {
-        val updated = savedFlows.value.filter { it.name != name }
-        savedFlows.value = updated
+        val updated = _savedFlows.value.filter { it.name != name }
+        _savedFlows.value = updated
         prefs.edit().putString(KEY_SAVED_FLOWS, SavedFlow.serializeList(updated)).apply()
     }
 
     fun startFlow() {
-        val steps = flowSteps.value
+        val steps = _flowSteps.value
         if (steps.isEmpty()) return
         flowJob?.cancel()
-        flowRunning.value = true
-        flowPaused.value = false
-        flowCurrentStep.value = 0
+        _flowRunning.value = true
+        _flowPaused.value = false
+        _flowCurrentStep.value = 0
         flowJob = viewModelScope.launch {
             try {
                 for (i in steps.indices) {
-                    flowCurrentStep.value = i
+                    _flowCurrentStep.value = i
                     executeFlowStep(steps[i])
                 }
                 // All steps complete
             } finally {
-                flowRunning.value = false
-                flowPaused.value = false
-                flowCurrentStep.value = -1
+                _flowRunning.value = false
+                _flowPaused.value = false
+                _flowCurrentStep.value = -1
             }
         }
     }
 
     fun continueFlow() {
-        flowPaused.value = false
+        _flowPaused.value = false
     }
 
     fun stopFlow() {
@@ -380,18 +415,18 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         if (!_simulatorActive.value) {
             bleManager.sendCommand(CommandBuilder.stop())
         }
-        flowRunning.value = false
-        flowPaused.value = false
-        flowCurrentStep.value = -1
+        _flowRunning.value = false
+        _flowPaused.value = false
+        _flowCurrentStep.value = -1
         dismissNotification()
     }
 
     private suspend fun executeFlowStep(step: FlowStep) {
         when (step.type) {
             FlowStepType.PAUSE -> {
-                flowPaused.value = true
+                _flowPaused.value = true
                 // Wait until user taps Continue
-                while (flowPaused.value) {
+                while (_flowPaused.value) {
                     coroutineContext.ensureActive()
                     delay(100)
                 }
@@ -477,17 +512,17 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     /** Serialize all persisted settings to JSON for export. */
     fun exportSettingsJson(): String {
         val json = org.json.JSONObject()
-        json.put("intv_interval_ms", defaultIntervalMs.value)
-        json.put("intv_exposure_ms", defaultExposureMs.value)
-        json.put("intv_shot_count", defaultShotCount.value)
-        json.put("intv_delay_ms", defaultDelayMs.value)
-        json.put("intv_max_shots", maxShotCount.value)
-        json.put("pin_shutter", pinShutter.value)
-        json.put("pin_focus", pinFocus.value)
+        json.put("intv_interval_ms", _defaultIntervalMs.value)
+        json.put("intv_exposure_ms", _defaultExposureMs.value)
+        json.put("intv_shot_count", _defaultShotCount.value)
+        json.put("intv_delay_ms", _defaultDelayMs.value)
+        json.put("intv_max_shots", _maxShotCount.value)
+        json.put("pin_shutter", _pinShutter.value)
+        json.put("pin_focus", _pinFocus.value)
         // Custom flow steps
-        json.put("flow_steps", org.json.JSONArray(flowSteps.value.map { it.toJson() }))
+        json.put("flow_steps", org.json.JSONArray(_flowSteps.value.map { it.toJson() }))
         // Saved flows library
-        json.put("saved_flows", org.json.JSONArray(savedFlows.value.map { it.toJson() }))
+        json.put("saved_flows", org.json.JSONArray(_savedFlows.value.map { it.toJson() }))
         return json.toString(2)
     }
 
@@ -514,7 +549,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         // Import saved flows library
         obj.optJSONArray("saved_flows")?.let { arr ->
             val flows = (0 until arr.length()).map { SavedFlow.fromJson(arr.getJSONObject(it)) }
-            savedFlows.value = flows
+            _savedFlows.value = flows
             prefs.edit().putString(KEY_SAVED_FLOWS, SavedFlow.serializeList(flows)).apply()
         }
     }
@@ -523,13 +558,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         if (_simulatorActive.value) return
         val packet = when (_currentMode.value) {
             TriggerMode.INTERVALOMETER -> CommandBuilder.setIntervalometer(
-                intervalMs.value, exposureMs.value, shotCount.value, delayMs.value
+                _intervalMs.value, _exposureMs.value, _shotCount.value, _delayMs.value
             )
             TriggerMode.ASTRO -> {
-                val exposureS = astroRuleDivisor.value.toDouble() / (astroFocalLength.value * astroCropFactor.value)
+                val exposureS = _astroRuleDivisor.value.toDouble() / (_astroFocalLength.value * _astroCropFactor.value)
                 val exposureMs = (exposureS * 1000).toLong().coerceAtLeast(AppConfig.MIN_ASTRO_EXPOSURE_MS)
                 CommandBuilder.setAstro(
-                    astroGapMs.value, exposureMs, astroShotCount.value, astroDelayMs.value
+                    _astroGapMs.value, exposureMs, _astroShotCount.value, _astroDelayMs.value
                 )
             }
             TriggerMode.PRESS_HOLD -> CommandBuilder.setPressHold()
@@ -561,8 +596,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     fun singleShot() {
         if (_simulatorActive.value) {
             viewModelScope.launch {
-                _status.value = _status.value?.copy(state = DeviceState.RUNNING, shotsTaken = 1, timeRemainingMs = exposureMs.value)
-                delay(exposureMs.value)
+                _status.value = _status.value?.copy(state = DeviceState.RUNNING, shotsTaken = 1, timeRemainingMs = _exposureMs.value)
+                delay(_exposureMs.value)
                 _status.value = _status.value?.copy(state = DeviceState.IDLE, shotsTaken = 1, timeRemainingMs = 0L)
             }
             return
@@ -626,26 +661,26 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         simulatorJob?.cancel()
         val mode = _currentMode.value
         val totalShots = when (mode) {
-            TriggerMode.INTERVALOMETER -> shotCount.value
-            TriggerMode.ASTRO -> astroShotCount.value
+            TriggerMode.INTERVALOMETER -> _shotCount.value
+            TriggerMode.ASTRO -> _astroShotCount.value
             else -> 1
         }
         val expMs = when (mode) {
-            TriggerMode.INTERVALOMETER -> exposureMs.value
+            TriggerMode.INTERVALOMETER -> _exposureMs.value
             TriggerMode.ASTRO -> {
-                val s = astroRuleDivisor.value.toDouble() / (astroFocalLength.value * astroCropFactor.value)
+                val s = _astroRuleDivisor.value.toDouble() / (_astroFocalLength.value * _astroCropFactor.value)
                 (s * 1000).toLong().coerceAtLeast(AppConfig.MIN_ASTRO_EXPOSURE_MS)
             }
-            else -> exposureMs.value
+            else -> _exposureMs.value
         }
         val gapMs = when (mode) {
-            TriggerMode.INTERVALOMETER -> intervalMs.value
-            TriggerMode.ASTRO -> astroGapMs.value
+            TriggerMode.INTERVALOMETER -> _intervalMs.value
+            TriggerMode.ASTRO -> _astroGapMs.value
             else -> 0L
         }
         val startDelayMs = when (mode) {
-            TriggerMode.INTERVALOMETER -> delayMs.value
-            TriggerMode.ASTRO -> astroDelayMs.value
+            TriggerMode.INTERVALOMETER -> _delayMs.value
+            TriggerMode.ASTRO -> _astroDelayMs.value
             else -> 0L
         }
 
@@ -704,7 +739,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         val intent = Intent(app, PulsarNotificationService::class.java).apply {
             putExtra(PulsarNotificationService.EXTRA_MODE, _currentMode.value.name.replace('_', ' '))
             putExtra(PulsarNotificationService.EXTRA_SHOTS, s?.shotsTaken ?: 0)
-            putExtra(PulsarNotificationService.EXTRA_TOTAL, shotCount.value)
+            putExtra(PulsarNotificationService.EXTRA_TOTAL, _shotCount.value)
             putExtra(PulsarNotificationService.EXTRA_STATE, s?.state?.name ?: "RUNNING")
         }
         app.startForegroundService(intent)

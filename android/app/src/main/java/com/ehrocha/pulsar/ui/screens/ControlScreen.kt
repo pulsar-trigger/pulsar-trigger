@@ -226,7 +226,7 @@ internal fun AstroActions(vm: PulsarViewModel, connected: Boolean, isRunning: Bo
         connected = connected,
         isRunning = isRunning,
         ruleDivisor = ruleDivisor,
-        onRuleChanged = { vm.astroRuleDivisor.value = it },
+        onRuleChanged = { vm.setAstroRuleDivisor(it) },
         onStart = { vm.start() },
         onStop = { vm.stop() }
     )
@@ -278,14 +278,14 @@ internal fun AstroActionsContent(
             modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
             Text(
-                text = if (isRunning) "STOP ASTRO" else "START ASTRO",
+                text = stringResource(if (isRunning) R.string.btn_stop_astro else R.string.btn_start_astro),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
         }
 
         Text(
-            text = if (isRunning) "Capturing stars…" else "Ready for astro sequence",
+            text = stringResource(if (isRunning) R.string.status_capturing_stars else R.string.status_ready_astro),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -306,10 +306,10 @@ internal fun IntervalometerPanel(vm: PulsarViewModel, enabled: Boolean = true) {
         shotCount = count,
         delayMs = delayVal,
         maxShotCount = maxShots,
-        onIntervalChanged = { vm.intervalMs.value = it.coerceAtLeast(AppConfig.MIN_INTERVAL_MS) },
-        onExposureChanged = { vm.exposureMs.value = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS) },
-        onShotCountChanged = { vm.shotCount.value = it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT) },
-        onDelayChanged = { vm.delayMs.value = it },
+        onIntervalChanged = { vm.setIntervalMs(it) },
+        onExposureChanged = { vm.setExposureMs(it) },
+        onShotCountChanged = { vm.setShotCount(it) },
+        onDelayChanged = { vm.setDelayMs(it) },
         enabled = enabled
     )
 }
@@ -493,11 +493,11 @@ internal fun AstroPanel(vm: PulsarViewModel, enabled: Boolean = true) {
         delayMs = delayVal,
         gapMs = gapMs,
         ruleDivisor = ruleDivisor,
-        onCropFactorChanged = { vm.astroCropFactor.value = it },
-        onFocalLengthChanged = { vm.astroFocalLength.value = it },
-        onGapMsChanged = { vm.astroGapMs.value = it.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS) },
-        onShotCountChanged = { vm.astroShotCount.value = it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT) },
-        onDelayMsChanged = { vm.astroDelayMs.value = it },
+        onCropFactorChanged = { vm.setAstroCropFactor(it) },
+        onFocalLengthChanged = { vm.setAstroFocalLength(it) },
+        onGapMsChanged = { vm.setAstroGapMs(it) },
+        onShotCountChanged = { vm.setAstroShotCount(it) },
+        onDelayMsChanged = { vm.setAstroDelayMs(it) },
         enabled = enabled
     )
 }
@@ -1550,53 +1550,7 @@ internal fun AstroSettingsPanel(vm: PulsarViewModel, connected: Boolean) {
     }
 }
 
-// ── Device Hardware Info ─────────────────────────────────────────────────────
-
-@Composable
-private fun DeviceInfoSection(vm: PulsarViewModel, connected: Boolean) {
-    val info by vm.deviceInfo.collectAsState()
-    val simulatorActive by vm.simulatorActive.collectAsState()
-
-    CollapsibleSection(stringResource(R.string.section_device_hardware)) {
-        if (simulatorActive) {
-            Text(
-                stringResource(R.string.hw_simulator_note),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else if (info != null) {
-            val i = info!!
-            InfoRow(stringResource(R.string.hw_chip), stringResource(R.string.hw_chip_value, i.chipModel, i.chipRevision))
-            InfoRow(stringResource(R.string.hw_cpu), stringResource(R.string.hw_cpu_value, i.cpuFreqMhz))
-            InfoRow(stringResource(R.string.hw_flash), formatKb(i.flashSizeKb))
-            InfoRow(stringResource(R.string.hw_free_heap), formatKb(i.freeHeapKb))
-            if (i.psramKb > 0) {
-                InfoRow(stringResource(R.string.hw_psram), formatKb(i.psramKb.toLong()))
-            }
-            InfoRow(stringResource(R.string.hw_gpio), stringResource(R.string.hw_gpio_value, i.gpioCount, i.safeOutputCount))
-            InfoRow(stringResource(R.string.hw_uptime), formatUptime(i.uptimeMinutes))
-
-            Spacer(Modifier.height(4.dp))
-            OutlinedButton(
-                onClick = { vm.requestDeviceInfo() },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-            ) { Text(stringResource(R.string.refresh)) }
-        } else if (connected) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                Spacer(Modifier.width(12.dp))
-                Text(stringResource(R.string.status_querying_device), style = MaterialTheme.typography.bodySmall)
-            }
-        } else {
-            Text(
-                stringResource(R.string.hw_connect_prompt),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
+// ── Device Hardware Info helpers ──────────────────────────────────────────────
 
 @Composable
 private fun InfoRow(label: String, value: String) {

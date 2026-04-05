@@ -35,6 +35,7 @@ import com.ehrocha.pulsar.ble.StatusFrame
 import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import kotlinx.coroutines.delay
+import com.ehrocha.pulsar.ui.components.BatteryIndicator
 
 @Composable
 fun ModeScreen(
@@ -71,32 +72,7 @@ fun ModeScreen(
             }
             Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
-            if (status != null) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(8.dp),
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    ) {
-                        Text(
-                            text = "${status!!.batteryPct}%",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = if (status!!.batteryPct < 20) Color(0xFFFF1744)
-                                    else MaterialTheme.colorScheme.onSurface,
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        val battIcon = when {
-                            status!!.batteryPct > 75 -> "󰁹"
-                            status!!.batteryPct > 25 -> "󰁾"
-                            else -> "󰁺"
-                        }
-                        Text(text = battIcon, fontSize = 16.sp)
-                    }
-                }
-            }
+            BatteryIndicator(status)
         }
 
         Spacer(Modifier.height(12.dp))
@@ -244,32 +220,7 @@ fun SettingsScreen(
                 fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.weight(1f))
-            if (status != null) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(8.dp),
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    ) {
-                        Text(
-                            text = "${status!!.batteryPct}%",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = if (status!!.batteryPct < 20) Color(0xFFFF1744)
-                                    else MaterialTheme.colorScheme.onSurface,
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        val battIcon = when {
-                            status!!.batteryPct > 75 -> "󰁹"
-                            status!!.batteryPct > 25 -> "󰁾"
-                            else -> "󰁺"
-                        }
-                        Text(text = battIcon, fontSize = 16.sp)
-                    }
-                }
-            }
+            BatteryIndicator(status)
         }
 
         Spacer(Modifier.height(12.dp))
@@ -407,32 +358,7 @@ fun ModeSettingsScreen(
             Spacer(Modifier.width(4.dp))
             Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
-            if (status != null) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(8.dp),
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    ) {
-                        Text(
-                            text = "${status!!.batteryPct}%",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = if (status!!.batteryPct < 20) Color(0xFFFF1744)
-                                    else MaterialTheme.colorScheme.onSurface,
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        val battIcon = when {
-                            status!!.batteryPct > 75 -> "󰁹"
-                            status!!.batteryPct > 25 -> "󰁾"
-                            else -> "󰁺"
-                        }
-                        Text(text = battIcon, fontSize = 16.sp)
-                    }
-                }
-            }
+            BatteryIndicator(status)
         }
 
         Spacer(Modifier.height(12.dp))

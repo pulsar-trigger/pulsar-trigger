@@ -40,6 +40,7 @@ import com.ehrocha.pulsar.model.summaryLabel
 import com.ehrocha.pulsar.ui.components.IntStepperField
 import com.ehrocha.pulsar.ui.components.TimePicker
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
+import com.ehrocha.pulsar.ui.components.BatteryIndicator
 
 private enum class FlowScreenState { LIBRARY, EDITOR }
 
@@ -575,37 +576,6 @@ private fun FlowEditorView(
     }
 }
 
-// ─── Battery indicator (shared) ──────────────────────────────────────────────
-
-@Composable
-private fun BatteryIndicator(status: StatusFrame?) {
-    if (status != null) {
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            shape = RoundedCornerShape(8.dp),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-            ) {
-                Text(
-                    text = "${status.batteryPct}%",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = if (status.batteryPct < 20) Color(0xFFFF1744)
-                            else MaterialTheme.colorScheme.onSurface,
-                )
-                Spacer(Modifier.width(4.dp))
-                val battIcon = when {
-                    status.batteryPct > 75 -> "󰁹"
-                    status.batteryPct > 25 -> "󰁾"
-                    else -> "󰁺"
-                }
-                Text(text = battIcon, fontSize = 16.sp)
-            }
-        }
-    }
-}
 
 // ─── Step card ───────────────────────────────────────────────────────────────
 

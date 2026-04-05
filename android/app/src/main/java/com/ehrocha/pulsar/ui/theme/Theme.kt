@@ -6,7 +6,6 @@
 package com.ehrocha.pulsar.ui.theme
 
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
 val PulsarViolet = Color(0xFFB15CFF)
@@ -25,9 +24,4 @@ val DarkColorScheme = darkColorScheme(
     surfaceVariant = PulsarSecondary,
     onSurfaceVariant = Color(0xFFCAC4D0),
     outline = Color(0xFF938F99)
-)
-
-val LightColorScheme = lightColorScheme(
-    primary = PulsarViolet,
-    onPrimary = Color.White,
 )

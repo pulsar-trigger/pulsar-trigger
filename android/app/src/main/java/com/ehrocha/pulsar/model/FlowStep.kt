@@ -51,7 +51,8 @@ data class FlowStep(
     companion object {
         fun fromJson(json: JSONObject): FlowStep = FlowStep(
             id = json.optString("id", UUID.randomUUID().toString()),
-            type = FlowStepType.valueOf(json.getString("type")),
+            type = FlowStepType.entries.firstOrNull { it.name == json.optString("type") }
+                ?: FlowStepType.PAUSE,
             intervalMs = json.optLong("intervalMs", AppConfig.DEFAULT_INTERVAL_MS),
             exposureMs = json.optLong("exposureMs", AppConfig.DEFAULT_EXPOSURE_MS),
             shotCount = json.optInt("shotCount", 10),

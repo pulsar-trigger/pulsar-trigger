@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
+import com.ehrocha.pulsar.ui.components.BatteryIndicator
 
 @Composable
 fun MainMenuScreen(
@@ -60,32 +61,7 @@ fun MainMenuScreen(
                 letterSpacing = 1.sp,
                 modifier = Modifier.weight(1f),
             )
-            if (status != null) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(8.dp),
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    ) {
-                        Text(
-                            text = "${status!!.batteryPct}%",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = if (status!!.batteryPct < 20) Color(0xFFFF1744)
-                                    else MaterialTheme.colorScheme.onSurface,
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        val battIcon = when {
-                            status!!.batteryPct > 75 -> "󰁹"
-                            status!!.batteryPct > 25 -> "󰁾"
-                            else -> "󰁺"
-                        }
-                        Text(text = battIcon, fontSize = 16.sp)
-                    }
-                }
-            }
+            BatteryIndicator(status)
             Spacer(Modifier.width(4.dp))
             IconButton(onClick = onSettingsSelected) {
                 Icon(

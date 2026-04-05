@@ -10,15 +10,19 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
-import org.json.JSONArray
 import java.io.BufferedInputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import com.ehrocha.pulsar.AppConfig
+import com.ehrocha.pulsar.update.GitHubAsset
+import com.ehrocha.pulsar.update.fetchGitHubRelease
+import com.ehrocha.pulsar.update.fetchExpectedChecksum
+import com.ehrocha.pulsar.update.sha256Hex
 
 data class FirmwareRelease(
     val version: String,
     val downloadUrl: String,
+    val checksumUrl: String?,
     val publishedAt: String,
     val body: String,
 )
@@ -40,8 +44,6 @@ class FirmwareUpdateManager(
 ) {
     companion object {
         private const val TAG = "FirmwareOTA"
-        private const val GITHUB_REPO = AppConfig.GITHUB_REPO
-        private const val RELEASES_URL = "https://api.github.com/repos/$GITHUB_REPO/releases"
         private const val CHUNK_DELAY_MS = AppConfig.OTA_CHUNK_DELAY_MS
     }
 
@@ -96,6 +98,19 @@ class FirmwareUpdateManager(
                 firmwareBytes = downloadFirmware(release.downloadUrl)
                 val fw = firmwareBytes ?: throw Exception("Download returned empty")
                 Log.i(TAG, "Downloaded ${fw.size} bytes")
+
+                // Verify SHA-256 checksum if available
+                release.checksumUrl?.let { url ->
+                    val expected = fetchExpectedChecksum(url)
+                    if (expected != null) {
+                        val actual = sha256Hex(fw)
+                        if (actual != expected) {
+                            firmwareBytes = null
+                            throw Exception("SHA-256 checksum mismatch")
+                        }
+                        Log.i(TAG, "Firmware checksum verified")
+                    }
+                }
 
                 // Phase 2: Send OTA_BEGIN
                 _state.value = OtaState.UPLOADING
@@ -171,41 +186,15 @@ class FirmwareUpdateManager(
     }
 
     private fun fetchLatestRelease(): FirmwareRelease? {
-        val url = URL("$RELEASES_URL?per_page=5")
-        val conn = url.openConnection() as HttpURLConnection
-        conn.setRequestProperty("Accept", "application/vnd.github+json")
-        conn.connectTimeout = AppConfig.API_CONNECT_TIMEOUT_MS
-        conn.readTimeout = AppConfig.API_READ_TIMEOUT_MS
-        try {
-            if (conn.responseCode != 200) {
-                throw Exception("GitHub API returned ${conn.responseCode}")
-            }
-            val body = conn.inputStream.bufferedReader().readText()
-            val releases = JSONArray(body)
-            for (i in 0 until releases.length()) {
-                val rel = releases.getJSONObject(i)
-                val tagName = rel.getString("tag_name")
-                if (!tagName.startsWith("firmware-")) continue
-
-                val version = tagName.removePrefix("firmware-v")
-                val assets = rel.getJSONArray("assets")
-                for (j in 0 until assets.length()) {
-                    val asset = assets.getJSONObject(j)
-                    val name = asset.getString("name")
-                    if (name.endsWith(".bin")) {
-                        return FirmwareRelease(
-                            version = version,
-                            downloadUrl = asset.getString("browser_download_url"),
-                            publishedAt = rel.getString("published_at"),
-                            body = rel.optString("body", ""),
-                        )
-                    }
-                }
-            }
-            return null
-        } finally {
-            conn.disconnect()
-        }
+        val asset = fetchGitHubRelease(tagPrefix = "firmware-v", assetSuffix = ".bin", perPage = 5)
+            ?: return null
+        return FirmwareRelease(
+            version = asset.version,
+            downloadUrl = asset.downloadUrl,
+            checksumUrl = asset.checksumUrl,
+            publishedAt = asset.publishedAt,
+            body = asset.body,
+        )
     }
 
     private fun downloadFirmware(downloadUrl: String): ByteArray {
@@ -213,25 +202,29 @@ class FirmwareUpdateManager(
         val conn = url.openConnection() as HttpURLConnection
         conn.connectTimeout = AppConfig.DOWNLOAD_CONNECT_TIMEOUT_MS
         conn.readTimeout = AppConfig.DOWNLOAD_READ_TIMEOUT_MS
+        val tempFile = java.io.File.createTempFile("firmware_", ".bin")
         try {
             if (conn.responseCode != 200) {
                 throw Exception("Download failed: HTTP ${conn.responseCode}")
             }
             val totalSize = conn.contentLength
-            val input = BufferedInputStream(conn.inputStream);
-            val buffer = ByteArray(8192)
-            val output = java.io.ByteArrayOutputStream(maxOf(totalSize, 256 * 1024))
-            var bytesRead: Int
-            var totalRead = 0
-            while (input.read(buffer).also { bytesRead = it } != -1) {
-                output.write(buffer, 0, bytesRead)
-                totalRead += bytesRead
-                if (totalSize > 0) {
-                    _progress.value = totalRead.toFloat() / totalSize
+            BufferedInputStream(conn.inputStream).use { input ->
+                tempFile.outputStream().buffered().use { output ->
+                    val buffer = ByteArray(8192)
+                    var bytesRead: Int
+                    var totalRead = 0
+                    while (input.read(buffer).also { bytesRead = it } != -1) {
+                        output.write(buffer, 0, bytesRead)
+                        totalRead += bytesRead
+                        if (totalSize > 0) {
+                            _progress.value = totalRead.toFloat() / totalSize
+                        }
+                    }
                 }
             }
-            return output.toByteArray()
+            return tempFile.readBytes()
         } finally {
+            tempFile.delete()
             conn.disconnect()
         }
     }

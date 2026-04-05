@@ -20,6 +20,7 @@ object AppConfig {
     /** GitHub owner/repo used by both firmware OTA and app self-update to
      *  query the Releases API. */
     const val GITHUB_REPO = "pulsar-trigger/pulsar-trigger"
+    const val GITHUB_RELEASES_URL = "https://api.github.com/repos/$GITHUB_REPO/releases"
 
     // ── Intervalometer defaults ──────────────────────────────────────────
     // These are the factory values applied on first launch and after a
