@@ -256,6 +256,7 @@
     <string name="label_dark_window">Fenêtre sombre</string>
     <string name="mw_season_good">Bonne saison pour la photographie de la Voie lactée</string>
     <string name="mw_season_off">Hors saison pour la visibilité du noyau de la Voie lactée</string>
+    <string name="label_rise_set">LEVER / COUCHER</string>
 
     <!-- Best photo windows -->
     <string name="card_best_windows">MEILLEURES FENÊTRES PHOTO</string>

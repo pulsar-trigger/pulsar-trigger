@@ -255,8 +255,7 @@
     <string name="label_core_set">核心落下</string>
     <string name="label_dark_window">黑暗窗口</string>
     <string name="mw_season_good">银河摄影的好季节</string>
-    <string name="mw_season_off">银河核心可见性的淡季</string>
-
+    <string name="mw_season_off">银河核心可见性的淡季</string>    <string name="label_rise_set">升落时间</string>
     <!-- Best photo windows -->
     <string name="card_best_windows">最佳拍摄时段</string>
     <string name="window_excellent">优秀</string>

@@ -256,6 +256,7 @@
     <string name="label_dark_window">Janela Escura</string>
     <string name="mw_season_good">Boa temporada para fotografia da Via Láctea</string>
     <string name="mw_season_off">Fora de temporada para visibilidade do núcleo da Via Láctea</string>
+    <string name="label_rise_set">NASCER / PÔR</string>
 
     <!-- Best photo windows -->
     <string name="card_best_windows">MELHORES JANELAS PARA FOTOS</string>

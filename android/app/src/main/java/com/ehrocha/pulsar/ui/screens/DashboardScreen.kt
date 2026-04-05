@@ -251,25 +251,16 @@ fun DashboardScreen(
 
                     // Sun
                     state.sun?.let { sun ->
-                        val times = listOfNotNull(
-                            sun.sunrise?.let { "↑${formatTime(it)}" },
-                            sun.sunset?.let { "↓${formatTime(it)}" },
-                        ).joinToString("  ")
-                        VerdictRow("☀️", stringResource(R.string.label_sunrise) + " / " + stringResource(R.string.label_sunset), true, times.ifEmpty { null })
+                        VerdictRow("☀️", stringResource(R.string.label_sunrise) + " / " + stringResource(R.string.label_sunset), true)
                     }
 
                     // Moon
                     state.moon?.let { moon ->
-                        val times = listOfNotNull(
-                            moon.rise?.let { "↑${formatTime(it)}" },
-                            moon.set?.let { "↓${formatTime(it)}" },
-                        ).joinToString("  ")
                         VerdictRow(
                             moon.emoji,
                             if (moon.goodForAstro) stringResource(R.string.verdict_moon_good)
                             else stringResource(R.string.verdict_moon_bright),
                             moon.goodForAstro,
-                            times.ifEmpty { null },
                         )
                     }
 
@@ -291,16 +282,11 @@ fun DashboardScreen(
 
                     // Milky Way
                     state.milkyWay?.let { mw ->
-                        val times = listOfNotNull(
-                            mw.coreRise?.let { "↑$it" },
-                            mw.coreSet?.let { "↓$it" },
-                        ).joinToString("  ")
                         VerdictRow(
                             "🌌",
                             if (mw.visible) stringResource(R.string.verdict_mw_visible)
                             else stringResource(R.string.verdict_mw_not_visible),
                             mw.visible,
-                            times.ifEmpty { null },
                         )
                     }
 
@@ -314,6 +300,55 @@ fun DashboardScreen(
                             good,
                             String.format(Locale.US, "%.1f mpsas", b.mpsas),
                         )
+                    }
+
+                    // Rise / Set times
+                    val riseSetRows = buildList {
+                        state.sun?.let { sun ->
+                            val t = listOfNotNull(
+                                sun.sunrise?.let { "↑${formatTime(it)}" },
+                                sun.sunset?.let { "↓${formatTime(it)}" },
+                            ).joinToString("  ")
+                            if (t.isNotEmpty()) add("☀️" to t)
+                        }
+                        state.moon?.let { moon ->
+                            val t = listOfNotNull(
+                                moon.rise?.let { "↑${formatTime(it)}" },
+                                moon.set?.let { "↓${formatTime(it)}" },
+                            ).joinToString("  ")
+                            if (t.isNotEmpty()) add(moon.emoji to t)
+                        }
+                        state.milkyWay?.let { mw ->
+                            val t = listOfNotNull(
+                                mw.coreRise?.let { "↑$it" },
+                                mw.coreSet?.let { "↓$it" },
+                            ).joinToString("  ")
+                            if (t.isNotEmpty()) add("🌌" to t)
+                        }
+                    }
+                    if (riseSetRows.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            stringResource(R.string.label_rise_set),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        riseSetRows.forEach { (emoji, times) ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(emoji, fontSize = 14.sp, modifier = Modifier.width(24.dp))
+                                Text(
+                                    times,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
                     }
 
                     // Best photo windows

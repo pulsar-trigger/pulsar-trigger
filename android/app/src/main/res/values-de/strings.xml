@@ -256,6 +256,7 @@
     <string name="label_dark_window">Dunkelfenster</string>
     <string name="mw_season_good">Gute Saison für Milchstraßenfotografie</string>
     <string name="mw_season_off">Nebensaison für die Sichtbarkeit des Milchstraßenkerns</string>
+    <string name="label_rise_set">AUF- / UNTERGANG</string>
 
     <!-- Best photo windows -->
     <string name="card_best_windows">BESTE FOTOFENSTER</string>

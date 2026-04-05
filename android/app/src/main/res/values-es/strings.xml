@@ -255,8 +255,7 @@
     <string name="label_core_set">Ocaso del Núcleo</string>
     <string name="label_dark_window">Ventana Oscura</string>
     <string name="mw_season_good">Buena temporada para fotografía de la Vía Láctea</string>
-    <string name="mw_season_off">Fuera de temporada para visibilidad del núcleo de la Vía Láctea</string>
-
+    <string name="mw_season_off">Fuera de temporada para visibilidad del núcleo de la Vía Láctea</string>    <string name="label_rise_set">SALIDA / PUESTA</string>
     <!-- Best photo windows -->
     <string name="card_best_windows">MEJORES VENTANAS PARA FOTOS</string>
     <string name="window_excellent">Excelente</string>

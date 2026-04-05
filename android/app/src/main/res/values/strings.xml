@@ -300,6 +300,7 @@
     <string name="label_dark_window">Dark Window</string>
     <string name="mw_season_good">Good season for Milky Way photography</string>
     <string name="mw_season_off">Off-season for Milky Way core visibility</string>
+    <string name="label_rise_set">RISE / SET</string>
 
     <!-- Best photo windows -->
     <string name="card_best_windows">BEST PHOTO WINDOWS</string>

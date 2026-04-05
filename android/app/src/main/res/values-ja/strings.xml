@@ -256,6 +256,7 @@
     <string name="label_dark_window">暗闇の窓</string>
     <string name="mw_season_good">天の川撮影に良い季節</string>
     <string name="mw_season_off">天の川中心部の可視性はオフシーズン</string>
+    <string name="label_rise_set">出没時刻</string>
 
     <!-- Best photo windows -->
     <string name="card_best_windows">最適な撮影時間帯</string>
