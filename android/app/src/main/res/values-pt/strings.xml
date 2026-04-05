@@ -18,7 +18,7 @@
     <string name="mode_custom_flow">Fluxo Personalizado</string>
     <string name="mode_custom_flow_desc">Monte sequências combinando qualquer modo</string>
     <string name="mode_astro_dashboard">Painel Astro</string>
-    <string name="mode_astro_dashboard_desc">Clima, fase lunar &amp; condições do céu</string>
+    <string name="mode_astro_dashboard_desc">Clima, fase lunar, escala Bortle &amp; condições do céu</string>
     <string name="menu_settings">Configurações</string>
     <string name="menu_settings_desc">Configuração e informações do dispositivo</string>
     <string name="disconnect">Desconectar</string>
@@ -213,6 +213,7 @@
     <string name="verdict_rain">Chuva</string>
     <string name="verdict_mw_visible">VL Visível</string>
     <string name="verdict_mw_not_visible">VL Não Visível</string>
+    <string name="verdict_bortle">Bortle %1$d</string>
     <string name="verdict_best_window">Melhor: %1$s – %2$s</string>
 
     <string name="card_moon">FASE DA LUA</string>
@@ -241,6 +242,12 @@
     <string name="label_sunset">Pôr do sol</string>
 
     <!-- Milky Way card -->
+    <string name="card_bortle">POLUIÇÃO LUMINOSA</string>
+    <string name="bortle_class">Bortle Classe %1$d</string>
+    <string name="bortle_label_category">Categoria</string>
+    <string name="bortle_label_mw">Via Láctea</string>
+    <string name="bortle_good">✓ Céu escuro — excelente para astrofotografia de céu profundo</string>
+    <string name="bortle_poor">⚠ Poluição luminosa — use filtros narrowband ou vá para locais mais escuros</string>
     <string name="card_milky_way">VIA LÁCTEA</string>
     <string name="mw_visible">✓ Núcleo visível esta noite durante escuridão astronômica</string>
     <string name="mw_not_visible">✗ Núcleo não visível esta noite — nasce durante o dia ou crepúsculo</string>

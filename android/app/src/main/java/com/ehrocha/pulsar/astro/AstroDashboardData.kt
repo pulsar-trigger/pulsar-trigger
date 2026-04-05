@@ -33,6 +33,7 @@ data class DashboardState(
     val weather: WeatherInfo? = null,
     val moon: MoonInfo? = null,
     val sun: SunInfo? = null,
+    val bortle: BortleInfo? = null,
     val milkyWay: MilkyWayInfo? = null,
     val bestWindows: List<PhotoWindow> = emptyList(),
     val loading: Boolean = false,
@@ -94,6 +95,13 @@ data class PhotoWindow(
     val hours: Int,
     val avgCloudPct: Int,
     val rating: Int,  // 3=Excellent, 2=Good, 1=Fair
+)
+
+data class BortleInfo(
+    val bortleClass: Double,
+    val mpsas: Double,
+    val category: String,
+    val milkyWayQuality: String,
 )
 
 // ── Moon phase calculation ───────────────────────────────────────────────────
@@ -413,6 +421,9 @@ class AstroDashboardManager(private val context: Context) {
             val weatherResult = fetchWeather(loc.latitude, loc.longitude, date, isToday)
             val astroResult = fetchAstronomy(loc.latitude, loc.longitude, date)
 
+            // Fetch light pollution / Bortle scale
+            val bortleInfo = fetchLightPollution(loc.latitude, loc.longitude)
+
             // Moon rise/set computed locally
             val (moonRise, moonSet) = AstroCalculator.moonRiseSet(loc.latitude, loc.longitude, date)
 
@@ -452,6 +463,7 @@ class AstroDashboardManager(private val context: Context) {
                 weather = weatherResult,
                 moon = moonInfo,
                 sun = sunInfo,
+                bortle = bortleInfo,
                 milkyWay = milkyWayInfo,
                 bestWindows = bestWindows,
                 loading = false,
@@ -600,6 +612,43 @@ class AstroDashboardManager(private val context: Context) {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Astronomy fetch failed", e)
+                null
+            }
+        }
+
+    private suspend fun fetchLightPollution(lat: Double, lon: Double): BortleInfo? =
+        withContext(Dispatchers.IO) {
+            try {
+                val url = URL(
+                    "https://lightpollutionmap.app/api/lightpollution" +
+                        "?lat=$lat&lon=$lon"
+                )
+                val conn = url.openConnection() as HttpURLConnection
+                conn.connectTimeout = AppConfig.API_CONNECT_TIMEOUT_MS
+                conn.readTimeout = AppConfig.API_READ_TIMEOUT_MS
+                conn.setRequestProperty("Origin", "https://lightpollutionmap.app")
+                conn.setRequestProperty("Referer", "https://lightpollutionmap.app/")
+                conn.setRequestProperty("User-Agent",
+                    "Mozilla/5.0 (Linux; Android) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36")
+                try {
+                    val json = JSONObject(conn.inputStream.bufferedReader().readText())
+                    val bortle = json.getDouble("bortleScale")
+                    val brightness = json.optJSONObject("brightness")
+                    val mpsas = brightness?.optDouble("mpsas", 0.0) ?: 0.0
+                    val info = json.optJSONObject("lightPollutionInfo")
+                    val category = info?.optString("category", "") ?: ""
+                    val milkyWay = info?.optString("milkyWay", "") ?: ""
+                    BortleInfo(
+                        bortleClass = bortle,
+                        mpsas = mpsas,
+                        category = category.substringAfterLast("."),
+                        milkyWayQuality = milkyWay.substringAfterLast("."),
+                    )
+                } finally {
+                    conn.disconnect()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Light pollution fetch failed", e)
                 null
             }
         }

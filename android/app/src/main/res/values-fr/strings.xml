@@ -18,7 +18,7 @@
     <string name="mode_custom_flow">Séquence personnalisée</string>
     <string name="mode_custom_flow_desc">Créez des séquences multi-étapes combinant tous les modes</string>
     <string name="mode_astro_dashboard">Tableau de bord Astro</string>
-    <string name="mode_astro_dashboard_desc">Météo, phase lunaire &amp; conditions du ciel</string>
+    <string name="mode_astro_dashboard_desc">Météo, phase lunaire, échelle de Bortle &amp; conditions du ciel</string>
     <string name="menu_settings">Paramètres</string>
     <string name="menu_settings_desc">Configuration et informations de l\'appareil</string>
     <string name="disconnect">Déconnecter</string>
@@ -213,6 +213,7 @@
     <string name="verdict_rain">Pluie</string>
     <string name="verdict_mw_visible">VL Visible</string>
     <string name="verdict_mw_not_visible">VL Non Visible</string>
+    <string name="verdict_bortle">Bortle %1$d</string>
     <string name="verdict_best_window">Optimal : %1$s – %2$s</string>
 
     <string name="card_moon">PHASE LUNAIRE</string>
@@ -241,6 +242,12 @@
     <string name="label_sunset">Coucher du soleil</string>
 
     <!-- Milky Way card -->
+    <string name="card_bortle">POLLUTION LUMINEUSE</string>
+    <string name="bortle_class">Bortle Classe %1$d</string>
+    <string name="bortle_label_category">Catégorie</string>
+    <string name="bortle_label_mw">Voie Lactée</string>
+    <string name="bortle_good">✓ Ciel sombre — excellent pour l\'astrophotographie du ciel profond</string>
+    <string name="bortle_poor">⚠ Pollution lumineuse — utilisez des filtres narrowband ou déplacez-vous</string>
     <string name="card_milky_way">VOIE LACTÉE</string>
     <string name="mw_visible">✓ Noyau visible ce soir pendant l\'obscurité astronomique</string>
     <string name="mw_not_visible">✗ Noyau non visible ce soir — se lève pendant le jour ou le crépuscule</string>

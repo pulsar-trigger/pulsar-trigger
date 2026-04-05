@@ -304,6 +304,18 @@ fun DashboardScreen(
                         )
                     }
 
+                    // Bortle / Light Pollution
+                    state.bortle?.let { b ->
+                        val bInt = b.bortleClass.toInt().coerceIn(1, 9)
+                        val good = bInt <= 4
+                        VerdictRow(
+                            "💡",
+                            stringResource(R.string.verdict_bortle, bInt),
+                            good,
+                            String.format(Locale.US, "%.1f mpsas", b.mpsas),
+                        )
+                    }
+
                     // Best photo windows
                     if (state.bestWindows.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
@@ -494,6 +506,55 @@ fun DashboardScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+            }
+
+            // ── Bortle / Light Pollution card ────────────────────────
+            state.bortle?.let { b ->
+                val bInt = b.bortleClass.toInt().coerceIn(1, 9)
+                val good = bInt <= 4
+                DashCard(title = stringResource(R.string.card_bortle), icon = Icons.Default.Lightbulb) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("💡", fontSize = 36.sp)
+                        Spacer(Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                stringResource(R.string.bortle_class, bInt),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                String.format(Locale.US, "%.2f mag/arcsec²", b.mpsas),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                    ) {
+                        InfoChip(stringResource(R.string.bortle_label_category), b.category)
+                        InfoChip(stringResource(R.string.bortle_label_mw), b.milkyWayQuality)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Surface(
+                        color = if (good) Color(0xFF2E7D32).copy(alpha = 0.15f)
+                                else Color(0xFFE65100).copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = if (good) stringResource(R.string.bortle_good)
+                                   else stringResource(R.string.bortle_poor),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(8.dp),
+                            color = if (good) Color(0xFF2E7D32) else Color(0xFFE65100),
+                        )
+                    }
                 }
             }
 

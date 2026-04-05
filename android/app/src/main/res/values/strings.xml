@@ -22,7 +22,7 @@
     <string name="mode_custom_flow">Custom Flow</string>
     <string name="mode_custom_flow_desc">Build multi-step sequences mixing any mode</string>
     <string name="mode_astro_dashboard">Astro Dashboard</string>
-    <string name="mode_astro_dashboard_desc">Weather, moon phase &amp; sky conditions</string>
+    <string name="mode_astro_dashboard_desc">Weather, moon phase, Bortle scale &amp; sky conditions</string>
     <string name="menu_settings">Settings</string>
     <string name="menu_settings_desc">Device configuration and info</string>
     <string name="disconnect">Disconnect</string>
@@ -257,6 +257,7 @@
     <string name="verdict_rain">Rain</string>
     <string name="verdict_mw_visible">MW Visible</string>
     <string name="verdict_mw_not_visible">MW Not Visible</string>
+    <string name="verdict_bortle">Bortle %1$d</string>
     <string name="verdict_best_window">Best: %1$s – %2$s</string>
 
     <string name="card_moon">MOON PHASE</string>
@@ -285,6 +286,12 @@
     <string name="label_sunset">Sunset</string>
 
     <!-- Milky Way card -->
+    <string name="card_bortle">LIGHT POLLUTION</string>
+    <string name="bortle_class">Bortle Class %1$d</string>
+    <string name="bortle_label_category">Category</string>
+    <string name="bortle_label_mw">Milky Way</string>
+    <string name="bortle_good">✓ Dark skies — excellent for deep-sky astrophotography</string>
+    <string name="bortle_poor">⚠ Light pollution present — use narrowband filters or travel darker</string>
     <string name="card_milky_way">MILKY WAY</string>
     <string name="mw_visible">✓ Core visible tonight during astronomical darkness</string>
     <string name="mw_not_visible">✗ Core not visible tonight — rises during daylight or twilight</string>
