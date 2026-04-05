@@ -54,6 +54,7 @@ fun ScrollPicker(
 
     var editing by remember { mutableStateOf(false) }
     var editText by remember { mutableStateOf("") }
+    var hadFocus by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
 
@@ -70,6 +71,7 @@ fun ScrollPicker(
         val parsed = editText.toIntOrNull()?.coerceIn(range) ?: value
         onValueChange(parsed)
         editing = false
+        hadFocus = false
         focusManager.clearFocus()
     }
 
@@ -120,7 +122,13 @@ fun ScrollPicker(
                     .widthIn(min = 52.dp)
                     .height(40.dp)
                     .focusRequester(focusRequester)
-                    .onFocusChanged { if (!it.isFocused && editing) commitEdit() },
+                    .onFocusChanged {
+                        if (it.isFocused) {
+                            hadFocus = true
+                        } else if (hadFocus && editing) {
+                            commitEdit()
+                        }
+                    },
                 decorationBox = { inner ->
                     Box(
                         contentAlignment = Alignment.Center,
