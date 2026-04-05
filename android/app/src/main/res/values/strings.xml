@@ -241,11 +241,25 @@
     <string name="dashboard_title">Astro Dashboard</string>
     <string name="status_fetching_data">Fetching location &amp; data…</string>
     <string name="card_location">LOCATION</string>
+    <string name="card_summary">SUMMARY</string>
     <string name="location_north">N</string>
     <string name="location_south">S</string>
     <string name="location_east">E</string>
     <string name="location_west">W</string>
     <string name="location_altitude">Altitude: %.0f m</string>
+
+    <!-- Summary verdict chips -->
+    <string name="verdict_moon_good">Dark Moon</string>
+    <string name="verdict_moon_bright">Bright Moon</string>
+    <string name="verdict_clear">Clear Skies</string>
+    <string name="verdict_partly">Partly Cloudy</string>
+    <string name="verdict_cloudy">Too Cloudy</string>
+    <string name="verdict_rain">Rain</string>
+    <string name="verdict_bortle">Bortle %1$d</string>
+    <string name="verdict_mw_visible">MW Visible</string>
+    <string name="verdict_mw_not_visible">MW Not Visible</string>
+    <string name="verdict_best_window">Best: %1$s – %2$s</string>
+
     <string name="card_bortle">LIGHT POLLUTION (BORTLE)</string>
     <string name="bortle_unavailable">Light pollution data unavailable for this location</string>
     <string name="card_moon">MOON PHASE</string>

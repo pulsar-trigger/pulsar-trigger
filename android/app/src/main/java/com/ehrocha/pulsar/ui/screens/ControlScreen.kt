@@ -415,7 +415,6 @@ internal fun IntervalometerPanelContent(
                 totalMs = exposureMs,
                 onChanged = { onExposureChanged(it) },
                 label = stringResource(R.string.label_exposure),
-                showMs = true,
                 enabled = enabled,
             )
 
@@ -681,7 +680,7 @@ private val SENSOR_PRESETS = listOf(
 )
 
 internal fun formatDuration(ms: Long): String {
-    val totalS = ms / 1000.0
+    val totalS = (ms + 500) / 1000
     return if (totalS >= 60) {
         val m = (totalS / 60).toInt()
         val s = (totalS % 60).toInt()
@@ -693,7 +692,7 @@ internal fun formatDuration(ms: Long): String {
             "${m}m ${s}s"
         }
     } else {
-        "${"%.1f".format(totalS)}s"
+        "${totalS}s"
     }
 }
 
@@ -1380,9 +1379,8 @@ internal fun IntervalometerSettingsPanel(vm: PulsarViewModel, connected: Boolean
 
                 TimePicker(
                     totalMs = defExposure,
-                    onChanged = { vm.saveIntervalometerDefaults(defInterval, it.coerceAtLeast(50), defCount, defDelay) },
+                    onChanged = { vm.saveIntervalometerDefaults(defInterval, it.coerceAtLeast(1000), defCount, defDelay) },
                     label = stringResource(R.string.label_default_exposure),
-                    showMs = true,
                 )
 
                 TimePicker(

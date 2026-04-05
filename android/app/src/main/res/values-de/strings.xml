@@ -197,11 +197,25 @@
     <string name="dashboard_title">Astro-Dashboard</string>
     <string name="status_fetching_data">Standort &amp; Daten werden abgerufen…</string>
     <string name="card_location">STANDORT</string>
+    <string name="card_summary">ZUSAMMENFASSUNG</string>
     <string name="location_north">N</string>
     <string name="location_south">S</string>
     <string name="location_east">O</string>
     <string name="location_west">W</string>
     <string name="location_altitude">Höhe: %.0f m</string>
+
+    <!-- Summary verdict chips -->
+    <string name="verdict_moon_good">Dunkler Mond</string>
+    <string name="verdict_moon_bright">Heller Mond</string>
+    <string name="verdict_clear">Klarer Himmel</string>
+    <string name="verdict_partly">Teilweise Bewölkt</string>
+    <string name="verdict_cloudy">Zu Bewölkt</string>
+    <string name="verdict_rain">Regen</string>
+    <string name="verdict_bortle">Bortle %1$d</string>
+    <string name="verdict_mw_visible">MW Sichtbar</string>
+    <string name="verdict_mw_not_visible">MW Nicht Sichtbar</string>
+    <string name="verdict_best_window">Optimal: %1$s – %2$s</string>
+
     <string name="card_bortle">LICHTVERSCHMUTZUNG (BORTLE)</string>
     <string name="bortle_unavailable">Lichtverschmutzungsdaten für diesen Standort nicht verfügbar</string>
     <string name="card_moon">MONDPHASE</string>

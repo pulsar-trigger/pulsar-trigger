@@ -197,11 +197,25 @@
     <string name="dashboard_title">天体ダッシュボード</string>
     <string name="status_fetching_data">位置情報＆データを取得中…</string>
     <string name="card_location">位置情報</string>
+    <string name="card_summary">サマリー</string>
     <string name="location_north">北</string>
     <string name="location_south">南</string>
     <string name="location_east">東</string>
     <string name="location_west">西</string>
     <string name="location_altitude">標高: %.0f m</string>
+
+    <!-- Summary verdict chips -->
+    <string name="verdict_moon_good">暗い月</string>
+    <string name="verdict_moon_bright">明るい月</string>
+    <string name="verdict_clear">快晴</string>
+    <string name="verdict_partly">曇り時々晴れ</string>
+    <string name="verdict_cloudy">曇りすぎ</string>
+    <string name="verdict_rain">雨</string>
+    <string name="verdict_bortle">Bortle %1$d</string>
+    <string name="verdict_mw_visible">天の川 可視</string>
+    <string name="verdict_mw_not_visible">天の川 不可視</string>
+    <string name="verdict_best_window">最適: %1$s – %2$s</string>
+
     <string name="card_bortle">光害 (BORTLE)</string>
     <string name="bortle_unavailable">この場所の光害データは利用できません</string>
     <string name="card_moon">月齢</string>

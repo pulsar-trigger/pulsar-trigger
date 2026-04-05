@@ -197,11 +197,25 @@
     <string name="dashboard_title">Painel Astro</string>
     <string name="status_fetching_data">Buscando localização &amp; dados…</string>
     <string name="card_location">LOCALIZAÇÃO</string>
+    <string name="card_summary">RESUMO</string>
     <string name="location_north">N</string>
     <string name="location_south">S</string>
     <string name="location_east">L</string>
     <string name="location_west">O</string>
     <string name="location_altitude">Altitude: %.0f m</string>
+
+    <!-- Summary verdict chips -->
+    <string name="verdict_moon_good">Lua Escura</string>
+    <string name="verdict_moon_bright">Lua Brilhante</string>
+    <string name="verdict_clear">Céu Limpo</string>
+    <string name="verdict_partly">Parcialm. Nublado</string>
+    <string name="verdict_cloudy">Muito Nublado</string>
+    <string name="verdict_rain">Chuva</string>
+    <string name="verdict_bortle">Bortle %1$d</string>
+    <string name="verdict_mw_visible">VL Visível</string>
+    <string name="verdict_mw_not_visible">VL Não Visível</string>
+    <string name="verdict_best_window">Melhor: %1$s – %2$s</string>
+
     <string name="card_bortle">POLUIÇÃO LUMINOSA (BORTLE)</string>
     <string name="bortle_unavailable">Dados de poluição luminosa indisponíveis para esta localização</string>
     <string name="card_moon">FASE DA LUA</string>

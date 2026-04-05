@@ -7,6 +7,7 @@ package com.ehrocha.pulsar.astro
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.location.Geocoder
 import android.location.Location
 import android.location.LocationManager
 import android.util.Log
@@ -43,6 +44,7 @@ data class LocationInfo(
     val latitude: Double,
     val longitude: Double,
     val altitude: Double? = null,
+    val cityName: String? = null,
 )
 
 data class WeatherInfo(
@@ -386,7 +388,10 @@ class AstroDashboardManager(private val context: Context) {
                 return
             }
 
-            val locationInfo = LocationInfo(loc.latitude, loc.longitude, loc.altitude)
+            val locationInfo = LocationInfo(
+                loc.latitude, loc.longitude, loc.altitude,
+                cityName = reverseGeocode(loc.latitude, loc.longitude),
+            )
             val isToday = date == LocalDate.now()
 
             // Moon — use selected date
@@ -453,6 +458,22 @@ class AstroDashboardManager(private val context: Context) {
         return lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
             ?: lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
     }
+
+    @Suppress("DEPRECATION")
+    private suspend fun reverseGeocode(lat: Double, lon: Double): String? =
+        withContext(Dispatchers.IO) {
+            try {
+                val geocoder = Geocoder(context, Locale.getDefault())
+                val addresses = geocoder.getFromLocation(lat, lon, 1)
+                addresses?.firstOrNull()?.let { addr ->
+                    listOfNotNull(addr.locality, addr.adminArea, addr.countryCode)
+                        .joinToString(", ")
+                        .takeIf { it.isNotEmpty() }
+                }
+            } catch (_: Exception) {
+                null
+            }
+        }
 
     private suspend fun fetchWeather(
         lat: Double, lon: Double, date: LocalDate, isToday: Boolean,

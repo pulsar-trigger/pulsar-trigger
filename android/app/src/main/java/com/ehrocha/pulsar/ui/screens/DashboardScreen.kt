@@ -185,9 +185,17 @@ fun DashboardScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // ── Location card ────────────────────────────────────────
+            // ── Summary card ──────────────────────────────────────
             state.location?.let { loc ->
-                DashCard(title = stringResource(R.string.card_location), icon = Icons.Default.MyLocation) {
+                DashCard(title = stringResource(R.string.card_summary), icon = Icons.Default.MyLocation) {
+                    // City name + coordinates
+                    loc.cityName?.let { city ->
+                        Text(
+                            city,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
                     Text(
                         String.format(Locale.US, "%.4f° %s, %.4f° %s",
                             abs(loc.latitude),
@@ -195,15 +203,107 @@ fun DashboardScreen(
                             abs(loc.longitude),
                             if (loc.longitude >= 0) stringResource(R.string.location_east) else stringResource(R.string.location_west),
                         ),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    loc.altitude?.let { alt ->
-                        Text(
-                            String.format(Locale.US, stringResource(R.string.location_altitude), alt),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+
+                    Spacer(Modifier.height(12.dp))
+
+                    // Verdict chips grid
+                    @Composable
+                    fun VerdictChip(emoji: String, label: String, good: Boolean) {
+                        Surface(
+                            color = if (good) Color(0xFF2E7D32).copy(alpha = 0.12f)
+                                    else Color(0xFFE65100).copy(alpha = 0.12f),
+                            shape = RoundedCornerShape(8.dp),
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Text(emoji, fontSize = 14.sp)
+                                Text(
+                                    label,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = if (good) Color(0xFF2E7D32) else Color(0xFFE65100),
+                                )
+                            }
+                        }
+                    }
+
+                    // Row 1: Moon, Weather
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        state.moon?.let { moon ->
+                            VerdictChip(
+                                moon.emoji,
+                                if (moon.goodForAstro) stringResource(R.string.verdict_moon_good)
+                                else stringResource(R.string.verdict_moon_bright),
+                                moon.goodForAstro,
+                            )
+                        }
+                        state.weather?.let { weather ->
+                            val hasRain = weather.precipitationMm > 0.1
+                            val good = weather.cloudCoverPct <= 20 && !hasRain
+                            val bad = hasRain || weather.cloudCoverPct > 50
+                            VerdictChip(
+                                weatherEmoji(weather.weatherCode),
+                                when {
+                                    hasRain -> stringResource(R.string.verdict_rain)
+                                    weather.cloudCoverPct <= 20 -> stringResource(R.string.verdict_clear)
+                                    weather.cloudCoverPct <= 50 -> stringResource(R.string.verdict_partly)
+                                    else -> stringResource(R.string.verdict_cloudy)
+                                },
+                                good,
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(6.dp))
+
+                    // Row 2: Bortle, Milky Way
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        state.bortle?.let { bortle ->
+                            VerdictChip(
+                                "🔦",
+                                String.format(stringResource(R.string.verdict_bortle), bortle.classNumber),
+                                bortle.classNumber <= 5,
+                            )
+                        }
+                        state.milkyWay?.let { mw ->
+                            VerdictChip(
+                                "🌌",
+                                if (mw.visible) stringResource(R.string.verdict_mw_visible)
+                                else stringResource(R.string.verdict_mw_not_visible),
+                                mw.visible,
+                            )
+                        }
+                    }
+
+                    // Best window summary
+                    if (state.bestWindows.isNotEmpty()) {
+                        Spacer(Modifier.height(6.dp))
+                        val best = state.bestWindows.first()
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            VerdictChip(
+                                "📷",
+                                String.format(
+                                    stringResource(R.string.verdict_best_window),
+                                    best.startTime, best.endTime,
+                                ),
+                                best.rating >= 2,
+                            )
+                        }
                     }
                 }
             }

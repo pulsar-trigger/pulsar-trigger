@@ -197,11 +197,25 @@
     <string name="dashboard_title">天文仪表盘</string>
     <string name="status_fetching_data">正在获取位置 &amp; 数据…</string>
     <string name="card_location">位置</string>
+    <string name="card_summary">摘要</string>
     <string name="location_north">北</string>
     <string name="location_south">南</string>
     <string name="location_east">东</string>
     <string name="location_west">西</string>
     <string name="location_altitude">海拔：%.0f 米</string>
+
+    <!-- Summary verdict chips -->
+    <string name="verdict_moon_good">暗月</string>
+    <string name="verdict_moon_bright">亮月</string>
+    <string name="verdict_clear">晴空</string>
+    <string name="verdict_partly">多云间晴</string>
+    <string name="verdict_cloudy">云层过厚</string>
+    <string name="verdict_rain">降雨</string>
+    <string name="verdict_bortle">Bortle %1$d</string>
+    <string name="verdict_mw_visible">银河可见</string>
+    <string name="verdict_mw_not_visible">银河不可见</string>
+    <string name="verdict_best_window">最佳：%1$s – %2$s</string>
+
     <string name="card_bortle">光污染（Bortle）</string>
     <string name="bortle_unavailable">该位置暂无光污染数据</string>
     <string name="card_moon">月相</string>
