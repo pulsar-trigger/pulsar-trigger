@@ -7,14 +7,15 @@ package com.ehrocha.pulsar.ble
 
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import com.ehrocha.pulsar.AppConfig
 
-/** Builds BLE command packets (20-byte frames). */
+/** Builds BLE command packets ([AppConfig.BLE_FRAME_SIZE]-byte frames). */
 object CommandBuilder {
 
     private fun frame(cmd: Byte, payload: ByteArray = ByteArray(0)): ByteArray {
-        val buf = ByteArray(20)
+        val buf = ByteArray(AppConfig.BLE_FRAME_SIZE)
         buf[0] = cmd
-        payload.copyInto(buf, destinationOffset = 1, endIndex = minOf(payload.size, 19))
+        payload.copyInto(buf, destinationOffset = 1, endIndex = minOf(payload.size, AppConfig.BLE_PAYLOAD_MAX))
         return buf
     }
 
@@ -26,7 +27,7 @@ object CommandBuilder {
 
     fun setName(suffix: String): ByteArray {
         val bytes = suffix.toByteArray(Charsets.UTF_8)
-        val trimmed = bytes.copyOf(minOf(bytes.size, 12))
+        val trimmed = bytes.copyOf(minOf(bytes.size, AppConfig.BLE_DEVICE_NAME_MAX))
         return frame(Cmd.SET_NAME, trimmed)
     }
 

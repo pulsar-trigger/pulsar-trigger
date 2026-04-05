@@ -14,12 +14,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.data.Data
+import com.ehrocha.pulsar.AppConfig
 
 class PulsarBleManager(context: Context) : BleManager(context) {
 
     companion object {
         private const val TAG = "PulsarBLE"
-        const val OTA_MTU = 517  // request max MTU for fast OTA transfer
+        const val OTA_MTU = AppConfig.BLE_OTA_MTU  // request max MTU for fast OTA transfer
     }
 
     @Volatile
@@ -45,7 +46,7 @@ class PulsarBleManager(context: Context) : BleManager(context) {
     private val _otaStatus = MutableStateFlow<OtaStatus?>(null)
     val otaStatus: StateFlow<OtaStatus?> = _otaStatus
 
-    private val _mtu = MutableStateFlow(23)  // default BLE MTU
+    private val _mtu = MutableStateFlow(AppConfig.BLE_DEFAULT_MTU)  // default BLE MTU
     val mtu: StateFlow<Int> = _mtu
 
     override fun isRequiredServiceSupported(gatt: BluetoothGatt): Boolean {
@@ -132,7 +133,7 @@ class PulsarBleManager(context: Context) : BleManager(context) {
     fun hasOtaSupport(): Boolean = otaCtrlChar != null && otaDataChar != null
 
     /** Returns usable payload per BLE write (MTU - 3 for ATT header). */
-    fun otaChunkSize(): Int = (_mtu.value - 3).coerceAtLeast(20)
+    fun otaChunkSize(): Int = (_mtu.value - 3).coerceAtLeast(AppConfig.BLE_MIN_OTA_CHUNK)
 
     /** Request GATT cache clear on next disconnect+reconnect. */
     fun requestCacheRefresh() {
@@ -150,7 +151,7 @@ class PulsarBleManager(context: Context) : BleManager(context) {
 
     fun connectDevice(device: BluetoothDevice) {
         connect(device)
-            .retry(3, 200)
+            .retry(AppConfig.BLE_CONNECT_RETRIES, AppConfig.BLE_RETRY_DELAY_MS)
             .useAutoConnect(false)
             .enqueue()
     }

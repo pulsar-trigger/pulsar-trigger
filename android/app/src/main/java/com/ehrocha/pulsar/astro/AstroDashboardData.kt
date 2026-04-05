@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import com.ehrocha.pulsar.AppConfig
 import java.net.HttpURLConnection
 import java.net.URL
 import java.time.LocalDate
@@ -155,7 +156,7 @@ object MoonPhase {
     }
 
     /** Good for astrophotography when illumination < 25% */
-    fun goodForAstro(illumination: Double): Boolean = illumination < 25.0
+    fun goodForAstro(illumination: Double): Boolean = illumination < AppConfig.MOON_GOOD_ASTRO_THRESHOLD
 
     private fun julianDay(year: Int, month: Int, day: Double): Double {
         var y = year
@@ -286,15 +287,15 @@ object AstroCalculator {
         var gcSet: Double? = null
         var prevGcUp = false
 
-        var t = sunsetLocal - 1.0
-        while (t <= sunriseNext + 1.0) {
+        var t = sunsetLocal - AppConfig.DARK_WINDOW_OFFSET_HOURS
+        while (t <= sunriseNext + AppConfig.DARK_WINDOW_OFFSET_HOURS) {
             val utcH = t - tz
             val siderealTime = lst(date, utcH, lon)
             val sunAlt = altitude(lat, sunDec, siderealTime - sunRa)
             val gcAlt = altitude(lat, GC_DEC_DEG, siderealTime - GC_RA_DEG)
 
-            val isDark = sunAlt < -18.0
-            val gcUp = gcAlt > 5.0
+            val isDark = sunAlt < AppConfig.ASTRONOMICAL_TWILIGHT_DEG
+            val gcUp = gcAlt > AppConfig.GC_ALTITUDE_THRESHOLD
 
             if (gcUp && !prevGcUp) gcRise = t
             if (!gcUp && prevGcUp) gcSet = t
@@ -304,7 +305,7 @@ object AstroCalculator {
                 if (mwStart == null) mwStart = t
                 mwEnd = t
             }
-            t += 10.0 / 60.0
+            t += AppConfig.MW_SCAN_STEP_MINUTES / 60.0
         }
 
         val month = date.monthValue
@@ -328,12 +329,12 @@ object AstroCalculator {
     ): List<PhotoWindow> {
         val sunsetH = parseIsoHour(sunsetIso) ?: return emptyList()
         val sunriseH = parseIsoHour(sunriseIso) ?: return emptyList()
-        val darkAfter = sunsetH + 1.0
-        val darkBefore = sunriseH - 1.0
+        val darkAfter = sunsetH + AppConfig.DARK_WINDOW_OFFSET_HOURS
+        val darkBefore = sunriseH - AppConfig.DARK_WINDOW_OFFSET_HOURS
 
         val dark = hourly.filter { h ->
             val hh = parseIsoHour(h.time) ?: return@filter false
-            (hh >= darkAfter || hh <= darkBefore) && h.precipitationMm <= 0.1
+            (hh >= darkAfter || hh <= darkBefore) && h.precipitationMm <= AppConfig.PRECIPITATION_CLEAR_THRESHOLD
         }
         if (dark.isEmpty()) return emptyList()
 
@@ -358,9 +359,9 @@ object AstroCalculator {
                 endTime = w.last().time.substringAfter("T").take(5),
                 hours = w.size,
                 avgCloudPct = avgCloud,
-                rating = when { score >= 80 -> 3; score >= 50 -> 2; else -> 1 },
+                rating = when { score >= AppConfig.PHOTO_WINDOW_EXCELLENT -> 3; score >= AppConfig.PHOTO_WINDOW_GOOD -> 2; else -> 1 },
             )
-        }.sortedByDescending { it.hours * (100 - it.avgCloudPct) }.take(3)
+        }.sortedByDescending { it.hours * (100 - it.avgCloudPct) }.take(AppConfig.MAX_PHOTO_WINDOWS)
     }
 }
 
@@ -497,8 +498,8 @@ class AstroDashboardManager(private val context: Context) {
                 }
                 val url = URL(urlStr)
                 val conn = url.openConnection() as HttpURLConnection
-                conn.connectTimeout = 10_000
-                conn.readTimeout = 10_000
+                conn.connectTimeout = AppConfig.API_CONNECT_TIMEOUT_MS
+                conn.readTimeout = AppConfig.API_READ_TIMEOUT_MS
                 try {
                     val json = JSONObject(conn.inputStream.bufferedReader().readText())
 
@@ -510,7 +511,7 @@ class AstroDashboardManager(private val context: Context) {
                         val clouds = hourly.getJSONArray("cloud_cover")
                         val precip = hourly.getJSONArray("precipitation")
                         val codes = hourly.getJSONArray("weather_code")
-                        val count = if (isToday) minOf(times.length(), 12) else times.length()
+                        val count = if (isToday) minOf(times.length(), AppConfig.HOURLY_FORECAST_CAP) else times.length()
                         for (i in 0 until count) {
                             hourlyList.add(
                                 HourlyForecast(
@@ -574,8 +575,8 @@ class AstroDashboardManager(private val context: Context) {
                         "&timezone=auto"
                 )
                 val conn = url.openConnection() as HttpURLConnection
-                conn.connectTimeout = 10_000
-                conn.readTimeout = 10_000
+                conn.connectTimeout = AppConfig.API_CONNECT_TIMEOUT_MS
+                conn.readTimeout = AppConfig.API_READ_TIMEOUT_MS
                 try {
                     val json = JSONObject(conn.inputStream.bufferedReader().readText())
                     val daily = json.getJSONObject("daily")
@@ -603,8 +604,8 @@ class AstroDashboardManager(private val context: Context) {
                         "?ql=wa_2015&qt=point&qd=$lon,$lat"
                 )
                 val conn = url.openConnection() as HttpURLConnection
-                conn.connectTimeout = 10_000
-                conn.readTimeout = 10_000
+                conn.connectTimeout = AppConfig.API_CONNECT_TIMEOUT_MS
+                conn.readTimeout = AppConfig.API_READ_TIMEOUT_MS
                 conn.setRequestProperty("User-Agent", "PulsarTrigger/1.0")
                 try {
                     val response = conn.inputStream.bufferedReader().readText().trim()

@@ -14,6 +14,7 @@ import org.json.JSONArray
 import java.io.BufferedInputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import com.ehrocha.pulsar.AppConfig
 
 data class FirmwareRelease(
     val version: String,
@@ -39,9 +40,9 @@ class FirmwareUpdateManager(
 ) {
     companion object {
         private const val TAG = "FirmwareOTA"
-        private const val GITHUB_REPO = "pulsar-trigger/pulsar-trigger"
+        private const val GITHUB_REPO = AppConfig.GITHUB_REPO
         private const val RELEASES_URL = "https://api.github.com/repos/$GITHUB_REPO/releases"
-        private const val CHUNK_DELAY_MS = 10L  // throttle between BLE writes
+        private const val CHUNK_DELAY_MS = AppConfig.OTA_CHUNK_DELAY_MS
     }
 
     private val _state = MutableStateFlow(OtaState.IDLE)

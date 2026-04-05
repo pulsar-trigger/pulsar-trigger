@@ -47,6 +47,7 @@ import com.ehrocha.pulsar.BuildConfig
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ui.components.IntStepperField
 import com.ehrocha.pulsar.ui.components.TimePicker
+import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel.Companion.SAFE_OUTPUT_PINS
 
@@ -314,9 +315,9 @@ internal fun IntervalometerPanel(vm: PulsarViewModel, enabled: Boolean = true) {
         shotCount = count,
         delayMs = delayVal,
         maxShotCount = maxShots,
-        onIntervalChanged = { vm.intervalMs.value = it.coerceAtLeast(500) },
-        onExposureChanged = { vm.exposureMs.value = it.coerceAtLeast(50) },
-        onShotCountChanged = { vm.shotCount.value = it.coerceAtLeast(1) },
+        onIntervalChanged = { vm.intervalMs.value = it.coerceAtLeast(AppConfig.MIN_INTERVAL_MS) },
+        onExposureChanged = { vm.exposureMs.value = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS) },
+        onShotCountChanged = { vm.shotCount.value = it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT) },
         onDelayChanged = { vm.delayMs.value = it },
         enabled = enabled
     )
@@ -428,8 +429,8 @@ internal fun IntervalometerPanelContent(
             IntStepperField(
                 label = stringResource(R.string.label_number_of_shots),
                 value = shotCount,
-                onValueChange = { onShotCountChanged(it.coerceAtLeast(1)) },
-                min = 1,
+                onValueChange = { onShotCountChanged(it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT)) },
+                min = AppConfig.MIN_SHOT_COUNT,
                 max = maxShotCount,
                 enabled = enabled,
             )
@@ -503,8 +504,8 @@ internal fun AstroPanel(vm: PulsarViewModel, enabled: Boolean = true) {
         ruleDivisor = ruleDivisor,
         onCropFactorChanged = { vm.astroCropFactor.value = it },
         onFocalLengthChanged = { vm.astroFocalLength.value = it },
-        onGapMsChanged = { vm.astroGapMs.value = it.coerceAtLeast(500) },
-        onShotCountChanged = { vm.astroShotCount.value = it.coerceAtLeast(1) },
+        onGapMsChanged = { vm.astroGapMs.value = it.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS) },
+        onShotCountChanged = { vm.astroShotCount.value = it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT) },
         onDelayMsChanged = { vm.astroDelayMs.value = it },
         enabled = enabled
     )
@@ -528,7 +529,7 @@ internal fun AstroPanelContent(
     enabled: Boolean = true,
 ) {
     val maxExposureS = ruleDivisor.toDouble() / (focalLength * cropFactor)
-    val maxExposureMs = (maxExposureS * 1000).toLong().coerceAtLeast(100)
+    val maxExposureMs = (maxExposureS * 1000).toLong().coerceAtLeast(AppConfig.MIN_ASTRO_EXPOSURE_MS)
     val intervalMs = maxExposureMs + gapMs
     val totalTimeMs = delayMs + shotCount.toLong() * (maxExposureMs + gapMs) - gapMs
 
@@ -633,10 +634,10 @@ internal fun AstroPanelContent(
                 label = stringResource(R.string.label_focal_length),
                 value = focalLength,
                 onValueChange = { onFocalLengthChanged(it) },
-                min = 8,
-                max = 600,
+                min = AppConfig.MIN_FOCAL_LENGTH,
+                max = AppConfig.MAX_FOCAL_LENGTH,
                 enabled = enabled,
-                presets = listOf(14, 24, 35, 50, 85, 135, 200, 400, 600),
+                presets = AppConfig.FOCAL_LENGTH_PRESETS,
                 presetLabel = { "${it}mm" },
             )
         }
@@ -661,9 +662,9 @@ internal fun AstroPanelContent(
             IntStepperField(
                 label = stringResource(R.string.label_number_of_shots),
                 value = shotCount,
-                onValueChange = { onShotCountChanged(it.coerceAtLeast(1)) },
-                min = 1,
-                max = 999,
+                onValueChange = { onShotCountChanged(it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT)) },
+                min = AppConfig.MIN_SHOT_COUNT,
+                max = AppConfig.DEFAULT_MAX_SHOTS,
                 enabled = enabled,
             )
         }
@@ -1373,13 +1374,13 @@ internal fun IntervalometerSettingsPanel(vm: PulsarViewModel, connected: Boolean
 
                 TimePicker(
                     totalMs = defInterval,
-                    onChanged = { vm.saveIntervalometerDefaults(it.coerceAtLeast(500), defExposure, defCount, defDelay) },
+                    onChanged = { vm.saveIntervalometerDefaults(it.coerceAtLeast(AppConfig.MIN_INTERVAL_MS), defExposure, defCount, defDelay) },
                     label = stringResource(R.string.label_default_interval),
                 )
 
                 TimePicker(
                     totalMs = defExposure,
-                    onChanged = { vm.saveIntervalometerDefaults(defInterval, it.coerceAtLeast(1000), defCount, defDelay) },
+                    onChanged = { vm.saveIntervalometerDefaults(defInterval, it.coerceAtLeast(AppConfig.MIN_DEFAULT_EXPOSURE_MS), defCount, defDelay) },
                     label = stringResource(R.string.label_default_exposure),
                 )
 

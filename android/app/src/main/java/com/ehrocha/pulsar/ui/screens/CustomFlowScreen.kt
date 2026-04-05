@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.ble.StatusFrame
@@ -973,9 +974,9 @@ private fun IntervalometerStepEditor(step: FlowStep, onChange: (FlowStep) -> Uni
         exposureMs = step.exposureMs,
         shotCount = step.shotCount,
         delayMs = step.delayMs,
-        onIntervalChanged = { onChange(step.copy(intervalMs = it.coerceAtLeast(500))) },
-        onExposureChanged = { onChange(step.copy(exposureMs = it.coerceAtLeast(50))) },
-        onShotCountChanged = { onChange(step.copy(shotCount = it.coerceAtLeast(1))) },
+        onIntervalChanged = { onChange(step.copy(intervalMs = it.coerceAtLeast(AppConfig.MIN_INTERVAL_MS))) },
+        onExposureChanged = { onChange(step.copy(exposureMs = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS))) },
+        onShotCountChanged = { onChange(step.copy(shotCount = it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT))) },
         onDelayChanged = { onChange(step.copy(delayMs = it)) },
     )
 }
@@ -991,8 +992,8 @@ private fun AstroStepEditor(step: FlowStep, onChange: (FlowStep) -> Unit) {
         ruleDivisor = step.ruleDivisor,
         onCropFactorChanged = { onChange(step.copy(cropFactor = it)) },
         onFocalLengthChanged = { onChange(step.copy(focalLength = it)) },
-        onGapMsChanged = { onChange(step.copy(gapMs = it.coerceAtLeast(500))) },
-        onShotCountChanged = { onChange(step.copy(shotCount = it.coerceAtLeast(1))) },
+        onGapMsChanged = { onChange(step.copy(gapMs = it.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS))) },
+        onShotCountChanged = { onChange(step.copy(shotCount = it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT))) },
         onDelayMsChanged = { onChange(step.copy(delayMs = it)) },
     )
 }

@@ -21,6 +21,7 @@ import android.os.ParcelUuid
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.ble.*
 import com.ehrocha.pulsar.model.FlowStep
 import com.ehrocha.pulsar.model.FlowStepType
@@ -50,9 +51,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         private const val KEY_PIN_FOCUS = "pin_focus"
         private const val KEY_FLOW_STEPS = "flow_steps"
         private const val KEY_SAVED_FLOWS = "saved_flows"
-        const val DEFAULT_PIN_SHUTTER = 25
-        const val DEFAULT_PIN_FOCUS = 26
-        val SAFE_OUTPUT_PINS = listOf(4, 13, 14, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27)
+        const val DEFAULT_PIN_SHUTTER = AppConfig.DEFAULT_PIN_SHUTTER
+        const val DEFAULT_PIN_FOCUS = AppConfig.DEFAULT_PIN_FOCUS
+        val SAFE_OUTPUT_PINS = AppConfig.SAFE_OUTPUT_PINS
     }
 
     private val prefs = app.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -97,26 +98,26 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val currentMode: StateFlow<TriggerMode> = _currentMode
 
     // ── Intervalometer params ────────────────────────────────────────────
-    val intervalMs = MutableStateFlow(5000L)
-    val exposureMs = MutableStateFlow(200L)
-    val shotCount = MutableStateFlow(1)
-    val delayMs = MutableStateFlow(0L)
+    val intervalMs = MutableStateFlow(AppConfig.DEFAULT_INTERVAL_MS)
+    val exposureMs = MutableStateFlow(AppConfig.DEFAULT_EXPOSURE_MS)
+    val shotCount = MutableStateFlow(AppConfig.DEFAULT_SHOT_COUNT)
+    val delayMs = MutableStateFlow(AppConfig.DEFAULT_DELAY_MS)
 
     // ── Intervalometer defaults (persisted) ──────────────────────────────
-    val defaultIntervalMs = MutableStateFlow(5000L)
-    val defaultExposureMs = MutableStateFlow(200L)
-    val defaultShotCount = MutableStateFlow(1)
-    val defaultDelayMs = MutableStateFlow(0L)
-    val maxShotCount = MutableStateFlow(999)
+    val defaultIntervalMs = MutableStateFlow(AppConfig.DEFAULT_INTERVAL_MS)
+    val defaultExposureMs = MutableStateFlow(AppConfig.DEFAULT_EXPOSURE_MS)
+    val defaultShotCount = MutableStateFlow(AppConfig.DEFAULT_SHOT_COUNT)
+    val defaultDelayMs = MutableStateFlow(AppConfig.DEFAULT_DELAY_MS)
+    val maxShotCount = MutableStateFlow(AppConfig.DEFAULT_MAX_SHOTS)
 
 
     // ── Astro params ─────────────────────────────────────────────────────
-    val astroFocalLength = MutableStateFlow(24)       // mm
-    val astroCropFactor = MutableStateFlow(1.0f)      // Full Frame default
-    val astroRuleDivisor = MutableStateFlow(500)      // 500 or 400
-    val astroShotCount = MutableStateFlow(1)
-    val astroDelayMs = MutableStateFlow(5000L)
-    val astroGapMs = MutableStateFlow(2000L)          // gap between shots
+    val astroFocalLength = MutableStateFlow(AppConfig.DEFAULT_FOCAL_LENGTH)       // mm
+    val astroCropFactor = MutableStateFlow(AppConfig.DEFAULT_CROP_FACTOR)      // Full Frame default
+    val astroRuleDivisor = MutableStateFlow(AppConfig.DEFAULT_RULE_DIVISOR)      // 500 or 400
+    val astroShotCount = MutableStateFlow(AppConfig.DEFAULT_SHOT_COUNT)
+    val astroDelayMs = MutableStateFlow(AppConfig.DEFAULT_ASTRO_DELAY_MS)
+    val astroGapMs = MutableStateFlow(AppConfig.DEFAULT_ASTRO_GAP_MS)          // gap between shots
 
     // ── GPIO pin config ──────────────────────────────────────────────────
     val pinShutter = MutableStateFlow(DEFAULT_PIN_SHUTTER)
@@ -156,11 +157,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
 
         // Load persisted intervalometer defaults
-        defaultIntervalMs.value = prefs.getLong(KEY_INTV_INTERVAL, 5000L)
-        defaultExposureMs.value = prefs.getLong(KEY_INTV_EXPOSURE, 200L)
-        defaultShotCount.value = prefs.getInt(KEY_INTV_COUNT, 1)
-        defaultDelayMs.value = prefs.getLong(KEY_INTV_DELAY, 0L)
-        maxShotCount.value = prefs.getInt(KEY_INTV_MAX_SHOTS, 999)
+        defaultIntervalMs.value = prefs.getLong(KEY_INTV_INTERVAL, AppConfig.DEFAULT_INTERVAL_MS)
+        defaultExposureMs.value = prefs.getLong(KEY_INTV_EXPOSURE, AppConfig.DEFAULT_EXPOSURE_MS)
+        defaultShotCount.value = prefs.getInt(KEY_INTV_COUNT, AppConfig.DEFAULT_SHOT_COUNT)
+        defaultDelayMs.value = prefs.getLong(KEY_INTV_DELAY, AppConfig.DEFAULT_DELAY_MS)
+        maxShotCount.value = prefs.getInt(KEY_INTV_MAX_SHOTS, AppConfig.DEFAULT_MAX_SHOTS)
         pinShutter.value = prefs.getInt(KEY_PIN_SHUTTER, DEFAULT_PIN_SHUTTER)
         pinFocus.value = prefs.getInt(KEY_PIN_FOCUS, DEFAULT_PIN_FOCUS)
         // Load custom flow steps
@@ -292,7 +293,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun saveMaxShotCount(max: Int) {
-        maxShotCount.value = max.coerceIn(10, 9999)
+        maxShotCount.value = max.coerceIn(AppConfig.MIN_MAX_SHOTS, AppConfig.MAX_MAX_SHOTS)
         prefs.edit().putInt(KEY_INTV_MAX_SHOTS, maxShotCount.value).apply()
         // Clamp current values if they exceed the new max
         if (shotCount.value > maxShotCount.value) shotCount.value = maxShotCount.value
@@ -302,8 +303,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun resetIntervalometerDefaults() {
-        saveIntervalometerDefaults(5000L, 200L, 1, 0L)
-        saveMaxShotCount(999)
+        saveIntervalometerDefaults(AppConfig.DEFAULT_INTERVAL_MS, AppConfig.DEFAULT_EXPOSURE_MS, AppConfig.DEFAULT_SHOT_COUNT, AppConfig.DEFAULT_DELAY_MS)
+        saveMaxShotCount(AppConfig.DEFAULT_MAX_SHOTS)
     }
 
     fun savePins(shutter: Int, focus: Int) {
@@ -412,7 +413,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             }
             FlowStepType.ASTRO -> {
                 val expS = step.ruleDivisor.toDouble() / (step.focalLength * step.cropFactor)
-                val expMs = (expS * 1000).toLong().coerceAtLeast(100)
+                val expMs = (expS * 1000).toLong().coerceAtLeast(AppConfig.MIN_ASTRO_EXPOSURE_MS)
                 if (_simulatorActive.value) {
                     simulateShots(step.shotCount, expMs, step.gapMs, step.delayMs)
                 } else {
@@ -495,10 +496,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         val obj = org.json.JSONObject(json)
         if (obj.has("intv_max_shots")) saveMaxShotCount(obj.getInt("intv_max_shots"))
         saveIntervalometerDefaults(
-            obj.optLong("intv_interval_ms", 5000L),
-            obj.optLong("intv_exposure_ms", 200L),
-            obj.optInt("intv_shot_count", 1),
-            obj.optLong("intv_delay_ms", 0L),
+            obj.optLong("intv_interval_ms", AppConfig.DEFAULT_INTERVAL_MS),
+            obj.optLong("intv_exposure_ms", AppConfig.DEFAULT_EXPOSURE_MS),
+            obj.optInt("intv_shot_count", AppConfig.DEFAULT_SHOT_COUNT),
+            obj.optLong("intv_delay_ms", AppConfig.DEFAULT_DELAY_MS),
         )
         val shutter = obj.optInt("pin_shutter", DEFAULT_PIN_SHUTTER)
         val focus = obj.optInt("pin_focus", DEFAULT_PIN_FOCUS)
@@ -526,7 +527,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             )
             TriggerMode.ASTRO -> {
                 val exposureS = astroRuleDivisor.value.toDouble() / (astroFocalLength.value * astroCropFactor.value)
-                val exposureMs = (exposureS * 1000).toLong().coerceAtLeast(100)
+                val exposureMs = (exposureS * 1000).toLong().coerceAtLeast(AppConfig.MIN_ASTRO_EXPOSURE_MS)
                 CommandBuilder.setAstro(
                     astroGapMs.value, exposureMs, astroShotCount.value, astroDelayMs.value
                 )
@@ -606,7 +607,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             mode = TriggerMode.INTERVALOMETER.id,
             shotsTaken = 0,
             timeRemainingMs = 0L,
-            batteryPct = 85,
+            batteryPct = AppConfig.SIMULATOR_BATTERY_PCT,
             errorCode = 0,
         )
         _connected.value = true
@@ -633,7 +634,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             TriggerMode.INTERVALOMETER -> exposureMs.value
             TriggerMode.ASTRO -> {
                 val s = astroRuleDivisor.value.toDouble() / (astroFocalLength.value * astroCropFactor.value)
-                (s * 1000).toLong().coerceAtLeast(100)
+                (s * 1000).toLong().coerceAtLeast(AppConfig.MIN_ASTRO_EXPOSURE_MS)
             }
             else -> exposureMs.value
         }

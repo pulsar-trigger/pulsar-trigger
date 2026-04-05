@@ -17,6 +17,7 @@ import java.io.BufferedInputStream
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import com.ehrocha.pulsar.AppConfig
 
 data class AppRelease(
     val version: String,
@@ -41,7 +42,7 @@ class AppUpdateManager(
 ) {
     companion object {
         private const val TAG = "AppUpdate"
-        private const val GITHUB_REPO = "pulsar-trigger/pulsar-trigger"
+        private const val GITHUB_REPO = AppConfig.GITHUB_REPO
         private const val RELEASES_URL = "https://api.github.com/repos/$GITHUB_REPO/releases"
         private const val APK_FILENAME = "pulsar-update.apk"
     }

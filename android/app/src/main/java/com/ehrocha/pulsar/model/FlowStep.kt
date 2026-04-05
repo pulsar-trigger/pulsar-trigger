@@ -9,6 +9,7 @@ import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
+import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.R
 
 enum class FlowStepType {
@@ -21,15 +22,15 @@ data class FlowStep(
     val id: String = UUID.randomUUID().toString(),
     val type: FlowStepType = FlowStepType.PAUSE,
     // Intervalometer / Astro shared params
-    val intervalMs: Long = 5000,
-    val exposureMs: Long = 200,
+    val intervalMs: Long = AppConfig.DEFAULT_INTERVAL_MS,
+    val exposureMs: Long = AppConfig.DEFAULT_EXPOSURE_MS,
     val shotCount: Int = 10,
-    val delayMs: Long = 0,
+    val delayMs: Long = AppConfig.DEFAULT_DELAY_MS,
     // Astro-specific
-    val focalLength: Int = 24,
-    val cropFactor: Float = 1.0f,
-    val ruleDivisor: Int = 500,
-    val gapMs: Long = 2000,
+    val focalLength: Int = AppConfig.DEFAULT_FOCAL_LENGTH,
+    val cropFactor: Float = AppConfig.DEFAULT_CROP_FACTOR,
+    val ruleDivisor: Int = AppConfig.DEFAULT_RULE_DIVISOR,
+    val gapMs: Long = AppConfig.DEFAULT_ASTRO_GAP_MS,
     // Pause
     val pauseLabel: String = "Adjust camera settings",
 ) {
@@ -51,14 +52,14 @@ data class FlowStep(
         fun fromJson(json: JSONObject): FlowStep = FlowStep(
             id = json.optString("id", UUID.randomUUID().toString()),
             type = FlowStepType.valueOf(json.getString("type")),
-            intervalMs = json.optLong("intervalMs", 5000),
-            exposureMs = json.optLong("exposureMs", 200),
+            intervalMs = json.optLong("intervalMs", AppConfig.DEFAULT_INTERVAL_MS),
+            exposureMs = json.optLong("exposureMs", AppConfig.DEFAULT_EXPOSURE_MS),
             shotCount = json.optInt("shotCount", 10),
-            delayMs = json.optLong("delayMs", 0),
-            focalLength = json.optInt("focalLength", 24),
-            cropFactor = json.optDouble("cropFactor", 1.0).toFloat(),
-            ruleDivisor = json.optInt("ruleDivisor", 500),
-            gapMs = json.optLong("gapMs", 2000),
+            delayMs = json.optLong("delayMs", AppConfig.DEFAULT_DELAY_MS),
+            focalLength = json.optInt("focalLength", AppConfig.DEFAULT_FOCAL_LENGTH),
+            cropFactor = json.optDouble("cropFactor", AppConfig.DEFAULT_CROP_FACTOR.toDouble()).toFloat(),
+            ruleDivisor = json.optInt("ruleDivisor", AppConfig.DEFAULT_RULE_DIVISOR),
+            gapMs = json.optLong("gapMs", AppConfig.DEFAULT_ASTRO_GAP_MS),
             pauseLabel = json.optString("pauseLabel", "Adjust camera settings"),
         )
 

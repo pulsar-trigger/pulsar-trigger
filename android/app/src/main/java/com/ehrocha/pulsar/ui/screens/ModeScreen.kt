@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.sp
+import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.ble.OtaState
@@ -122,7 +123,7 @@ fun ModeScreen(
                         val fl = vm.astroFocalLength.collectAsState().value
                         val cf = vm.astroCropFactor.collectAsState().value
                         val rd = vm.astroRuleDivisor.collectAsState().value
-                        val expMs = (rd.toDouble() / (fl * cf) * 1000).toLong().coerceAtLeast(100)
+                        val expMs = (rd.toDouble() / (fl * cf) * 1000).toLong().coerceAtLeast(AppConfig.MIN_ASTRO_EXPOSURE_MS)
                         expMs + gap
                     }
                     else -> 1L
