@@ -26,6 +26,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.dp
  * Tap the centre value to type via keyboard.
  * This prevents accidental value changes when the user scrolls the page.
  */
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun ScrollPicker(
     value: Int,
@@ -47,6 +49,7 @@ fun ScrollPicker(
     format: (Int) -> String = { "%02d".format(it) },
 ) {
     val haptic = LocalHapticFeedback.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     val alpha = if (enabled) 1f else 0.4f
 
     var editing by remember { mutableStateOf(false) }
@@ -130,7 +133,11 @@ fun ScrollPicker(
                     ) { inner() }
                 },
             )
-            LaunchedEffect(Unit) { focusRequester.requestFocus() }
+            LaunchedEffect(Unit) {
+                kotlinx.coroutines.yield()
+                focusRequester.requestFocus()
+                keyboardController?.show()
+            }
         } else {
             Box(
                 contentAlignment = Alignment.Center,
