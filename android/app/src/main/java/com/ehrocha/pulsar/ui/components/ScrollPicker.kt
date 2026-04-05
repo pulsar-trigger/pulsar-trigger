@@ -6,12 +6,14 @@
 package com.ehrocha.pulsar.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
@@ -113,7 +115,7 @@ fun ScrollPicker(
                 keyboardActions = KeyboardActions(onDone = { commitEdit() }),
                 modifier = Modifier
                     .widthIn(min = 52.dp)
-                    .height(36.dp)
+                    .height(40.dp)
                     .focusRequester(focusRequester)
                     .onFocusChanged { if (!it.isFocused && editing) commitEdit() },
                 decorationBox = { inner ->
@@ -130,28 +132,36 @@ fun ScrollPicker(
             )
             LaunchedEffect(Unit) { focusRequester.requestFocus() }
         } else {
-            Surface(
-                onClick = {
-                    if (enabled) {
-                        editText = value.toString()
-                        editing = true
-                    }
-                },
-                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
-                shape = RoundedCornerShape(8.dp),
+            Box(
+                contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .widthIn(min = 52.dp)
-                    .height(36.dp),
+                    .height(40.dp)
+                    .background(
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+                        RoundedCornerShape(8.dp),
+                    )
+                    .clickable(enabled = enabled) {
+                        editText = value.toString()
+                        editing = true
+                    },
             ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize(),
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
                 ) {
                     Text(
                         text = format(value),
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
                         textAlign = TextAlign.Center,
+                    )
+                    Spacer(Modifier.width(2.dp))
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                     )
                 }
             }
