@@ -144,6 +144,8 @@
     <string name="about_license">Licensed under GPL-3.0-or-later</string>
     <string name="about_github">View on GitHub</string>
     <string name="about_instagram">@ehrocha.br on Instagram</string>
+    <string name="about_data_sources_title">Data Sources</string>
+    <string name="about_data_sources">Weather &amp; sunrise/sunset: Open-Meteo (open-meteo.com)\nLight pollution &amp; Bortle scale: lightpollutionmap.app\nMoon phase &amp; rise/set: calculated locally</string>
 
     <!-- Rename dialog -->
     <string name="dialog_rename_device">Rename Device</string>

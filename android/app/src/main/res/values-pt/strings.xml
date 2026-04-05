@@ -120,6 +120,8 @@
     <string name="about_license">Licenciado sob GPL-3.0-or-later</string>
     <string name="about_github">Ver no GitHub</string>
     <string name="about_instagram">@ehrocha.br no Instagram</string>
+    <string name="about_data_sources_title">Fontes de Dados</string>
+    <string name="about_data_sources">Clima &amp; nascer/pôr do sol: Open-Meteo (open-meteo.com)\nPoluição luminosa &amp; escala Bortle: lightpollutionmap.app\nFase lunar &amp; nascer/pôr da lua: calculado localmente</string>
     <string name="dialog_rename_device">Renomear Dispositivo</string>
     <string name="dialog_rename_instructions">Digite um nome personalizado. O dispositivo será anunciado como \"Pulsar-&lt;nome&gt;\". Deixe vazio para redefinir para \"Pulsar\".</string>
     <string name="label_device_name_input">Nome do dispositivo</string>

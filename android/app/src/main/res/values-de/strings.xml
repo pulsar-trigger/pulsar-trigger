@@ -120,6 +120,8 @@
     <string name="about_license">Lizenziert unter GPL-3.0-or-later</string>
     <string name="about_github">Auf GitHub ansehen</string>
     <string name="about_instagram">@ehrocha.br auf Instagram</string>
+    <string name="about_data_sources_title">Datenquellen</string>
+    <string name="about_data_sources">Wetter &amp; Sonnenauf-/untergang: Open-Meteo (open-meteo.com)\nLichtverschmutzung &amp; Bortle-Skala: lightpollutionmap.app\nMondphase &amp; Mondauf-/untergang: lokal berechnet</string>
     <string name="dialog_rename_device">Gerät umbenennen</string>
     <string name="dialog_rename_instructions">Gib einen benutzerdefinierten Namen ein. Das Gerät wird als \"Pulsar-&lt;Name&gt;\" angezeigt. Leer lassen, um auf \"Pulsar\" zurückzusetzen.</string>
     <string name="label_device_name_input">Gerätename</string>

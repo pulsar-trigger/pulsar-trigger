@@ -120,6 +120,8 @@
     <string name="about_license">基于 GPL-3.0-or-later 许可证</string>
     <string name="about_github">在 GitHub 上查看</string>
     <string name="about_instagram">Instagram: @ehrocha.br</string>
+    <string name="about_data_sources_title">数据来源</string>
+    <string name="about_data_sources">天气和日出/日落：Open-Meteo (open-meteo.com)\n光污染和波特尔等级：lightpollutionmap.app\n月相和月出/月落：本地计算</string>
     <string name="dialog_rename_device">重命名设备</string>
     <string name="dialog_rename_instructions">输入自定义名称。设备将以 \"Pulsar-&lt;名称&gt;\" 广播。留空可重置为 \"Pulsar\"。</string>
     <string name="label_device_name_input">设备名称</string>

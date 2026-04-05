@@ -1066,6 +1066,20 @@ internal fun AboutSectionContent() {
         ) {
             Text(stringResource(R.string.about_instagram))
         }
+
+        Spacer(Modifier.height(8.dp))
+        HorizontalDivider()
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            stringResource(R.string.about_data_sources_title),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        Text(
+            stringResource(R.string.about_data_sources),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
