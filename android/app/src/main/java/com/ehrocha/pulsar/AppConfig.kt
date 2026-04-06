@@ -286,6 +286,9 @@ object AppConfig {
     /** Maximum age of cached dashboard data before it's considered stale (ms). */
     const val DASHBOARD_CACHE_MAX_AGE_MS = 3_600_000L  // 1 hour
 
+    /** Default refresh interval for planner session dashboard cache (hours). */
+    const val PLANNER_DASHBOARD_CACHE_HOURS_DEFAULT = 24L
+
     // ── Simulator ───────────────────────────────────────────────────────
 
     /** Fake battery percentage shown when connected to the built-in

@@ -53,37 +53,38 @@ class ConditionCheckWorker(
 
     override suspend fun doWork(): Result {
         val manager = PlannerManager(applicationContext)
-        val entries = manager.state.value.entries.filter {
+        val state = manager.state.value
+        val futureSessions = state.sessions.filter {
             !it.date.isBefore(LocalDate.now())
         }
-        if (entries.isEmpty()) return Result.success()
+        if (futureSessions.isEmpty()) return Result.success()
 
         ensureChannel()
 
-        for (entry in entries) {
+        for (session in futureSessions) {
+            val event = manager.eventById(session.eventId) ?: continue
             try {
-                val verdict = checkConditions(entry)
-                manager.updateEntry(entry.copy(
+                val verdict = checkConditions(session, event)
+                manager.updateSession(session.copy(
                     lastChecked = System.currentTimeMillis(),
                     verdict = verdict.first,
                     summary = verdict.second,
                 ))
                 if (verdict.first == PlannerVerdict.EXCELLENT || verdict.first == PlannerVerdict.GOOD) {
-                    sendNotification(entry, verdict.second)
+                    sendNotification(event, session, verdict.second)
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to check ${entry.location.name}", e)
+                Log.e(TAG, "Failed to check ${event.name}", e)
             }
         }
         return Result.success()
     }
 
-    private fun checkConditions(entry: PlannerEntry): Pair<PlannerVerdict, String> {
-        val loc = entry.location
-        val dateStr = entry.date.format(DateTimeFormatter.ISO_LOCAL_DATE)
+    private fun checkConditions(session: PlannerSession, event: PlannerEvent): Pair<PlannerVerdict, String> {
+        val dateStr = session.date.format(DateTimeFormatter.ISO_LOCAL_DATE)
         val url = URL(
             "https://api.open-meteo.com/v1/forecast" +
-                "?latitude=${loc.latitude}&longitude=${loc.longitude}" +
+                "?latitude=${event.latitude}&longitude=${event.longitude}" +
                 "&hourly=cloud_cover,precipitation" +
                 "&start_date=$dateStr&end_date=$dateStr" +
                 "&timezone=auto"
@@ -122,7 +123,7 @@ class ConditionCheckWorker(
         }
     }
 
-    private fun sendNotification(entry: PlannerEntry, summary: String) {
+    private fun sendNotification(event: PlannerEvent, session: PlannerSession, summary: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.POST_NOTIFICATIONS)
             != PackageManager.PERMISSION_GRANTED
@@ -130,14 +131,14 @@ class ConditionCheckWorker(
 
         val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("Clear skies at ${entry.location.name}!")
-            .setContentText("${entry.date}: $summary")
+            .setContentTitle("Clear skies at ${event.name}!")
+            .setContentText("${session.date}: $summary")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
             .build()
 
         NotificationManagerCompat.from(applicationContext)
-            .notify(entry.id.hashCode(), notification)
+            .notify(session.id.hashCode(), notification)
     }
 
     private fun ensureChannel() {

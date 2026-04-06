@@ -335,6 +335,29 @@
     <string name="planner_lon_short">Lon</string>
     <string name="planner_last_checked">Verificado há %1$d h</string>
     <string name="planner_days">dias</string>
+
+    <!-- Planner v0.23 -->
+    <string name="section_planner">Planeador</string>
+    <string name="planner_pick_on_map">Escolher no mapa</string>
+    <string name="planner_tap_to_select">Toque no mapa para selecionar uma localização</string>
+    <string name="planner_resolving_location">Resolvendo localização…</string>
+    <string name="planner_time_window">Janela de tempo</string>
+    <string name="planner_cache_desc">Os dados dos painéis das sessões são guardados localmente para reduzir chamadas à API. Escolha a frequência de atualização.</string>
+    <string name="planner_cache_interval">Intervalo de atualização</string>
+    <string name="planner_cache_hours">%1$d h</string>
+
+    <!-- Events v0.23 -->
+    <string name="event_no_events">Nenhum evento ainda</string>
+    <string name="event_add">Adicionar evento</string>
+    <string name="event_add_title">Novo evento</string>
+    <string name="event_delete_title">Apagar evento?</string>
+    <string name="event_delete_msg">Apagar \"%1$s\" e todas as sessões?</string>
+    <string name="event_share">Partilhar</string>
+    <string name="event_import">Importar</string>
+    <string name="event_import_title">Importar evento</string>
+    <string name="event_import_hint">Cole o JSON do evento partilhado</string>
+    <string name="event_session_count">%1$d sessões</string>
+
     <string name="verdict_excellent">Excelente</string>
     <string name="verdict_good">Bom</string>
     <string name="verdict_fair">Razoável</string>

@@ -6,136 +6,214 @@
 package com.ehrocha.pulsar.planner
 
 import android.content.Context
+import android.content.SharedPreferences
 import com.ehrocha.pulsar.AppConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
+import java.time.LocalTime
 import java.util.UUID
 
 class PlannerManager(context: Context) {
 
     companion object {
         private const val PREFS = "planner_data"
-        private const val KEY_LOCATIONS = "locations"
-        private const val KEY_ENTRIES = "entries"
+        private const val CACHE_PREFS = "planner_dashboard_cache"
+        private const val KEY_EVENTS = "events"
+        private const val KEY_SESSIONS = "sessions"
+        private const val KEY_CACHE_INTERVAL = "cache_interval_hours"
     }
 
     private val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private val cachePrefs: SharedPreferences =
+        context.getSharedPreferences(CACHE_PREFS, Context.MODE_PRIVATE)
 
     private val _state = MutableStateFlow(PlannerState())
     val state: StateFlow<PlannerState> = _state
 
+    /** User-configurable cache refresh interval (hours). */
+    var cacheIntervalHours: Long
+        get() = cachePrefs.getLong(KEY_CACHE_INTERVAL, AppConfig.PLANNER_DASHBOARD_CACHE_HOURS_DEFAULT)
+        set(value) { cachePrefs.edit().putLong(KEY_CACHE_INTERVAL, value).apply() }
+
     init { load() }
 
-    // ── Locations ────────────────────────────────────────────────────
+    // ── Events ───────────────────────────────────────────────────────
 
-    fun addLocation(name: String, lat: Double, lon: Double): SavedLocation {
-        val loc = SavedLocation(UUID.randomUUID().toString(), name, lat, lon)
-        val current = _state.value
-        if (current.locations.size >= AppConfig.MAX_SAVED_LOCATIONS) return loc
-        _state.value = current.copy(locations = current.locations + loc)
-        save()
-        return loc
-    }
-
-    fun removeLocation(id: String) {
-        val current = _state.value
-        _state.value = current.copy(
-            locations = current.locations.filter { it.id != id },
-            entries = current.entries.filter { it.location.id != id },
+    fun addEvent(
+        name: String,
+        lat: Double,
+        lon: Double,
+        startDate: LocalDate,
+        endDate: LocalDate,
+        startTime: LocalTime? = null,
+        endTime: LocalTime? = null,
+    ): PlannerEvent {
+        val event = PlannerEvent(
+            id = UUID.randomUUID().toString(),
+            name = name,
+            latitude = lat,
+            longitude = lon,
+            startDate = startDate,
+            endDate = endDate,
+            startTime = startTime,
+            endTime = endTime,
         )
-        save()
-    }
-
-    // ── Planner entries ──────────────────────────────────────────────
-
-    fun addEntry(location: SavedLocation, date: LocalDate): PlannerEntry {
-        val entry = PlannerEntry(UUID.randomUUID().toString(), location, date)
         val current = _state.value
-        if (current.entries.size >= AppConfig.MAX_PLANNER_ENTRIES) return entry
-        _state.value = current.copy(entries = current.entries + entry)
-        save()
-        return entry
-    }
+        if (current.events.size >= AppConfig.MAX_SAVED_LOCATIONS) return event
 
-    fun addEntries(location: SavedLocation, startDate: LocalDate, endDate: LocalDate) {
-        var current = _state.value
+        // Create one session per day in the date range
+        val sessions = mutableListOf<PlannerSession>()
         var date = startDate
-        while (!date.isAfter(endDate) && current.entries.size < AppConfig.MAX_PLANNER_ENTRIES) {
-            val entry = PlannerEntry(UUID.randomUUID().toString(), location, date)
-            current = current.copy(entries = current.entries + entry)
+        while (!date.isAfter(endDate) && (current.sessions.size + sessions.size) < AppConfig.MAX_PLANNER_ENTRIES) {
+            sessions += PlannerSession(
+                id = UUID.randomUUID().toString(),
+                eventId = event.id,
+                date = date,
+            )
             date = date.plusDays(1)
         }
-        _state.value = current
-        save()
-    }
 
-    fun removeEntry(id: String) {
-        val current = _state.value
-        _state.value = current.copy(entries = current.entries.filter { it.id != id })
-        save()
-    }
-
-    fun updateEntry(entry: PlannerEntry) {
-        val current = _state.value
         _state.value = current.copy(
-            entries = current.entries.map { if (it.id == entry.id) entry else it }
+            events = current.events + event,
+            sessions = current.sessions + sessions,
         )
         save()
+        return event
+    }
+
+    fun removeEvent(id: String) {
+        val current = _state.value
+        _state.value = current.copy(
+            events = current.events.filter { it.id != id },
+            sessions = current.sessions.filter { it.eventId != id },
+        )
+        save()
+    }
+
+    // ── Sessions ─────────────────────────────────────────────────────
+
+    fun removeSession(id: String) {
+        val current = _state.value
+        _state.value = current.copy(sessions = current.sessions.filter { it.id != id })
+        save()
+    }
+
+    fun updateSession(session: PlannerSession) {
+        val current = _state.value
+        _state.value = current.copy(
+            sessions = current.sessions.map { if (it.id == session.id) session else it }
+        )
+        save()
+    }
+
+    fun sessionsForEvent(eventId: String): List<PlannerSession> =
+        _state.value.sessions.filter { it.eventId == eventId }.sortedBy { it.date }
+
+    fun eventById(eventId: String): PlannerEvent? =
+        _state.value.events.find { it.id == eventId }
+
+    // ── Sharing (export / import) ────────────────────────────────────
+
+    fun exportEvent(eventId: String): String? {
+        val event = eventById(eventId) ?: return null
+        return JSONObject().apply {
+            put("v", 1)
+            put("event", JSONObject().apply {
+                put("name", event.name)
+                put("lat", event.latitude)
+                put("lon", event.longitude)
+                put("startDate", event.startDate.toString())
+                put("endDate", event.endDate.toString())
+                event.startTime?.let { put("startTime", it.toString()) }
+                event.endTime?.let { put("endTime", it.toString()) }
+            })
+        }.toString(2)
+    }
+
+    fun importEvent(json: String): PlannerEvent? {
+        return try {
+            val root = JSONObject(json)
+            val e = root.getJSONObject("event")
+            addEvent(
+                name = e.getString("name"),
+                lat = e.getDouble("lat"),
+                lon = e.getDouble("lon"),
+                startDate = LocalDate.parse(e.getString("startDate")),
+                endDate = LocalDate.parse(e.getString("endDate")),
+                startTime = e.optString("startTime", "").takeIf { it.isNotEmpty() }?.let { LocalTime.parse(it) },
+                endTime = e.optString("endTime", "").takeIf { it.isNotEmpty() }?.let { LocalTime.parse(it) },
+            )
+        } catch (_: Exception) {
+            null
+        }
     }
 
     // ── Persistence ──────────────────────────────────────────────────
 
     private fun save() {
         val state = _state.value
-        val locsJson = JSONArray().apply {
-            state.locations.forEach { loc ->
+        val eventsJson = JSONArray().apply {
+            state.events.forEach { ev ->
                 put(JSONObject().apply {
-                    put("id", loc.id)
-                    put("name", loc.name)
-                    put("lat", loc.latitude)
-                    put("lon", loc.longitude)
+                    put("id", ev.id)
+                    put("name", ev.name)
+                    put("lat", ev.latitude)
+                    put("lon", ev.longitude)
+                    put("startDate", ev.startDate.toString())
+                    put("endDate", ev.endDate.toString())
+                    ev.startTime?.let { put("startTime", it.toString()) }
+                    ev.endTime?.let { put("endTime", it.toString()) }
                 })
             }
         }
-        val entriesJson = JSONArray().apply {
-            state.entries.forEach { e ->
+        val sessionsJson = JSONArray().apply {
+            state.sessions.forEach { s ->
                 put(JSONObject().apply {
-                    put("id", e.id)
-                    put("locId", e.location.id)
-                    put("date", e.date.toString())
-                    put("lastChecked", e.lastChecked)
-                    put("verdict", e.verdict.name)
-                    put("summary", e.summary)
+                    put("id", s.id)
+                    put("eventId", s.eventId)
+                    put("date", s.date.toString())
+                    put("lastChecked", s.lastChecked)
+                    put("verdict", s.verdict.name)
+                    put("summary", s.summary)
                 })
             }
         }
         prefs.edit()
-            .putString(KEY_LOCATIONS, locsJson.toString())
-            .putString(KEY_ENTRIES, entriesJson.toString())
+            .putString(KEY_EVENTS, eventsJson.toString())
+            .putString(KEY_SESSIONS, sessionsJson.toString())
             .apply()
     }
 
     private fun load() {
-        val locsStr = prefs.getString(KEY_LOCATIONS, null) ?: return
-        val entriesStr = prefs.getString(KEY_ENTRIES, null) ?: "[]"
+        val eventsStr = prefs.getString(KEY_EVENTS, null) ?: return
+        val sessionsStr = prefs.getString(KEY_SESSIONS, null) ?: "[]"
         try {
-            val locsArr = JSONArray(locsStr)
-            val locations = (0 until locsArr.length()).map { i ->
-                val j = locsArr.getJSONObject(i)
-                SavedLocation(j.getString("id"), j.getString("name"),
-                    j.getDouble("lat"), j.getDouble("lon"))
-            }
-            val entriesArr = JSONArray(entriesStr)
-            val entries = (0 until entriesArr.length()).mapNotNull { i ->
-                val j = entriesArr.getJSONObject(i)
-                val locId = j.getString("locId")
-                val loc = locations.find { it.id == locId } ?: return@mapNotNull null
-                PlannerEntry(
+            val eventsArr = JSONArray(eventsStr)
+            val events = (0 until eventsArr.length()).map { i ->
+                val j = eventsArr.getJSONObject(i)
+                PlannerEvent(
                     id = j.getString("id"),
-                    location = loc,
+                    name = j.getString("name"),
+                    latitude = j.getDouble("lat"),
+                    longitude = j.getDouble("lon"),
+                    startDate = LocalDate.parse(j.getString("startDate")),
+                    endDate = LocalDate.parse(j.getString("endDate")),
+                    startTime = j.optString("startTime", "").takeIf { it.isNotEmpty() }?.let { LocalTime.parse(it) },
+                    endTime = j.optString("endTime", "").takeIf { it.isNotEmpty() }?.let { LocalTime.parse(it) },
+                )
+            }
+            val sessionsArr = JSONArray(sessionsStr)
+            val eventIds = events.map { it.id }.toSet()
+            val sessions = (0 until sessionsArr.length()).mapNotNull { i ->
+                val j = sessionsArr.getJSONObject(i)
+                val eventId = j.getString("eventId")
+                if (eventId !in eventIds) return@mapNotNull null
+                PlannerSession(
+                    id = j.getString("id"),
+                    eventId = eventId,
                     date = LocalDate.parse(j.getString("date")),
                     lastChecked = j.optLong("lastChecked", 0),
                     verdict = PlannerVerdict.entries.firstOrNull { it.name == j.optString("verdict") }
@@ -143,7 +221,24 @@ class PlannerManager(context: Context) {
                     summary = j.optString("summary", ""),
                 )
             }
-            _state.value = PlannerState(locations, entries)
+            _state.value = PlannerState(events, sessions)
         } catch (_: Exception) { /* corrupt prefs — start fresh */ }
+    }
+
+    // ── Session dashboard cache ──────────────────────────────────────
+
+    fun getCachedDashboard(sessionId: String): String? {
+        val ts = cachePrefs.getLong("ts_$sessionId", 0L)
+        if (ts == 0L) return null
+        val age = System.currentTimeMillis() - ts
+        if (age > cacheIntervalHours * 3_600_000L) return null
+        return cachePrefs.getString("data_$sessionId", null)
+    }
+
+    fun putCachedDashboard(sessionId: String, json: String) {
+        cachePrefs.edit()
+            .putString("data_$sessionId", json)
+            .putLong("ts_$sessionId", System.currentTimeMillis())
+            .apply()
     }
 }

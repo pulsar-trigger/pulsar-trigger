@@ -333,6 +333,29 @@
     <string name="planner_lon_short">经度</string>
     <string name="planner_last_checked">%1$d 小时前检查</string>
     <string name="planner_days">天</string>
+
+    <!-- Planner v0.23 -->
+    <string name="section_planner">计划器</string>
+    <string name="planner_pick_on_map">在地图上选择</string>
+    <string name="planner_tap_to_select">点击地图选择位置</string>
+    <string name="planner_resolving_location">正在解析位置…</string>
+    <string name="planner_time_window">时间窗口</string>
+    <string name="planner_cache_desc">会话仪表板数据已缓存在本地以减少API调用。选择刷新间隔。</string>
+    <string name="planner_cache_interval">刷新间隔</string>
+    <string name="planner_cache_hours">%1$d 小时</string>
+
+    <!-- Events v0.23 -->
+    <string name="event_no_events">暂无活动</string>
+    <string name="event_add">添加活动</string>
+    <string name="event_add_title">新建活动</string>
+    <string name="event_delete_title">删除活动？</string>
+    <string name="event_delete_msg">删除"%1$s"及其所有会话？</string>
+    <string name="event_share">分享</string>
+    <string name="event_import">导入</string>
+    <string name="event_import_title">导入活动</string>
+    <string name="event_import_hint">粘贴共享的活动JSON</string>
+    <string name="event_session_count">%1$d个会话</string>
+
     <string name="verdict_excellent">极佳</string>
     <string name="verdict_good">良好</string>
     <string name="verdict_fair">一般</string>

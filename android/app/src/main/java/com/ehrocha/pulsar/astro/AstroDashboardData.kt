@@ -683,6 +683,187 @@ class AstroDashboardManager(private val context: Context) {
             .apply()
     }
 
+    // ── Full state serialization (planner session cache) ─────────
+
+    /** Serialize the current dashboard state to JSON for off-line caching. */
+    fun serializeState(): String {
+        val s = _state.value
+        return JSONObject().apply {
+            put("date", s.selectedDate.toString())
+            s.location?.let { put("loc", serializeLocation(it)) }
+            s.weather?.let { put("weather", serializeWeather(it)) }
+            s.moon?.let { put("moon", serializeMoon(it)) }
+            s.sun?.let { put("sun", serializeSun(it)) }
+            s.bortle?.let { put("bortle", serializeBortle(it)) }
+            s.milkyWay?.let { put("mw", serializeMilkyWay(it)) }
+            s.dewPoint?.let { put("dew", serializeDewPoint(it)) }
+            s.twilight?.let { put("tw", serializeTwilight(it)) }
+            if (s.bestWindows.isNotEmpty()) {
+                put("windows", org.json.JSONArray().apply {
+                    s.bestWindows.forEach { put(serializePhotoWindow(it)) }
+                })
+            }
+            if (s.planets.isNotEmpty()) {
+                put("planets", org.json.JSONArray().apply {
+                    s.planets.forEach { put(serializePlanet(it)) }
+                })
+            }
+            s.weatherError?.let { put("weatherError", it) }
+            s.bortleError?.let { put("bortleError", it) }
+        }.toString()
+    }
+
+    /** Restore dashboard state from a cached JSON blob. Returns true on success. */
+    fun restoreState(json: String): Boolean = try {
+        val j = JSONObject(json)
+        val date = LocalDate.parse(j.getString("date"))
+        _state.value = DashboardState(
+            location = j.optJSONObject("loc")?.let { deserializeLocation(it) },
+            weather = j.optJSONObject("weather")?.let { deserializeWeather(it) },
+            moon = j.optJSONObject("moon")?.let { deserializeMoon(it) },
+            sun = j.optJSONObject("sun")?.let { deserializeSun(it) },
+            bortle = j.optJSONObject("bortle")?.let { deserializeBortle(it) },
+            milkyWay = j.optJSONObject("mw")?.let { deserializeMilkyWay(it) },
+            dewPoint = j.optJSONObject("dew")?.let { deserializeDewPoint(it) },
+            twilight = j.optJSONObject("tw")?.let { deserializeTwilight(it) },
+            bestWindows = j.optJSONArray("windows")?.let { arr ->
+                (0 until arr.length()).map { deserializePhotoWindow(arr.getJSONObject(it)) }
+            } ?: emptyList(),
+            planets = j.optJSONArray("planets")?.let { arr ->
+                (0 until arr.length()).map { deserializePlanet(arr.getJSONObject(it)) }
+            } ?: emptyList(),
+            loading = false,
+            error = null,
+            weatherError = j.optString("weatherError").takeIf { it.isNotEmpty() },
+            bortleError = j.optString("bortleError").takeIf { it.isNotEmpty() },
+            selectedDate = date,
+        )
+        true
+    } catch (_: Exception) { false }
+
+    private fun serializeLocation(l: LocationInfo) = JSONObject().apply {
+        put("lat", l.latitude); put("lon", l.longitude)
+        l.altitude?.let { put("alt", it) }
+        l.cityName?.let { put("city", it) }
+    }
+    private fun deserializeLocation(j: JSONObject) = LocationInfo(
+        j.getDouble("lat"), j.getDouble("lon"),
+        j.optDouble("alt").takeIf { !it.isNaN() },
+        j.optString("city").takeIf { it.isNotEmpty() },
+    )
+
+    private fun serializeWeather(w: WeatherInfo) = JSONObject().apply {
+        put("tempC", w.temperatureC); put("hum", w.humidity)
+        put("cloud", w.cloudCoverPct); put("precip", w.precipitationMm)
+        put("wind", w.windSpeedKmh); put("code", w.weatherCode)
+        put("hourly", org.json.JSONArray().apply {
+            w.hourlyForecast.forEach { h ->
+                put(JSONObject().apply {
+                    put("t", h.time); put("tc", h.temperatureC)
+                    put("c", h.cloudCoverPct); put("p", h.precipitationMm)
+                    put("w", h.weatherCode)
+                })
+            }
+        })
+    }
+    private fun deserializeWeather(j: JSONObject): WeatherInfo {
+        val hourly = j.optJSONArray("hourly")?.let { arr ->
+            (0 until arr.length()).map { i ->
+                val h = arr.getJSONObject(i)
+                HourlyForecast(h.getString("t"), h.getDouble("tc"),
+                    h.getInt("c"), h.getDouble("p"), h.getInt("w"))
+            }
+        } ?: emptyList()
+        return WeatherInfo(j.getDouble("tempC"), j.getInt("hum"),
+            j.getInt("cloud"), j.getDouble("precip"),
+            j.getDouble("wind"), j.getInt("code"), hourly)
+    }
+
+    private fun serializeMoon(m: MoonInfo) = JSONObject().apply {
+        put("phase", m.phaseName); put("illum", m.illuminationPct)
+        put("age", m.ageInDays); put("emoji", m.emoji)
+        m.rise?.let { put("rise", it) }; m.set?.let { put("set", it) }
+        put("good", m.goodForAstro)
+    }
+    private fun deserializeMoon(j: JSONObject) = MoonInfo(
+        j.getString("phase"), j.getDouble("illum"), j.getDouble("age"),
+        j.getString("emoji"), j.optString("rise").takeIf { it.isNotEmpty() },
+        j.optString("set").takeIf { it.isNotEmpty() }, j.getBoolean("good"),
+    )
+
+    private fun serializeSun(s: SunInfo) = JSONObject().apply {
+        s.sunrise?.let { put("rise", it) }; s.sunset?.let { put("set", it) }
+    }
+    private fun deserializeSun(j: JSONObject) = SunInfo(
+        j.optString("rise").takeIf { it.isNotEmpty() },
+        j.optString("set").takeIf { it.isNotEmpty() },
+    )
+
+    private fun serializeBortle(b: BortleInfo) = JSONObject().apply {
+        put("bortle", b.bortleClass); put("mpsas", b.mpsas)
+        put("cat", b.category); put("mw", b.milkyWayQuality)
+    }
+    private fun deserializeBortle(j: JSONObject) = BortleInfo(
+        j.getDouble("bortle"), j.getDouble("mpsas"),
+        j.getString("cat"), j.getString("mw"),
+    )
+
+    private fun serializeMilkyWay(m: MilkyWayInfo) = JSONObject().apply {
+        put("visible", m.visible); put("best", m.seasonBest)
+        m.coreRise?.let { put("rise", it) }; m.coreSet?.let { put("set", it) }
+        m.darkWindow?.let { put("dark", it) }
+    }
+    private fun deserializeMilkyWay(j: JSONObject) = MilkyWayInfo(
+        j.getBoolean("visible"), j.getBoolean("best"),
+        j.optString("rise").takeIf { it.isNotEmpty() },
+        j.optString("set").takeIf { it.isNotEmpty() },
+        j.optString("dark").takeIf { it.isNotEmpty() },
+    )
+
+    private fun serializeDewPoint(d: DewPointInfo) = JSONObject().apply {
+        put("dew", d.dewPointC); put("temp", d.temperatureC)
+        put("spread", d.spreadC); put("risk", d.risk.name)
+    }
+    private fun deserializeDewPoint(j: JSONObject) = DewPointInfo(
+        j.getDouble("dew"), j.getDouble("temp"), j.getDouble("spread"),
+        DewRisk.valueOf(j.getString("risk")),
+    )
+
+    private fun serializeTwilight(t: TwilightInfo) = JSONObject().apply {
+        t.civilEnd?.let { put("ce", it) }; t.nauticalEnd?.let { put("ne", it) }
+        t.astroEnd?.let { put("ae", it) }; t.astroStart?.let { put("as", it) }
+        t.nauticalStart?.let { put("ns", it) }; t.civilStart?.let { put("cs", it) }
+    }
+    private fun deserializeTwilight(j: JSONObject) = TwilightInfo(
+        j.optString("ce").takeIf { it.isNotEmpty() },
+        j.optString("ne").takeIf { it.isNotEmpty() },
+        j.optString("ae").takeIf { it.isNotEmpty() },
+        j.optString("as").takeIf { it.isNotEmpty() },
+        j.optString("ns").takeIf { it.isNotEmpty() },
+        j.optString("cs").takeIf { it.isNotEmpty() },
+    )
+
+    private fun serializePhotoWindow(w: PhotoWindow) = JSONObject().apply {
+        put("start", w.startTime); put("end", w.endTime)
+        put("h", w.hours); put("cloud", w.avgCloudPct); put("r", w.rating)
+    }
+    private fun deserializePhotoWindow(j: JSONObject) = PhotoWindow(
+        j.getString("start"), j.getString("end"),
+        j.getInt("h"), j.getInt("cloud"), j.getInt("r"),
+    )
+
+    private fun serializePlanet(p: PlanetInfo) = JSONObject().apply {
+        put("name", p.name); put("emoji", p.emoji); put("alt", p.altitude)
+        p.rise?.let { put("rise", it) }; p.set?.let { put("set", it) }
+        put("vis", p.visible)
+    }
+    private fun deserializePlanet(j: JSONObject) = PlanetInfo(
+        j.getString("name"), j.getString("emoji"), j.getDouble("alt"),
+        j.optString("rise").takeIf { it.isNotEmpty() },
+        j.optString("set").takeIf { it.isNotEmpty() },
+        j.getBoolean("vis"),
+    )
+
     @SuppressLint("MissingPermission")
     suspend fun refresh(date: LocalDate = LocalDate.now()) {
         _state.value = _state.value.copy(loading = true, error = null, weatherError = null, bortleError = null, selectedDate = date)

@@ -335,6 +335,29 @@
     <string name="planner_lon_short">Lon</string>
     <string name="planner_last_checked">Vérifié il y a %1$d h</string>
     <string name="planner_days">jours</string>
+
+    <!-- Planner v0.23 -->
+    <string name="section_planner">Planificateur</string>
+    <string name="planner_pick_on_map">Choisir sur la carte</string>
+    <string name="planner_tap_to_select">Appuyez sur la carte pour sélectionner un lieu</string>
+    <string name="planner_resolving_location">Résolution du lieu…</string>
+    <string name="planner_time_window">Plage horaire</string>
+    <string name="planner_cache_desc">Les données des tableaux de bord de session sont mises en cache localement pour réduire les appels API. Choisissez la fréquence de rafraîchissement.</string>
+    <string name="planner_cache_interval">Intervalle de rafraîchissement</string>
+    <string name="planner_cache_hours">%1$d h</string>
+
+    <!-- Events v0.23 -->
+    <string name="event_no_events">Aucun événement</string>
+    <string name="event_add">Ajouter un événement</string>
+    <string name="event_add_title">Nouvel événement</string>
+    <string name="event_delete_title">Supprimer l\'événement ?</string>
+    <string name="event_delete_msg">Supprimer \"%1$s\" et toutes ses sessions ?</string>
+    <string name="event_share">Partager</string>
+    <string name="event_import">Importer</string>
+    <string name="event_import_title">Importer un événement</string>
+    <string name="event_import_hint">Collez le JSON de l\'événement partagé</string>
+    <string name="event_session_count">%1$d sessions</string>
+
     <string name="verdict_excellent">Excellent</string>
     <string name="verdict_good">Bon</string>
     <string name="verdict_fair">Passable</string>

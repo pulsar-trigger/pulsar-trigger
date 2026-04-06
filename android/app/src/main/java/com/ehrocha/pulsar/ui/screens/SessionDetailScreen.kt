@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,29 +29,47 @@ import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.astro.*
-import com.ehrocha.pulsar.planner.PlannerEntry
+import com.ehrocha.pulsar.planner.PlannerEvent
+import com.ehrocha.pulsar.planner.PlannerManager
+import com.ehrocha.pulsar.planner.PlannerSession
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionDetailScreen(
-    entry: PlannerEntry,
+    session: PlannerSession,
+    event: PlannerEvent,
+    plannerManager: PlannerManager,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val dashManager = remember { AstroDashboardManager(context) }
     val state by dashManager.state.collectAsState()
     val scope = rememberCoroutineScope()
+    var isRefreshing by remember { mutableStateOf(false) }
 
-    LaunchedEffect(entry.id) {
+    suspend fun doRefresh() {
+        isRefreshing = true
         dashManager.refreshForLocation(
-            entry.location.latitude,
-            entry.location.longitude,
-            entry.location.name,
-            entry.date,
+            event.latitude,
+            event.longitude,
+            event.name,
+            session.date,
         )
+        plannerManager.putCachedDashboard(session.id, dashManager.serializeState())
+        isRefreshing = false
+    }
+
+    LaunchedEffect(session.id) {
+        // Try cached data first
+        val cached = plannerManager.getCachedDashboard(session.id)
+        if (cached != null && dashManager.restoreState(cached)) {
+            return@LaunchedEffect
+        }
+        doRefresh()
     }
 
     Column(
@@ -68,25 +87,18 @@ fun SessionDetailScreen(
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    entry.location.name,
+                    event.name,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    entry.date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)),
+                    session.date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             IconButton(onClick = {
-                scope.launch {
-                    dashManager.refreshForLocation(
-                        entry.location.latitude,
-                        entry.location.longitude,
-                        entry.location.name,
-                        entry.date,
-                    )
-                }
+                scope.launch { doRefresh() }
             }) {
                 Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.refresh))
             }
@@ -116,14 +128,7 @@ fun SessionDetailScreen(
                     Text(state.error!!, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(16.dp))
                     OutlinedButton(onClick = {
-                        scope.launch {
-                            dashManager.refreshForLocation(
-                                entry.location.latitude,
-                                entry.location.longitude,
-                                entry.location.name,
-                                entry.date,
-                            )
-                        }
+                        scope.launch { doRefresh() }
                     }) {
                         Text(stringResource(R.string.retry))
                     }
@@ -132,6 +137,11 @@ fun SessionDetailScreen(
             return
         }
 
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = { scope.launch { doRefresh() } },
+            modifier = Modifier.fillMaxSize(),
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -562,5 +572,6 @@ fun SessionDetailScreen(
 
             Spacer(Modifier.height(16.dp))
         }
+        } // PullToRefreshBox
     }
 }

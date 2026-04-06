@@ -335,6 +335,29 @@
     <string name="planner_lon_short">経度</string>
     <string name="planner_last_checked">%1$d 時間前に確認</string>
     <string name="planner_days">日間</string>
+
+    <!-- Planner v0.23 -->
+    <string name="section_planner">プランナー</string>
+    <string name="planner_pick_on_map">地図で選択</string>
+    <string name="planner_tap_to_select">地図をタップして場所を選択</string>
+    <string name="planner_resolving_location">場所を解決中…</string>
+    <string name="planner_time_window">時間枠</string>
+    <string name="planner_cache_desc">セッションダッシュボードのデータはAPI呼び出しを減らすためにローカルにキャッシュされます。更新間隔を選択してください。</string>
+    <string name="planner_cache_interval">更新間隔</string>
+    <string name="planner_cache_hours">%1$d 時間</string>
+
+    <!-- Events v0.23 -->
+    <string name="event_no_events">イベントがありません</string>
+    <string name="event_add">イベント追加</string>
+    <string name="event_add_title">新規イベント</string>
+    <string name="event_delete_title">イベントを削除しますか？</string>
+    <string name="event_delete_msg">\"%1$s\"とすべてのセッションを削除しますか？</string>
+    <string name="event_share">共有</string>
+    <string name="event_import">インポート</string>
+    <string name="event_import_title">イベントをインポート</string>
+    <string name="event_import_hint">共有されたイベントJSONを貼り付け</string>
+    <string name="event_session_count">%1$dセッション</string>
+
     <string name="verdict_excellent">最高</string>
     <string name="verdict_good">良好</string>
     <string name="verdict_fair">普通</string>

@@ -385,6 +385,28 @@
     <string name="planner_last_checked">Checked %1$d h ago</string>
     <string name="planner_days">days</string>
 
+    <!-- Planner v0.23 -->
+    <string name="section_planner">Planner</string>
+    <string name="planner_pick_on_map">Pick on map</string>
+    <string name="planner_tap_to_select">Tap the map to select a location</string>
+    <string name="planner_resolving_location">Resolving location…</string>
+    <string name="planner_time_window">Time window</string>
+    <string name="planner_cache_desc">Session dashboard data is cached locally to reduce API calls. Choose how often it should be refreshed.</string>
+    <string name="planner_cache_interval">Refresh interval</string>
+    <string name="planner_cache_hours">%1$d h</string>
+
+    <!-- Events v0.23 -->
+    <string name="event_no_events">No events yet</string>
+    <string name="event_add">Add event</string>
+    <string name="event_add_title">New event</string>
+    <string name="event_delete_title">Delete event?</string>
+    <string name="event_delete_msg">Delete \"%1$s\" and all its sessions?</string>
+    <string name="event_share">Share</string>
+    <string name="event_import">Import</string>
+    <string name="event_import_title">Import event</string>
+    <string name="event_import_hint">Paste shared event JSON</string>
+    <string name="event_session_count">%1$d sessions</string>
+
     <!-- Planner verdicts -->
     <string name="verdict_excellent">Excellent</string>
     <string name="verdict_good">Good</string>

@@ -50,11 +50,14 @@ import com.ehrocha.pulsar.ui.screens.SettingsScreen
 import com.ehrocha.pulsar.ui.screens.CustomFlowScreen
 import com.ehrocha.pulsar.ui.screens.DashboardScreen
 import com.ehrocha.pulsar.ui.screens.PlannerScreen
+import com.ehrocha.pulsar.ui.screens.EventSessionsScreen
 import com.ehrocha.pulsar.ui.screens.SessionDetailScreen
+import com.ehrocha.pulsar.ui.screens.MapLocationPicker
 import com.ehrocha.pulsar.ui.theme.DarkColorScheme
 import com.ehrocha.pulsar.ui.theme.RedLightColorScheme
 import com.ehrocha.pulsar.ui.theme.LocalNightMode
-import com.ehrocha.pulsar.planner.PlannerEntry
+import com.ehrocha.pulsar.planner.PlannerEvent
+import com.ehrocha.pulsar.planner.PlannerSession
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import kotlinx.coroutines.flow.filterNotNull
@@ -228,14 +231,47 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                 PlannerScreen(
                     plannerManager = vm.plannerManager,
                     onBack = { currentScreen = AppScreen.Menu },
-                    onSessionDetail = { entry -> currentScreen = AppScreen.SessionDetail(entry) },
+                    onEventSessions = { event -> currentScreen = AppScreen.EventSessions(event) },
+                    onPickOnMap = { currentScreen = AppScreen.MapPicker },
+                )
+            }
+            is AppScreen.PlannerWithTab -> {
+                BackHandler { currentScreen = AppScreen.Menu }
+                PlannerScreen(
+                    plannerManager = vm.plannerManager,
+                    onBack = { currentScreen = AppScreen.Menu },
+                    onEventSessions = { event -> currentScreen = AppScreen.EventSessions(event) },
+                    onPickOnMap = { currentScreen = AppScreen.MapPicker },
+                )
+            }
+            AppScreen.MapPicker -> {
+                BackHandler { currentScreen = AppScreen.Planner }
+                MapLocationPicker(
+                    onBack = { currentScreen = AppScreen.Planner },
+                    onConfirm = { name, lat, lon ->
+                        // After picking on map, go back to planner (user can add via dialog)
+                        currentScreen = AppScreen.Planner
+                    },
+                )
+            }
+            is AppScreen.EventSessions -> {
+                BackHandler { currentScreen = AppScreen.Planner }
+                EventSessionsScreen(
+                    event = screen.event,
+                    plannerManager = vm.plannerManager,
+                    onBack = { currentScreen = AppScreen.Planner },
+                    onSessionDetail = { session, event ->
+                        currentScreen = AppScreen.SessionDetail(session, event)
+                    },
                 )
             }
             is AppScreen.SessionDetail -> {
-                BackHandler { currentScreen = AppScreen.Planner }
+                BackHandler { currentScreen = AppScreen.EventSessions(screen.event) }
                 SessionDetailScreen(
-                    entry = screen.entry,
-                    onBack = { currentScreen = AppScreen.Planner },
+                    session = screen.session,
+                    event = screen.event,
+                    plannerManager = vm.plannerManager,
+                    onBack = { currentScreen = AppScreen.EventSessions(screen.event) },
                 )
             }
         }
@@ -269,5 +305,8 @@ private sealed class AppScreen {
     data object CustomFlow : AppScreen()
     data object Dashboard : AppScreen()
     data object Planner : AppScreen()
-    data class SessionDetail(val entry: PlannerEntry) : AppScreen()
+    data class PlannerWithTab(val tab: Int) : AppScreen()
+    data object MapPicker : AppScreen()
+    data class EventSessions(val event: PlannerEvent) : AppScreen()
+    data class SessionDetail(val session: PlannerSession, val event: PlannerEvent) : AppScreen()
 }

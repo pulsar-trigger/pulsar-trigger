@@ -335,6 +335,29 @@
     <string name="planner_lon_short">Lng</string>
     <string name="planner_last_checked">Vor %1$d h überprüft</string>
     <string name="planner_days">Tage</string>
+
+    <!-- Planner v0.23 -->
+    <string name="section_planner">Planer</string>
+    <string name="planner_pick_on_map">Auf der Karte wählen</string>
+    <string name="planner_tap_to_select">Tippen Sie auf die Karte, um einen Ort auszuwählen</string>
+    <string name="planner_resolving_location">Ort wird aufgelöst…</string>
+    <string name="planner_time_window">Zeitfenster</string>
+    <string name="planner_cache_desc">Sitzungs-Dashboard-Daten werden lokal zwischengespeichert, um API-Aufrufe zu reduzieren. Wählen Sie das Aktualisierungsintervall.</string>
+    <string name="planner_cache_interval">Aktualisierungsintervall</string>
+    <string name="planner_cache_hours">%1$d h</string>
+
+    <!-- Events v0.23 -->
+    <string name="event_no_events">Noch keine Ereignisse</string>
+    <string name="event_add">Ereignis hinzufügen</string>
+    <string name="event_add_title">Neues Ereignis</string>
+    <string name="event_delete_title">Ereignis löschen?</string>
+    <string name="event_delete_msg">\"%1$s\" und alle Sitzungen löschen?</string>
+    <string name="event_share">Teilen</string>
+    <string name="event_import">Importieren</string>
+    <string name="event_import_title">Ereignis importieren</string>
+    <string name="event_import_hint">Geteiltes Ereignis-JSON einfügen</string>
+    <string name="event_session_count">%1$d Sitzungen</string>
+
     <string name="verdict_excellent">Ausgezeichnet</string>
     <string name="verdict_good">Gut</string>
     <string name="verdict_fair">Akzeptabel</string>

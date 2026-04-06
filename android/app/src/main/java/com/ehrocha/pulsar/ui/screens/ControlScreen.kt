@@ -52,6 +52,7 @@ import androidx.compose.material.icons.filled.DeveloperBoard
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.SaveAlt
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.ehrocha.pulsar.ui.components.IntStepperField
 import com.ehrocha.pulsar.ui.components.TimePicker
@@ -745,6 +746,7 @@ internal enum class SettingsSection(val icon: ImageVector, @StringRes val titleR
     LANGUAGE(Icons.Default.Language, R.string.section_language),
     DEVICE(Icons.Default.PhoneAndroid, R.string.section_device),
     GPIO_PINS(Icons.Default.Memory, R.string.section_gpio_pins),
+    PLANNER(Icons.Default.CalendarMonth, R.string.section_planner),
     BACKUP_RESTORE(Icons.Default.SaveAlt, R.string.section_backup_restore),
     UPDATES(Icons.Default.SystemUpdate, R.string.section_updates),
     DEVICE_INFO(Icons.Default.DeveloperBoard, R.string.section_device_hardware),
@@ -1665,4 +1667,49 @@ private fun formatUptime(minutes: Int): String {
     val h = minutes / 60
     val m = minutes % 60
     return if (h > 0) "${h}h ${m}m" else "${m}m"
+}
+
+// ── Planner settings section ─────────────────────────────────────────────────
+
+@Composable
+internal fun PlannerSettingsSectionContent(vm: PulsarViewModel) {
+    val cacheOptions = listOf(6L, 12L, 24L, 48L, 72L)
+    var currentInterval by remember { mutableLongStateOf(vm.plannerManager.cacheIntervalHours) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text(
+            stringResource(R.string.section_planner),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+        )
+
+        Text(
+            stringResource(R.string.planner_cache_desc),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        // Cache interval selector
+        Text(
+            stringResource(R.string.planner_cache_interval),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+        )
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            cacheOptions.forEach { hours ->
+                FilterChip(
+                    selected = currentInterval == hours,
+                    onClick = {
+                        currentInterval = hours
+                        vm.plannerManager.cacheIntervalHours = hours
+                    },
+                    label = { Text(stringResource(R.string.planner_cache_hours, hours)) },
+                )
+            }
+        }
+    }
 }

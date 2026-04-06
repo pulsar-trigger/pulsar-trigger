@@ -241,6 +241,7 @@ fun SettingsScreen(
                     SettingsSection.LANGUAGE -> LanguageSectionContent()
                     SettingsSection.DEVICE -> DeviceSectionContent(vm, deviceName, connected)
                     SettingsSection.GPIO_PINS -> GpioPinsSectionContent(vm, connected)
+                    SettingsSection.PLANNER -> PlannerSettingsSectionContent(vm)
                     SettingsSection.BACKUP_RESTORE -> BackupRestoreSectionContent(vm)
                     SettingsSection.UPDATES -> UpdatesSectionContent(vm, connected)
                     SettingsSection.DEVICE_INFO -> DeviceInfoSectionContent(vm, connected)

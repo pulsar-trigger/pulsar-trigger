@@ -20,8 +20,8 @@ android {
         applicationId = "com.ehrocha.pulsar"
         minSdk = 26
         targetSdk = 35
-        versionCode = 29
-        versionName = "0.22.0"
+        versionCode = 30
+        versionName = "0.23.0"
     }
 
     signingConfigs {
@@ -87,6 +87,9 @@ dependencies {
 
     // WorkManager — periodic background update checks
     implementation("androidx.work:work-runtime-ktx:2.9.1")
+
+    // OpenStreetMap — map-based location picker
+    implementation("org.osmdroid:osmdroid-android:6.1.20")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

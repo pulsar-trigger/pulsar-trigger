@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +45,7 @@ fun DashboardScreen(
     val state by dashboardManager.state.collectAsState()
     val scope = rememberCoroutineScope()
     var showDatePicker by remember { mutableStateOf(false) }
+    var isRefreshing by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         dashboardManager.refresh()
@@ -179,6 +181,17 @@ fun DashboardScreen(
             return
         }
 
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                scope.launch {
+                    isRefreshing = true
+                    dashboardManager.refresh(state.selectedDate)
+                    isRefreshing = false
+                }
+            },
+            modifier = Modifier.fillMaxSize(),
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -920,6 +933,7 @@ fun DashboardScreen(
 
             Spacer(Modifier.height(16.dp))
         }
+        } // PullToRefreshBox
     }
 }
 
