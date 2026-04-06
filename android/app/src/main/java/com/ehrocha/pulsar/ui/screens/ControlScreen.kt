@@ -396,15 +396,8 @@ internal fun IntervalometerPanelContent(
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text(stringResource(R.string.label_timing_parameters), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.label_capture_sequence), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             
-            TimePicker(
-                totalMs = intervalMs,
-                onChanged = { onIntervalChanged(it) },
-                label = stringResource(R.string.label_interval),
-                enabled = enabled,
-            )
-
             TimePicker(
                 totalMs = exposureMs,
                 onChanged = { onExposureChanged(it) },
@@ -413,9 +406,9 @@ internal fun IntervalometerPanelContent(
             )
 
             TimePicker(
-                totalMs = delayMs,
-                onChanged = { onDelayChanged(it) },
-                label = stringResource(R.string.label_start_delay),
+                totalMs = intervalMs,
+                onChanged = { onIntervalChanged(it) },
+                label = stringResource(R.string.label_interval),
                 enabled = enabled,
             )
 
@@ -425,6 +418,13 @@ internal fun IntervalometerPanelContent(
                 onValueChange = { onShotCountChanged(it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT)) },
                 min = AppConfig.MIN_SHOT_COUNT,
                 max = maxShotCount,
+                enabled = enabled,
+            )
+
+            TimePicker(
+                totalMs = delayMs,
+                onChanged = { onDelayChanged(it) },
+                label = stringResource(R.string.label_start_delay),
                 enabled = enabled,
             )
         }
@@ -580,7 +580,7 @@ internal fun AstroPanelContent(
                         Text(formatDuration(maxExposureMs), style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
                     }
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.label_total_time), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.label_total_duration), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(formatDuration(totalTimeMs), style = MaterialTheme.typography.headlineLarge)
                     }
                 }
@@ -641,14 +641,7 @@ internal fun AstroPanelContent(
             TimePicker(
                 totalMs = gapMs,
                 onChanged = { onGapMsChanged(it) },
-                label = stringResource(R.string.label_gap_between_shots),
-                enabled = enabled,
-            )
-
-            TimePicker(
-                totalMs = delayMs,
-                onChanged = { onDelayMsChanged(it) },
-                label = stringResource(R.string.label_start_delay),
+                label = stringResource(R.string.label_interval),
                 enabled = enabled,
             )
 
@@ -658,6 +651,13 @@ internal fun AstroPanelContent(
                 onValueChange = { onShotCountChanged(it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT)) },
                 min = AppConfig.MIN_SHOT_COUNT,
                 max = AppConfig.DEFAULT_MAX_SHOTS,
+                enabled = enabled,
+            )
+
+            TimePicker(
+                totalMs = delayMs,
+                onChanged = { onDelayMsChanged(it) },
+                label = stringResource(R.string.label_start_delay),
                 enabled = enabled,
             )
         }

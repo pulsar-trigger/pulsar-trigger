@@ -88,9 +88,8 @@
     <string name="label_shots">Shots</string>
     <string name="label_total_duration">Total Duration</string>
     <string name="label_duty_cycle">Duty Cycle: %1$d%% active exposure</string>
-    <string name="label_timing_parameters">Timing Parameters</string>
-    <string name="label_interval">Interval (time between shots)</string>
-    <string name="label_exposure">Exposure duration</string>
+    <string name="label_interval">Interval</string>
+    <string name="label_exposure">Exposure</string>
     <string name="label_start_delay">Start Delay</string>
     <string name="label_number_of_shots">Number of Shots</string>
 
@@ -108,7 +107,6 @@
     <string name="label_rule_readout">%1$d Rule Readout</string>
     <string name="label_effective_focal">%1$smm Effective</string>
     <string name="label_max_exposure">Max Exposure</string>
-    <string name="label_total_time">Total Time</string>
     <string name="label_astro_formula">Formula: %1$d / (%2$d mm × %3$sx) = %4$ss</string>
     <string name="label_optics_configuration">Optics Configuration</string>
     <string name="label_sensor_preset">Sensor Preset</string>
@@ -118,7 +116,6 @@
     <string name="preset_micro_43">Micro 4/3</string>
     <string name="label_focal_length">Lens Focal Length</string>
     <string name="label_capture_sequence">Capture Sequence</string>
-    <string name="label_gap_between_shots">Gap between shots</string>
 
     <!-- SettingsPanel -->
     <string name="section_language">Language</string>

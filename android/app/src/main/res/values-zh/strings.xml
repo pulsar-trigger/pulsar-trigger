@@ -72,9 +72,8 @@
     <string name="label_shots">拍摄张数</string>
     <string name="label_total_duration">总时长</string>
     <string name="label_duty_cycle">占空比：%1$d%% 有效曝光</string>
-    <string name="label_timing_parameters">定时参数</string>
-    <string name="label_interval">间隔（两次拍摄之间的时间）</string>
-    <string name="label_exposure">曝光时长</string>
+    <string name="label_interval">间隔</string>
+    <string name="label_exposure">曝光</string>
     <string name="label_start_delay">启动延迟</string>
     <string name="label_number_of_shots">拍摄张数</string>
     <string name="panel_manual">手动快门</string>
@@ -88,7 +87,6 @@
     <string name="label_rule_readout">%1$d 法则读数</string>
     <string name="label_effective_focal">%1$smm 等效焦距</string>
     <string name="label_max_exposure">最大曝光</string>
-    <string name="label_total_time">总时间</string>
     <string name="label_astro_formula">公式：%1$d / (%2$d mm × %3$sx) = %4$ss</string>
     <string name="label_optics_configuration">光学配置</string>
     <string name="label_sensor_preset">传感器预设</string>
@@ -98,7 +96,6 @@
     <string name="preset_micro_43">Micro 4/3</string>
     <string name="label_focal_length">镜头焦距</string>
     <string name="label_capture_sequence">拍摄序列</string>
-    <string name="label_gap_between_shots">拍摄间隔</string>
     <string name="section_language">语言</string>
     <string name="lang_system_default">系统默认</string>
     <string name="section_device">设备</string>

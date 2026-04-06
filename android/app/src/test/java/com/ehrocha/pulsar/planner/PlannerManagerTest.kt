@@ -8,6 +8,7 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
+import java.time.LocalTime
 
 class PlannerManagerTest {
 
@@ -169,5 +170,74 @@ class PlannerManagerTest {
             LocalDate.of(2025, 6, 15), LocalDate.of(2025, 6, 15))
         verify(atLeast = 1) { editor.putString(any(), any()) }
         verify(atLeast = 1) { editor.apply() }
+    }
+
+    @Test
+    fun `addSession respects MAX_PLANNER_ENTRIES`() {
+        val event = manager.addEvent("Trip",
+            LocalDate.of(2025, 6, 15), LocalDate.of(2025, 6, 17))
+        repeat(AppConfig.MAX_PLANNER_ENTRIES) { i ->
+            assertNotNull(manager.addSession(event.id, "Shot $i", 40.0, -74.0,
+                LocalDate.of(2025, 6, 15)))
+        }
+        assertEquals(AppConfig.MAX_PLANNER_ENTRIES, manager.state.value.sessions.size)
+
+        // Next add should return null
+        assertNull(manager.addSession(event.id, "Overflow", 40.0, -74.0,
+            LocalDate.of(2025, 6, 15)))
+        assertEquals(AppConfig.MAX_PLANNER_ENTRIES, manager.state.value.sessions.size)
+    }
+
+    @Test
+    fun `exportEvent includes optional time window`() {
+        val event = manager.addEvent("Trip",
+            LocalDate.of(2025, 6, 15), LocalDate.of(2025, 6, 15))
+        manager.addSession(event.id, "Waterfall", 40.0, -74.0,
+            LocalDate.of(2025, 6, 15),
+            LocalTime.of(15, 0), LocalTime.of(16, 0))
+        val json = manager.exportEvent(event.id)!!
+        assertTrue(json.contains("15:00"))
+        assertTrue(json.contains("16:00"))
+    }
+
+    @Test
+    fun `importEvent round-trips time window`() {
+        val event = manager.addEvent("Trip",
+            LocalDate.of(2025, 6, 15), LocalDate.of(2025, 6, 15))
+        manager.addSession(event.id, "Waterfall", 40.0, -74.0,
+            LocalDate.of(2025, 6, 15),
+            LocalTime.of(15, 0), LocalTime.of(16, 0))
+        val json = manager.exportEvent(event.id)!!
+
+        val imported = manager.importEvent(json)!!
+        val sessions = manager.sessionsForEvent(imported.id)
+        assertEquals(1, sessions.size)
+        assertEquals(LocalTime.of(15, 0), sessions.first().startTime)
+        assertEquals(LocalTime.of(16, 0), sessions.first().endTime)
+    }
+
+    @Test
+    fun `importEvent handles missing sessions array`() {
+        val json = """{"v":2,"event":{"name":"Solo","startDate":"2025-06-15","endDate":"2025-06-15"}}"""
+        val imported = manager.importEvent(json)
+        assertNotNull(imported)
+        assertEquals("Solo", imported!!.name)
+        assertEquals(0, manager.sessionsForEvent(imported.id).size)
+    }
+
+    @Test
+    fun `importEvent returns null on malformed JSON`() {
+        assertNull(manager.importEvent("{invalid"))
+        assertNull(manager.importEvent(""))
+    }
+
+    @Test
+    fun `importEvent session without time window`() {
+        val json = """{"v":2,"event":{"name":"Trip","startDate":"2025-06-15","endDate":"2025-06-15"},"sessions":[{"name":"Shot","lat":40.0,"lon":-74.0,"date":"2025-06-15"}]}"""
+        val imported = manager.importEvent(json)!!
+        val sessions = manager.sessionsForEvent(imported.id)
+        assertEquals(1, sessions.size)
+        assertNull(sessions.first().startTime)
+        assertNull(sessions.first().endTime)
     }
 }

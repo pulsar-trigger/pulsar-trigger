@@ -72,9 +72,8 @@
     <string name="label_shots">Aufnahmen</string>
     <string name="label_total_duration">Gesamtdauer</string>
     <string name="label_duty_cycle">Auslastung: %1$d%% aktive Belichtung</string>
-    <string name="label_timing_parameters">Zeitparameter</string>
-    <string name="label_interval">Intervall (Zeit zwischen Aufnahmen)</string>
-    <string name="label_exposure">Belichtungsdauer</string>
+    <string name="label_interval">Intervall</string>
+    <string name="label_exposure">Belichtung</string>
     <string name="label_start_delay">Startverzögerung</string>
     <string name="label_number_of_shots">Anzahl der Aufnahmen</string>
     <string name="panel_manual">Manueller Auslöser</string>
@@ -88,7 +87,6 @@
     <string name="label_rule_readout">%1$d-Regel Ergebnis</string>
     <string name="label_effective_focal">%1$smm Effektiv</string>
     <string name="label_max_exposure">Max. belichtung</string>
-    <string name="label_total_time">Gesamtzeit</string>
     <string name="label_astro_formula">Formel: %1$d / (%2$d mm × %3$sx) = %4$ss</string>
     <string name="label_optics_configuration">Optik-konfiguration</string>
     <string name="label_sensor_preset">Sensor-Voreinstellung</string>
@@ -98,7 +96,6 @@
     <string name="preset_micro_43">Micro 4/3</string>
     <string name="label_focal_length">Brennweite des Objektivs</string>
     <string name="label_capture_sequence">Aufnahmesequenz</string>
-    <string name="label_gap_between_shots">Pause zwischen Aufnahmen</string>
     <string name="section_language">Sprache</string>
     <string name="lang_system_default">Systemstandard</string>
     <string name="section_device">Gerät</string>

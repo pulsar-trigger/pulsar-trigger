@@ -72,9 +72,8 @@
     <string name="label_shots">ショット数</string>
     <string name="label_total_duration">合計時間</string>
     <string name="label_duty_cycle">デューティサイクル: %1$d%% アクティブ露出</string>
-    <string name="label_timing_parameters">タイミングパラメータ</string>
-    <string name="label_interval">インターバル（撮影間隔）</string>
-    <string name="label_exposure">露出時間</string>
+    <string name="label_interval">インターバル</string>
+    <string name="label_exposure">露出</string>
     <string name="label_start_delay">開始遅延</string>
     <string name="label_number_of_shots">撮影枚数</string>
     <string name="panel_manual">マニュアルシャッター</string>
@@ -88,7 +87,6 @@
     <string name="label_rule_readout">%1$d ルール表示</string>
     <string name="label_effective_focal">有効焦点距離 %1$smm</string>
     <string name="label_max_exposure">最大露出時間</string>
-    <string name="label_total_time">合計時間</string>
     <string name="label_astro_formula">計算式: %1$d / (%2$d mm × %3$sx) = %4$ss</string>
     <string name="label_optics_configuration">光学系の設定</string>
     <string name="label_sensor_preset">センサープリセット</string>
@@ -98,7 +96,6 @@
     <string name="preset_micro_43">Micro 4/3</string>
     <string name="label_focal_length">レンズ焦点距離</string>
     <string name="label_capture_sequence">撮影シーケンス</string>
-    <string name="label_gap_between_shots">撮影間の間隔</string>
     <string name="section_language">言語</string>
     <string name="lang_system_default">システムのデフォルト</string>
     <string name="section_device">デバイス</string>

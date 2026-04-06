@@ -72,9 +72,8 @@
     <string name="label_shots">Photos</string>
     <string name="label_total_duration">Durée totale</string>
     <string name="label_duty_cycle">Cycle utile : %1$d%% d\'exposition active</string>
-    <string name="label_timing_parameters">Paramètres de minutage</string>
-    <string name="label_interval">Intervalle (temps entre les prises)</string>
-    <string name="label_exposure">Durée d\'exposition</string>
+    <string name="label_interval">Intervalle</string>
+    <string name="label_exposure">Exposition</string>
     <string name="label_start_delay">Délai de démarrage</string>
     <string name="label_number_of_shots">Nombre de photos</string>
     <string name="panel_manual">Obturateur manuel</string>
@@ -88,7 +87,6 @@
     <string name="label_rule_readout">Résultat règle des %1$d</string>
     <string name="label_effective_focal">%1$smm effectif</string>
     <string name="label_max_exposure">Exposition max</string>
-    <string name="label_total_time">Durée totale</string>
     <string name="label_astro_formula">Formule : %1$d / (%2$d mm × %3$sx) = %4$ss</string>
     <string name="label_optics_configuration">Configuration optique</string>
     <string name="label_sensor_preset">Préréglage capteur</string>
@@ -98,7 +96,6 @@
     <string name="preset_micro_43">Micro 4/3</string>
     <string name="label_focal_length">Longueur focale de l\'objectif</string>
     <string name="label_capture_sequence">Séquence de capture</string>
-    <string name="label_gap_between_shots">Écart entre les prises</string>
     <string name="section_language">Langue</string>
     <string name="lang_system_default">Langue du système</string>
     <string name="section_device">Appareil</string>
