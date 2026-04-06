@@ -46,6 +46,7 @@ import java.util.Locale
 fun PlannerScreen(
     plannerManager: PlannerManager,
     onBack: () -> Unit,
+    onSessionDetail: (PlannerEntry) -> Unit = {},
 ) {
     val state by plannerManager.state.collectAsState()
     var showAddLocation by remember { mutableStateOf(false) }
@@ -68,8 +69,8 @@ fun PlannerScreen(
         AddEntryDialog(
             locations = state.locations,
             onDismiss = { showAddEntry = false },
-            onConfirm = { location, date ->
-                plannerManager.addEntry(location, date)
+            onConfirm = { location, start, end ->
+                plannerManager.addEntries(location, start, end)
                 showAddEntry = false
             },
         )
@@ -128,7 +129,7 @@ fun PlannerScreen(
             1 -> SessionsTab(state, plannerManager, onAddEntry = {
                 if (state.locations.isEmpty()) showAddLocation = true
                 else showAddEntry = true
-            })
+            }, onSessionDetail = onSessionDetail)
         }
     }
 }
@@ -243,6 +244,7 @@ private fun SessionsTab(
     state: PlannerState,
     manager: PlannerManager,
     onAddEntry: () -> Unit,
+    onSessionDetail: (PlannerEntry) -> Unit,
 ) {
     if (state.entries.isEmpty()) {
         Box(
@@ -279,7 +281,7 @@ private fun SessionsTab(
             state.entries.sortedBy { it.date },
             key = { it.id },
         ) { entry ->
-            EntryCard(entry) { manager.removeEntry(entry.id) }
+            EntryCard(entry, onClick = { onSessionDetail(entry) }) { manager.removeEntry(entry.id) }
         }
     }
 }
@@ -287,11 +289,13 @@ private fun SessionsTab(
 @Composable
 private fun EntryCard(
     entry: PlannerEntry,
+    onClick: () -> Unit,
     onDelete: () -> Unit,
 ) {
     val isPast = entry.date.isBefore(LocalDate.now())
 
     Surface(
+        onClick = onClick,
         shape = RoundedCornerShape(12.dp),
         tonalElevation = 2.dp,
         modifier = Modifier
@@ -568,29 +572,36 @@ private fun AddLocationDialog(
 private fun AddEntryDialog(
     locations: List<SavedLocation>,
     onDismiss: () -> Unit,
-    onConfirm: (SavedLocation, LocalDate) -> Unit,
+    onConfirm: (SavedLocation, LocalDate, LocalDate) -> Unit,
 ) {
     var selectedLoc by remember { mutableStateOf(locations.first()) }
     var showDatePicker by remember { mutableStateOf(false) }
-    var pickedDate by remember { mutableStateOf(LocalDate.now().plusDays(1)) }
+    var startDate by remember { mutableStateOf(LocalDate.now().plusDays(1)) }
+    var endDate by remember { mutableStateOf(LocalDate.now().plusDays(1)) }
     var expanded by remember { mutableStateOf(false) }
 
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = pickedDate
+        val rangeState = rememberDateRangePickerState(
+            initialSelectedStartDateMillis = startDate
                 .atStartOfDay(java.time.ZoneId.of("UTC"))
-                .toInstant().toEpochMilli()
+                .toInstant().toEpochMilli(),
+            initialSelectedEndDateMillis = endDate
+                .atStartOfDay(java.time.ZoneId.of("UTC"))
+                .toInstant().toEpochMilli(),
         )
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
                 TextButton(onClick = {
                     showDatePicker = false
-                    datePickerState.selectedDateMillis?.let { millis ->
-                        pickedDate = java.time.Instant.ofEpochMilli(millis)
-                            .atZone(java.time.ZoneId.of("UTC"))
-                            .toLocalDate()
+                    rangeState.selectedStartDateMillis?.let { s ->
+                        startDate = java.time.Instant.ofEpochMilli(s)
+                            .atZone(java.time.ZoneId.of("UTC")).toLocalDate()
                     }
+                    rangeState.selectedEndDateMillis?.let { e ->
+                        endDate = java.time.Instant.ofEpochMilli(e)
+                            .atZone(java.time.ZoneId.of("UTC")).toLocalDate()
+                    } ?: run { endDate = startDate }
                 }) { Text(stringResource(R.string.ok)) }
             },
             dismissButton = {
@@ -598,8 +609,14 @@ private fun AddEntryDialog(
                     Text(stringResource(R.string.cancel))
                 }
             },
-        ) { DatePicker(state = datePickerState) }
+        ) { DateRangePicker(state = rangeState, modifier = Modifier.weight(1f)) }
     }
+
+    val days = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1
+    val dateLabel = if (startDate == endDate)
+        startDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+    else
+        "${startDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT))} – ${endDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT))} ($days ${stringResource(R.string.planner_days)})"
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -637,19 +654,19 @@ private fun AddEntryDialog(
                     }
                 }
 
-                // Date selector
+                // Date range selector
                 OutlinedButton(
                     onClick = { showDatePicker = true },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Icon(Icons.Default.CalendarMonth, contentDescription = null)
+                    Icon(Icons.Default.DateRange, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text(pickedDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)))
+                    Text(dateLabel, maxLines = 2)
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(selectedLoc, pickedDate) }) {
+            TextButton(onClick = { onConfirm(selectedLoc, startDate, endDate) }) {
                 Text(stringResource(R.string.save))
             }
         },

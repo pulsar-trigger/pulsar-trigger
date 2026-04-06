@@ -334,6 +334,7 @@
     <string name="planner_lat_short">Brg</string>
     <string name="planner_lon_short">Lng</string>
     <string name="planner_last_checked">Vor %1$d h überprüft</string>
+    <string name="planner_days">Tage</string>
     <string name="verdict_excellent">Ausgezeichnet</string>
     <string name="verdict_good">Gut</string>
     <string name="verdict_fair">Akzeptabel</string>

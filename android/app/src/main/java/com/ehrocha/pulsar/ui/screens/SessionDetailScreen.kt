@@ -6,7 +6,6 @@
 package com.ehrocha.pulsar.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,63 +19,38 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.astro.*
+import com.ehrocha.pulsar.planner.PlannerEntry
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardScreen(
-    dashboardManager: AstroDashboardManager,
+fun SessionDetailScreen(
+    entry: PlannerEntry,
     onBack: () -> Unit,
 ) {
-    val state by dashboardManager.state.collectAsState()
+    val context = LocalContext.current
+    val dashManager = remember { AstroDashboardManager(context) }
+    val state by dashManager.state.collectAsState()
     val scope = rememberCoroutineScope()
-    var showDatePicker by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        dashboardManager.refresh()
-    }
-
-    // ── Date picker dialog ───────────────────────────────────────
-    if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = state.selectedDate
-                .atStartOfDay(java.time.ZoneId.of("UTC"))
-                .toInstant().toEpochMilli()
+    LaunchedEffect(entry.id) {
+        dashManager.refreshForLocation(
+            entry.location.latitude,
+            entry.location.longitude,
+            entry.location.name,
+            entry.date,
         )
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDatePicker = false
-                    datePickerState.selectedDateMillis?.let { millis ->
-                        val picked = java.time.Instant.ofEpochMilli(millis)
-                            .atZone(java.time.ZoneId.of("UTC"))
-                            .toLocalDate()
-                        scope.launch { dashboardManager.refresh(picked) }
-                    }
-                }) { Text(stringResource(R.string.ok)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
-        ) {
-            DatePicker(state = datePickerState)
-        }
     }
 
     Column(
@@ -92,59 +66,29 @@ fun DashboardScreen(
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
             }
-            Text(
-                stringResource(R.string.dashboard_title),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f),
-            )
-            IconButton(onClick = { scope.launch { dashboardManager.refresh(state.selectedDate) } }) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    entry.location.name,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    entry.date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            IconButton(onClick = {
+                scope.launch {
+                    dashManager.refreshForLocation(
+                        entry.location.latitude,
+                        entry.location.longitude,
+                        entry.location.name,
+                        entry.date,
+                    )
+                }
+            }) {
                 Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.refresh))
-            }
-        }
-
-        // ── Date selector chip ───────────────────────────────────────
-        val isToday = state.selectedDate == LocalDate.now()
-        val dateLabel = if (isToday)
-            stringResource(R.string.date_today)
-        else
-            state.selectedDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                modifier = Modifier.clickable { showDatePicker = true },
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Icon(
-                        Icons.Default.CalendarMonth,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    )
-                    Text(
-                        dateLabel,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    )
-                }
-            }
-            if (!isToday) {
-                Spacer(Modifier.width(8.dp))
-                TextButton(onClick = { scope.launch { dashboardManager.refresh(LocalDate.now()) } }) {
-                    Text(stringResource(R.string.date_today))
-                }
             }
         }
 
@@ -163,7 +107,7 @@ fun DashboardScreen(
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
-                        Icons.Default.LocationOff,
+                        Icons.Default.ErrorOutline,
                         contentDescription = null,
                         modifier = Modifier.size(48.dp),
                         tint = MaterialTheme.colorScheme.error,
@@ -171,7 +115,16 @@ fun DashboardScreen(
                     Spacer(Modifier.height(12.dp))
                     Text(state.error!!, textAlign = TextAlign.Center)
                     Spacer(Modifier.height(16.dp))
-                    OutlinedButton(onClick = { scope.launch { dashboardManager.refresh() } }) {
+                    OutlinedButton(onClick = {
+                        scope.launch {
+                            dashManager.refreshForLocation(
+                                entry.location.latitude,
+                                entry.location.longitude,
+                                entry.location.name,
+                                entry.date,
+                            )
+                        }
+                    }) {
                         Text(stringResource(R.string.retry))
                     }
                 }
@@ -188,7 +141,6 @@ fun DashboardScreen(
             // ── Summary card ──────────────────────────────────────
             state.location?.let { loc ->
                 DashCard(title = stringResource(R.string.card_summary), icon = Icons.Default.MyLocation) {
-                    // City name + coordinates
                     loc.cityName?.let { city ->
                         Text(
                             city,
@@ -209,7 +161,6 @@ fun DashboardScreen(
 
                     Spacer(Modifier.height(12.dp))
 
-                    // Verdict rows — one per line with rise/set times
                     @Composable
                     fun VerdictRow(emoji: String, label: String, good: Boolean, extra: String? = null) {
                         Row(
@@ -249,11 +200,6 @@ fun DashboardScreen(
                         }
                     }
 
-                    // Sun
-                    state.sun?.let { sun ->
-                        VerdictRow("☀️", stringResource(R.string.label_sunrise) + " / " + stringResource(R.string.label_sunset), true)
-                    }
-
                     // Moon
                     state.moon?.let { moon ->
                         VerdictRow(
@@ -290,65 +236,15 @@ fun DashboardScreen(
                         )
                     }
 
-                    // Bortle / Light Pollution
+                    // Bortle
                     state.bortle?.let { b ->
                         val bInt = b.bortleClass.toInt().coerceIn(1, 9)
-                        val good = bInt <= 4
                         VerdictRow(
                             "💡",
                             stringResource(R.string.verdict_bortle, bInt),
-                            good,
+                            bInt <= 4,
                             String.format(Locale.US, "%.1f mpsas", b.mpsas),
                         )
-                    }
-
-                    // Rise / Set times
-                    val riseSetRows = buildList {
-                        state.sun?.let { sun ->
-                            val t = listOfNotNull(
-                                sun.sunrise?.let { "↑${formatTime(it)}" },
-                                sun.sunset?.let { "↓${formatTime(it)}" },
-                            ).joinToString("  ")
-                            if (t.isNotEmpty()) add("☀️" to t)
-                        }
-                        state.moon?.let { moon ->
-                            val t = listOfNotNull(
-                                moon.rise?.let { "↑${formatTime(it)}" },
-                                moon.set?.let { "↓${formatTime(it)}" },
-                            ).joinToString("  ")
-                            if (t.isNotEmpty()) add(moon.emoji to t)
-                        }
-                        state.milkyWay?.let { mw ->
-                            val t = listOfNotNull(
-                                mw.coreRise?.let { "↑$it" },
-                                mw.coreSet?.let { "↓$it" },
-                            ).joinToString("  ")
-                            if (t.isNotEmpty()) add("🌌" to t)
-                        }
-                    }
-                    if (riseSetRows.isNotEmpty()) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            stringResource(R.string.label_rise_set),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        riseSetRows.forEach { (emoji, times) ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(emoji, fontSize = 14.sp, modifier = Modifier.width(24.dp))
-                                Text(
-                                    times,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
                     }
 
                     // Best photo windows
@@ -400,13 +296,6 @@ fun DashboardScreen(
                                 }
                             }
                         }
-                    } else if (!state.loading && state.weather != null && state.sun != null) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            stringResource(R.string.window_no_clear),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
                     }
                 }
             }
@@ -490,12 +379,8 @@ fun DashboardScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        moon.rise?.let {
-                            InfoChip(stringResource(R.string.label_moonrise), formatTime(it))
-                        }
-                        moon.set?.let {
-                            InfoChip(stringResource(R.string.label_moonset), formatTime(it))
-                        }
+                        moon.rise?.let { InfoChip(stringResource(R.string.label_moonrise), formatTime(it)) }
+                        moon.set?.let { InfoChip(stringResource(R.string.label_moonset), formatTime(it)) }
                     }
                     Spacer(Modifier.height(8.dp))
                     Surface(
@@ -520,105 +405,6 @@ fun DashboardScreen(
                 }
             }
 
-            // ── Milky Way card ───────────────────────────────────────
-            state.milkyWay?.let { mw ->
-                DashCard(title = stringResource(R.string.card_milky_way), icon = Icons.Default.AutoAwesome) {
-                    Surface(
-                        color = if (mw.visible) Color(0xFF2E7D32).copy(alpha = 0.15f)
-                                else Color(0xFFE65100).copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(
-                            text = when {
-                                mw.visible -> stringResource(R.string.mw_visible)
-                                mw.coreRise != null || mw.coreSet != null -> stringResource(R.string.mw_not_visible)
-                                else -> stringResource(R.string.mw_never_rises)
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(8.dp),
-                            color = if (mw.visible) Color(0xFF2E7D32) else Color(0xFFE65100),
-                        )
-                    }
-                    if (mw.coreRise != null || mw.coreSet != null) {
-                        Spacer(Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly,
-                        ) {
-                            mw.coreRise?.let { InfoChip(stringResource(R.string.label_core_rise), it) }
-                            mw.coreSet?.let { InfoChip(stringResource(R.string.label_core_set), it) }
-                        }
-                    }
-                    mw.darkWindow?.let { window ->
-                        Spacer(Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
-                        ) {
-                            InfoChip(stringResource(R.string.label_dark_window), window)
-                        }
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = if (mw.seasonBest) stringResource(R.string.mw_season_good)
-                               else stringResource(R.string.mw_season_off),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            // ── Bortle / Light Pollution card ────────────────────────
-            state.bortle?.let { b ->
-                val bInt = b.bortleClass.toInt().coerceIn(1, 9)
-                val good = bInt <= 4
-                DashCard(title = stringResource(R.string.card_bortle), icon = Icons.Default.Lightbulb) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text("💡", fontSize = 36.sp)
-                        Spacer(Modifier.width(16.dp))
-                        Column {
-                            Text(
-                                stringResource(R.string.bortle_class, bInt),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                            )
-                            Text(
-                                String.format(Locale.US, "%.2f mag/arcsec²", b.mpsas),
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                    ) {
-                        InfoChip(stringResource(R.string.bortle_label_category), b.category)
-                        InfoChip(stringResource(R.string.bortle_label_mw), b.milkyWayQuality)
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Surface(
-                        color = if (good) Color(0xFF2E7D32).copy(alpha = 0.15f)
-                                else Color(0xFFE65100).copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(
-                            text = if (good) stringResource(R.string.bortle_good)
-                                   else stringResource(R.string.bortle_poor),
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(8.dp),
-                            color = if (good) Color(0xFF2E7D32) else Color(0xFFE65100),
-                        )
-                    }
-                }
-            }
-
             // ── Weather card ─────────────────────────────────────────
             state.weather?.let { weather ->
                 DashCard(title = stringResource(R.string.card_weather), icon = Icons.Default.Cloud) {
@@ -626,10 +412,7 @@ fun DashboardScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            weatherEmoji(weather.weatherCode),
-                            fontSize = 40.sp,
-                        )
+                        Text(weatherEmoji(weather.weatherCode), fontSize = 40.sp)
                         Spacer(Modifier.width(12.dp))
                         Column {
                             Text(
@@ -643,9 +426,7 @@ fun DashboardScreen(
                             )
                         }
                     }
-
                     Spacer(Modifier.height(8.dp))
-
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -654,74 +435,6 @@ fun DashboardScreen(
                         WeatherStat("🌧️", String.format(Locale.US, "%.1f mm", weather.precipitationMm), stringResource(R.string.weather_rain))
                         WeatherStat("💧", "${weather.humidity}%", stringResource(R.string.weather_humidity))
                         WeatherStat("💨", String.format(Locale.US, "%.0f km/h", weather.windSpeedKmh), stringResource(R.string.weather_wind))
-                    }
-
-                    // Weather verdict for astronomy
-                    Spacer(Modifier.height(8.dp))
-                    val hasRain = weather.precipitationMm > 0.1
-                    Surface(
-                        color = when {
-                            hasRain || weather.cloudCoverPct > AppConfig.CLOUD_COVER_PARTLY_THRESHOLD -> Color(0xFFE65100).copy(alpha = 0.15f)
-                            weather.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD && !hasRain -> Color(0xFF2E7D32).copy(alpha = 0.15f)
-                            else -> Color(0xFFF9A825).copy(alpha = 0.15f)
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(
-                            text = when {
-                                hasRain -> stringResource(R.string.weather_rain_bad)
-                                weather.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD -> stringResource(R.string.weather_clear)
-                                weather.cloudCoverPct <= AppConfig.CLOUD_COVER_PARTLY_THRESHOLD -> stringResource(R.string.weather_partly_cloudy)
-                                else -> stringResource(R.string.weather_too_cloudy)
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(8.dp),
-                            color = when {
-                                hasRain || weather.cloudCoverPct > AppConfig.CLOUD_COVER_PARTLY_THRESHOLD -> Color(0xFFE65100)
-                                weather.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD -> Color(0xFF2E7D32)
-                                else -> Color(0xFFF9A825)
-                            },
-                        )
-                    }
-                }
-            }
-
-            // ── Dew point card ───────────────────────────────────────
-            state.dewPoint?.let { dew ->
-                if (dew.risk != DewRisk.NONE) {
-                    val isCritical = dew.risk == DewRisk.CRITICAL
-                    DashCard(
-                        title = stringResource(R.string.card_dew_point),
-                        icon = Icons.Default.WaterDrop,
-                    ) {
-                        Surface(
-                            color = (if (isCritical) Color(0xFFE65100) else Color(0xFFF9A825)).copy(alpha = 0.15f),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Text(
-                                    text = if (isCritical) stringResource(R.string.dew_critical)
-                                           else stringResource(R.string.dew_warning),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isCritical) Color(0xFFE65100) else Color(0xFFF9A825),
-                                )
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                    stringResource(
-                                        R.string.dew_detail,
-                                        String.format(Locale.US, "%.1f", dew.temperatureC),
-                                        String.format(Locale.US, "%.1f", dew.dewPointC),
-                                        String.format(Locale.US, "%.1f", dew.spreadC),
-                                    ),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
                     }
                 }
             }
@@ -740,13 +453,12 @@ fun DashboardScreen(
                         tw.nauticalStart?.let { stringResource(R.string.tw_nautical_start) to it },
                         tw.civilStart?.let { stringResource(R.string.tw_civil_start) to it },
                     )
-                    // Visual bar
                     val colors = listOf(
-                        Color(0xFF1A237E), // civil → nautical
-                        Color(0xFF0D47A1), // nautical → astro
-                        Color(0xFF000033), // full dark
-                        Color(0xFF0D47A1), // astro → nautical
-                        Color(0xFF1A237E), // nautical → civil
+                        Color(0xFF1A237E),
+                        Color(0xFF0D47A1),
+                        Color(0xFF000033),
+                        Color(0xFF0D47A1),
+                        Color(0xFF1A237E),
                     )
                     Row(
                         modifier = Modifier
@@ -848,128 +560,7 @@ fun DashboardScreen(
                 }
             }
 
-            // ── Hourly forecast ──────────────────────────────────────
-            state.weather?.hourlyForecast?.takeIf { it.isNotEmpty() }?.let { hours ->
-                val isToday2 = state.selectedDate == LocalDate.now()
-                DashCard(
-                    title = if (isToday2) stringResource(R.string.card_forecast)
-                            else stringResource(R.string.card_forecast_day),
-                    icon = Icons.Default.Schedule,
-                ) {
-                    hours.forEach { h ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                formatTime(h.time),
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.width(52.dp),
-                                fontWeight = FontWeight.Medium,
-                            )
-                            Text(
-                                weatherEmoji(h.weatherCode),
-                                modifier = Modifier.width(28.dp),
-                            )
-                            // Cloud bar
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(8.dp)
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .fillMaxWidth(h.cloudCoverPct / 100f)
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(
-                                            when {
-                                                h.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD -> Color(0xFF2E7D32)
-                                                h.cloudCoverPct <= AppConfig.CLOUD_COVER_PARTLY_THRESHOLD -> Color(0xFFF9A825)
-                                                else -> Color(0xFFE65100)
-                                            }
-                                        ),
-                                )
-                            }
-                            Text(
-                                "${h.cloudCoverPct}%",
-                                style = MaterialTheme.typography.labelSmall,
-                                modifier = Modifier.width(36.dp),
-                                textAlign = TextAlign.End,
-                            )
-                            // Precipitation
-                            if (h.precipitationMm > 0.0) {
-                                Text(
-                                    String.format(Locale.US, "%.1f", h.precipitationMm),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color(0xFF1565C0),
-                                    modifier = Modifier.width(36.dp),
-                                    textAlign = TextAlign.End,
-                                )
-                            } else {
-                                Spacer(Modifier.width(36.dp))
-                            }
-                        }
-                    }
-                }
-            }
-
             Spacer(Modifier.height(16.dp))
         }
     }
 }
-
-// ── Reusable components ──────────────────────────────────────────────────────
-
-@Composable
-internal fun DashCard(
-    title: String,
-    icon: ImageVector,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Text(
-        title,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-    )
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            content = content,
-        )
-    }
-}
-
-@Composable
-internal fun InfoChip(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Composable
-internal fun WeatherStat(emoji: String, value: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(emoji, fontSize = 20.sp)
-        Text(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Composable
-internal fun formatTime(isoTime: String): String {
-    // Handles "2026-04-03T14:00" → "14:00"
-    return isoTime.substringAfter("T", isoTime).take(5)
-}
-
-internal fun abs(d: Double): Double = kotlin.math.abs(d)

@@ -50,9 +50,11 @@ import com.ehrocha.pulsar.ui.screens.SettingsScreen
 import com.ehrocha.pulsar.ui.screens.CustomFlowScreen
 import com.ehrocha.pulsar.ui.screens.DashboardScreen
 import com.ehrocha.pulsar.ui.screens.PlannerScreen
+import com.ehrocha.pulsar.ui.screens.SessionDetailScreen
 import com.ehrocha.pulsar.ui.theme.DarkColorScheme
 import com.ehrocha.pulsar.ui.theme.RedLightColorScheme
 import com.ehrocha.pulsar.ui.theme.LocalNightMode
+import com.ehrocha.pulsar.planner.PlannerEntry
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import kotlinx.coroutines.flow.filterNotNull
@@ -226,6 +228,14 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                 PlannerScreen(
                     plannerManager = vm.plannerManager,
                     onBack = { currentScreen = AppScreen.Menu },
+                    onSessionDetail = { entry -> currentScreen = AppScreen.SessionDetail(entry) },
+                )
+            }
+            is AppScreen.SessionDetail -> {
+                BackHandler { currentScreen = AppScreen.Planner }
+                SessionDetailScreen(
+                    entry = screen.entry,
+                    onBack = { currentScreen = AppScreen.Planner },
                 )
             }
         }
@@ -259,4 +269,5 @@ private sealed class AppScreen {
     data object CustomFlow : AppScreen()
     data object Dashboard : AppScreen()
     data object Planner : AppScreen()
+    data class SessionDetail(val entry: PlannerEntry) : AppScreen()
 }

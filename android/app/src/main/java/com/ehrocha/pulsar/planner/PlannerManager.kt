@@ -60,6 +60,18 @@ class PlannerManager(context: Context) {
         return entry
     }
 
+    fun addEntries(location: SavedLocation, startDate: LocalDate, endDate: LocalDate) {
+        var current = _state.value
+        var date = startDate
+        while (!date.isAfter(endDate) && current.entries.size < AppConfig.MAX_PLANNER_ENTRIES) {
+            val entry = PlannerEntry(UUID.randomUUID().toString(), location, date)
+            current = current.copy(entries = current.entries + entry)
+            date = date.plusDays(1)
+        }
+        _state.value = current
+        save()
+    }
+
     fun removeEntry(id: String) {
         val current = _state.value
         _state.value = current.copy(entries = current.entries.filter { it.id != id })

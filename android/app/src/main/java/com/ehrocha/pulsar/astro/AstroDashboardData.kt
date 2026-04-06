@@ -700,95 +700,113 @@ class AstroDashboardManager(private val context: Context) {
                 loc.latitude, loc.longitude, loc.altitude,
                 cityName = reverseGeocode(loc.latitude, loc.longitude),
             )
-            val isToday = date == LocalDate.now()
-
-            // Moon — use selected date
-            val moonAge = MoonPhase.moonAge(date)
-            val illum = MoonPhase.illumination(moonAge)
-
-            // Fetch weather + astronomy from Open-Meteo (per-card error)
-            val weatherResult = fetchWeather(loc.latitude, loc.longitude, date, isToday)
-            val weatherError = if (weatherResult == null) "Weather data unavailable" else null
-            val astroResult = fetchAstronomy(loc.latitude, loc.longitude, date)
-
-            // Fetch light pollution / Bortle scale (per-card error)
-            val bortleInfo = fetchLightPollution(loc.latitude, loc.longitude)
-            val bortleError = if (bortleInfo == null) "Light pollution data unavailable" else null
-
-            // Moon rise/set computed locally
-            val (moonRise, moonSet) = AstroCalculator.moonRiseSet(loc.latitude, loc.longitude, date)
-
-            val moonInfo = MoonInfo(
-                phaseName = MoonPhase.phaseName(moonAge),
-                illuminationPct = illum,
-                ageInDays = moonAge,
-                emoji = MoonPhase.emoji(moonAge),
-                rise = moonRise,
-                set = moonSet,
-                goodForAstro = MoonPhase.goodForAstro(illum),
-            )
-
-            val sunInfo = SunInfo(
-                sunrise = astroResult?.optString("sunrise", "")?.takeIf { it.isNotEmpty() },
-                sunset = astroResult?.optString("sunset", "")?.takeIf { it.isNotEmpty() },
-            )
-
-            val milkyWayInfo = AstroCalculator.milkyWayWindow(
-                lat = loc.latitude,
-                lon = loc.longitude,
-                date = date,
-                sunriseIso = sunInfo.sunrise,
-                sunsetIso = sunInfo.sunset,
-            )
-
-            val bestWindows = weatherResult?.let {
-                AstroCalculator.bestPhotoWindows(
-                    hourly = it.hourlyForecast,
-                    sunriseIso = sunInfo.sunrise,
-                    sunsetIso = sunInfo.sunset,
-                )
-            } ?: emptyList()
-
-            // Dew point from weather data
-            val dewPointInfo = weatherResult?.let {
-                if (it.humidity > 0)
-                    AstroCalculator.dewPoint(it.temperatureC, it.humidity)
-                else null
-            }
-
-            // Twilight phases
-            val twilightInfo = AstroCalculator.twilightPhases(
-                loc.latitude, loc.longitude, date,
-                sunInfo.sunrise, sunInfo.sunset,
-            )
-
-            // Visible planets
-            val planets = AstroCalculator.visiblePlanets(
-                loc.latitude, loc.longitude, date,
-                sunInfo.sunset, sunInfo.sunrise,
-            )
-
-            _state.value = DashboardState(
-                location = locationInfo,
-                weather = weatherResult,
-                moon = moonInfo,
-                sun = sunInfo,
-                bortle = bortleInfo,
-                milkyWay = milkyWayInfo,
-                bestWindows = bestWindows,
-                dewPoint = dewPointInfo,
-                twilight = twilightInfo,
-                planets = planets,
-                loading = false,
-                weatherError = weatherError,
-                bortleError = bortleError,
-                selectedDate = date,
-            )
-            saveCache(_state.value)
+            refreshInternal(locationInfo, date)
         } catch (e: Exception) {
             Log.e(TAG, "Dashboard refresh failed", e)
             _state.value = _state.value.copy(loading = false, error = e.message)
         }
+    }
+
+    /** Refresh using explicit coordinates (for planner session detail). */
+    suspend fun refreshForLocation(lat: Double, lon: Double, cityName: String?, date: LocalDate) {
+        _state.value = _state.value.copy(loading = true, error = null, weatherError = null, bortleError = null, selectedDate = date)
+        try {
+            val locationInfo = LocationInfo(lat, lon, cityName = cityName)
+            refreshInternal(locationInfo, date)
+        } catch (e: Exception) {
+            Log.e(TAG, "Dashboard refresh failed", e)
+            _state.value = _state.value.copy(loading = false, error = e.message)
+        }
+    }
+
+    private suspend fun refreshInternal(locationInfo: LocationInfo, date: LocalDate) {
+        val lat = locationInfo.latitude
+        val lon = locationInfo.longitude
+        val isToday = date == LocalDate.now()
+
+        // Moon — use selected date
+        val moonAge = MoonPhase.moonAge(date)
+        val illum = MoonPhase.illumination(moonAge)
+
+        // Fetch weather + astronomy from Open-Meteo (per-card error)
+        val weatherResult = fetchWeather(lat, lon, date, isToday)
+        val weatherError = if (weatherResult == null) "Weather data unavailable" else null
+        val astroResult = fetchAstronomy(lat, lon, date)
+
+        // Fetch light pollution / Bortle scale (per-card error)
+        val bortleInfo = fetchLightPollution(lat, lon)
+        val bortleError = if (bortleInfo == null) "Light pollution data unavailable" else null
+
+        // Moon rise/set computed locally
+        val (moonRise, moonSet) = AstroCalculator.moonRiseSet(lat, lon, date)
+
+        val moonInfo = MoonInfo(
+            phaseName = MoonPhase.phaseName(moonAge),
+            illuminationPct = illum,
+            ageInDays = moonAge,
+            emoji = MoonPhase.emoji(moonAge),
+            rise = moonRise,
+            set = moonSet,
+            goodForAstro = MoonPhase.goodForAstro(illum),
+        )
+
+        val sunInfo = SunInfo(
+            sunrise = astroResult?.optString("sunrise", "")?.takeIf { it.isNotEmpty() },
+            sunset = astroResult?.optString("sunset", "")?.takeIf { it.isNotEmpty() },
+        )
+
+        val milkyWayInfo = AstroCalculator.milkyWayWindow(
+            lat = lat,
+            lon = lon,
+            date = date,
+            sunriseIso = sunInfo.sunrise,
+            sunsetIso = sunInfo.sunset,
+        )
+
+        val bestWindows = weatherResult?.let {
+            AstroCalculator.bestPhotoWindows(
+                hourly = it.hourlyForecast,
+                sunriseIso = sunInfo.sunrise,
+                sunsetIso = sunInfo.sunset,
+            )
+        } ?: emptyList()
+
+        // Dew point from weather data
+        val dewPointInfo = weatherResult?.let {
+            if (it.humidity > 0)
+                AstroCalculator.dewPoint(it.temperatureC, it.humidity)
+            else null
+        }
+
+        // Twilight phases
+        val twilightInfo = AstroCalculator.twilightPhases(
+            lat, lon, date,
+            sunInfo.sunrise, sunInfo.sunset,
+        )
+
+        // Visible planets
+        val planets = AstroCalculator.visiblePlanets(
+            lat, lon, date,
+            sunInfo.sunset, sunInfo.sunrise,
+        )
+
+        _state.value = DashboardState(
+            location = locationInfo,
+            weather = weatherResult,
+            moon = moonInfo,
+            sun = sunInfo,
+            bortle = bortleInfo,
+            milkyWay = milkyWayInfo,
+            bestWindows = bestWindows,
+            dewPoint = dewPointInfo,
+            twilight = twilightInfo,
+            planets = planets,
+            loading = false,
+            weatherError = weatherError,
+            bortleError = bortleError,
+            selectedDate = date,
+        )
+        saveCache(_state.value)
     }
 
     @SuppressLint("MissingPermission")

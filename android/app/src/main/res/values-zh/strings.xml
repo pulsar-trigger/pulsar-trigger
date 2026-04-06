@@ -332,6 +332,7 @@
     <string name="planner_lat_short">纬度</string>
     <string name="planner_lon_short">经度</string>
     <string name="planner_last_checked">%1$d 小时前检查</string>
+    <string name="planner_days">天</string>
     <string name="verdict_excellent">极佳</string>
     <string name="verdict_good">良好</string>
     <string name="verdict_fair">一般</string>

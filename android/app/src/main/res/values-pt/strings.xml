@@ -334,6 +334,7 @@
     <string name="planner_lat_short">Lat</string>
     <string name="planner_lon_short">Lon</string>
     <string name="planner_last_checked">Verificado há %1$d h</string>
+    <string name="planner_days">dias</string>
     <string name="verdict_excellent">Excelente</string>
     <string name="verdict_good">Bom</string>
     <string name="verdict_fair">Razoável</string>

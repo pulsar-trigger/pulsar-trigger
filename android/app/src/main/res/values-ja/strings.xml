@@ -334,6 +334,7 @@
     <string name="planner_lat_short">緯度</string>
     <string name="planner_lon_short">経度</string>
     <string name="planner_last_checked">%1$d 時間前に確認</string>
+    <string name="planner_days">日間</string>
     <string name="verdict_excellent">最高</string>
     <string name="verdict_good">良好</string>
     <string name="verdict_fair">普通</string>

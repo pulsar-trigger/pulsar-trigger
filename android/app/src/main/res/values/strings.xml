@@ -383,6 +383,7 @@
     <string name="planner_lat_short">Lat</string>
     <string name="planner_lon_short">Lon</string>
     <string name="planner_last_checked">Checked %1$d h ago</string>
+    <string name="planner_days">days</string>
 
     <!-- Planner verdicts -->
     <string name="verdict_excellent">Excellent</string>
