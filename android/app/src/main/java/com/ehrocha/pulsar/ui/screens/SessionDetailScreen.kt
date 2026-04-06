@@ -54,9 +54,9 @@ fun SessionDetailScreen(
     suspend fun doRefresh() {
         isRefreshing = true
         dashManager.refreshForLocation(
-            event.latitude,
-            event.longitude,
-            event.name,
+            session.latitude,
+            session.longitude,
+            session.name,
             session.date,
         )
         plannerManager.putCachedDashboard(session.id, dashManager.serializeState())
@@ -87,12 +87,12 @@ fun SessionDetailScreen(
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    event.name,
+                    session.name,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    session.date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG)),
+                    "${event.name} \u00b7 ${session.date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG))}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

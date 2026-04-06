@@ -44,42 +44,19 @@ class PlannerManager(context: Context) {
 
     fun addEvent(
         name: String,
-        lat: Double,
-        lon: Double,
         startDate: LocalDate,
         endDate: LocalDate,
-        startTime: LocalTime? = null,
-        endTime: LocalTime? = null,
     ): PlannerEvent {
         val event = PlannerEvent(
             id = UUID.randomUUID().toString(),
             name = name,
-            latitude = lat,
-            longitude = lon,
             startDate = startDate,
             endDate = endDate,
-            startTime = startTime,
-            endTime = endTime,
         )
         val current = _state.value
         if (current.events.size >= AppConfig.MAX_SAVED_LOCATIONS) return event
 
-        // Create one session per day in the date range
-        val sessions = mutableListOf<PlannerSession>()
-        var date = startDate
-        while (!date.isAfter(endDate) && (current.sessions.size + sessions.size) < AppConfig.MAX_PLANNER_ENTRIES) {
-            sessions += PlannerSession(
-                id = UUID.randomUUID().toString(),
-                eventId = event.id,
-                date = date,
-            )
-            date = date.plusDays(1)
-        }
-
-        _state.value = current.copy(
-            events = current.events + event,
-            sessions = current.sessions + sessions,
-        )
+        _state.value = current.copy(events = current.events + event)
         save()
         return event
     }
@@ -94,6 +71,32 @@ class PlannerManager(context: Context) {
     }
 
     // ── Sessions ─────────────────────────────────────────────────────
+
+    fun addSession(
+        eventId: String,
+        name: String,
+        lat: Double,
+        lon: Double,
+        date: LocalDate,
+        startTime: LocalTime? = null,
+        endTime: LocalTime? = null,
+    ): PlannerSession? {
+        val current = _state.value
+        if (current.sessions.size >= AppConfig.MAX_PLANNER_ENTRIES) return null
+        val session = PlannerSession(
+            id = UUID.randomUUID().toString(),
+            eventId = eventId,
+            name = name,
+            latitude = lat,
+            longitude = lon,
+            date = date,
+            startTime = startTime,
+            endTime = endTime,
+        )
+        _state.value = current.copy(sessions = current.sessions + session)
+        save()
+        return session
+    }
 
     fun removeSession(id: String) {
         val current = _state.value
@@ -119,16 +122,25 @@ class PlannerManager(context: Context) {
 
     fun exportEvent(eventId: String): String? {
         val event = eventById(eventId) ?: return null
+        val sessions = sessionsForEvent(eventId)
         return JSONObject().apply {
-            put("v", 1)
+            put("v", 2)
             put("event", JSONObject().apply {
                 put("name", event.name)
-                put("lat", event.latitude)
-                put("lon", event.longitude)
                 put("startDate", event.startDate.toString())
                 put("endDate", event.endDate.toString())
-                event.startTime?.let { put("startTime", it.toString()) }
-                event.endTime?.let { put("endTime", it.toString()) }
+            })
+            put("sessions", JSONArray().apply {
+                sessions.forEach { s ->
+                    put(JSONObject().apply {
+                        put("name", s.name)
+                        put("lat", s.latitude)
+                        put("lon", s.longitude)
+                        put("date", s.date.toString())
+                        s.startTime?.let { put("startTime", it.toString()) }
+                        s.endTime?.let { put("endTime", it.toString()) }
+                    })
+                }
             })
         }.toString(2)
     }
@@ -137,15 +149,27 @@ class PlannerManager(context: Context) {
         return try {
             val root = JSONObject(json)
             val e = root.getJSONObject("event")
-            addEvent(
+            val event = addEvent(
                 name = e.getString("name"),
-                lat = e.getDouble("lat"),
-                lon = e.getDouble("lon"),
                 startDate = LocalDate.parse(e.getString("startDate")),
                 endDate = LocalDate.parse(e.getString("endDate")),
-                startTime = e.optString("startTime", "").takeIf { it.isNotEmpty() }?.let { LocalTime.parse(it) },
-                endTime = e.optString("endTime", "").takeIf { it.isNotEmpty() }?.let { LocalTime.parse(it) },
             )
+            val sessionsArr = root.optJSONArray("sessions")
+            if (sessionsArr != null) {
+                for (i in 0 until sessionsArr.length()) {
+                    val s = sessionsArr.getJSONObject(i)
+                    addSession(
+                        eventId = event.id,
+                        name = s.getString("name"),
+                        lat = s.getDouble("lat"),
+                        lon = s.getDouble("lon"),
+                        date = LocalDate.parse(s.getString("date")),
+                        startTime = s.optString("startTime", "").takeIf { it.isNotEmpty() }?.let { LocalTime.parse(it) },
+                        endTime = s.optString("endTime", "").takeIf { it.isNotEmpty() }?.let { LocalTime.parse(it) },
+                    )
+                }
+            }
+            event
         } catch (_: Exception) {
             null
         }
@@ -160,12 +184,8 @@ class PlannerManager(context: Context) {
                 put(JSONObject().apply {
                     put("id", ev.id)
                     put("name", ev.name)
-                    put("lat", ev.latitude)
-                    put("lon", ev.longitude)
                     put("startDate", ev.startDate.toString())
                     put("endDate", ev.endDate.toString())
-                    ev.startTime?.let { put("startTime", it.toString()) }
-                    ev.endTime?.let { put("endTime", it.toString()) }
                 })
             }
         }
@@ -174,7 +194,12 @@ class PlannerManager(context: Context) {
                 put(JSONObject().apply {
                     put("id", s.id)
                     put("eventId", s.eventId)
+                    put("name", s.name)
+                    put("lat", s.latitude)
+                    put("lon", s.longitude)
                     put("date", s.date.toString())
+                    s.startTime?.let { put("startTime", it.toString()) }
+                    s.endTime?.let { put("endTime", it.toString()) }
                     put("lastChecked", s.lastChecked)
                     put("verdict", s.verdict.name)
                     put("summary", s.summary)
@@ -197,12 +222,8 @@ class PlannerManager(context: Context) {
                 PlannerEvent(
                     id = j.getString("id"),
                     name = j.getString("name"),
-                    latitude = j.getDouble("lat"),
-                    longitude = j.getDouble("lon"),
                     startDate = LocalDate.parse(j.getString("startDate")),
                     endDate = LocalDate.parse(j.getString("endDate")),
-                    startTime = j.optString("startTime", "").takeIf { it.isNotEmpty() }?.let { LocalTime.parse(it) },
-                    endTime = j.optString("endTime", "").takeIf { it.isNotEmpty() }?.let { LocalTime.parse(it) },
                 )
             }
             val sessionsArr = JSONArray(sessionsStr)
@@ -214,7 +235,12 @@ class PlannerManager(context: Context) {
                 PlannerSession(
                     id = j.getString("id"),
                     eventId = eventId,
+                    name = j.optString("name", ""),
+                    latitude = j.optDouble("lat", 0.0),
+                    longitude = j.optDouble("lon", 0.0),
                     date = LocalDate.parse(j.getString("date")),
+                    startTime = j.optString("startTime", "").takeIf { it.isNotEmpty() }?.let { LocalTime.parse(it) },
+                    endTime = j.optString("endTime", "").takeIf { it.isNotEmpty() }?.let { LocalTime.parse(it) },
                     lastChecked = j.optLong("lastChecked", 0),
                     verdict = PlannerVerdict.entries.firstOrNull { it.name == j.optString("verdict") }
                         ?: PlannerVerdict.UNKNOWN,

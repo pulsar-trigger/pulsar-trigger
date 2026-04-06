@@ -357,6 +357,10 @@
     <string name="event_import_title">Ereignis importieren</string>
     <string name="event_import_hint">Geteiltes Ereignis-JSON einfügen</string>
     <string name="event_session_count">%1$d Sitzungen</string>
+    <string name="event_name">Veranstaltungsname</string>
+    <string name="session_add">Sitzung hinzufügen</string>
+    <string name="session_add_title">Neue Sitzung</string>
+    <string name="session_name">Sitzungsname (z.B. Wasserfall-Aufnahme)</string>
 
     <string name="verdict_excellent">Ausgezeichnet</string>
     <string name="verdict_good">Gut</string>

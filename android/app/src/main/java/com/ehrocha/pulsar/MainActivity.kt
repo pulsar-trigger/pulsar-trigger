@@ -232,7 +232,6 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                     plannerManager = vm.plannerManager,
                     onBack = { currentScreen = AppScreen.Menu },
                     onEventSessions = { event -> currentScreen = AppScreen.EventSessions(event) },
-                    onPickOnMap = { currentScreen = AppScreen.MapPicker },
                 )
             }
             is AppScreen.PlannerWithTab -> {
@@ -241,16 +240,14 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                     plannerManager = vm.plannerManager,
                     onBack = { currentScreen = AppScreen.Menu },
                     onEventSessions = { event -> currentScreen = AppScreen.EventSessions(event) },
-                    onPickOnMap = { currentScreen = AppScreen.MapPicker },
                 )
             }
-            AppScreen.MapPicker -> {
-                BackHandler { currentScreen = AppScreen.Planner }
+            is AppScreen.MapPicker -> {
+                BackHandler { currentScreen = AppScreen.EventSessions(screen.event) }
                 MapLocationPicker(
-                    onBack = { currentScreen = AppScreen.Planner },
+                    onBack = { currentScreen = AppScreen.EventSessions(screen.event) },
                     onConfirm = { name, lat, lon ->
-                        // After picking on map, go back to planner (user can add via dialog)
-                        currentScreen = AppScreen.Planner
+                        currentScreen = AppScreen.EventSessions(screen.event)
                     },
                 )
             }
@@ -263,6 +260,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                     onSessionDetail = { session, event ->
                         currentScreen = AppScreen.SessionDetail(session, event)
                     },
+                    onPickOnMap = { currentScreen = AppScreen.MapPicker(screen.event) },
                 )
             }
             is AppScreen.SessionDetail -> {
@@ -306,7 +304,7 @@ private sealed class AppScreen {
     data object Dashboard : AppScreen()
     data object Planner : AppScreen()
     data class PlannerWithTab(val tab: Int) : AppScreen()
-    data object MapPicker : AppScreen()
+    data class MapPicker(val event: PlannerEvent) : AppScreen()
     data class EventSessions(val event: PlannerEvent) : AppScreen()
     data class SessionDetail(val session: PlannerSession, val event: PlannerEvent) : AppScreen()
 }

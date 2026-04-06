@@ -406,6 +406,10 @@
     <string name="event_import_title">Import event</string>
     <string name="event_import_hint">Paste shared event JSON</string>
     <string name="event_session_count">%1$d sessions</string>
+    <string name="event_name">Event name</string>
+    <string name="session_add">Add session</string>
+    <string name="session_add_title">New session</string>
+    <string name="session_name">Session name (e.g. Waterfall shoot)</string>
 
     <!-- Planner verdicts -->
     <string name="verdict_excellent">Excellent</string>

@@ -11,18 +11,19 @@ import java.time.LocalTime
 data class PlannerEvent(
     val id: String,
     val name: String,
-    val latitude: Double,
-    val longitude: Double,
     val startDate: LocalDate,
     val endDate: LocalDate,
-    val startTime: LocalTime? = null,
-    val endTime: LocalTime? = null,
 )
 
 data class PlannerSession(
     val id: String,
     val eventId: String,
+    val name: String,
+    val latitude: Double,
+    val longitude: Double,
     val date: LocalDate,
+    val startTime: LocalTime? = null,
+    val endTime: LocalTime? = null,
     val lastChecked: Long = 0L,
     val verdict: PlannerVerdict = PlannerVerdict.UNKNOWN,
     val summary: String = "",

@@ -49,7 +49,6 @@ fun PlannerScreen(
     plannerManager: PlannerManager,
     onBack: () -> Unit,
     onEventSessions: (PlannerEvent) -> Unit = {},
-    onPickOnMap: () -> Unit = {},
 ) {
     val state by plannerManager.state.collectAsState()
     var showAddEvent by remember { mutableStateOf(false) }
@@ -58,13 +57,9 @@ fun PlannerScreen(
     if (showAddEvent) {
         AddEventDialog(
             onDismiss = { showAddEvent = false },
-            onConfirm = { name, lat, lon, startDate, endDate, startTime, endTime ->
-                plannerManager.addEvent(name, lat, lon, startDate, endDate, startTime, endTime)
+            onConfirm = { name, startDate, endDate ->
+                plannerManager.addEvent(name, startDate, endDate)
                 showAddEvent = false
-            },
-            onPickOnMap = {
-                showAddEvent = false
-                onPickOnMap()
             },
         )
     }
@@ -170,11 +165,28 @@ fun EventSessionsScreen(
     plannerManager: PlannerManager,
     onBack: () -> Unit,
     onSessionDetail: (PlannerSession, PlannerEvent) -> Unit = { _, _ -> },
+    onPickOnMap: () -> Unit = {},
 ) {
     val state by plannerManager.state.collectAsState()
     val sessions = state.sessions
         .filter { it.eventId == event.id }
-        .sortedBy { it.date }
+        .sortedWith(compareBy({ it.date }, { it.startTime }))
+    var showAddSession by remember { mutableStateOf(false) }
+
+    if (showAddSession) {
+        AddSessionDialog(
+            event = event,
+            onDismiss = { showAddSession = false },
+            onConfirm = { name, lat, lon, date, startTime, endTime ->
+                plannerManager.addSession(event.id, name, lat, lon, date, startTime, endTime)
+                showAddSession = false
+            },
+            onPickOnMap = {
+                showAddSession = false
+                onPickOnMap()
+            },
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -207,6 +219,9 @@ fun EventSessionsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            IconButton(onClick = { showAddSession = true }) {
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.session_add))
+            }
         }
 
         if (sessions.isEmpty()) {
@@ -214,24 +229,49 @@ fun EventSessionsScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    stringResource(R.string.planner_no_sessions),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        @Suppress("DEPRECATION") Icons.Default.EventNote,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        stringResource(R.string.planner_no_sessions),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    OutlinedButton(onClick = { showAddSession = true }) {
+                        Text(stringResource(R.string.session_add))
+                    }
+                }
             }
         } else {
+            // Group by date for agenda view
+            val byDate = sessions.groupBy { it.date }
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxSize(),
             ) {
-                items(sessions, key = { it.id }) { session ->
-                    SessionCard(
-                        session = session,
-                        event = event,
-                        onClick = { onSessionDetail(session, event) },
-                        onDelete = { plannerManager.removeSession(session.id) },
-                    )
+                byDate.forEach { (date, daySessions) ->
+                    item(key = "header_$date") {
+                        Text(
+                            date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                        )
+                    }
+                    items(daySessions, key = { it.id }) { session ->
+                        SessionCard(
+                            session = session,
+                            onClick = { onSessionDetail(session, event) },
+                            onDelete = { plannerManager.removeSession(session.id) },
+                        )
+                    }
                 }
             }
         }
@@ -290,11 +330,6 @@ private fun EventCard(
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                     )
-                    Text(
-                        String.format(Locale.US, "%.4f, %.4f", event.latitude, event.longitude),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
                 VerdictChip(bestVerdict)
             }
@@ -330,23 +365,6 @@ private fun EventCard(
                 )
             }
 
-            // Optional time window
-            if (event.startTime != null || event.endTime != null) {
-                val timeStr = buildString {
-                    append("🕐 ")
-                    event.startTime?.let { append(String.format(Locale.US, "%02d:%02d", it.hour, it.minute)) }
-                        ?: append("--:--")
-                    append(" – ")
-                    event.endTime?.let { append(String.format(Locale.US, "%02d:%02d", it.hour, it.minute)) }
-                        ?: append("--:--")
-                }
-                Text(
-                    timeStr,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-
             // Action buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -377,7 +395,6 @@ private fun EventCard(
 @Composable
 private fun SessionCard(
     session: PlannerSession,
-    event: PlannerEvent,
     onClick: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -393,19 +410,26 @@ private fun SessionCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        session.date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)),
+                        session.name,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = if (isPast) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         else MaterialTheme.colorScheme.onSurface,
                     )
-                    if (event.startTime != null || event.endTime != null) {
+                    // Location
+                    Text(
+                        String.format(Locale.US, "📍 %.4f, %.4f", session.latitude, session.longitude),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    // Time window
+                    if (session.startTime != null || session.endTime != null) {
                         val timeStr = buildString {
                             append("🕐 ")
-                            event.startTime?.let { append(String.format(Locale.US, "%02d:%02d", it.hour, it.minute)) }
+                            session.startTime?.let { append(String.format(Locale.US, "%02d:%02d", it.hour, it.minute)) }
                                 ?: append("--:--")
                             append(" – ")
-                            event.endTime?.let { append(String.format(Locale.US, "%02d:%02d", it.hour, it.minute)) }
+                            session.endTime?.let { append(String.format(Locale.US, "%02d:%02d", it.hour, it.minute)) }
                                 ?: append("--:--")
                         }
                         Text(
@@ -473,61 +497,21 @@ private fun VerdictChip(verdict: PlannerVerdict) {
     }
 }
 
-// ── Add event dialog ─────────────────────────────────────────────────────────
+// ── Add event dialog (simplified: name + date range only) ───────────────────
 
-@SuppressLint("MissingPermission")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AddEventDialog(
     onDismiss: () -> Unit,
-    onConfirm: (name: String, lat: Double, lon: Double, startDate: LocalDate, endDate: LocalDate, startTime: LocalTime?, endTime: LocalTime?) -> Unit,
-    onPickOnMap: () -> Unit = {},
+    onConfirm: (name: String, startDate: LocalDate, endDate: LocalDate) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
-    var latStr by remember { mutableStateOf("") }
-    var lonStr by remember { mutableStateOf("") }
-    var searchQuery by remember { mutableStateOf("") }
-    var searchResults by remember { mutableStateOf<List<GeocodingResult>>(emptyList()) }
-    var searching by remember { mutableStateOf(false) }
-    var gpsLoading by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-    val myLocationStr = stringResource(R.string.planner_my_location)
 
     // Date range
     var showDatePicker by remember { mutableStateOf(false) }
     var startDate by remember { mutableStateOf(LocalDate.now().plusDays(1)) }
     var endDate by remember { mutableStateOf(LocalDate.now().plusDays(1)) }
 
-    // Optional time window
-    var useTimeWindow by remember { mutableStateOf(false) }
-    var showStartTimePicker by remember { mutableStateOf(false) }
-    var showEndTimePicker by remember { mutableStateOf(false) }
-    var startTime by remember { mutableStateOf(LocalTime.of(20, 0)) }
-    var endTime by remember { mutableStateOf(LocalTime.of(6, 0)) }
-
-    // Debounced city search
-    var searchJob by remember { mutableStateOf<Job?>(null) }
-    LaunchedEffect(searchQuery) {
-        searchJob?.cancel()
-        if (searchQuery.length < 2) {
-            searchResults = emptyList()
-            searching = false
-            return@LaunchedEffect
-        }
-        searching = true
-        searchJob = scope.launch {
-            delay(350)
-            searchResults = searchCities(searchQuery)
-            searching = false
-        }
-    }
-
-    val valid = name.isNotBlank()
-            && latStr.toDoubleOrNull()?.let { it in -90.0..90.0 } == true
-            && lonStr.toDoubleOrNull()?.let { it in -180.0..180.0 } == true
-
-    // Date range picker dialog
     if (showDatePicker) {
         val rangeState = rememberDateRangePickerState(
             initialSelectedStartDateMillis = startDate
@@ -558,6 +542,135 @@ private fun AddEventDialog(
                 }
             },
         ) { DateRangePicker(state = rangeState, modifier = Modifier.weight(1f)) }
+    }
+
+    val days = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1
+    val dateLabel = if (startDate == endDate)
+        startDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+    else
+        "${startDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT))} – ${
+            endDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT))
+        } ($days ${stringResource(R.string.planner_days)})"
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.event_add_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.event_name)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedButton(
+                    onClick = { showDatePicker = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Default.DateRange, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(dateLabel, maxLines = 2)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(name.trim(), startDate, endDate) },
+                enabled = name.isNotBlank(),
+            ) { Text(stringResource(R.string.save)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        },
+    )
+}
+
+// ── Add session dialog (location + date + time window) ───────────────────────
+
+@SuppressLint("MissingPermission")
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddSessionDialog(
+    event: PlannerEvent,
+    onDismiss: () -> Unit,
+    onConfirm: (name: String, lat: Double, lon: Double, date: LocalDate, startTime: LocalTime?, endTime: LocalTime?) -> Unit,
+    onPickOnMap: () -> Unit = {},
+) {
+    var name by remember { mutableStateOf("") }
+    var latStr by remember { mutableStateOf("") }
+    var lonStr by remember { mutableStateOf("") }
+    var searchQuery by remember { mutableStateOf("") }
+    var searchResults by remember { mutableStateOf<List<GeocodingResult>>(emptyList()) }
+    var searching by remember { mutableStateOf(false) }
+    var gpsLoading by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val myLocationStr = stringResource(R.string.planner_my_location)
+
+    // Date (within event range)
+    var showDatePicker by remember { mutableStateOf(false) }
+    var date by remember { mutableStateOf(event.startDate) }
+
+    // Time window
+    var useTimeWindow by remember { mutableStateOf(false) }
+    var showStartTimePicker by remember { mutableStateOf(false) }
+    var showEndTimePicker by remember { mutableStateOf(false) }
+    var startTime by remember { mutableStateOf(LocalTime.of(20, 0)) }
+    var endTime by remember { mutableStateOf(LocalTime.of(6, 0)) }
+
+    // Debounced city search
+    var searchJob by remember { mutableStateOf<Job?>(null) }
+    LaunchedEffect(searchQuery) {
+        searchJob?.cancel()
+        if (searchQuery.length < 2) {
+            searchResults = emptyList()
+            searching = false
+            return@LaunchedEffect
+        }
+        searching = true
+        searchJob = scope.launch {
+            delay(350)
+            searchResults = searchCities(searchQuery)
+            searching = false
+        }
+    }
+
+    val valid = name.isNotBlank()
+            && latStr.toDoubleOrNull()?.let { it in -90.0..90.0 } == true
+            && lonStr.toDoubleOrNull()?.let { it in -180.0..180.0 } == true
+
+    // Date picker (single date within event range)
+    if (showDatePicker) {
+        val dpState = rememberDatePickerState(
+            initialSelectedDateMillis = date
+                .atStartOfDay(java.time.ZoneId.of("UTC"))
+                .toInstant().toEpochMilli(),
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                    val d = java.time.Instant.ofEpochMilli(utcTimeMillis)
+                        .atZone(java.time.ZoneId.of("UTC")).toLocalDate()
+                    return !d.isBefore(event.startDate) && !d.isAfter(event.endDate)
+                }
+            },
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDatePicker = false
+                    dpState.selectedDateMillis?.let { ms ->
+                        date = java.time.Instant.ofEpochMilli(ms)
+                            .atZone(java.time.ZoneId.of("UTC")).toLocalDate()
+                    }
+                }) { Text(stringResource(R.string.ok)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        ) { DatePicker(state = dpState) }
     }
 
     // Time pickers
@@ -598,19 +711,22 @@ private fun AddEventDialog(
         )
     }
 
-    val days = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1
-    val dateLabel = if (startDate == endDate)
-        startDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
-    else
-        "${startDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT))} – ${
-            endDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT))
-        } ($days ${stringResource(R.string.planner_days)})"
-
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.event_add_title)) },
+        title = { Text(stringResource(R.string.session_add_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // ── Name ─────────────────────────────────────────────
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text(stringResource(R.string.session_name)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                HorizontalDivider()
+
                 // ── City search ──────────────────────────────────────
                 OutlinedTextField(
                     value = searchQuery,
@@ -639,7 +755,7 @@ private fun AddEventDialog(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
-                                            name = result.displayName
+                                            if (name.isBlank()) name = result.name
                                             latStr = String.format(Locale.US, "%.5f", result.latitude)
                                             lonStr = String.format(Locale.US, "%.5f", result.longitude)
                                             searchQuery = ""
@@ -682,7 +798,7 @@ private fun AddEventDialog(
                                             val geoName = listOfNotNull(
                                                 addr.locality, addr.adminArea, addr.countryCode
                                             ).joinToString(", ")
-                                            if (geoName.isNotEmpty()) name = geoName
+                                            if (geoName.isNotEmpty() && name.isBlank()) name = geoName
                                         }
                                     } catch (_: Exception) {
                                         if (name.isBlank()) name = myLocationStr
@@ -715,16 +831,7 @@ private fun AddEventDialog(
                     Text(stringResource(R.string.planner_pick_on_map))
                 }
 
-                HorizontalDivider()
-
-                // ── Manual fields ────────────────────────────────────
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text(stringResource(R.string.planner_location_name)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                // ── Manual lat/lon ───────────────────────────────────
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = latStr,
@@ -746,17 +853,17 @@ private fun AddEventDialog(
 
                 HorizontalDivider()
 
-                // ── Date range ───────────────────────────────────────
+                // ── Date ─────────────────────────────────────────────
                 OutlinedButton(
                     onClick = { showDatePicker = true },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(Icons.Default.DateRange, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text(dateLabel, maxLines = 2)
+                    Text(date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)))
                 }
 
-                // ── Optional time window ─────────────────────────────
+                // ── Time window ──────────────────────────────────────
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth(),
@@ -800,7 +907,7 @@ private fun AddEventDialog(
                 onClick = {
                     onConfirm(
                         name.trim(), latStr.toDouble(), lonStr.toDouble(),
-                        startDate, endDate,
+                        date,
                         if (useTimeWindow) startTime else null,
                         if (useTimeWindow) endTime else null,
                     )

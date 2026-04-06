@@ -355,6 +355,10 @@
     <string name="event_import_title">Importar evento</string>
     <string name="event_import_hint">Pega el JSON del evento compartido</string>
     <string name="event_session_count">%1$d sesiones</string>
+    <string name="event_name">Nombre del evento</string>
+    <string name="session_add">Añadir sesión</string>
+    <string name="session_add_title">Nueva sesión</string>
+    <string name="session_name">Nombre de la sesión (ej.: Foto de cascada)</string>
 
     <string name="verdict_excellent">Excelente</string>
     <string name="verdict_good">Bueno</string>

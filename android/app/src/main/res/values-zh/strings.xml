@@ -355,6 +355,10 @@
     <string name="event_import_title">导入活动</string>
     <string name="event_import_hint">粘贴共享的活动JSON</string>
     <string name="event_session_count">%1$d个会话</string>
+    <string name="event_name">活动名称</string>
+    <string name="session_add">添加场次</string>
+    <string name="session_add_title">新建场次</string>
+    <string name="session_name">场次名称（如：瀑布拍摄）</string>
 
     <string name="verdict_excellent">极佳</string>
     <string name="verdict_good">良好</string>

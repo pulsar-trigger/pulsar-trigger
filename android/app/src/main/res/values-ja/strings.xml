@@ -357,6 +357,10 @@
     <string name="event_import_title">イベントをインポート</string>
     <string name="event_import_hint">共有されたイベントJSONを貼り付け</string>
     <string name="event_session_count">%1$dセッション</string>
+    <string name="event_name">イベント名</string>
+    <string name="session_add">セッション追加</string>
+    <string name="session_add_title">新しいセッション</string>
+    <string name="session_name">セッション名（例：滝の撮影）</string>
 
     <string name="verdict_excellent">最高</string>
     <string name="verdict_good">良好</string>

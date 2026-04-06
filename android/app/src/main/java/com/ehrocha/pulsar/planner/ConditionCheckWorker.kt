@@ -64,7 +64,7 @@ class ConditionCheckWorker(
         for (session in futureSessions) {
             val event = manager.eventById(session.eventId) ?: continue
             try {
-                val verdict = checkConditions(session, event)
+                val verdict = checkConditions(session)
                 manager.updateSession(session.copy(
                     lastChecked = System.currentTimeMillis(),
                     verdict = verdict.first,
@@ -74,17 +74,17 @@ class ConditionCheckWorker(
                     sendNotification(event, session, verdict.second)
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to check ${event.name}", e)
+                Log.e(TAG, "Failed to check ${session.name}", e)
             }
         }
         return Result.success()
     }
 
-    private fun checkConditions(session: PlannerSession, event: PlannerEvent): Pair<PlannerVerdict, String> {
+    private fun checkConditions(session: PlannerSession): Pair<PlannerVerdict, String> {
         val dateStr = session.date.format(DateTimeFormatter.ISO_LOCAL_DATE)
         val url = URL(
             "https://api.open-meteo.com/v1/forecast" +
-                "?latitude=${event.latitude}&longitude=${event.longitude}" +
+                "?latitude=${session.latitude}&longitude=${session.longitude}" +
                 "&hourly=cloud_cover,precipitation" +
                 "&start_date=$dateStr&end_date=$dateStr" +
                 "&timezone=auto"
@@ -131,8 +131,8 @@ class ConditionCheckWorker(
 
         val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("Clear skies at ${event.name}!")
-            .setContentText("${session.date}: $summary")
+            .setContentTitle("Clear skies for ${session.name}!")
+            .setContentText("${event.name} · ${session.date}: $summary")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
             .build()

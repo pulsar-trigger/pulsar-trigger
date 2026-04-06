@@ -35,39 +35,43 @@ class PlannerManagerTest {
 
     @Test
     fun `addEvent adds to state`() {
-        val event = manager.addEvent("Dark Site", 40.0, -74.0,
+        val event = manager.addEvent("Yosemite Trip",
             LocalDate.of(2025, 6, 15), LocalDate.of(2025, 6, 17))
-        assertEquals("Dark Site", event.name)
-        assertEquals(40.0, event.latitude, 0.001)
-        assertEquals(-74.0, event.longitude, 0.001)
+        assertEquals("Yosemite Trip", event.name)
         assertEquals(1, manager.state.value.events.size)
+        // addEvent no longer auto-creates sessions
+        assertEquals(0, manager.state.value.sessions.size)
     }
 
     @Test
-    fun `addEvent creates sessions for each day`() {
-        manager.addEvent("Site", 40.0, -74.0,
+    fun `addSession adds to state`() {
+        val event = manager.addEvent("Trip",
             LocalDate.of(2025, 6, 15), LocalDate.of(2025, 6, 17))
-        // 3 days: 15, 16, 17
-        assertEquals(3, manager.state.value.sessions.size)
+        val session = manager.addSession(event.id, "Waterfall", 40.0, -74.0,
+            LocalDate.of(2025, 6, 15))
+        assertNotNull(session)
+        assertEquals("Waterfall", session!!.name)
+        assertEquals(40.0, session.latitude, 0.001)
+        assertEquals(1, manager.state.value.sessions.size)
     }
 
     @Test
     fun `addEvent respects MAX_SAVED_LOCATIONS`() {
         repeat(AppConfig.MAX_SAVED_LOCATIONS) { i ->
-            manager.addEvent("Site $i", i.toDouble(), i.toDouble(),
+            manager.addEvent("Site $i",
                 LocalDate.of(2025, 6, 15), LocalDate.of(2025, 6, 15))
         }
         assertEquals(AppConfig.MAX_SAVED_LOCATIONS, manager.state.value.events.size)
 
         // Next add should not increase size
-        manager.addEvent("Overflow", 99.0, 99.0,
+        manager.addEvent("Overflow",
             LocalDate.of(2025, 6, 15), LocalDate.of(2025, 6, 15))
         assertEquals(AppConfig.MAX_SAVED_LOCATIONS, manager.state.value.events.size)
     }
 
     @Test
     fun `removeEvent removes from state`() {
-        val event = manager.addEvent("Site", 40.0, -74.0,
+        val event = manager.addEvent("Site",
             LocalDate.of(2025, 6, 15), LocalDate.of(2025, 6, 15))
         assertEquals(1, manager.state.value.events.size)
         manager.removeEvent(event.id)
@@ -76,17 +80,20 @@ class PlannerManagerTest {
 
     @Test
     fun `removeEvent cascades sessions`() {
-        val event = manager.addEvent("Site", 40.0, -74.0,
+        val event = manager.addEvent("Site",
             LocalDate.of(2025, 6, 15), LocalDate.of(2025, 6, 17))
-        assertEquals(3, manager.state.value.sessions.size)
+        manager.addSession(event.id, "Shot 1", 40.0, -74.0, LocalDate.of(2025, 6, 15))
+        manager.addSession(event.id, "Shot 2", 41.0, -73.0, LocalDate.of(2025, 6, 16))
+        assertEquals(2, manager.state.value.sessions.size)
         manager.removeEvent(event.id)
         assertEquals(0, manager.state.value.sessions.size)
     }
 
     @Test
     fun `removeSession removes from state`() {
-        manager.addEvent("Site", 40.0, -74.0,
+        val event = manager.addEvent("Site",
             LocalDate.of(2025, 6, 15), LocalDate.of(2025, 6, 15))
+        manager.addSession(event.id, "Shot", 40.0, -74.0, LocalDate.of(2025, 6, 15))
         assertEquals(1, manager.state.value.sessions.size)
         val session = manager.state.value.sessions.first()
         manager.removeSession(session.id)
@@ -95,8 +102,9 @@ class PlannerManagerTest {
 
     @Test
     fun `updateSession replaces matching session`() {
-        manager.addEvent("Site", 40.0, -74.0,
+        val event = manager.addEvent("Site",
             LocalDate.of(2025, 6, 15), LocalDate.of(2025, 6, 15))
+        manager.addSession(event.id, "Shot", 40.0, -74.0, LocalDate.of(2025, 6, 15))
         val session = manager.state.value.sessions.first()
         val updated = session.copy(verdict = PlannerVerdict.EXCELLENT, summary = "Great night")
         manager.updateSession(updated)
@@ -108,8 +116,11 @@ class PlannerManagerTest {
 
     @Test
     fun `sessionsForEvent returns correct sessions`() {
-        val event = manager.addEvent("Site", 40.0, -74.0,
+        val event = manager.addEvent("Site",
             LocalDate.of(2025, 6, 15), LocalDate.of(2025, 6, 17))
+        manager.addSession(event.id, "Shot 1", 40.0, -74.0, LocalDate.of(2025, 6, 15))
+        manager.addSession(event.id, "Shot 2", 41.0, -73.0, LocalDate.of(2025, 6, 16))
+        manager.addSession(event.id, "Shot 3", 42.0, -72.0, LocalDate.of(2025, 6, 17))
         val sessions = manager.sessionsForEvent(event.id)
         assertEquals(3, sessions.size)
         assertTrue(sessions.all { it.eventId == event.id })
@@ -117,37 +128,44 @@ class PlannerManagerTest {
 
     @Test
     fun `eventById returns correct event`() {
-        val event = manager.addEvent("Site", 40.0, -74.0,
+        val event = manager.addEvent("Site",
             LocalDate.of(2025, 6, 15), LocalDate.of(2025, 6, 15))
         assertEquals(event, manager.eventById(event.id))
         assertNull(manager.eventById("nonexistent"))
     }
 
     @Test
-    fun `exportEvent returns JSON`() {
-        val event = manager.addEvent("Site", 40.0, -74.0,
+    fun `exportEvent returns JSON with sessions`() {
+        val event = manager.addEvent("Site",
             LocalDate.of(2025, 6, 15), LocalDate.of(2025, 6, 15))
+        manager.addSession(event.id, "Waterfall", 40.0, -74.0, LocalDate.of(2025, 6, 15))
         val json = manager.exportEvent(event.id)
         assertNotNull(json)
         assertTrue(json!!.contains("Site"))
+        assertTrue(json.contains("Waterfall"))
         assertTrue(json.contains("2025-06-15"))
     }
 
     @Test
-    fun `importEvent creates event from JSON`() {
-        val event = manager.addEvent("Original", 40.0, -74.0,
+    fun `importEvent creates event and sessions from JSON`() {
+        val event = manager.addEvent("Original",
             LocalDate.of(2025, 6, 15), LocalDate.of(2025, 6, 15))
+        manager.addSession(event.id, "Waterfall", 40.0, -74.0, LocalDate.of(2025, 6, 15))
         val json = manager.exportEvent(event.id)!!
 
         val imported = manager.importEvent(json)
         assertNotNull(imported)
         assertEquals("Original", imported!!.name)
         assertEquals(2, manager.state.value.events.size)
+        // Should have imported the session too
+        val importedSessions = manager.sessionsForEvent(imported.id)
+        assertEquals(1, importedSessions.size)
+        assertEquals("Waterfall", importedSessions.first().name)
     }
 
     @Test
     fun `save is called after each mutation`() {
-        manager.addEvent("Site", 40.0, -74.0,
+        manager.addEvent("Site",
             LocalDate.of(2025, 6, 15), LocalDate.of(2025, 6, 15))
         verify(atLeast = 1) { editor.putString(any(), any()) }
         verify(atLeast = 1) { editor.apply() }
