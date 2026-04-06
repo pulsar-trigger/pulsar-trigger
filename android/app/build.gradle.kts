@@ -94,4 +94,5 @@ dependencies {
     // Testing
     testImplementation("junit:junit:4.13.2")
     testImplementation("io.mockk:mockk:1.13.12")
+    testImplementation("org.json:json:20231013")
 }
