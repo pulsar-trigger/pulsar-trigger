@@ -31,6 +31,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ui.components.BatteryIndicator
+import com.ehrocha.pulsar.ui.components.NightModeToggle
 import com.ehrocha.pulsar.planner.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -42,6 +44,9 @@ import java.time.format.FormatStyle
 import java.util.Locale
 
 // ── Main screen ──────────────────────────────────────────────────────────────
+
+/** Data returned from the map location picker. */
+data class MapPickerResult(val name: String, val lat: Double, val lon: Double)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,6 +104,8 @@ fun PlannerScreen(
             IconButton(onClick = { showAddEvent = true }) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.planner_add))
             }
+            BatteryIndicator()
+            NightModeToggle()
         }
 
         // ── Events list ──────────────────────────────────────────────
@@ -165,26 +172,36 @@ fun EventSessionsScreen(
     plannerManager: PlannerManager,
     onBack: () -> Unit,
     onSessionDetail: (PlannerSession, PlannerEvent) -> Unit = { _, _ -> },
-    onPickOnMap: () -> Unit = {},
+    onPickOnMap: (lat: Double, lon: Double) -> Unit = { _, _ -> },
+    mapResult: MapPickerResult? = null,
 ) {
     val state by plannerManager.state.collectAsState()
     val sessions = state.sessions
         .filter { it.eventId == event.id }
         .sortedWith(compareBy({ it.date }, { it.startTime }))
-    var showAddSession by remember { mutableStateOf(false) }
+    var showAddSession by remember { mutableStateOf(mapResult != null) }
+    val scope = rememberCoroutineScope()
 
     if (showAddSession) {
         AddSessionDialog(
             event = event,
             onDismiss = { showAddSession = false },
             onConfirm = { name, lat, lon, date, startTime, endTime ->
-                plannerManager.addSession(event.id, name, lat, lon, date, startTime, endTime)
+                val session = plannerManager.addSession(event.id, name, lat, lon, date, startTime, endTime)
                 showAddSession = false
+                if (session != null) {
+                    scope.launch {
+                        try { plannerManager.checkSessionConditions(session) } catch (_: Exception) {}
+                    }
+                }
             },
-            onPickOnMap = {
+            onPickOnMap = { lat, lon ->
                 showAddSession = false
-                onPickOnMap()
+                onPickOnMap(lat, lon)
             },
+            initialName = mapResult?.name.orEmpty(),
+            initialLat = mapResult?.let { String.format(Locale.US, "%.5f", it.lat) } ?: "",
+            initialLon = mapResult?.let { String.format(Locale.US, "%.5f", it.lon) } ?: "",
         )
     }
 
@@ -222,6 +239,8 @@ fun EventSessionsScreen(
             IconButton(onClick = { showAddSession = true }) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.session_add))
             }
+            BatteryIndicator()
+            NightModeToggle()
         }
 
         if (sessions.isEmpty()) {
@@ -595,11 +614,14 @@ private fun AddSessionDialog(
     event: PlannerEvent,
     onDismiss: () -> Unit,
     onConfirm: (name: String, lat: Double, lon: Double, date: LocalDate, startTime: LocalTime?, endTime: LocalTime?) -> Unit,
-    onPickOnMap: () -> Unit = {},
+    onPickOnMap: (lat: Double, lon: Double) -> Unit = { _, _ -> },
+    initialName: String = "",
+    initialLat: String = "",
+    initialLon: String = "",
 ) {
-    var name by remember { mutableStateOf("") }
-    var latStr by remember { mutableStateOf("") }
-    var lonStr by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf(initialName) }
+    var latStr by remember { mutableStateOf(initialLat) }
+    var lonStr by remember { mutableStateOf(initialLon) }
     var searchQuery by remember { mutableStateOf("") }
     var searchResults by remember { mutableStateOf<List<GeocodingResult>>(emptyList()) }
     var searching by remember { mutableStateOf(false) }
@@ -612,12 +634,11 @@ private fun AddSessionDialog(
     var showDatePicker by remember { mutableStateOf(false) }
     var date by remember { mutableStateOf(event.startDate) }
 
-    // Time window
-    var useTimeWindow by remember { mutableStateOf(false) }
+    // Time window (optional – only set when user explicitly picks)
     var showStartTimePicker by remember { mutableStateOf(false) }
     var showEndTimePicker by remember { mutableStateOf(false) }
-    var startTime by remember { mutableStateOf(LocalTime.of(20, 0)) }
-    var endTime by remember { mutableStateOf(LocalTime.of(6, 0)) }
+    var startTime by remember { mutableStateOf<LocalTime?>(null) }
+    var endTime by remember { mutableStateOf<LocalTime?>(null) }
 
     // Debounced city search
     var searchJob by remember { mutableStateOf<Job?>(null) }
@@ -676,7 +697,7 @@ private fun AddSessionDialog(
     // Time pickers
     if (showStartTimePicker) {
         val tpState = rememberTimePickerState(
-            initialHour = startTime.hour, initialMinute = startTime.minute, is24Hour = true,
+            initialHour = startTime?.hour ?: 20, initialMinute = startTime?.minute ?: 0, is24Hour = true,
         )
         AlertDialog(
             onDismissRequest = { showStartTimePicker = false },
@@ -694,7 +715,7 @@ private fun AddSessionDialog(
     }
     if (showEndTimePicker) {
         val tpState = rememberTimePickerState(
-            initialHour = endTime.hour, initialMinute = endTime.minute, is24Hour = true,
+            initialHour = endTime?.hour ?: 6, initialMinute = endTime?.minute ?: 0, is24Hour = true,
         )
         AlertDialog(
             onDismissRequest = { showEndTimePicker = false },
@@ -821,9 +842,17 @@ private fun AddSessionDialog(
                     Text(stringResource(R.string.planner_use_gps))
                 }
 
-                // ── Pick on map ──────────────────────────────────────
+                // ── Pick on map (requires a starting point) ─────────
+                val hasCoords = latStr.toDoubleOrNull()?.let { it in -90.0..90.0 } == true
+                        && lonStr.toDoubleOrNull()?.let { it in -180.0..180.0 } == true
                 OutlinedButton(
-                    onClick = onPickOnMap,
+                    onClick = {
+                        onPickOnMap(
+                            latStr.toDoubleOrNull() ?: 0.0,
+                            lonStr.toDoubleOrNull() ?: 0.0,
+                        )
+                    },
+                    enabled = hasCoords,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Icon(Icons.Default.Map, contentDescription = null)
@@ -863,41 +892,32 @@ private fun AddSessionDialog(
                     Text(date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)))
                 }
 
-                // ── Time window ──────────────────────────────────────
+                // ── Time window (optional) ───────────────────────────
+                Text(
+                    stringResource(R.string.planner_time_window),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(
-                        stringResource(R.string.planner_time_window),
-                        style = MaterialTheme.typography.bodyMedium,
+                    OutlinedButton(
+                        onClick = { showStartTimePicker = true },
                         modifier = Modifier.weight(1f),
-                    )
-                    Switch(checked = useTimeWindow, onCheckedChange = { useTimeWindow = it })
-                }
-
-                if (useTimeWindow) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        OutlinedButton(
-                            onClick = { showStartTimePicker = true },
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text(String.format(Locale.US, "%02d:%02d", startTime.hour, startTime.minute))
-                        }
-                        Text("–", modifier = Modifier.align(Alignment.CenterVertically))
-                        OutlinedButton(
-                            onClick = { showEndTimePicker = true },
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text(String.format(Locale.US, "%02d:%02d", endTime.hour, endTime.minute))
-                        }
+                        Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(startTime?.let { String.format(Locale.US, "%02d:%02d", it.hour, it.minute) } ?: "--:--")
+                    }
+                    Text("–", modifier = Modifier.align(Alignment.CenterVertically))
+                    OutlinedButton(
+                        onClick = { showEndTimePicker = true },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(endTime?.let { String.format(Locale.US, "%02d:%02d", it.hour, it.minute) } ?: "--:--")
                     }
                 }
             }
@@ -908,8 +928,8 @@ private fun AddSessionDialog(
                     onConfirm(
                         name.trim(), latStr.toDouble(), lonStr.toDouble(),
                         date,
-                        if (useTimeWindow) startTime else null,
-                        if (useTimeWindow) endTime else null,
+                        startTime,
+                        endTime,
                     )
                 },
                 enabled = valid,

@@ -31,6 +31,7 @@ import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import com.ehrocha.pulsar.ui.components.BatteryIndicator
+import com.ehrocha.pulsar.ui.components.NightModeToggle
 
 @Composable
 fun MainMenuScreen(
@@ -42,7 +43,6 @@ fun MainMenuScreen(
     onDashboardSelected: () -> Unit = {},
     onPlannerSelected: () -> Unit = {},
 ) {
-    val status by vm.status.collectAsState()
     val deviceName by vm.deviceName.collectAsState()
 
     Column(
@@ -63,7 +63,8 @@ fun MainMenuScreen(
                 letterSpacing = 1.sp,
                 modifier = Modifier.weight(1f),
             )
-            BatteryIndicator(status)
+            BatteryIndicator()
+            NightModeToggle()
             Spacer(Modifier.width(4.dp))
             IconButton(onClick = onSettingsSelected) {
                 Icon(

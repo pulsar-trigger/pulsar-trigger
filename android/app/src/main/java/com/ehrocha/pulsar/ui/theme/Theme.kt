@@ -9,6 +9,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
+import com.ehrocha.pulsar.ble.StatusFrame
 
 val PulsarViolet = Color(0xFFB15CFF)
 val PulsarDark = Color(0xFF1C1B1F)
@@ -54,3 +55,9 @@ val RedLightColorScheme = darkColorScheme(
 
 /** Global flag for night mode — survives recomposition. */
 val LocalNightMode = compositionLocalOf { mutableStateOf(false) }
+
+/** Global device status — available to every composable without parameter threading. */
+val LocalDeviceStatus = compositionLocalOf<StatusFrame?> { null }
+
+/** Global connection flag — true when a BLE device is connected. */
+val LocalDeviceConnected = compositionLocalOf { false }

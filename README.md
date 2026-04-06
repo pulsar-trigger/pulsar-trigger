@@ -29,7 +29,7 @@ I you happen to try the app/firmware and want to suggest a fix, improvement or n
 | | Version | Source of truth |
 |---|---------|----------------|
 | Firmware | 0.5.0 | `firmware/platformio.ini` build flags → `config.h` via `#ifndef` |
-| Android  | 0.4.0 | `android/app/build.gradle.kts` → `BuildConfig.VERSION_NAME` |
+| Android  | 0.25.0 | `android/app/build.gradle.kts` → `BuildConfig.VERSION_NAME` |
 
 ---
 
@@ -75,8 +75,9 @@ Single-threaded `loop()` architecture. All trigger modes are driven by `triggers
 
 | File | Responsibility |
 |------|---------------|
-| `MainActivity.kt` | Permission handling, `PulsarNavHost` composable navigation (Scan → Menu → Mode/Settings) |
+| `MainActivity.kt` | Permission handling, `PulsarNavHost` composable navigation (Scan → Menu → Mode/Settings/Dashboard/Planner/Flows), `CompositionLocalProvider` for global device state |
 | `PulsarApp.kt` | Application subclass (empty, used for manifest) |
+| `AppConfig.kt` | Compile-time constants — timing limits, API URLs, default values |
 | **ble/** | |
 | `Protocol.kt` | UUIDs (`PulsarUuids`), command IDs (`Cmd`), `TriggerMode` enum, `DeviceState` enum, `StatusFrame` parser |
 | `CommandBuilder.kt` | Builds 20-byte BLE command packets — one function per command/mode |
@@ -86,27 +87,44 @@ Single-threaded `loop()` architecture. All trigger modes are driven by `triggers
 | `FlowStep.kt` | `FlowStep` data class (step types + parameters), `SavedFlow` data class (named flow presets), JSON serialization |
 | **viewmodel/** | |
 | `PulsarViewModel.kt` | All app state — scan, connection, mode config, notification lifecycle, settings persistence (SharedPreferences), simulator engine, custom flow execution |
+| **astro/** | |
+| `AstroDashboardData.kt` | Sun/moon ephemeris, Milky Way visibility, Bortle-scale calculations, best photo window computation |
+| **planner/** | |
+| `PlannerData.kt` | Data models for events, sessions, locations, and weather conditions |
+| `PlannerManager.kt` | Event/session CRUD, persistence, condition checking orchestration |
+| `ConditionCheckWorker.kt` | Background `CoroutineWorker` — fetches weather forecasts and evaluates session conditions |
+| `GeocodingApi.kt` | Open-Meteo geocoding API client for city/location search |
 | **update/** | |
 | `AppUpdateManager.kt` | APK self-update — checks GitHub releases for newer `app-v*` tags, downloads APK, triggers system installer |
+| `UpdateCheckWorker.kt` | Background periodic check for new app/firmware versions |
+| `VersionUtils.kt` | Semantic version comparison utilities |
 | **service/** | |
 | `PulsarNotificationService.kt` | Foreground notification showing job progress, cancel action via broadcast |
 | **ui/screens/** | |
 | `ScanScreen.kt` | BLE scan UI with device list + simulator entry point |
-| `MainMenuScreen.kt` | Mode selection cards (Intervalometer, Astro, Manual, Custom Flow) + Settings |
-| `ModeScreen.kt` | Mode-specific config panel + running status display with live countdown timer + Settings screen + OTA firmware update UI |
-| `ControlScreen.kt` | Reusable panels: `IntervalometerPanel`, `AstroPanel`, `ManualPanel`, `SettingsPanel` (defaults, GPIO pins, backup/restore, app update), action buttons |
+| `MainMenuScreen.kt` | Mode selection cards (Intervalometer, Astro, Manual, Custom Flow) + Dashboard + Planner + Settings |
+| `ModeScreen.kt` | Mode-specific config panel + running status display with live countdown timer + Settings screen (device, GPIO, updates, backup, about) + OTA firmware update UI |
+| `ControlScreen.kt` | Reusable panels: `IntervalometerPanel`, `AstroPanel`, `ManualPanel`, settings section panels (defaults, GPIO pins, backup/restore, app/firmware update, device info), action buttons |
 | `CustomFlowScreen.kt` | Flow builder UI — add/edit/reorder/delete steps, save/load named flows, execute with live progress |
+| `DashboardScreen.kt` | Astro dashboard — sun/moon ephemeris, Milky Way visibility, Bortle scale, weather, best photo windows, hourly forecasts for a given location and date |
+| `PlannerScreen.kt` | Event planner with sessions — create astro-imaging events, add sessions with location/time/conditions, check weather feasibility |
+| `SessionDetailScreen.kt` | Session detail view — condition results, weather data, go/no-go assessment |
+| `MapLocationPicker.kt` | Interactive map picker for session locations with city search via Open-Meteo geocoding |
 | **ui/components/** | |
 | `TimePicker.kt` | hh:mm:ss scroll-wheel time input, converts to/from milliseconds |
 | `ScrollPicker.kt` | Generic scroll-wheel number picker with tap-to-type |
+| `IntStepperField.kt` | Integer input with +/- stepper buttons |
 | `LiveStatusPanel.kt` | Real-time status display (state dot, battery, mode, shot count) |
+| `BatteryIndicator.kt` | Header battery indicator with status LED dot (green=idle, red=running, amber=error) + night mode toggle |
 
 **Key design decisions:**
-- Navigation is manual state (`AppScreen` sealed class), not Jetpack Navigation — simpler for a 4-screen app
+- Navigation is manual state (`AppScreen` sealed class), not Jetpack Navigation — simpler for a screen-based app
 - `TriggerMode.ASTRO` and `TriggerMode.INTERVALOMETER` share firmware id `0x01`. Auto-navigation on reconnect uses `vm.currentMode` (the ViewModel's local state) rather than the firmware's mode byte to resolve ambiguity
 - BLE characteristic references are `@Volatile` for thread safety between the BLE callback thread and the main thread
 - `CommandBuilder` always pads to 20 bytes (ATT MTU friendly)
 - Cancel action from notification → broadcast → ViewModel → `stop()` → firmware
+- **CompositionLocals** (`LocalDeviceStatus`, `LocalDeviceConnected`, `LocalNightMode`) provide global device state and theme mode to all screens — avoids parameter threading through deeply nested composables
+- **Night Mode** applies a red-tint color scheme (`RedLightColorScheme`) for night-vision preservation at the telescope; toggled via header icon on every screen
 
 ### Settings Persistence
 
@@ -225,12 +243,22 @@ pulsar-trigger/
 │       │   ├── CommandBuilder.kt
 │       │   ├── PulsarBleManager.kt
 │       │   └── FirmwareUpdateManager.kt
+│       ├── AppConfig.kt              ← Compile-time constants
 │       ├── model/
-│       │   └── FlowStep.kt          ← FlowStep + SavedFlow data models
+│       │   └── FlowStep.kt           ← FlowStep + SavedFlow data models
+│       ├── astro/
+│       │   └── AstroDashboardData.kt ← Ephemeris, Milky Way, Bortle, photo windows
+│       ├── planner/
+│       │   ├── PlannerData.kt        ← Event/session/location data models
+│       │   ├── PlannerManager.kt     ← CRUD + condition orchestration
+│       │   ├── ConditionCheckWorker.kt ← Background weather check
+│       │   └── GeocodingApi.kt       ← Open-Meteo city search
 │       ├── viewmodel/
 │       │   └── PulsarViewModel.kt
 │       ├── update/
-│       │   └── AppUpdateManager.kt   ← APK self-update from GitHub
+│       │   ├── AppUpdateManager.kt   ← APK self-update from GitHub
+│       │   ├── UpdateCheckWorker.kt  ← Background update check
+│       │   └── VersionUtils.kt       ← Semantic version comparison
 │       ├── service/
 │       │   └── PulsarNotificationService.kt
 │       └── ui/
@@ -239,13 +267,19 @@ pulsar-trigger/
 │           │   ├── MainMenuScreen.kt
 │           │   ├── ModeScreen.kt
 │           │   ├── ControlScreen.kt
-│           │   └── CustomFlowScreen.kt
+│           │   ├── CustomFlowScreen.kt
+│           │   ├── DashboardScreen.kt
+│           │   ├── PlannerScreen.kt
+│           │   ├── SessionDetailScreen.kt
+│           │   └── MapLocationPicker.kt
 │           ├── components/
 │           │   ├── TimePicker.kt
 │           │   ├── ScrollPicker.kt
-│           │   └── LiveStatusPanel.kt
+│           │   ├── IntStepperField.kt
+│           │   ├── LiveStatusPanel.kt
+│           │   └── BatteryIndicator.kt
 │           └── theme/
-│               └── Theme.kt
+│               └── Theme.kt          ← Color schemes, CompositionLocals
 ├── web/                      ← ESP Web Tools browser-based installer
 │   └── index.html
 ├── .github/workflows/        ← CI/CD

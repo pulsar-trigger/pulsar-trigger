@@ -31,11 +31,12 @@ import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.ble.OtaState
-import com.ehrocha.pulsar.ble.StatusFrame
 import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import kotlinx.coroutines.delay
 import com.ehrocha.pulsar.ui.components.BatteryIndicator
+import com.ehrocha.pulsar.ui.components.NightModeToggle
+import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 
 @Composable
 fun ModeScreen(
@@ -43,8 +44,7 @@ fun ModeScreen(
     targetMode: TriggerMode,
     onBack: () -> Unit,
 ) {
-    val connected by vm.connected.collectAsState()
-    val status by vm.status.collectAsState()
+    val status = LocalDeviceStatus.current
     val deviceName by vm.deviceName.collectAsState()
     val mode by vm.currentMode.collectAsState()
     val isRunning = status?.state == DeviceState.RUNNING || status?.state == DeviceState.WAITING
@@ -72,7 +72,8 @@ fun ModeScreen(
             }
             Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
-            BatteryIndicator(status)
+            BatteryIndicator()
+            NightModeToggle()
         }
 
         Spacer(Modifier.height(12.dp))
@@ -105,7 +106,6 @@ fun ModeScreen(
                     else -> 1L
                 }
                 RunningStatusContent(
-                    status = status!!,
                     totalShots = totalShots,
                     cycleMs = cycleMs,
                 )
@@ -133,9 +133,9 @@ fun ModeScreen(
         }
 
         when (targetMode) {
-            TriggerMode.PRESS_HOLD -> ManualActions(vm, connected, mode)
-            TriggerMode.ASTRO -> AstroActions(vm, connected, isRunning)
-            else -> DefaultActions(vm, connected, isRunning)
+            TriggerMode.PRESS_HOLD -> ManualActions(vm, mode)
+            TriggerMode.ASTRO -> AstroActions(vm, isRunning)
+            else -> DefaultActions(vm, isRunning)
         }
 
         Spacer(Modifier.height(8.dp))
@@ -145,16 +145,15 @@ fun ModeScreen(
 @Composable
 fun SettingsScreen(
     vm: PulsarViewModel,
+    initialSection: SettingsSection? = null,
     onBack: () -> Unit,
 ) {
-    val connected by vm.connected.collectAsState()
-    val status by vm.status.collectAsState()
     val deviceName by vm.deviceName.collectAsState()
     val otaState by vm.firmwareManager.state.collectAsState()
     val otaProgress by vm.firmwareManager.progress.collectAsState()
     val otaError by vm.firmwareManager.errorMessage.collectAsState()
 
-    var currentSection by remember { mutableStateOf<SettingsSection?>(null) }
+    var currentSection by remember { mutableStateOf(initialSection) }
 
     val otaActive = otaState in listOf(
         OtaState.DOWNLOADING, OtaState.UPLOADING, OtaState.VALIDATING, OtaState.COMPLETE,
@@ -220,7 +219,8 @@ fun SettingsScreen(
                 fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.weight(1f))
-            BatteryIndicator(status)
+            BatteryIndicator()
+            NightModeToggle()
         }
 
         Spacer(Modifier.height(12.dp))
@@ -239,12 +239,12 @@ fun SettingsScreen(
                 when (currentSection) {
                     null -> SettingsMenu(onSectionSelected = { currentSection = it })
                     SettingsSection.LANGUAGE -> LanguageSectionContent()
-                    SettingsSection.DEVICE -> DeviceSectionContent(vm, deviceName, connected)
-                    SettingsSection.GPIO_PINS -> GpioPinsSectionContent(vm, connected)
+                    SettingsSection.DEVICE -> DeviceSectionContent(vm, deviceName)
+                    SettingsSection.GPIO_PINS -> GpioPinsSectionContent(vm)
                     SettingsSection.PLANNER -> PlannerSettingsSectionContent(vm)
                     SettingsSection.BACKUP_RESTORE -> BackupRestoreSectionContent(vm)
-                    SettingsSection.UPDATES -> UpdatesSectionContent(vm, connected)
-                    SettingsSection.DEVICE_INFO -> DeviceInfoSectionContent(vm, connected)
+                    SettingsSection.UPDATES -> UpdatesSectionContent(vm)
+                    SettingsSection.DEVICE_INFO -> DeviceInfoSectionContent(vm)
                     SettingsSection.ABOUT -> AboutSectionContent()
                 }
             }
@@ -339,9 +339,6 @@ fun ModeSettingsScreen(
     targetMode: TriggerMode,
     onBack: () -> Unit,
 ) {
-    val connected by vm.connected.collectAsState()
-    val status by vm.status.collectAsState()
-
     val title = when (targetMode) {
         TriggerMode.INTERVALOMETER -> stringResource(R.string.settings_intervalometer)
         TriggerMode.ASTRO -> stringResource(R.string.settings_astro)
@@ -360,7 +357,8 @@ fun ModeSettingsScreen(
             Spacer(Modifier.width(4.dp))
             Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
-            BatteryIndicator(status)
+            BatteryIndicator()
+            NightModeToggle()
         }
 
         Spacer(Modifier.height(12.dp))
@@ -377,8 +375,8 @@ fun ModeSettingsScreen(
                     .padding(16.dp),
             ) {
                 when (targetMode) {
-                    TriggerMode.INTERVALOMETER -> IntervalometerSettingsPanel(vm, connected)
-                    TriggerMode.ASTRO -> AstroSettingsPanel(vm, connected)
+                    TriggerMode.INTERVALOMETER -> IntervalometerSettingsPanel(vm)
+                    TriggerMode.ASTRO -> AstroSettingsPanel(vm)
                     else -> {}
                 }
             }
@@ -388,10 +386,10 @@ fun ModeSettingsScreen(
 
 @Composable
 private fun RunningStatusContent(
-    status: StatusFrame,
     totalShots: Int,
     cycleMs: Long,
 ) {
+    val status = LocalDeviceStatus.current ?: return
     // ── Local countdown: start from firmware's timeRemainingMs and tick down ──
     var lastUpdateTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var lastRemainingMs by remember { mutableLongStateOf(status.timeRemainingMs) }

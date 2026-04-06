@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ui.components.BatteryIndicator
+import com.ehrocha.pulsar.ui.components.NightModeToggle
 import com.ehrocha.pulsar.astro.*
 import com.ehrocha.pulsar.planner.PlannerEvent
 import com.ehrocha.pulsar.planner.PlannerManager
@@ -102,6 +104,8 @@ fun SessionDetailScreen(
             }) {
                 Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.refresh))
             }
+            BatteryIndicator()
+            NightModeToggle()
         }
 
         if (state.loading && state.location == null) {

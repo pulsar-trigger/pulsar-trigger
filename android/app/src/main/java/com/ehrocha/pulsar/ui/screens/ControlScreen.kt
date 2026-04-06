@@ -59,9 +59,12 @@ import com.ehrocha.pulsar.ui.components.TimePicker
 import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel.Companion.SAFE_OUTPUT_PINS
+import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
+import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 
 @Composable
-internal fun DefaultActions(vm: PulsarViewModel, connected: Boolean, isRunning: Boolean) {
+internal fun DefaultActions(vm: PulsarViewModel, isRunning: Boolean) {
+    val connected = LocalDeviceConnected.current
     DefaultActionsContent(
         connected = connected,
         isRunning = isRunning,
@@ -109,7 +112,8 @@ internal fun DefaultActionsContent(
 }
 
 @Composable
-internal fun ManualActions(vm: PulsarViewModel, connected: Boolean, mode: TriggerMode) {
+internal fun ManualActions(vm: PulsarViewModel, mode: TriggerMode) {
+    val connected = LocalDeviceConnected.current
     ManualActionsContent(
         connected = connected,
         mode = mode,
@@ -222,7 +226,8 @@ internal fun ManualActionsContent(
 }
 
 @Composable
-internal fun AstroActions(vm: PulsarViewModel, connected: Boolean, isRunning: Boolean) {
+internal fun AstroActions(vm: PulsarViewModel, isRunning: Boolean) {
+    val connected = LocalDeviceConnected.current
     val ruleDivisor by vm.astroRuleDivisor.collectAsState()
     AstroActionsContent(
         connected = connected,
@@ -742,7 +747,7 @@ private fun CollapsibleSection(
 
 // ── Settings section enum & menu ─────────────────────────────────────────────
 
-internal enum class SettingsSection(val icon: ImageVector, @StringRes val titleRes: Int) {
+enum class SettingsSection(val icon: ImageVector, @StringRes val titleRes: Int) {
     LANGUAGE(Icons.Default.Language, R.string.section_language),
     DEVICE(Icons.Default.PhoneAndroid, R.string.section_device),
     GPIO_PINS(Icons.Default.Memory, R.string.section_gpio_pins),
@@ -887,8 +892,8 @@ internal fun LanguageSectionContent() {
 internal fun DeviceSectionContent(
     vm: PulsarViewModel,
     deviceName: String,
-    connected: Boolean,
 ) {
+    val connected = LocalDeviceConnected.current
     var showRenameDialog by remember { mutableStateOf(false) }
     val simulatorActive by vm.simulatorActive.collectAsState()
     val hwConnected = connected && !simulatorActive
@@ -930,7 +935,8 @@ internal fun DeviceSectionContent(
 }
 
 @Composable
-internal fun GpioPinsSectionContent(vm: PulsarViewModel, connected: Boolean) {
+internal fun GpioPinsSectionContent(vm: PulsarViewModel) {
+    val connected = LocalDeviceConnected.current
     val simulatorActive by vm.simulatorActive.collectAsState()
     val hwConnected = connected && !simulatorActive
     val shutterPin by vm.pinShutter.collectAsState()
@@ -1037,12 +1043,13 @@ internal fun BackupRestoreSectionContent(vm: PulsarViewModel) {
 }
 
 @Composable
-internal fun UpdatesSectionContent(vm: PulsarViewModel, connected: Boolean) {
-    UpdatesSection(vm = vm, connected = connected)
+internal fun UpdatesSectionContent(vm: PulsarViewModel) {
+    UpdatesSection(vm = vm)
 }
 
 @Composable
-internal fun DeviceInfoSectionContent(vm: PulsarViewModel, connected: Boolean) {
+internal fun DeviceInfoSectionContent(vm: PulsarViewModel) {
+    val connected = LocalDeviceConnected.current
     val info by vm.deviceInfo.collectAsState()
     val simulatorActive by vm.simulatorActive.collectAsState()
 
@@ -1206,14 +1213,15 @@ private fun RenameDeviceDialog(
 }
 
 @Composable
-private fun UpdatesSection(vm: PulsarViewModel, connected: Boolean) {
+private fun UpdatesSection(vm: PulsarViewModel) {
+    val connected = LocalDeviceConnected.current
     // Firmware state
     val fwManager = vm.firmwareManager
     val otaState by fwManager.state.collectAsState()
     val fwProgress by fwManager.progress.collectAsState()
     val fwRelease by fwManager.latestRelease.collectAsState()
     val fwError by fwManager.errorMessage.collectAsState()
-    val status by vm.status.collectAsState()
+    val status = LocalDeviceStatus.current
     val fwVersion = status?.fwVersion ?: ""
 
     // App state
@@ -1533,7 +1541,7 @@ private fun GpioPinSelector(
 // ── Per-mode settings panels (accessed via gear icon on main menu) ───────────
 
 @Composable
-internal fun IntervalometerSettingsPanel(vm: PulsarViewModel, connected: Boolean) {
+internal fun IntervalometerSettingsPanel(vm: PulsarViewModel) {
     val defInterval by vm.defaultIntervalMs.collectAsState()
     val defExposure by vm.defaultExposureMs.collectAsState()
     val defCount by vm.defaultShotCount.collectAsState()
@@ -1633,7 +1641,7 @@ internal fun IntervalometerSettingsPanel(vm: PulsarViewModel, connected: Boolean
 }
 
 @Composable
-internal fun AstroSettingsPanel(vm: PulsarViewModel, connected: Boolean) {
+internal fun AstroSettingsPanel(vm: PulsarViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
             stringResource(R.string.settings_astro_desc),

@@ -23,6 +23,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ui.components.BatteryIndicator
+import com.ehrocha.pulsar.ui.components.NightModeToggle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -82,6 +84,8 @@ fun MapLocationPicker(
                     Icon(Icons.Default.Check, contentDescription = stringResource(R.string.save))
                 }
             }
+            BatteryIndicator()
+            NightModeToggle()
         }
 
         // ── Selection info ───────────────────────────────────────────

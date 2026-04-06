@@ -31,7 +31,6 @@ import androidx.compose.ui.window.Dialog
 import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.DeviceState
-import com.ehrocha.pulsar.ble.StatusFrame
 import com.ehrocha.pulsar.model.FlowStep
 import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.model.SavedFlow
@@ -41,6 +40,9 @@ import com.ehrocha.pulsar.ui.components.IntStepperField
 import com.ehrocha.pulsar.ui.components.TimePicker
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import com.ehrocha.pulsar.ui.components.BatteryIndicator
+import com.ehrocha.pulsar.ui.components.NightModeToggle
+import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
+import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 
 private enum class FlowScreenState { LIBRARY, EDITOR }
 
@@ -49,8 +51,6 @@ fun CustomFlowScreen(
     vm: PulsarViewModel,
     onBack: () -> Unit,
 ) {
-    val connected by vm.connected.collectAsState()
-    val status by vm.status.collectAsState()
     val steps by vm.flowSteps.collectAsState()
     val saved by vm.savedFlows.collectAsState()
     val running by vm.flowRunning.collectAsState()
@@ -75,8 +75,6 @@ fun CustomFlowScreen(
     when (screenState) {
         FlowScreenState.LIBRARY -> FlowLibraryView(
             saved = saved,
-            status = status,
-            connected = connected,
             onBack = onBack,
             onNewFlow = {
                 vm.saveFlowSteps(emptyList())
@@ -100,8 +98,6 @@ fun CustomFlowScreen(
             vm = vm,
             steps = steps,
             saved = saved,
-            status = status,
-            connected = connected,
             running = running,
             paused = paused,
             currentStep = currentStep,
@@ -120,14 +116,13 @@ fun CustomFlowScreen(
 @Composable
 private fun FlowLibraryView(
     saved: List<SavedFlow>,
-    status: StatusFrame?,
-    connected: Boolean,
     onBack: () -> Unit,
     onNewFlow: () -> Unit,
     onEditFlow: (SavedFlow) -> Unit,
     onDeleteFlow: (String) -> Unit,
     onRunFlow: (SavedFlow) -> Unit,
 ) {
+    val connected = LocalDeviceConnected.current
     var confirmDelete by remember { mutableStateOf<String?>(null) }
 
     Column(
@@ -143,7 +138,8 @@ private fun FlowLibraryView(
             Spacer(Modifier.width(4.dp))
             Text(stringResource(R.string.flow_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Spacer(Modifier.weight(1f))
-            BatteryIndicator(status)
+            BatteryIndicator()
+            NightModeToggle()
         }
 
         Spacer(Modifier.height(12.dp))
@@ -195,7 +191,6 @@ private fun FlowLibraryView(
                 saved.forEach { flow ->
                     SavedFlowCard(
                         flow = flow,
-                        connected = connected,
                         onEdit = { onEditFlow(flow) },
                         onDelete = { confirmDelete = flow.name },
                         onRun = { onRunFlow(flow) },
@@ -244,11 +239,11 @@ private fun FlowLibraryView(
 @Composable
 private fun SavedFlowCard(
     flow: SavedFlow,
-    connected: Boolean,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onRun: () -> Unit,
 ) {
+    val connected = LocalDeviceConnected.current
     Surface(
         shape = RoundedCornerShape(12.dp),
         tonalElevation = 2.dp,
@@ -346,8 +341,6 @@ private fun FlowEditorView(
     vm: PulsarViewModel,
     steps: List<FlowStep>,
     saved: List<SavedFlow>,
-    status: StatusFrame?,
-    connected: Boolean,
     running: Boolean,
     paused: Boolean,
     currentStep: Int,
@@ -355,6 +348,8 @@ private fun FlowEditorView(
     onBack: () -> Unit,
     onFlowNameChanged: (String?) -> Unit,
 ) {
+    val connected = LocalDeviceConnected.current
+    val status = LocalDeviceStatus.current
     var showAddDialog by remember { mutableStateOf(false) }
     var editingIndex by remember { mutableIntStateOf(-1) }
     var showSaveDialog by remember { mutableStateOf(false) }
@@ -386,7 +381,8 @@ private fun FlowEditorView(
                 }
             }
             Spacer(Modifier.weight(1f))
-            BatteryIndicator(status)
+            BatteryIndicator()
+            NightModeToggle()
         }
 
         Spacer(Modifier.height(12.dp))
@@ -446,7 +442,6 @@ private fun FlowEditorView(
                         isCurrent = isCurrent,
                         isDone = isDone,
                         isPaused = isCurrent && paused,
-                        status = if (isCurrent) status else null,
                         enabled = !running,
                         onEdit = { editingIndex = index },
                         onDelete = {
@@ -587,7 +582,6 @@ private fun FlowStepCard(
     isCurrent: Boolean,
     isDone: Boolean,
     isPaused: Boolean,
-    status: StatusFrame?,
     enabled: Boolean,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -595,6 +589,7 @@ private fun FlowStepCard(
     onMoveDown: () -> Unit,
     onContinue: () -> Unit,
 ) {
+    val status = if (isCurrent) LocalDeviceStatus.current else null
     val containerColor = when {
         isCurrent -> MaterialTheme.colorScheme.primaryContainer
         isDone -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)

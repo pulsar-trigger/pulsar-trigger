@@ -18,11 +18,7 @@ import androidx.core.content.ContextCompat
 import androidx.work.*
 import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.R
-import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
 
 class ConditionCheckWorker(
@@ -64,7 +60,7 @@ class ConditionCheckWorker(
         for (session in futureSessions) {
             val event = manager.eventById(session.eventId) ?: continue
             try {
-                val verdict = checkConditions(session)
+                val verdict = manager.fetchConditions(session)
                 manager.updateSession(session.copy(
                     lastChecked = System.currentTimeMillis(),
                     verdict = verdict.first,
@@ -78,49 +74,6 @@ class ConditionCheckWorker(
             }
         }
         return Result.success()
-    }
-
-    private fun checkConditions(session: PlannerSession): Pair<PlannerVerdict, String> {
-        val dateStr = session.date.format(DateTimeFormatter.ISO_LOCAL_DATE)
-        val url = URL(
-            "https://api.open-meteo.com/v1/forecast" +
-                "?latitude=${session.latitude}&longitude=${session.longitude}" +
-                "&hourly=cloud_cover,precipitation" +
-                "&start_date=$dateStr&end_date=$dateStr" +
-                "&timezone=auto"
-        )
-        val conn = url.openConnection() as HttpURLConnection
-        conn.connectTimeout = AppConfig.API_CONNECT_TIMEOUT_MS
-        conn.readTimeout = AppConfig.API_READ_TIMEOUT_MS
-        try {
-            val json = JSONObject(conn.inputStream.bufferedReader().readText())
-            val hourly = json.getJSONObject("hourly")
-            val clouds = hourly.getJSONArray("cloud_cover")
-            val precip = hourly.getJSONArray("precipitation")
-
-            // Check night hours (18:00 → 06:00 = indices 18..23, 0..5)
-            val nightIndices = (18..23) + (0..5)
-            var clearHours = 0
-            var totalRain = 0.0
-            for (i in nightIndices) {
-                if (i < clouds.length()) {
-                    if (clouds.getInt(i) <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD) clearHours++
-                    totalRain += precip.getDouble(i)
-                }
-            }
-
-            val verdict = when {
-                totalRain > 1.0 -> PlannerVerdict.POOR
-                clearHours >= 8 -> PlannerVerdict.EXCELLENT
-                clearHours >= 5 -> PlannerVerdict.GOOD
-                clearHours >= 3 -> PlannerVerdict.FAIR
-                else -> PlannerVerdict.POOR
-            }
-            val summary = "$clearHours clear hours, ${String.format("%.1f", totalRain)} mm rain"
-            return verdict to summary
-        } finally {
-            conn.disconnect()
-        }
     }
 
     private fun sendNotification(event: PlannerEvent, session: PlannerSession, summary: String) {

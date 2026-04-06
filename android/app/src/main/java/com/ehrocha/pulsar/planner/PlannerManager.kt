@@ -8,12 +8,17 @@ package com.ehrocha.pulsar.planner
 import android.content.Context
 import android.content.SharedPreferences
 import com.ehrocha.pulsar.AppConfig
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 class PlannerManager(context: Context) {
@@ -117,6 +122,57 @@ class PlannerManager(context: Context) {
 
     fun eventById(eventId: String): PlannerEvent? =
         _state.value.events.find { it.id == eventId }
+
+    // ── On-demand condition check ────────────────────────────────────
+
+    /** Fetch weather forecast and update the session verdict. */
+    suspend fun checkSessionConditions(session: PlannerSession) {
+        val (verdict, summary) = withContext(Dispatchers.IO) { fetchConditions(session) }
+        updateSession(session.copy(
+            lastChecked = System.currentTimeMillis(),
+            verdict = verdict,
+            summary = summary,
+        ))
+    }
+
+    internal fun fetchConditions(session: PlannerSession): Pair<PlannerVerdict, String> {
+        val dateStr = session.date.format(DateTimeFormatter.ISO_LOCAL_DATE)
+        val url = URL(
+            "https://api.open-meteo.com/v1/forecast" +
+                "?latitude=${session.latitude}&longitude=${session.longitude}" +
+                "&hourly=cloud_cover,precipitation" +
+                "&start_date=$dateStr&end_date=$dateStr" +
+                "&timezone=auto"
+        )
+        val conn = url.openConnection() as HttpURLConnection
+        conn.connectTimeout = AppConfig.API_CONNECT_TIMEOUT_MS
+        conn.readTimeout = AppConfig.API_READ_TIMEOUT_MS
+        try {
+            val json = JSONObject(conn.inputStream.bufferedReader().readText())
+            val hourly = json.getJSONObject("hourly")
+            val clouds = hourly.getJSONArray("cloud_cover")
+            val precip = hourly.getJSONArray("precipitation")
+            val nightIndices = (18..23) + (0..5)
+            var clearHours = 0
+            var totalRain = 0.0
+            for (i in nightIndices) {
+                if (i < clouds.length()) {
+                    if (clouds.getInt(i) <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD) clearHours++
+                    totalRain += precip.getDouble(i)
+                }
+            }
+            val verdict = when {
+                totalRain > 1.0 -> PlannerVerdict.POOR
+                clearHours >= 8 -> PlannerVerdict.EXCELLENT
+                clearHours >= 5 -> PlannerVerdict.GOOD
+                clearHours >= 3 -> PlannerVerdict.FAIR
+                else -> PlannerVerdict.POOR
+            }
+            return verdict to "$clearHours clear hours, ${String.format("%.1f", totalRain)} mm rain"
+        } finally {
+            conn.disconnect()
+        }
+    }
 
     // ── Sharing (export / import) ────────────────────────────────────
 

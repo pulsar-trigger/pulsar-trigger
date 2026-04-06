@@ -47,14 +47,18 @@ import com.ehrocha.pulsar.ui.screens.ModeScreen
 import com.ehrocha.pulsar.ui.screens.ModeSettingsScreen
 import com.ehrocha.pulsar.ui.screens.ScanScreen
 import com.ehrocha.pulsar.ui.screens.SettingsScreen
+import com.ehrocha.pulsar.ui.screens.SettingsSection
 import com.ehrocha.pulsar.ui.screens.CustomFlowScreen
 import com.ehrocha.pulsar.ui.screens.DashboardScreen
 import com.ehrocha.pulsar.ui.screens.PlannerScreen
 import com.ehrocha.pulsar.ui.screens.EventSessionsScreen
 import com.ehrocha.pulsar.ui.screens.SessionDetailScreen
 import com.ehrocha.pulsar.ui.screens.MapLocationPicker
+import com.ehrocha.pulsar.ui.screens.MapPickerResult
 import com.ehrocha.pulsar.ui.theme.DarkColorScheme
 import com.ehrocha.pulsar.ui.theme.RedLightColorScheme
+import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
+import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 import com.ehrocha.pulsar.ui.theme.LocalNightMode
 import com.ehrocha.pulsar.planner.PlannerEvent
 import com.ehrocha.pulsar.planner.PlannerSession
@@ -128,7 +132,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
     val hasFwUpdate = fwState == OtaState.AVAILABLE && fwRelease != null
     val hasAppUpdate = appState == AppUpdateState.AVAILABLE && appRelease != null
 
-    if (connected && (hasFwUpdate || hasAppUpdate) && !dismissedUpdateDialog && currentScreen != AppScreen.Settings) {
+    if (connected && (hasFwUpdate || hasAppUpdate) && !dismissedUpdateDialog && currentScreen !is AppScreen.Settings) {
         AlertDialog(
             onDismissRequest = { dismissedUpdateDialog = true },
             title = { Text(stringResource(R.string.dialog_updates_available)) },
@@ -150,7 +154,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
             confirmButton = {
                 TextButton(onClick = {
                     dismissedUpdateDialog = true
-                    currentScreen = AppScreen.Settings
+                    currentScreen = AppScreen.Settings(SettingsSection.UPDATES)
                 }) { Text(stringResource(R.string.btn_go_to_settings)) }
             },
             dismissButton = {
@@ -177,6 +181,11 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
         }
     }
 
+    val deviceStatus by vm.status.collectAsState()
+    CompositionLocalProvider(
+        LocalDeviceStatus provides deviceStatus,
+        LocalDeviceConnected provides connected,
+    ) {
     Box(Modifier.fillMaxSize()) {
         when (val screen = currentScreen) {
             AppScreen.Scan -> ScanScreen(vm) { currentScreen = AppScreen.Menu }
@@ -184,7 +193,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                 vm = vm,
                 onModeSelected = { currentScreen = AppScreen.Mode(it) },
                 onModeSettingsSelected = { currentScreen = AppScreen.ModeSettings(it) },
-                onSettingsSelected = { currentScreen = AppScreen.Settings },
+                onSettingsSelected = { currentScreen = AppScreen.Settings() },
                 onCustomFlowSelected = { currentScreen = AppScreen.CustomFlow },
                 onDashboardSelected = { currentScreen = AppScreen.Dashboard },
                 onPlannerSelected = { currentScreen = AppScreen.Planner },
@@ -197,10 +206,11 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                     onBack = { currentScreen = AppScreen.Menu },
                 )
             }
-            AppScreen.Settings -> {
+            is AppScreen.Settings -> {
                 BackHandler { currentScreen = AppScreen.Menu }
                 SettingsScreen(
                     vm = vm,
+                    initialSection = screen.initialSection,
                     onBack = { currentScreen = AppScreen.Menu },
                 )
             }
@@ -247,8 +257,13 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                 MapLocationPicker(
                     onBack = { currentScreen = AppScreen.EventSessions(screen.event) },
                     onConfirm = { name, lat, lon ->
-                        currentScreen = AppScreen.EventSessions(screen.event)
+                        currentScreen = AppScreen.EventSessions(
+                            screen.event,
+                            mapResult = MapPickerResult(name, lat, lon),
+                        )
                     },
+                    initialLat = screen.initialLat,
+                    initialLon = screen.initialLon,
                 )
             }
             is AppScreen.EventSessions -> {
@@ -260,7 +275,10 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                     onSessionDetail = { session, event ->
                         currentScreen = AppScreen.SessionDetail(session, event)
                     },
-                    onPickOnMap = { currentScreen = AppScreen.MapPicker(screen.event) },
+                    onPickOnMap = { lat, lon ->
+                        currentScreen = AppScreen.MapPicker(screen.event, lat, lon)
+                    },
+                    mapResult = screen.mapResult,
                 )
             }
             is AppScreen.SessionDetail -> {
@@ -273,24 +291,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                 )
             }
         }
-
-        // Global night-mode toggle (visible on every screen)
-        val nightMode = LocalNightMode.current
-        SmallFloatingActionButton(
-            onClick = { nightMode.value = !nightMode.value },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(16.dp)
-                .size(40.dp),
-            containerColor = if (nightMode.value) Color(0xFFCC4444) else MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = if (nightMode.value) Color.White else MaterialTheme.colorScheme.onSurface,
-        ) {
-            Icon(
-                if (nightMode.value) Icons.Default.LightMode else Icons.Default.Nightlight,
-                contentDescription = stringResource(R.string.night_mode_toggle),
-                modifier = Modifier.size(20.dp),
-            )
-        }
+    }
     }
 }
 
@@ -299,12 +300,12 @@ private sealed class AppScreen {
     data object Menu : AppScreen()
     data class Mode(val mode: TriggerMode) : AppScreen()
     data class ModeSettings(val mode: TriggerMode) : AppScreen()
-    data object Settings : AppScreen()
+    data class Settings(val initialSection: SettingsSection? = null) : AppScreen()
     data object CustomFlow : AppScreen()
     data object Dashboard : AppScreen()
     data object Planner : AppScreen()
     data class PlannerWithTab(val tab: Int) : AppScreen()
-    data class MapPicker(val event: PlannerEvent) : AppScreen()
-    data class EventSessions(val event: PlannerEvent) : AppScreen()
+    data class MapPicker(val event: PlannerEvent, val initialLat: Double = 0.0, val initialLon: Double = 0.0) : AppScreen()
+    data class EventSessions(val event: PlannerEvent, val mapResult: MapPickerResult? = null) : AppScreen()
     data class SessionDetail(val session: PlannerSession, val event: PlannerEvent) : AppScreen()
 }

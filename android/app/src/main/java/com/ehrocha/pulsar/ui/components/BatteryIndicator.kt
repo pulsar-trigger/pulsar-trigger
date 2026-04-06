@@ -5,8 +5,14 @@
 
 package com.ehrocha.pulsar.ui.components
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Nightlight
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -14,13 +20,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.ble.StatusFrame
+import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
+import com.ehrocha.pulsar.ui.theme.LocalNightMode
 
 @Composable
-fun BatteryIndicator(status: StatusFrame?) {
+fun BatteryIndicator() {
+    val status = LocalDeviceStatus.current
     if (status != null) {
         Surface(
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
@@ -30,6 +42,15 @@ fun BatteryIndicator(status: StatusFrame?) {
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             ) {
+                val ledColor = when (status.state) {
+                    DeviceState.RUNNING, DeviceState.WAITING -> Color(0xFFFF1744)
+                    DeviceState.ERROR -> Color(0xFFFFA000)
+                    else -> Color(0xFF4CAF50)
+                }
+                Canvas(modifier = Modifier.size(8.dp)) {
+                    drawCircle(color = ledColor)
+                }
+                Spacer(Modifier.width(6.dp))
                 Text(
                     text = "${status.batteryPct}%",
                     style = MaterialTheme.typography.labelLarge,
@@ -46,5 +67,18 @@ fun BatteryIndicator(status: StatusFrame?) {
                 Text(text = battIcon, fontSize = 16.sp)
             }
         }
+    }
+}
+
+@Composable
+fun NightModeToggle() {
+    val nightMode = LocalNightMode.current
+    IconButton(onClick = { nightMode.value = !nightMode.value }) {
+        Icon(
+            if (nightMode.value) Icons.Default.LightMode else Icons.Default.Nightlight,
+            contentDescription = stringResource(R.string.night_mode_toggle),
+            modifier = Modifier.size(20.dp),
+            tint = if (nightMode.value) Color(0xFFCC4444) else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
