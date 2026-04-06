@@ -32,9 +32,9 @@ jobs:
       - name: Extract firmware version
         id: version
         run: |
-          MAJOR=$(grep -oP 'FW_VERSION_MAJOR=\K\d+' firmware/platformio.ini)
-          MINOR=$(grep -oP 'FW_VERSION_MINOR=\K\d+' firmware/platformio.ini)
-          PATCH=$(grep -oP 'FW_VERSION_PATCH=\K\d+' firmware/platformio.ini)
+          MAJOR=$(grep -oP -m1 'FW_VERSION_MAJOR=\K\d+' firmware/platformio.ini)
+          MINOR=$(grep -oP -m1 'FW_VERSION_MINOR=\K\d+' firmware/platformio.ini)
+          PATCH=$(grep -oP -m1 'FW_VERSION_PATCH=\K\d+' firmware/platformio.ini)
           VERSION="v${MAJOR}.${MINOR}.${PATCH}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Building firmware $VERSION"
