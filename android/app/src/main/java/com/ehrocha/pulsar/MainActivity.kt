@@ -69,9 +69,8 @@ class MainActivity : ComponentActivity() {
                         buildList {
                             add(android.Manifest.permission.BLUETOOTH_SCAN)
                             add(android.Manifest.permission.BLUETOOTH_CONNECT)
-                            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                                add(android.Manifest.permission.ACCESS_FINE_LOCATION)
-                            }
+                            add(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                            add(android.Manifest.permission.ACCESS_COARSE_LOCATION)
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 add(android.Manifest.permission.POST_NOTIFICATIONS)
                             }

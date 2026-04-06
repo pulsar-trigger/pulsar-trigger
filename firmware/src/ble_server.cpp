@@ -242,10 +242,10 @@ void ble_init() {
 
     BLEDevice::init(_deviceName);
 
-    // Enable BLE security — require bonding for writes
-    BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT_MITM);
+    // Enable BLE security — bonding with encryption (Just Works, no MITM)
+    BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT);
     BLESecurity* security = new BLESecurity();
-    security->setAuthenticationMode(ESP_LE_AUTH_REQ_SC_MITM_BOND);
+    security->setAuthenticationMode(ESP_LE_AUTH_REQ_SC_BOND);
     security->setCapability(ESP_IO_CAP_NONE);  // Just Works pairing
     security->setInitEncryptionKey(ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK);
 
