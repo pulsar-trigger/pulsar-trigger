@@ -39,6 +39,9 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Building firmware $VERSION"
 
+      - name: Run unit tests
+        run: cd firmware && pio test -e native
+
       - name: Build firmware
         run: cd firmware && pio run
 

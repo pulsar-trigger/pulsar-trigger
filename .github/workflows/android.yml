@@ -44,6 +44,12 @@ jobs:
             "keyPassword=${{ secrets.KEY_PASSWORD }}" \
             > android/keystore.properties
 
+      - name: Run unit tests
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew test
+
       - name: Build release APK
         run: |
           cd android

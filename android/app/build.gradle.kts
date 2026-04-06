@@ -20,8 +20,8 @@ android {
         applicationId = "com.ehrocha.pulsar"
         minSdk = 26
         targetSdk = 35
-        versionCode = 23
-        versionName = "0.19.0"
+        versionCode = 24
+        versionName = "0.20.0"
     }
 
     signingConfigs {
@@ -54,6 +54,10 @@ android {
         compose = true
         buildConfig = true
     }
+
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 dependencies {
@@ -83,4 +87,8 @@ dependencies {
 
     // WorkManager — periodic background update checks
     implementation("androidx.work:work-runtime-ktx:2.9.1")
+
+    // Testing
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("io.mockk:mockk:1.13.12")
 }
