@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.astro.*
-import com.ehrocha.pulsar.ui.theme.LocalNightMode
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -99,15 +98,6 @@ fun DashboardScreen(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
             )
-            // Night mode toggle
-            val nightMode = LocalNightMode.current
-            IconButton(onClick = { nightMode.value = !nightMode.value }) {
-                Icon(
-                    if (nightMode.value) Icons.Default.LightMode else Icons.Default.Nightlight,
-                    contentDescription = stringResource(R.string.night_mode_toggle),
-                    tint = if (nightMode.value) Color(0xFFCC4444) else MaterialTheme.colorScheme.onSurface,
-                )
-            }
             IconButton(onClick = { scope.launch { dashboardManager.refresh(state.selectedDate) } }) {
                 Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.refresh))
             }

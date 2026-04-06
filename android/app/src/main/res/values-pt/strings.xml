@@ -328,6 +328,11 @@
     <string name="planner_location">Local</string>
     <string name="planner_delete_location_title">Excluir local?</string>
     <string name="planner_delete_location_msg">Excluir \"%1$s\" e todas as suas sessões?</string>
+    <string name="planner_search_city">Buscar cidade</string>
+    <string name="planner_use_gps">Usar minha localização atual</string>
+    <string name="planner_my_location">Minha localização</string>
+    <string name="planner_lat_short">Lat</string>
+    <string name="planner_lon_short">Lon</string>
     <string name="planner_last_checked">Verificado há %1$d h</string>
     <string name="verdict_excellent">Excelente</string>
     <string name="verdict_good">Bom</string>

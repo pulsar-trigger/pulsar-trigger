@@ -11,20 +11,30 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Nightlight
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -162,59 +172,79 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
         }
     }
 
-    when (val screen = currentScreen) {
-        AppScreen.Scan -> ScanScreen(vm) { currentScreen = AppScreen.Menu }
-        AppScreen.Menu -> MainMenuScreen(
-            vm = vm,
-            onModeSelected = { currentScreen = AppScreen.Mode(it) },
-            onModeSettingsSelected = { currentScreen = AppScreen.ModeSettings(it) },
-            onSettingsSelected = { currentScreen = AppScreen.Settings },
-            onCustomFlowSelected = { currentScreen = AppScreen.CustomFlow },
-            onDashboardSelected = { currentScreen = AppScreen.Dashboard },
-            onPlannerSelected = { currentScreen = AppScreen.Planner },
-        )
-        is AppScreen.Mode -> {
-            BackHandler { currentScreen = AppScreen.Menu }
-            ModeScreen(
+    Box(Modifier.fillMaxSize()) {
+        when (val screen = currentScreen) {
+            AppScreen.Scan -> ScanScreen(vm) { currentScreen = AppScreen.Menu }
+            AppScreen.Menu -> MainMenuScreen(
                 vm = vm,
-                targetMode = screen.mode,
-                onBack = { currentScreen = AppScreen.Menu },
+                onModeSelected = { currentScreen = AppScreen.Mode(it) },
+                onModeSettingsSelected = { currentScreen = AppScreen.ModeSettings(it) },
+                onSettingsSelected = { currentScreen = AppScreen.Settings },
+                onCustomFlowSelected = { currentScreen = AppScreen.CustomFlow },
+                onDashboardSelected = { currentScreen = AppScreen.Dashboard },
+                onPlannerSelected = { currentScreen = AppScreen.Planner },
             )
+            is AppScreen.Mode -> {
+                BackHandler { currentScreen = AppScreen.Menu }
+                ModeScreen(
+                    vm = vm,
+                    targetMode = screen.mode,
+                    onBack = { currentScreen = AppScreen.Menu },
+                )
+            }
+            AppScreen.Settings -> {
+                BackHandler { currentScreen = AppScreen.Menu }
+                SettingsScreen(
+                    vm = vm,
+                    onBack = { currentScreen = AppScreen.Menu },
+                )
+            }
+            is AppScreen.ModeSettings -> {
+                BackHandler { currentScreen = AppScreen.Menu }
+                ModeSettingsScreen(
+                    vm = vm,
+                    targetMode = screen.mode,
+                    onBack = { currentScreen = AppScreen.Menu },
+                )
+            }
+            AppScreen.CustomFlow -> {
+                BackHandler { currentScreen = AppScreen.Menu }
+                CustomFlowScreen(
+                    vm = vm,
+                    onBack = { currentScreen = AppScreen.Menu },
+                )
+            }
+            AppScreen.Dashboard -> {
+                BackHandler { currentScreen = AppScreen.Menu }
+                DashboardScreen(
+                    dashboardManager = vm.dashboardManager,
+                    onBack = { currentScreen = AppScreen.Menu },
+                )
+            }
+            AppScreen.Planner -> {
+                BackHandler { currentScreen = AppScreen.Menu }
+                PlannerScreen(
+                    plannerManager = vm.plannerManager,
+                    onBack = { currentScreen = AppScreen.Menu },
+                )
+            }
         }
-        AppScreen.Settings -> {
-            BackHandler { currentScreen = AppScreen.Menu }
-            SettingsScreen(
-                vm = vm,
-                onBack = { currentScreen = AppScreen.Menu },
-            )
-        }
-        is AppScreen.ModeSettings -> {
-            BackHandler { currentScreen = AppScreen.Menu }
-            ModeSettingsScreen(
-                vm = vm,
-                targetMode = screen.mode,
-                onBack = { currentScreen = AppScreen.Menu },
-            )
-        }
-        AppScreen.CustomFlow -> {
-            BackHandler { currentScreen = AppScreen.Menu }
-            CustomFlowScreen(
-                vm = vm,
-                onBack = { currentScreen = AppScreen.Menu },
-            )
-        }
-        AppScreen.Dashboard -> {
-            BackHandler { currentScreen = AppScreen.Menu }
-            DashboardScreen(
-                dashboardManager = vm.dashboardManager,
-                onBack = { currentScreen = AppScreen.Menu },
-            )
-        }
-        AppScreen.Planner -> {
-            BackHandler { currentScreen = AppScreen.Menu }
-            PlannerScreen(
-                plannerManager = vm.plannerManager,
-                onBack = { currentScreen = AppScreen.Menu },
+
+        // Global night-mode toggle (visible on every screen)
+        val nightMode = LocalNightMode.current
+        SmallFloatingActionButton(
+            onClick = { nightMode.value = !nightMode.value },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+                .size(40.dp),
+            containerColor = if (nightMode.value) Color(0xFFCC4444) else MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = if (nightMode.value) Color.White else MaterialTheme.colorScheme.onSurface,
+        ) {
+            Icon(
+                if (nightMode.value) Icons.Default.LightMode else Icons.Default.Nightlight,
+                contentDescription = stringResource(R.string.night_mode_toggle),
+                modifier = Modifier.size(20.dp),
             )
         }
     }

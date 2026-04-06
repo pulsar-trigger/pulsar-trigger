@@ -326,6 +326,11 @@
     <string name="planner_location">地点</string>
     <string name="planner_delete_location_title">删除地点？</string>
     <string name="planner_delete_location_msg">删除 \"%1$s\" 及其所有会话？</string>
+    <string name="planner_search_city">搜索城市</string>
+    <string name="planner_use_gps">使用当前位置</string>
+    <string name="planner_my_location">我的位置</string>
+    <string name="planner_lat_short">纬度</string>
+    <string name="planner_lon_short">经度</string>
     <string name="planner_last_checked">%1$d 小时前检查</string>
     <string name="verdict_excellent">极佳</string>
     <string name="verdict_good">良好</string>

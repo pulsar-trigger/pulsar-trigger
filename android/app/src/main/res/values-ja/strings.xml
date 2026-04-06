@@ -328,6 +328,11 @@
     <string name="planner_location">場所</string>
     <string name="planner_delete_location_title">場所を削除しますか？</string>
     <string name="planner_delete_location_msg">\"%1$s\" とすべてのセッションを削除しますか？</string>
+    <string name="planner_search_city">都市を検索</string>
+    <string name="planner_use_gps">現在地を使用</string>
+    <string name="planner_my_location">現在地</string>
+    <string name="planner_lat_short">緯度</string>
+    <string name="planner_lon_short">経度</string>
     <string name="planner_last_checked">%1$d 時間前に確認</string>
     <string name="verdict_excellent">最高</string>
     <string name="verdict_good">良好</string>

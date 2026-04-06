@@ -377,6 +377,11 @@
     <string name="planner_location">Location</string>
     <string name="planner_delete_location_title">Delete location?</string>
     <string name="planner_delete_location_msg">Delete \"%1$s\" and all its sessions?</string>
+    <string name="planner_search_city">Search city</string>
+    <string name="planner_use_gps">Use my current location</string>
+    <string name="planner_my_location">My location</string>
+    <string name="planner_lat_short">Lat</string>
+    <string name="planner_lon_short">Lon</string>
     <string name="planner_last_checked">Checked %1$d h ago</string>
 
     <!-- Planner verdicts -->
