@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.astro.*
+import com.ehrocha.pulsar.ui.theme.LocalNightMode
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -98,6 +99,15 @@ fun DashboardScreen(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
             )
+            // Night mode toggle
+            val nightMode = LocalNightMode.current
+            IconButton(onClick = { nightMode.value = !nightMode.value }) {
+                Icon(
+                    if (nightMode.value) Icons.Default.LightMode else Icons.Default.Nightlight,
+                    contentDescription = stringResource(R.string.night_mode_toggle),
+                    tint = if (nightMode.value) Color(0xFFCC4444) else MaterialTheme.colorScheme.onSurface,
+                )
+            }
             IconButton(onClick = { scope.launch { dashboardManager.refresh(state.selectedDate) } }) {
                 Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.refresh))
             }
@@ -411,6 +421,32 @@ fun DashboardScreen(
                 }
             }
 
+            // ── Per-card error chips ────────────────────────────────
+            val errors = listOfNotNull(
+                state.weatherError?.let { "☁️ $it" },
+                state.bortleError?.let { "💡 $it" },
+            )
+            if (errors.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    errors.forEach { msg ->
+                        Surface(
+                            color = Color(0xFFE65100).copy(alpha = 0.12f),
+                            shape = RoundedCornerShape(8.dp),
+                        ) {
+                            Text(
+                                msg,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFFE65100),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            )
+                        }
+                    }
+                }
+            }
+
             // ── Sun card ─────────────────────────────────────────────
             state.sun?.let { sun ->
                 DashCard(title = stringResource(R.string.card_sun), icon = Icons.Default.WbSunny) {
@@ -658,6 +694,166 @@ fun DashboardScreen(
                                 else -> Color(0xFFF9A825)
                             },
                         )
+                    }
+                }
+            }
+
+            // ── Dew point card ───────────────────────────────────────
+            state.dewPoint?.let { dew ->
+                if (dew.risk != DewRisk.NONE) {
+                    val isCritical = dew.risk == DewRisk.CRITICAL
+                    DashCard(
+                        title = stringResource(R.string.card_dew_point),
+                        icon = Icons.Default.WaterDrop,
+                    ) {
+                        Surface(
+                            color = (if (isCritical) Color(0xFFE65100) else Color(0xFFF9A825)).copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(
+                                    text = if (isCritical) stringResource(R.string.dew_critical)
+                                           else stringResource(R.string.dew_warning),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isCritical) Color(0xFFE65100) else Color(0xFFF9A825),
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    stringResource(
+                                        R.string.dew_detail,
+                                        String.format(Locale.US, "%.1f", dew.temperatureC),
+                                        String.format(Locale.US, "%.1f", dew.dewPointC),
+                                        String.format(Locale.US, "%.1f", dew.spreadC),
+                                    ),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Twilight timeline card ───────────────────────────────
+            state.twilight?.let { tw ->
+                DashCard(
+                    title = stringResource(R.string.card_twilight),
+                    icon = Icons.Default.Gradient,
+                ) {
+                    val phases = listOfNotNull(
+                        tw.civilEnd?.let { stringResource(R.string.tw_civil_end) to it },
+                        tw.nauticalEnd?.let { stringResource(R.string.tw_nautical_end) to it },
+                        tw.astroEnd?.let { stringResource(R.string.tw_astro_end) to it },
+                        tw.astroStart?.let { stringResource(R.string.tw_astro_start) to it },
+                        tw.nauticalStart?.let { stringResource(R.string.tw_nautical_start) to it },
+                        tw.civilStart?.let { stringResource(R.string.tw_civil_start) to it },
+                    )
+                    // Visual bar
+                    val colors = listOf(
+                        Color(0xFF1A237E), // civil → nautical
+                        Color(0xFF0D47A1), // nautical → astro
+                        Color(0xFF000033), // full dark
+                        Color(0xFF0D47A1), // astro → nautical
+                        Color(0xFF1A237E), // nautical → civil
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(12.dp)
+                            .clip(RoundedCornerShape(6.dp)),
+                    ) {
+                        colors.forEach { c ->
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .background(c),
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    phases.forEach { (label, time) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(
+                                label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                formatTime(time),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        }
+                    }
+                }
+            }
+
+            // ── Planets card ─────────────────────────────────────────
+            if (state.planets.isNotEmpty()) {
+                DashCard(
+                    title = stringResource(R.string.card_planets),
+                    icon = Icons.Default.Public,
+                ) {
+                    state.planets.forEach { planet ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(planet.emoji, fontSize = 20.sp, modifier = Modifier.width(32.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    planet.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    planet.rise?.let {
+                                        Text(
+                                            "↑${formatTime(it)}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    planet.set?.let {
+                                        Text(
+                                            "↓${formatTime(it)}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                            }
+                            Text(
+                                String.format(Locale.US, "%.0f°", planet.altitude),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.Medium,
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Surface(
+                                color = if (planet.visible) Color(0xFF2E7D32).copy(alpha = 0.15f)
+                                        else Color(0xFFE65100).copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(8.dp),
+                            ) {
+                                Text(
+                                    if (planet.visible) stringResource(R.string.planet_visible)
+                                    else stringResource(R.string.planet_low),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (planet.visible) Color(0xFF2E7D32) else Color(0xFFE65100),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                )
+                            }
+                        }
                     }
                 }
             }

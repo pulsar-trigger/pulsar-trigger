@@ -309,4 +309,44 @@
     <string name="stat_captured">Aufgenommen</string>
     <string name="stat_est_remaining">Geschätzt verbl.</string>
     <string name="notif_update_available">Version %1$s verfügbar — öffnen zum Aktualisieren</string>
+
+    <!-- Planner -->
+    <string name="mode_planner">Sitzungsplaner</string>
+    <string name="mode_planner_desc">Standorte speichern und Sitzungen mit Bedingungswarnungen planen</string>
+    <string name="planner_title">Sitzungsplaner</string>
+    <string name="planner_add">Hinzufügen</string>
+    <string name="planner_tab_locations">Standorte</string>
+    <string name="planner_tab_sessions">Sitzungen</string>
+    <string name="planner_no_locations">Noch keine Standorte gespeichert</string>
+    <string name="planner_no_sessions">Noch keine Sitzungen geplant</string>
+    <string name="planner_add_session">Sitzung hinzufügen</string>
+    <string name="planner_add_location_title">Standort hinzufügen</string>
+    <string name="planner_add_session_title">Sitzung planen</string>
+    <string name="planner_location_name">Standortname</string>
+    <string name="planner_latitude">Breitengrad</string>
+    <string name="planner_longitude">Längengrad</string>
+    <string name="planner_location">Standort</string>
+    <string name="planner_delete_location_title">Standort löschen?</string>
+    <string name="planner_delete_location_msg">\"%1$s\" und alle zugehörigen Sitzungen löschen?</string>
+    <string name="planner_last_checked">Vor %1$d h überprüft</string>
+    <string name="verdict_excellent">Ausgezeichnet</string>
+    <string name="verdict_good">Gut</string>
+    <string name="verdict_fair">Akzeptabel</string>
+    <string name="verdict_poor">Schlecht</string>
+    <string name="verdict_unknown">Unbekannt</string>
+    <string name="night_mode_toggle">Nachtmodus</string>
+    <string name="card_dew_point">Taupunkt</string>
+    <string name="dew_warning">Taurisiko — Objektivbeschlag möglich</string>
+    <string name="dew_critical">Hohes Taurisiko — Beschlag wahrscheinlich!</string>
+    <string name="dew_detail">Temp %1$s°C, Taupunkt %2$s°C, Differenz %3$s°C</string>
+    <string name="card_twilight">Dämmerungsverlauf</string>
+    <string name="tw_civil_end">Bürgerliche Dämmerung endet</string>
+    <string name="tw_nautical_end">Nautische Dämmerung endet</string>
+    <string name="tw_astro_end">Astronomische Dämmerung endet</string>
+    <string name="tw_astro_start">Astronomische Dämmerung beginnt</string>
+    <string name="tw_nautical_start">Nautische Dämmerung beginnt</string>
+    <string name="tw_civil_start">Bürgerliche Dämmerung beginnt</string>
+    <string name="card_planets">Planeten heute Nacht</string>
+    <string name="planet_visible">Sichtbar</string>
+    <string name="planet_low">Niedrig</string>
 </resources>

@@ -6,6 +6,8 @@
 package com.ehrocha.pulsar.ui.theme
 
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
 
 val PulsarViolet = Color(0xFFB15CFF)
@@ -25,3 +27,30 @@ val DarkColorScheme = darkColorScheme(
     onSurfaceVariant = Color(0xFFCAC4D0),
     outline = Color(0xFF938F99)
 )
+
+// ── Red-light / Night mode ──────────────────────────────────────────────────
+// Dim red tones to preserve night vision at the telescope.
+
+private val RedDark = Color(0xFF120000)
+private val RedSurface = Color(0xFF1A0000)
+private val RedOnSurface = Color(0xFFCC4444)
+private val RedSecondary = Color(0xFF220808)
+private val RedAccent = Color(0xFFCC2222)
+
+val RedLightColorScheme = darkColorScheme(
+    primary = RedAccent,
+    onPrimary = Color.White,
+    background = RedDark,
+    surface = RedSurface,
+    onBackground = RedOnSurface,
+    onSurface = RedOnSurface,
+    surfaceVariant = RedSecondary,
+    onSurfaceVariant = Color(0xFF993333),
+    outline = Color(0xFF662222),
+    error = Color(0xFFFF4444),
+    secondaryContainer = Color(0xFF330808),
+    onSecondaryContainer = Color(0xFFCC4444),
+)
+
+/** Global flag for night mode — survives recomposition. */
+val LocalNightMode = compositionLocalOf { mutableStateOf(false) }

@@ -36,8 +36,13 @@ data class DashboardState(
     val bortle: BortleInfo? = null,
     val milkyWay: MilkyWayInfo? = null,
     val bestWindows: List<PhotoWindow> = emptyList(),
+    val dewPoint: DewPointInfo? = null,
+    val twilight: TwilightInfo? = null,
+    val planets: List<PlanetInfo> = emptyList(),
     val loading: Boolean = false,
     val error: String? = null,
+    val weatherError: String? = null,
+    val bortleError: String? = null,
     val selectedDate: LocalDate = LocalDate.now(),
 )
 
@@ -102,6 +107,33 @@ data class BortleInfo(
     val mpsas: Double,
     val category: String,
     val milkyWayQuality: String,
+)
+
+data class DewPointInfo(
+    val dewPointC: Double,
+    val temperatureC: Double,
+    val spreadC: Double,
+    val risk: DewRisk,
+)
+
+enum class DewRisk { NONE, WARNING, CRITICAL }
+
+data class TwilightInfo(
+    val civilEnd: String?,      // time civil twilight ends (evening)
+    val nauticalEnd: String?,   // time nautical twilight ends (evening)
+    val astroEnd: String?,      // time astronomical twilight ends (evening)
+    val astroStart: String?,    // time astronomical twilight starts (morning)
+    val nauticalStart: String?, // time nautical twilight starts (morning)
+    val civilStart: String?,    // time civil twilight starts (morning)
+)
+
+data class PlanetInfo(
+    val name: String,
+    val emoji: String,
+    val altitude: Double,       // max altitude during night
+    val rise: String?,
+    val set: String?,
+    val visible: Boolean,
 )
 
 // ── Moon phase calculation ───────────────────────────────────────────────────
@@ -381,6 +413,218 @@ object AstroCalculator {
             )
         }.sortedByDescending { it.hours * (100 - it.avgCloudPct) }.take(AppConfig.MAX_PHOTO_WINDOWS)
     }
+
+    // ── Dew point calculation ────────────────────────────────────
+
+    /** Magnus formula approximation for dew point (°C). */
+    fun dewPoint(temperatureC: Double, humidityPct: Int): DewPointInfo {
+        val rh = humidityPct.coerceIn(1, 100).toDouble()
+        val a = 17.27
+        val b = 237.7
+        val gamma = (a * temperatureC) / (b + temperatureC) + ln(rh / 100.0)
+        val dp = (b * gamma) / (a - gamma)
+        val spread = temperatureC - dp
+        val risk = when {
+            spread <= AppConfig.DEW_POINT_CRITICAL_SPREAD_C -> DewRisk.CRITICAL
+            spread <= AppConfig.DEW_POINT_WARN_SPREAD_C -> DewRisk.WARNING
+            else -> DewRisk.NONE
+        }
+        return DewPointInfo(dp, temperatureC, spread, risk)
+    }
+
+    // ── Twilight phase boundaries ────────────────────────────────
+
+    fun twilightPhases(
+        lat: Double, lon: Double, date: LocalDate,
+        sunriseIso: String?, sunsetIso: String?,
+    ): TwilightInfo {
+        val tz = date.atStartOfDay(ZoneId.systemDefault()).offset.totalSeconds / 3600.0
+        val (sunRa, sunDec) = sunPosition(date)
+        val sunsetLocal = parseIsoHour(sunsetIso) ?: 18.0
+        val sunriseLocal = parseIsoHour(sunriseIso) ?: 6.0
+
+        // Scan evening: sunset → sunset+3h for civil/nautical/astro boundaries
+        var civilEnd: Double? = null
+        var nauticalEnd: Double? = null
+        var astroEnd: Double? = null
+        var t = sunsetLocal
+        while (t <= sunsetLocal + 4.0) {
+            val utcH = t - tz
+            val siderealTime = lst(date, utcH, lon)
+            val sunAlt = altitude(lat, sunDec, siderealTime - sunRa)
+            if (civilEnd == null && sunAlt < AppConfig.CIVIL_TWILIGHT_DEG) civilEnd = t
+            if (nauticalEnd == null && sunAlt < AppConfig.NAUTICAL_TWILIGHT_DEG) nauticalEnd = t
+            if (astroEnd == null && sunAlt < AppConfig.ASTRONOMICAL_TWILIGHT_DEG) astroEnd = t
+            t += 1.0 / 60.0  // 1-minute steps
+        }
+
+        // Scan morning: sunrise-3h → sunrise for astro/nautical/civil starts
+        var astroStart: Double? = null
+        var nauticalStart: Double? = null
+        var civilStart: Double? = null
+        t = sunriseLocal + 24.0 - 4.0  // handle wrap-around for next-day sunrise
+        while (t <= sunriseLocal + 24.0) {
+            val utcH = t - tz
+            val siderealTime = lst(date, utcH, lon)
+            val sunAlt = altitude(lat, sunDec, siderealTime - sunRa)
+            if (astroStart == null && sunAlt > AppConfig.ASTRONOMICAL_TWILIGHT_DEG) astroStart = t
+            if (nauticalStart == null && sunAlt > AppConfig.NAUTICAL_TWILIGHT_DEG) nauticalStart = t
+            if (civilStart == null && sunAlt > AppConfig.CIVIL_TWILIGHT_DEG) civilStart = t
+            t += 1.0 / 60.0
+        }
+
+        return TwilightInfo(
+            civilEnd = civilEnd?.let { fmtHour(it) },
+            nauticalEnd = nauticalEnd?.let { fmtHour(it) },
+            astroEnd = astroEnd?.let { fmtHour(it) },
+            astroStart = astroStart?.let { fmtHour(it) },
+            nauticalStart = nauticalStart?.let { fmtHour(it) },
+            civilStart = civilStart?.let { fmtHour(it) },
+        )
+    }
+
+    // ── Planetary positions ──────────────────────────────────────
+
+    private data class PlanetElements(
+        val name: String, val emoji: String,
+        val N: Double, val i: Double, val w: Double, val a: Double, val e: Double, val M: Double,
+    )
+
+    /** Simplified planetary orbital elements (mean J2000 + linear rate × d). */
+    private fun planetElements(date: LocalDate): List<PlanetElements> {
+        val d = daysSinceJ2000(date)
+        return listOf(
+            // Venus
+            PlanetElements("Venus", "♀️",
+                N = (76.6799 + 2.46590e-5 * d) % 360,
+                i = 3.3946 + 2.75e-8 * d,
+                w = (54.8910 + 1.38374e-5 * d) % 360,
+                a = 0.72333,
+                e = 0.006773 - 1.302e-9 * d,
+                M = ((48.0052 + 1.6021302244 * d) % 360 + 360) % 360,
+            ),
+            // Mars
+            PlanetElements("Mars", "♂️",
+                N = (49.5574 + 2.11081e-5 * d) % 360,
+                i = 1.8497 - 1.78e-8 * d,
+                w = (286.5016 + 2.92961e-5 * d) % 360,
+                a = 1.52368,
+                e = 0.093405 + 2.516e-9 * d,
+                M = ((18.6021 + 0.5240207766 * d) % 360 + 360) % 360,
+            ),
+            // Jupiter
+            PlanetElements("Jupiter", "♃",
+                N = (100.4542 + 2.76854e-5 * d) % 360,
+                i = 1.3030 - 1.557e-7 * d,
+                w = (273.8777 + 1.64505e-5 * d) % 360,
+                a = 5.20256,
+                e = 0.048498 + 4.469e-9 * d,
+                M = ((19.8950 + 0.0830853001 * d) % 360 + 360) % 360,
+            ),
+            // Saturn
+            PlanetElements("Saturn", "♄",
+                N = (113.6634 + 2.38980e-5 * d) % 360,
+                i = 2.4886 - 1.081e-7 * d,
+                w = (339.3939 + 2.97661e-5 * d) % 360,
+                a = 9.55475,
+                e = 0.055546 - 9.499e-9 * d,
+                M = ((316.9670 + 0.0334442282 * d) % 360 + 360) % 360,
+            ),
+        )
+    }
+
+    /** Compute ecliptic longitude of a planet from its Keplerian elements. */
+    private fun planetEclipticLon(p: PlanetElements): Pair<Double, Double> {
+        val mRad = Math.toRadians(p.M)
+        // Kepler's equation: E ≈ M + e·sin(M) (first-order)
+        val E = p.M + Math.toDegrees(p.e * sin(mRad))
+        val eRad = Math.toRadians(E)
+        // Distance and true anomaly
+        val xv = p.a * (cos(eRad) - p.e)
+        val yv = p.a * (sqrt(1 - p.e * p.e) * sin(eRad))
+        val v = Math.toDegrees(atan2(yv, xv))
+        val r = sqrt(xv * xv + yv * yv)
+        // Heliocentric ecliptic coordinates
+        val wRad = Math.toRadians(p.w)
+        val nRad = Math.toRadians(p.N)
+        val iRad = Math.toRadians(p.i)
+        val vwRad = Math.toRadians(v + p.w)
+        val xh = r * (cos(nRad) * cos(vwRad) - sin(nRad) * sin(vwRad) * cos(iRad))
+        val yh = r * (sin(nRad) * cos(vwRad) + cos(nRad) * sin(vwRad) * cos(iRad))
+        val zh = r * sin(vwRad) * sin(iRad)
+        val lonEcl = (Math.toDegrees(atan2(yh, xh)) + 360) % 360
+        val latEcl = Math.toDegrees(atan2(zh, sqrt(xh * xh + yh * yh)))
+        return lonEcl to latEcl
+    }
+
+    fun visiblePlanets(lat: Double, lon: Double, date: LocalDate,
+                       sunsetIso: String?, sunriseIso: String?): List<PlanetInfo> {
+        val d = daysSinceJ2000(date)
+        val tz = date.atStartOfDay(ZoneId.systemDefault()).offset.totalSeconds / 3600.0
+        val sunsetLocal = parseIsoHour(sunsetIso) ?: 18.0
+        val sunriseLocal = parseIsoHour(sunriseIso) ?: 6.0
+        val sunriseNext = sunriseLocal + 24.0
+
+        // Sun ecliptic longitude for geocentric conversion
+        val (sunRa, sunDec) = sunPosition(date)
+        val sunLon = {
+            val n = d
+            val L = (280.460 + 0.9856474 * n) % 360
+            val g = Math.toRadians((357.528 + 0.9856003 * n) % 360)
+            ((L + 1.915 * sin(g) + 0.020 * sin(2 * g)) % 360 + 360) % 360
+        }()
+
+        val eps = Math.toRadians(23.439 - 0.0000004 * d)
+        val elements = planetElements(date)
+
+        return elements.map { p ->
+            val (helioLon, helioLat) = planetEclipticLon(p)
+            // Approximate geocentric ecliptic longitude (simple: subtract sun)
+            // This is a rough approximation suitable for visibility checks
+            val geoLonRad = Math.toRadians(helioLon)
+            val geoLatRad = Math.toRadians(helioLat)
+
+            val ra = (Math.toDegrees(atan2(
+                sin(geoLonRad) * cos(eps) - tan(geoLatRad) * sin(eps),
+                cos(geoLonRad),
+            )) + 360) % 360
+            val dec = Math.toDegrees(asin(
+                sin(geoLatRad) * cos(eps) + cos(geoLatRad) * sin(eps) * sin(geoLonRad)
+            ))
+
+            // Find max altitude and rise/set during night
+            var maxAlt = -90.0
+            var riseTime: Double? = null
+            var setTime: Double? = null
+            var prevAlt: Double? = null
+
+            var t = sunsetLocal
+            while (t <= sunriseNext) {
+                val utcH = t - tz
+                val siderealTime = lst(date, utcH, lon)
+                val alt = altitude(lat, dec, siderealTime - ra)
+                if (alt > maxAlt) maxAlt = alt
+
+                if (prevAlt != null) {
+                    if (prevAlt < AppConfig.PLANET_MIN_ALTITUDE_DEG && alt >= AppConfig.PLANET_MIN_ALTITUDE_DEG && riseTime == null)
+                        riseTime = t
+                    if (prevAlt >= AppConfig.PLANET_MIN_ALTITUDE_DEG && alt < AppConfig.PLANET_MIN_ALTITUDE_DEG && setTime == null)
+                        setTime = t
+                }
+                prevAlt = alt
+                t += 0.25 // 15-min steps
+            }
+
+            PlanetInfo(
+                name = p.name,
+                emoji = p.emoji,
+                altitude = maxAlt,
+                rise = riseTime?.let { fmtHour(it) },
+                set = setTime?.let { fmtHour(it) },
+                visible = maxAlt >= AppConfig.PLANET_MIN_ALTITUDE_DEG,
+            )
+        }.filter { it.visible }
+    }
 }
 
 // ── Dashboard manager ────────────────────────────────────────────────────────
@@ -389,14 +633,59 @@ class AstroDashboardManager(private val context: Context) {
 
     companion object {
         private const val TAG = "AstroDash"
+        private const val CACHE_PREFS = "dashboard_cache"
+        private const val KEY_CACHE_JSON = "cached_state"
+        private const val KEY_CACHE_TIME = "cached_at"
+        private const val KEY_CACHE_DATE = "cached_date"
     }
+
+    private val cachePrefs = context.getSharedPreferences(CACHE_PREFS, Context.MODE_PRIVATE)
 
     private val _state = MutableStateFlow(DashboardState())
     val state: StateFlow<DashboardState> = _state
 
+    init {
+        // Restore from cache on startup
+        loadCache()?.let { _state.value = it }
+    }
+
+    private fun loadCache(): DashboardState? {
+        val age = System.currentTimeMillis() - cachePrefs.getLong(KEY_CACHE_TIME, 0)
+        if (age > AppConfig.DASHBOARD_CACHE_MAX_AGE_MS) return null
+        val json = cachePrefs.getString(KEY_CACHE_JSON, null) ?: return null
+        return try {
+            val j = JSONObject(json)
+            val loc = j.optJSONObject("loc")?.let {
+                LocationInfo(it.getDouble("lat"), it.getDouble("lon"),
+                    it.optDouble("alt").takeIf { a -> !a.isNaN() },
+                    it.optString("city").takeIf { c -> c.isNotEmpty() })
+            }
+            // Return a lightweight cached state (location + date only, triggers full refresh)
+            DashboardState(location = loc, selectedDate = LocalDate.parse(
+                cachePrefs.getString(KEY_CACHE_DATE, LocalDate.now().toString())))
+        } catch (_: Exception) { null }
+    }
+
+    private fun saveCache(state: DashboardState) {
+        val loc = state.location ?: return
+        val j = JSONObject().apply {
+            put("loc", JSONObject().apply {
+                put("lat", loc.latitude)
+                put("lon", loc.longitude)
+                loc.altitude?.let { put("alt", it) }
+                loc.cityName?.let { put("city", it) }
+            })
+        }
+        cachePrefs.edit()
+            .putString(KEY_CACHE_JSON, j.toString())
+            .putLong(KEY_CACHE_TIME, System.currentTimeMillis())
+            .putString(KEY_CACHE_DATE, state.selectedDate.toString())
+            .apply()
+    }
+
     @SuppressLint("MissingPermission")
     suspend fun refresh(date: LocalDate = LocalDate.now()) {
-        _state.value = _state.value.copy(loading = true, error = null, selectedDate = date)
+        _state.value = _state.value.copy(loading = true, error = null, weatherError = null, bortleError = null, selectedDate = date)
         try {
             val loc = getLocation()
             if (loc == null) {
@@ -417,12 +706,14 @@ class AstroDashboardManager(private val context: Context) {
             val moonAge = MoonPhase.moonAge(date)
             val illum = MoonPhase.illumination(moonAge)
 
-            // Fetch weather + astronomy from Open-Meteo
+            // Fetch weather + astronomy from Open-Meteo (per-card error)
             val weatherResult = fetchWeather(loc.latitude, loc.longitude, date, isToday)
+            val weatherError = if (weatherResult == null) "Weather data unavailable" else null
             val astroResult = fetchAstronomy(loc.latitude, loc.longitude, date)
 
-            // Fetch light pollution / Bortle scale
+            // Fetch light pollution / Bortle scale (per-card error)
             val bortleInfo = fetchLightPollution(loc.latitude, loc.longitude)
+            val bortleError = if (bortleInfo == null) "Light pollution data unavailable" else null
 
             // Moon rise/set computed locally
             val (moonRise, moonSet) = AstroCalculator.moonRiseSet(loc.latitude, loc.longitude, date)
@@ -458,6 +749,25 @@ class AstroDashboardManager(private val context: Context) {
                 )
             } ?: emptyList()
 
+            // Dew point from weather data
+            val dewPointInfo = weatherResult?.let {
+                if (it.humidity > 0)
+                    AstroCalculator.dewPoint(it.temperatureC, it.humidity)
+                else null
+            }
+
+            // Twilight phases
+            val twilightInfo = AstroCalculator.twilightPhases(
+                loc.latitude, loc.longitude, date,
+                sunInfo.sunrise, sunInfo.sunset,
+            )
+
+            // Visible planets
+            val planets = AstroCalculator.visiblePlanets(
+                loc.latitude, loc.longitude, date,
+                sunInfo.sunset, sunInfo.sunrise,
+            )
+
             _state.value = DashboardState(
                 location = locationInfo,
                 weather = weatherResult,
@@ -466,9 +776,15 @@ class AstroDashboardManager(private val context: Context) {
                 bortle = bortleInfo,
                 milkyWay = milkyWayInfo,
                 bestWindows = bestWindows,
+                dewPoint = dewPointInfo,
+                twilight = twilightInfo,
+                planets = planets,
                 loading = false,
+                weatherError = weatherError,
+                bortleError = bortleError,
                 selectedDate = date,
             )
+            saveCache(_state.value)
         } catch (e: Exception) {
             Log.e(TAG, "Dashboard refresh failed", e)
             _state.value = _state.value.copy(loading = false, error = e.message)

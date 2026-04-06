@@ -307,4 +307,44 @@
     <string name="stat_captured">已拍摄</string>
     <string name="stat_est_remaining">预计剩余</string>
     <string name="notif_update_available">版本 %1$s 可用 — 打开以更新</string>
+
+    <!-- Planner -->
+    <string name="mode_planner">会话规划器</string>
+    <string name="mode_planner_desc">保存地点并安排带有条件警报的拍摄会话</string>
+    <string name="planner_title">会话规划器</string>
+    <string name="planner_add">添加</string>
+    <string name="planner_tab_locations">地点</string>
+    <string name="planner_tab_sessions">会话</string>
+    <string name="planner_no_locations">尚无保存的地点</string>
+    <string name="planner_no_sessions">尚无计划的会话</string>
+    <string name="planner_add_session">添加会话</string>
+    <string name="planner_add_location_title">添加地点</string>
+    <string name="planner_add_session_title">计划会话</string>
+    <string name="planner_location_name">地点名称</string>
+    <string name="planner_latitude">纬度</string>
+    <string name="planner_longitude">经度</string>
+    <string name="planner_location">地点</string>
+    <string name="planner_delete_location_title">删除地点？</string>
+    <string name="planner_delete_location_msg">删除 \"%1$s\" 及其所有会话？</string>
+    <string name="planner_last_checked">%1$d 小时前检查</string>
+    <string name="verdict_excellent">极佳</string>
+    <string name="verdict_good">良好</string>
+    <string name="verdict_fair">一般</string>
+    <string name="verdict_poor">较差</string>
+    <string name="verdict_unknown">未知</string>
+    <string name="night_mode_toggle">夜间模式</string>
+    <string name="card_dew_point">露点</string>
+    <string name="dew_warning">结露风险 — 镜头可能起雾</string>
+    <string name="dew_critical">高结露风险 — 镜头很可能起雾！</string>
+    <string name="dew_detail">温度 %1$s°C，露点 %2$s°C，差值 %3$s°C</string>
+    <string name="card_twilight">暮光时间线</string>
+    <string name="tw_civil_end">民用暮光结束</string>
+    <string name="tw_nautical_end">航海暮光结束</string>
+    <string name="tw_astro_end">天文暮光结束</string>
+    <string name="tw_astro_start">天文暮光开始</string>
+    <string name="tw_nautical_start">航海暮光开始</string>
+    <string name="tw_civil_start">民用暮光开始</string>
+    <string name="card_planets">今晚的行星</string>
+    <string name="planet_visible">可见</string>
+    <string name="planet_low">低</string>
 </resources>

@@ -244,6 +244,48 @@ object AppConfig {
      *  Below this it gets ★. */
     const val PHOTO_WINDOW_GOOD = 50
 
+    // ── Dew point ───────────────────────────────────────────────────────
+    // Dew point warning thresholds for lens-fogging alerts.
+
+    /** Temperature-to-dew-point spread (°C) at or below which a dew
+     *  warning is shown. Below this margin, lenses fog quickly. */
+    const val DEW_POINT_WARN_SPREAD_C = 4.0
+
+    /** Spread below which a critical dew alert fires. */
+    const val DEW_POINT_CRITICAL_SPREAD_C = 2.0
+
+    // ── Twilight ────────────────────────────────────────────────────────
+
+    /** Sun altitude boundary for civil twilight (degrees above horizon). */
+    const val CIVIL_TWILIGHT_DEG = -6.0
+
+    /** Sun altitude boundary for nautical twilight (degrees above horizon). */
+    const val NAUTICAL_TWILIGHT_DEG = -12.0
+
+    // ASTRONOMICAL_TWILIGHT_DEG (-18°) already defined above
+
+    // ── Planner ─────────────────────────────────────────────────────────
+
+    /** Maximum number of saved locations the planner will store. */
+    const val MAX_SAVED_LOCATIONS = 20
+
+    /** Maximum number of planned sessions the user can create. */
+    const val MAX_PLANNER_ENTRIES = 50
+
+    /** How often the background planner condition-check runs (hours). */
+    const val PLANNER_CHECK_INTERVAL_HOURS = 24L
+
+    // ── Planetary positions ─────────────────────────────────────────────
+
+    /** Minimum altitude (degrees) above horizon for a planet to be
+     *  considered "visible" for photography. */
+    const val PLANET_MIN_ALTITUDE_DEG = 5.0
+
+    // ── Dashboard cache ─────────────────────────────────────────────────
+
+    /** Maximum age of cached dashboard data before it's considered stale (ms). */
+    const val DASHBOARD_CACHE_MAX_AGE_MS = 3_600_000L  // 1 hour
+
     // ── Simulator ───────────────────────────────────────────────────────
 
     /** Fake battery percentage shown when connected to the built-in

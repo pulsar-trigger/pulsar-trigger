@@ -23,6 +23,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -38,7 +39,10 @@ import com.ehrocha.pulsar.ui.screens.ScanScreen
 import com.ehrocha.pulsar.ui.screens.SettingsScreen
 import com.ehrocha.pulsar.ui.screens.CustomFlowScreen
 import com.ehrocha.pulsar.ui.screens.DashboardScreen
+import com.ehrocha.pulsar.ui.screens.PlannerScreen
 import com.ehrocha.pulsar.ui.theme.DarkColorScheme
+import com.ehrocha.pulsar.ui.theme.RedLightColorScheme
+import com.ehrocha.pulsar.ui.theme.LocalNightMode
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import kotlinx.coroutines.flow.filterNotNull
@@ -51,7 +55,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MaterialTheme(colorScheme = DarkColorScheme) {
+            val nightMode = remember { mutableStateOf(false) }
+            val colorScheme = if (nightMode.value) RedLightColorScheme else DarkColorScheme
+            CompositionLocalProvider(LocalNightMode provides nightMode) {
+            MaterialTheme(colorScheme = colorScheme) {
                 Surface(
                     Modifier
                         .fillMaxSize()
@@ -81,6 +88,7 @@ class MainActivity : ComponentActivity() {
                         PulsarNavHost()
                     }
                 }
+            }
             }
         }
     }
@@ -164,6 +172,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
             onSettingsSelected = { currentScreen = AppScreen.Settings },
             onCustomFlowSelected = { currentScreen = AppScreen.CustomFlow },
             onDashboardSelected = { currentScreen = AppScreen.Dashboard },
+            onPlannerSelected = { currentScreen = AppScreen.Planner },
         )
         is AppScreen.Mode -> {
             BackHandler { currentScreen = AppScreen.Menu }
@@ -202,6 +211,13 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                 onBack = { currentScreen = AppScreen.Menu },
             )
         }
+        AppScreen.Planner -> {
+            BackHandler { currentScreen = AppScreen.Menu }
+            PlannerScreen(
+                plannerManager = vm.plannerManager,
+                onBack = { currentScreen = AppScreen.Menu },
+            )
+        }
     }
 }
 
@@ -213,4 +229,5 @@ private sealed class AppScreen {
     data object Settings : AppScreen()
     data object CustomFlow : AppScreen()
     data object Dashboard : AppScreen()
+    data object Planner : AppScreen()
 }

@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.NightsStay
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.automirrored.filled.ViewList
@@ -39,6 +40,7 @@ fun MainMenuScreen(
     onSettingsSelected: () -> Unit,
     onCustomFlowSelected: () -> Unit = {},
     onDashboardSelected: () -> Unit = {},
+    onPlannerSelected: () -> Unit = {},
 ) {
     val status by vm.status.collectAsState()
     val deviceName by vm.deviceName.collectAsState()
@@ -79,6 +81,15 @@ fun MainMenuScreen(
             description = stringResource(R.string.mode_astro_dashboard_desc),
             icon = Icons.Default.NightsStay,
             onClick = onDashboardSelected,
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        MenuCard(
+            title = stringResource(R.string.mode_planner),
+            description = stringResource(R.string.mode_planner_desc),
+            icon = Icons.Default.DateRange,
+            onClick = onPlannerSelected,
         )
 
         Spacer(Modifier.height(20.dp))

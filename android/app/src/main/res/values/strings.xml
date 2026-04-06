@@ -358,4 +358,54 @@
     <string name="stat_captured">Captured</string>
     <string name="stat_est_remaining">Est. Remaining</string>
     <string name="notif_update_available">Version %1$s is available — open to update</string>
+
+    <!-- Planner -->
+    <string name="mode_planner">Session Planner</string>
+    <string name="mode_planner_desc">Save locations &amp; schedule sessions with condition alerts</string>
+    <string name="planner_title">Session Planner</string>
+    <string name="planner_add">Add</string>
+    <string name="planner_tab_locations">Locations</string>
+    <string name="planner_tab_sessions">Sessions</string>
+    <string name="planner_no_locations">No saved locations yet</string>
+    <string name="planner_no_sessions">No planned sessions yet</string>
+    <string name="planner_add_session">Add session</string>
+    <string name="planner_add_location_title">Add location</string>
+    <string name="planner_add_session_title">Plan a session</string>
+    <string name="planner_location_name">Location name</string>
+    <string name="planner_latitude">Latitude</string>
+    <string name="planner_longitude">Longitude</string>
+    <string name="planner_location">Location</string>
+    <string name="planner_delete_location_title">Delete location?</string>
+    <string name="planner_delete_location_msg">Delete \"%1$s\" and all its sessions?</string>
+    <string name="planner_last_checked">Checked %1$d h ago</string>
+
+    <!-- Planner verdicts -->
+    <string name="verdict_excellent">Excellent</string>
+    <string name="verdict_good">Good</string>
+    <string name="verdict_fair">Fair</string>
+    <string name="verdict_poor">Poor</string>
+    <string name="verdict_unknown">Unknown</string>
+
+    <!-- Night mode -->
+    <string name="night_mode_toggle">Night mode</string>
+
+    <!-- Dew point card -->
+    <string name="card_dew_point">Dew Point</string>
+    <string name="dew_warning">Dew risk — lens fogging possible</string>
+    <string name="dew_critical">High dew risk — lens fogging likely!</string>
+    <string name="dew_detail">Temp %1$s°C, Dew point %2$s°C, Spread %3$s°C</string>
+
+    <!-- Twilight card -->
+    <string name="card_twilight">Twilight Timeline</string>
+    <string name="tw_civil_end">Civil twilight ends</string>
+    <string name="tw_nautical_end">Nautical twilight ends</string>
+    <string name="tw_astro_end">Astronomical twilight ends</string>
+    <string name="tw_astro_start">Astronomical twilight starts</string>
+    <string name="tw_nautical_start">Nautical twilight starts</string>
+    <string name="tw_civil_start">Civil twilight starts</string>
+
+    <!-- Planets card -->
+    <string name="card_planets">Planets Tonight</string>
+    <string name="planet_visible">Visible</string>
+    <string name="planet_low">Low</string>
 </resources>

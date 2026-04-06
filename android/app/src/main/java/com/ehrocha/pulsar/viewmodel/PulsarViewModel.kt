@@ -63,6 +63,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     // ── Astro dashboard ──────────────────────────────────────────────
     val dashboardManager = com.ehrocha.pulsar.astro.AstroDashboardManager(app)
 
+    // ── Planner ──────────────────────────────────────────────────────
+    val plannerManager = com.ehrocha.pulsar.planner.PlannerManager(app)
+
     // ── Firmware OTA ─────────────────────────────────────────────────
     val firmwareManager = FirmwareUpdateManager(bleManager, viewModelScope)
 
@@ -155,7 +158,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     // ── BLE Scan ─────────────────────────────────────────────────────────
     private val btManager = app.getSystemService(BluetoothManager::class.java)
-    private val scanner = btManager?.adapter?.bluetoothLeScanner
+    // Resolved lazily — must not be cached at init time because Bluetooth
+    // permissions may not yet be granted when the ViewModel is created.
+    private val scanner get() = btManager?.adapter?.bluetoothLeScanner
 
     // ── Notification / cancel ────────────────────────────────────────────
     private val cancelReceiver = object : BroadcastReceiver() {
@@ -260,6 +265,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         _devices.value = emptyList()
         _scanning.value = true
 
+        val s = scanner
+        if (s == null) {
+            Log.w(TAG, "BLE scanner unavailable — Bluetooth off or permissions not granted")
+            _scanning.value = false
+            return
+        }
+
         val filter = ScanFilter.Builder()
             .setServiceUuid(ParcelUuid(PulsarUuids.SERVICE))
             .build()
@@ -267,12 +279,21 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
             .build()
 
-        scanner?.startScan(listOf(filter), settings, scanCallback)
-        Log.i(TAG, "BLE scan started")
+        try {
+            s.startScan(listOf(filter), settings, scanCallback)
+            Log.i(TAG, "BLE scan started")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start BLE scan", e)
+            _scanning.value = false
+        }
     }
 
     fun stopScan() {
-        scanner?.stopScan(scanCallback)
+        try {
+            scanner?.stopScan(scanCallback)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to stop BLE scan", e)
+        }
         _scanning.value = false
     }
 

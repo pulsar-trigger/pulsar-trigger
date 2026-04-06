@@ -309,4 +309,44 @@
     <string name="stat_captured">Capturées</string>
     <string name="stat_est_remaining">Est. restant</string>
     <string name="notif_update_available">Version %1$s disponible — ouvrez pour mettre à jour</string>
+
+    <!-- Planner -->
+    <string name="mode_planner">Planificateur de sessions</string>
+    <string name="mode_planner_desc">Enregistrez des lieux et planifiez des sessions avec alertes météo</string>
+    <string name="planner_title">Planificateur de sessions</string>
+    <string name="planner_add">Ajouter</string>
+    <string name="planner_tab_locations">Lieux</string>
+    <string name="planner_tab_sessions">Sessions</string>
+    <string name="planner_no_locations">Aucun lieu enregistré</string>
+    <string name="planner_no_sessions">Aucune session planifiée</string>
+    <string name="planner_add_session">Ajouter une session</string>
+    <string name="planner_add_location_title">Ajouter un lieu</string>
+    <string name="planner_add_session_title">Planifier une session</string>
+    <string name="planner_location_name">Nom du lieu</string>
+    <string name="planner_latitude">Latitude</string>
+    <string name="planner_longitude">Longitude</string>
+    <string name="planner_location">Lieu</string>
+    <string name="planner_delete_location_title">Supprimer le lieu ?</string>
+    <string name="planner_delete_location_msg">Supprimer \"%1$s\" et toutes ses sessions ?</string>
+    <string name="planner_last_checked">Vérifié il y a %1$d h</string>
+    <string name="verdict_excellent">Excellent</string>
+    <string name="verdict_good">Bon</string>
+    <string name="verdict_fair">Passable</string>
+    <string name="verdict_poor">Mauvais</string>
+    <string name="verdict_unknown">Inconnu</string>
+    <string name="night_mode_toggle">Mode nuit</string>
+    <string name="card_dew_point">Point de rosée</string>
+    <string name="dew_warning">Risque de rosée — buée possible sur l\&#039;objectif</string>
+    <string name="dew_critical">Haut risque de rosée — buée probable !</string>
+    <string name="dew_detail">Temp %1$s°C, Point de rosée %2$s°C, Écart %3$s°C</string>
+    <string name="card_twilight">Chronologie crépusculaire</string>
+    <string name="tw_civil_end">Crépuscule civil se termine</string>
+    <string name="tw_nautical_end">Crépuscule nautique se termine</string>
+    <string name="tw_astro_end">Crépuscule astronomique se termine</string>
+    <string name="tw_astro_start">Crépuscule astronomique commence</string>
+    <string name="tw_nautical_start">Crépuscule nautique commence</string>
+    <string name="tw_civil_start">Crépuscule civil commence</string>
+    <string name="card_planets">Planètes ce soir</string>
+    <string name="planet_visible">Visible</string>
+    <string name="planet_low">Bas</string>
 </resources>
