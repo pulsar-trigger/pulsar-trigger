@@ -32,3 +32,12 @@ Mode triggers_current_mode();
 
 /// Get the current state.
 State triggers_current_state();
+
+/// Get number of shots taken in current sequence.
+uint16_t triggers_shots_taken();
+
+/// Get configured interval parameters (valid after SET_MODE).
+const IntervalParams& triggers_interval_params();
+
+/// Get time remaining for the current sequence (ms).
+uint32_t triggers_time_remaining_ms();

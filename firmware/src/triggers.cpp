@@ -20,6 +20,7 @@ static uint32_t _next_fire_ms  = 0;
 static uint32_t _focus_ms      = DEFAULT_FOCUS_MS;
 static bool     _lock_active   = false;
 static uint32_t _debounce_until = 0;  // non-blocking debounce timestamp
+static uint32_t _last_remaining_ms = 0;  // cached for display getter
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 static uint32_t clamp_u32(uint32_t value, uint32_t lower, uint32_t upper) {
@@ -101,6 +102,7 @@ void triggers_start() {
         camera_shutter_set(true);
     }
 
+    _last_remaining_ms = 0;
     status_send(_state, _mode, _shots_taken, 0);
 }
 
@@ -113,6 +115,7 @@ void triggers_stop() {
         _lock_active = false;
     }
 
+    _last_remaining_ms = 0;
     status_send(_state, _mode, _shots_taken, 0);
 }
 
@@ -122,6 +125,9 @@ void triggers_single_shot() {
 
 Mode  triggers_current_mode()  { return _mode; }
 State triggers_current_state() { return _state; }
+uint16_t triggers_shots_taken() { return _shots_taken; }
+const IntervalParams& triggers_interval_params() { return _interval; }
+uint32_t triggers_time_remaining_ms() { return _last_remaining_ms; }
 
 // ── Tick (called from loop) ──────────────────────────────────────────────────
 void triggers_tick() {
@@ -144,6 +150,7 @@ void triggers_tick() {
                 if (_interval.count > 0 && _shots_taken >= _interval.count) {
                     _state = STATE_IDLE;
                     Serial.printf("[INTV] sequence complete: %u shots\n", _shots_taken);
+                    _last_remaining_ms = 0;
                     status_send(_state, _mode, _shots_taken, 0);
                     return;
                 }
@@ -166,6 +173,7 @@ void triggers_tick() {
                 } else {
                     remaining = _interval.interval_ms;  // infinite: gap countdown
                 }
+                _last_remaining_ms = remaining;
                 status_send(_state, _mode, _shots_taken, remaining);
             }
             break;

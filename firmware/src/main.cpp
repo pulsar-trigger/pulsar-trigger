@@ -10,17 +10,20 @@
 #include "triggers.h"
 #include "status.h"
 
-#ifdef BOARD_M5STICKS3
+#ifdef HAS_M5DISPLAY
 #include <M5Unified.h>
+#include "display.h"
 #endif
 
 void setup() {
-#ifdef BOARD_M5STICKS3
+#ifdef HAS_M5DISPLAY
     auto cfg = M5.config();
     M5.begin(cfg);
+#ifdef BOARD_M5STICKS3
     // Enable 5V output on Grove / Hat2 bus (needed for optocoupler power)
     M5.Power.setExtOutput(true);
-    Serial.println("\n=== Pulsar Intervalometer (M5StickS3) ===");
+#endif
+    Serial.println("\n=== Pulsar Intervalometer (M5) ===");
 #else
     Serial.begin(115200);
     Serial.println("\n=== Pulsar Intervalometer ===");
@@ -31,15 +34,19 @@ void setup() {
     camera_init();
     triggers_init();
     ble_init();
+
+#ifdef HAS_M5DISPLAY
+    display_init();
+#endif
 }
 
 void loop() {
-#ifdef BOARD_M5STICKS3
+#ifdef HAS_M5DISPLAY
     M5.update();
 #endif
 
-    // LED status indicator (generic ESP32 only — StickS3 has no GPIO LED)
-#ifndef BOARD_M5STICKS3
+    // LED status indicator (generic ESP32 only — M5 boards use display)
+#ifndef HAS_M5DISPLAY
     static uint32_t led_timer = 0;
     bool running = (triggers_current_state() == STATE_RUNNING ||
                     triggers_current_state() == STATE_WAITING);
@@ -64,6 +71,11 @@ void loop() {
 
     // Run active trigger mode
     triggers_tick();
+
+#ifdef HAS_M5DISPLAY
+    // Update LCD display
+    display_update();
+#endif
 
     // Small yield to avoid watchdog
     delay(1);

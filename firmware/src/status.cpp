@@ -7,7 +7,7 @@
 #include "ble_server.h"
 #include "config.h"
 
-#ifdef BOARD_M5STICKS3
+#ifdef HAS_M5DISPLAY
 #include <M5Unified.h>
 #endif
 
@@ -22,8 +22,8 @@ uint8_t battery_read_pct() {
     }
     _last_battery_read = now;
 
-#ifdef BOARD_M5STICKS3
-    // M5StickS3: read battery level via M5Unified / M5PM1 PMIC
+#ifdef HAS_M5DISPLAY
+    // M5 boards: read battery level via M5Unified Power API
     int32_t level = M5.Power.getBatteryLevel();
     _cached_battery_pct = (level < 0) ? 0 : (level > 100) ? 100 : (uint8_t)level;
 #else

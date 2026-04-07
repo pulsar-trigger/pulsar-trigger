@@ -4,6 +4,7 @@
  */
 
 #pragma once
+#include <cstdint>
 
 // ── GPIO pins ────────────────────────────────────────────────────────────────
 #ifdef BOARD_M5STICKS3
@@ -14,6 +15,12 @@
   #define PIN_LED       GPIO_NUM_NC
   // Battery via M5PM1 I2C PMIC — no ADC pin
   #define PIN_BATTERY   GPIO_NUM_NC
+#elif defined(BOARD_M5CORE2)
+  // M5Stack Core2: M5-Bus exposes G25, G26 for optocoupler
+  #define DEFAULT_PIN_SHUTTER  25
+  #define DEFAULT_PIN_FOCUS    26
+  #define PIN_LED       GPIO_NUM_NC
+  #define PIN_BATTERY   GPIO_NUM_NC   // battery via AXP192 PMIC
 #else
   // Generic ESP32-DevKit: standard GPIO mapping
   #define DEFAULT_PIN_SHUTTER  25     // optocoupler → camera shutter
@@ -22,11 +29,21 @@
   #define PIN_BATTERY   GPIO_NUM_33   // analog — battery voltage divider
 #endif
 
+// ── Derived feature flags ────────────────────────────────────────────────────
+#if defined(BOARD_M5STICKS3) || defined(BOARD_M5CORE2)
+  #define HAS_M5DISPLAY  1
+#endif
+
 // ── Safe digital-output pins for shutter / focus ─────────────────────────────
 #ifdef BOARD_M5STICKS3
   // Hat2-Bus exposes: G1-G8, G43, G44;  Grove: G9, G10
   static const uint8_t SAFE_OUTPUT_PINS[] = {
       1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 43, 44
+  };
+#elif defined(BOARD_M5CORE2)
+  // Core2 M5-Bus: most GPIOs accessible
+  static const uint8_t SAFE_OUTPUT_PINS[] = {
+      13, 14, 19, 25, 26, 27, 32, 33
   };
 #else
   // ESP32-DevKit: exclude boot-strapping, flash, input-only pins
@@ -78,10 +95,10 @@
 #define OTA_DATA_UUID         "0000ff12-0000-1000-8000-00805f9b34fb"
 
 // ── Battery ──────────────────────────────────────────────────────────────────
-#ifndef BOARD_M5STICKS3
+#ifndef HAS_M5DISPLAY
   // Generic ESP32: direct ADC via resistor divider
   #define BATTERY_FULL_MV       4200
   #define BATTERY_EMPTY_MV      3200
   #define BATTERY_DIVIDER_RATIO 2.0   // resistor divider factor
 #endif
-// M5StickS3 reads battery via M5PM1 PMIC — no ADC defines needed
+// M5 boards read battery via M5Unified Power API — no ADC defines needed
