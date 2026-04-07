@@ -318,7 +318,6 @@ fun DashboardScreen(
                             "💡",
                             stringResource(R.string.verdict_bortle, bInt),
                             good,
-                            String.format(Locale.US, "%.1f mpsas", b.mpsas),
                         )
                     }
 
@@ -607,7 +606,7 @@ fun DashboardScreen(
                                 fontWeight = FontWeight.Bold,
                             )
                             Text(
-                                String.format(Locale.US, "%.2f mag/arcsec²", b.mpsas),
+                                b.category,
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                         }

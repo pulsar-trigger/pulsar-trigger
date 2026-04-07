@@ -51,6 +51,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         private const val KEY_PIN_FOCUS = "pin_focus"
         private const val KEY_FLOW_STEPS = "flow_steps"
         private const val KEY_SAVED_FLOWS = "saved_flows"
+        private const val NOTIFICATION_THROTTLE_MS = 5_000L
         const val DEFAULT_PIN_SHUTTER = AppConfig.DEFAULT_PIN_SHUTTER
         const val DEFAULT_PIN_FOCUS = AppConfig.DEFAULT_PIN_FOCUS
         val SAFE_OUTPUT_PINS = AppConfig.SAFE_OUTPUT_PINS
@@ -211,12 +212,22 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             Context.RECEIVER_NOT_EXPORTED,
         )
 
-        // Auto-update notification as status frames arrive
+        // Auto-update notification as status frames arrive (throttled)
         viewModelScope.launch {
+            var lastNotifShots = -1
+            var lastNotifTimeMs = 0L
             status.collect { frame ->
                 if (frame != null && (frame.state == DeviceState.RUNNING || frame.state == DeviceState.WAITING)) {
-                    updateNotification()
+                    val now = System.currentTimeMillis()
+                    val shotsChanged = frame.shotsTaken != lastNotifShots
+                    val elapsed = now - lastNotifTimeMs
+                    if (shotsChanged || elapsed >= NOTIFICATION_THROTTLE_MS) {
+                        lastNotifShots = frame.shotsTaken
+                        lastNotifTimeMs = now
+                        updateNotification()
+                    }
                 } else if (frame != null && frame.state == DeviceState.IDLE) {
+                    lastNotifShots = -1
                     dismissNotification()
                 }
             }

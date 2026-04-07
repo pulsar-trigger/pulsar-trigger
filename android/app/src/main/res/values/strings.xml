@@ -455,4 +455,13 @@
 
     <!-- Flow timeline -->
     <string name="flow_timeline_progress">Step %1$d of %2$d</string>
+
+    <!-- SessionDetailScreen: Last Updated & Offline Fallback -->
+    <string name="last_updated">Last updated: %1$s</string>
+    <string name="pull_latest_data">Pull Latest Data</string>
+    <string name="data_stale">Data may be stale</string>
+    <string name="assessment_unavailable">Assessment unavailable</string>
+
+    <!-- In-app update badge -->
+    <string name="update_available_badge">Update</string>
 </resources>

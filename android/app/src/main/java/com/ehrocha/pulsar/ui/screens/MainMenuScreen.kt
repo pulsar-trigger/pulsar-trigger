@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -41,12 +42,80 @@ fun MainMenuScreen(
     onCustomFlowSelected: () -> Unit = {},
     onDashboardSelected: () -> Unit = {},
     onPlannerSelected: () -> Unit = {},
+    onSettingsSelected: () -> Unit = {},
 ) {
+    val fwState by vm.firmwareManager.state.collectAsState()
+    val appState by vm.appUpdateManager.state.collectAsState()
+    val fwRelease by vm.firmwareManager.latestRelease.collectAsState()
+    val appRelease by vm.appUpdateManager.latestRelease.collectAsState()
+    val hasFwUpdate = fwState == com.ehrocha.pulsar.ble.OtaState.AVAILABLE && fwRelease != null
+    val hasAppUpdate = appState == com.ehrocha.pulsar.update.AppUpdateState.AVAILABLE && appRelease != null
+    var bannerDismissed by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
+
+        // ── Update banner (non-blocking, dismissible) ────────────────
+        if ((hasFwUpdate || hasAppUpdate) && !bannerDismissed) {
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Default.Settings,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            stringResource(R.string.dialog_updates_available),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                        if (hasFwUpdate) {
+                            Text(
+                                stringResource(R.string.update_firmware_available, fwRelease!!.version),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
+                        if (hasAppUpdate) {
+                            Text(
+                                stringResource(R.string.update_app_available, appRelease!!.version),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
+                    }
+                    TextButton(onClick = onSettingsSelected) {
+                        Text(stringResource(R.string.btn_go_to_settings))
+                    }
+                    IconButton(
+                        onClick = { bannerDismissed = true },
+                        modifier = Modifier.size(24.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = stringResource(R.string.dismiss),
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+        }
 
         MenuCard(
             title = stringResource(R.string.mode_astro_dashboard),

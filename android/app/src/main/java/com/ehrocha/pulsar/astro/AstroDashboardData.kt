@@ -44,6 +44,7 @@ data class DashboardState(
     val weatherError: String? = null,
     val bortleError: String? = null,
     val selectedDate: LocalDate = LocalDate.now(),
+    val lastUpdated: Long? = null,
 )
 
 data class LocationInfo(
@@ -710,6 +711,7 @@ class AstroDashboardManager(private val context: Context) {
             }
             s.weatherError?.let { put("weatherError", it) }
             s.bortleError?.let { put("bortleError", it) }
+            s.lastUpdated?.let { put("lastUpdated", it) }
         }.toString()
     }
 
@@ -737,6 +739,7 @@ class AstroDashboardManager(private val context: Context) {
             weatherError = j.optString("weatherError").takeIf { it.isNotEmpty() },
             bortleError = j.optString("bortleError").takeIf { it.isNotEmpty() },
             selectedDate = date,
+            lastUpdated = j.optLong("lastUpdated", 0L).takeIf { it > 0L },
         )
         true
     } catch (_: Exception) { false }
@@ -986,6 +989,7 @@ class AstroDashboardManager(private val context: Context) {
             weatherError = weatherError,
             bortleError = bortleError,
             selectedDate = date,
+            lastUpdated = System.currentTimeMillis(),
         )
         saveCache(_state.value)
     }

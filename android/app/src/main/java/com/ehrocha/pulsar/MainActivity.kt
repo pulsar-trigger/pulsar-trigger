@@ -152,35 +152,8 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
     val hasFwUpdate = fwState == OtaState.AVAILABLE && fwRelease != null
     val hasAppUpdate = appState == AppUpdateState.AVAILABLE && appRelease != null
 
-    if (connected && (hasFwUpdate || hasAppUpdate) && !dismissedUpdateDialog && currentScreen !is AppScreen.Settings) {
-        AlertDialog(
-            onDismissRequest = { dismissedUpdateDialog = true },
-            title = { Text(stringResource(R.string.dialog_updates_available)) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (hasFwUpdate) {
-                        Text(stringResource(R.string.update_firmware_available, fwRelease!!.version))
-                    }
-                    if (hasAppUpdate) {
-                        Text(stringResource(R.string.update_app_available, appRelease!!.version))
-                    }
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        stringResource(R.string.update_go_to_settings),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    dismissedUpdateDialog = true
-                    currentScreen = AppScreen.Settings(SettingsSection.UPDATES)
-                }) { Text(stringResource(R.string.btn_go_to_settings)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { dismissedUpdateDialog = true }) { Text(stringResource(R.string.btn_later)) }
-            },
-        )
+    if (connected && (hasFwUpdate || hasAppUpdate) && !dismissedUpdateDialog && currentScreen is AppScreen.Menu) {
+        // Non-blocking: handled by the banner in MainMenuScreen and badge on Settings gear
     }
 
     // Go back to scan if disconnected
@@ -227,12 +200,23 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                     BatteryIndicator()
                     NightModeToggle()
                     Spacer(Modifier.width(4.dp))
+                    val hasAnyUpdate = hasFwUpdate || hasAppUpdate
                     IconButton(onClick = { currentScreen = AppScreen.Settings() }) {
-                        Icon(
-                            Icons.Default.Settings,
-                            contentDescription = stringResource(R.string.menu_settings),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        BadgedBox(
+                            badge = {
+                                if (hasAnyUpdate) {
+                                    Badge(
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                    )
+                                }
+                            }
+                        ) {
+                            Icon(
+                                Icons.Default.Settings,
+                                contentDescription = stringResource(R.string.menu_settings),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             }
@@ -248,6 +232,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                 onCustomFlowSelected = { currentScreen = AppScreen.CustomFlow },
                 onDashboardSelected = { currentScreen = AppScreen.Dashboard },
                 onPlannerSelected = { currentScreen = AppScreen.Planner },
+                onSettingsSelected = { currentScreen = AppScreen.Settings(SettingsSection.UPDATES) },
             )
             is AppScreen.Mode -> {
                 BackHandler { currentScreen = AppScreen.Menu }

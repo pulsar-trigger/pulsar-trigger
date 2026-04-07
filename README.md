@@ -1,6 +1,6 @@
 # Pulsar
 
-An open-source camera intervalometer and trigger system.
+An open-source camera intervalometer and trigger system for your DSLR or Mirrorless camera.
 I have started this project a few years ago, but as I did not have time to take on development it was frozen since then. I still do not have much time available now, but with the help of AI this is finally becoming something useful.
 
 I built this for my own benefit while photographing, but I figured if this is useful for me, maybe this is useful to other people, so, why not open source it? 

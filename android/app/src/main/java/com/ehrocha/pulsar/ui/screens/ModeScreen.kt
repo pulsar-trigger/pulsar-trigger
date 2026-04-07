@@ -22,6 +22,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
@@ -225,6 +226,17 @@ fun SettingsScreen(
     // Sub-section back navigation
     BackHandler(enabled = currentSection != null && !(otaActive && otaState != OtaState.COMPLETE)) {
         currentSection = null
+    }
+
+    // Keep screen awake during OTA to prevent BLE disconnection
+    val activity = LocalContext.current as? android.app.Activity
+    DisposableEffect(otaActive) {
+        if (otaActive && otaState != OtaState.COMPLETE) {
+            activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        onDispose {
+            activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
     }
 
     // Post OTA notifications on state changes

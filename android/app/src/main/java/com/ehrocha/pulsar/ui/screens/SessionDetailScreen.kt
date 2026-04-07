@@ -38,6 +38,8 @@ import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
+import java.text.DateFormat
+import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -104,6 +106,75 @@ fun SessionDetailScreen(
             }) {
                 Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.refresh))
             }
+        }
+
+        // ── Last Updated + Pull Latest Data ──────────────────────────
+        val lastUpdated = state.lastUpdated
+        val isStale = lastUpdated != null && (System.currentTimeMillis() - lastUpdated) > 3_600_000L // > 1 hour
+        val hasData = state.location != null
+
+        if (hasData) {
+            Surface(
+                color = if (isStale) MaterialTheme.colorScheme.errorContainer
+                        else MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        if (isStale) Icons.Default.Warning else Icons.Default.Schedule,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = if (isStale) MaterialTheme.colorScheme.onErrorContainer
+                               else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (lastUpdated != null) {
+                                stringResource(R.string.last_updated,
+                                    DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
+                                        .format(Date(lastUpdated)))
+                            } else {
+                                stringResource(R.string.assessment_unavailable)
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (isStale) MaterialTheme.colorScheme.onErrorContainer
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        if (isStale) {
+                            Text(
+                                stringResource(R.string.data_stale),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                            )
+                        }
+                    }
+                    FilledTonalButton(
+                        onClick = { scope.launch { doRefresh() } },
+                        enabled = !isRefreshing,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            stringResource(R.string.pull_latest_data),
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
         }
 
         if (state.loading && state.location == null) {
@@ -212,6 +283,36 @@ fun SessionDetailScreen(
                         }
                     }
 
+                    @Composable
+                    fun UnknownVerdictRow(emoji: String) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Surface(
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.weight(1f),
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    Text(emoji, fontSize = 14.sp, color = Color.Gray)
+                                    Text(
+                                        stringResource(R.string.verdict_unknown),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Medium,
+                                        color = Color.Gray,
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     // Moon
                     state.moon?.let { moon ->
                         VerdictRow(
@@ -220,7 +321,7 @@ fun SessionDetailScreen(
                             else stringResource(R.string.verdict_moon_bright),
                             moon.goodForAstro,
                         )
-                    }
+                    } ?: if (!state.loading) UnknownVerdictRow("🌑")
 
                     // Weather
                     state.weather?.let { weather ->
@@ -236,7 +337,7 @@ fun SessionDetailScreen(
                             },
                             good,
                         )
-                    }
+                    } ?: if (!state.loading) UnknownVerdictRow("☁️")
 
                     // Milky Way
                     state.milkyWay?.let { mw ->
@@ -246,7 +347,7 @@ fun SessionDetailScreen(
                             else stringResource(R.string.verdict_mw_not_visible),
                             mw.visible,
                         )
-                    }
+                    } ?: if (!state.loading) UnknownVerdictRow("🌌")
 
                     // Bortle
                     state.bortle?.let { b ->
@@ -255,9 +356,8 @@ fun SessionDetailScreen(
                             "💡",
                             stringResource(R.string.verdict_bortle, bInt),
                             bInt <= 4,
-                            String.format(Locale.US, "%.1f mpsas", b.mpsas),
                         )
-                    }
+                    } ?: if (!state.loading) UnknownVerdictRow("💡")
 
                     // Best photo windows
                     if (state.bestWindows.isNotEmpty()) {
