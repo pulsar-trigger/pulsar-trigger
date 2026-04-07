@@ -6,35 +6,41 @@
 package com.ehrocha.pulsar.ui.screens
 
 import android.location.Geocoder
-import android.view.MotionEvent
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ui.components.BatteryIndicator
 import com.ehrocha.pulsar.ui.components.NightModeToggle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.osmdroid.config.Configuration
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
-import org.osmdroid.util.GeoPoint
-import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.Marker
-import org.osmdroid.views.overlay.Overlay
+import org.maplibre.android.MapLibre
+import org.maplibre.android.annotations.Marker
+import org.maplibre.android.annotations.MarkerOptions
+import org.maplibre.android.camera.CameraPosition
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.MapView
 import java.util.Locale
+
+private const val STYLE_LIBERTY = "https://tiles.openfreemap.org/styles/liberty"
+private const val STYLE_POSITRON = "https://tiles.openfreemap.org/styles/positron"
 
 @Composable
 fun MapLocationPicker(
@@ -45,6 +51,7 @@ fun MapLocationPicker(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val isDark = isSystemInDarkTheme()
 
     var selectedLat by remember { mutableDoubleStateOf(initialLat) }
     var selectedLon by remember { mutableDoubleStateOf(initialLon) }
@@ -52,12 +59,30 @@ fun MapLocationPicker(
     var hasSelection by remember { mutableStateOf(false) }
     var resolving by remember { mutableStateOf(false) }
 
-    // Configure osmdroid
-    LaunchedEffect(Unit) {
-        Configuration.getInstance().userAgentValue = context.packageName
-    }
+    val mapViewRef = remember { mutableStateOf<MapView?>(null) }
+    val mapRef = remember { mutableStateOf<MapLibreMap?>(null) }
+    val markerRef = remember { mutableStateOf<Marker?>(null) }
 
-    val marker = remember { mutableStateOf<Marker?>(null) }
+    // Forward lifecycle events to MapView
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            val mv = mapViewRef.value ?: return@LifecycleEventObserver
+            when (event) {
+                Lifecycle.Event.ON_START -> mv.onStart()
+                Lifecycle.Event.ON_RESUME -> mv.onResume()
+                Lifecycle.Event.ON_PAUSE -> mv.onPause()
+                Lifecycle.Event.ON_STOP -> mv.onStop()
+                Lifecycle.Event.ON_DESTROY -> mv.onDestroy()
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            mapViewRef.value?.onDestroy()
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // ── Top bar ──────────────────────────────────────────────────
@@ -136,46 +161,46 @@ fun MapLocationPicker(
                 .fillMaxSize()
                 .padding(top = 4.dp),
             factory = { ctx ->
+                MapLibre.getInstance(ctx)
                 MapView(ctx).apply {
-                    setTileSource(TileSourceFactory.MAPNIK)
-                    setMultiTouchControls(true)
-                    controller.setZoom(4.0)
-                    if (initialLat != 0.0 || initialLon != 0.0) {
-                        controller.setCenter(GeoPoint(initialLat, initialLon))
-                        controller.setZoom(10.0)
-                    }
+                    mapViewRef.value = this
+                    onCreate(null)
+                    getMapAsync { map ->
+                        mapRef.value = map
+                        map.setStyle(if (isDark) STYLE_POSITRON else STYLE_LIBERTY)
+                        map.uiSettings.isAttributionEnabled = true
+                        map.uiSettings.isLogoEnabled = false
 
-                    // Tap listener
-                    overlays.add(object : Overlay() {
-                        override fun onSingleTapConfirmed(e: MotionEvent?, mapView: MapView?): Boolean {
-                            if (e == null || mapView == null) return false
-                            val proj = mapView.projection
-                            val geoPoint = proj.fromPixels(e.x.toInt(), e.y.toInt()) as GeoPoint
-                            selectedLat = geoPoint.latitude
-                            selectedLon = geoPoint.longitude
+                        val startZoom = if (initialLat != 0.0 || initialLon != 0.0) 10.0 else 2.0
+                        map.cameraPosition = CameraPosition.Builder()
+                            .target(LatLng(initialLat, initialLon))
+                            .zoom(startZoom)
+                            .build()
+
+                        map.addOnMapClickListener { latLng ->
+                            selectedLat = latLng.latitude
+                            selectedLon = latLng.longitude
                             hasSelection = true
 
-                            // Update or create marker
-                            val m = marker.value ?: Marker(mapView).also {
-                                it.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                                mapView.overlays.add(it)
-                                marker.value = it
-                            }
-                            m.position = geoPoint
-                            m.title = String.format(Locale.US, "%.5f, %.5f", geoPoint.latitude, geoPoint.longitude)
-                            mapView.invalidate()
+                            // Replace existing marker
+                            markerRef.value?.let { map.removeMarker(it) }
+                            markerRef.value = map.addMarker(
+                                MarkerOptions()
+                                    .position(latLng)
+                                    .title(String.format(Locale.US, "%.5f, %.5f", latLng.latitude, latLng.longitude)),
+                            )
 
                             // Reverse geocode
                             resolving = true
                             locationName = ""
                             scope.launch {
-                                val name = reverseGeocodeMap(ctx, geoPoint.latitude, geoPoint.longitude)
+                                val name = reverseGeocodeMap(ctx, latLng.latitude, latLng.longitude)
                                 locationName = name ?: ""
                                 resolving = false
                             }
-                            return true
+                            true
                         }
-                    })
+                    }
                 }
             },
         )
