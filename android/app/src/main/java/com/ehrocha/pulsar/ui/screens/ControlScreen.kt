@@ -142,24 +142,23 @@ internal fun ManualActionsContent(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            FilterChip(
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            SegmentedButton(
                 selected = mode == TriggerMode.PRESS_HOLD,
                 onClick = { onModeSelected(TriggerMode.PRESS_HOLD) },
                 enabled = connected,
-                label = { Text(stringResource(R.string.chip_hold_mode), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
-                modifier = Modifier.weight(1f)
-            )
-            FilterChip(
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+            ) {
+                Text(stringResource(R.string.chip_hold_mode))
+            }
+            SegmentedButton(
                 selected = mode == TriggerMode.PRESS_LOCK,
                 onClick = { onModeSelected(TriggerMode.PRESS_LOCK) },
                 enabled = connected,
-                label = { Text(stringResource(R.string.chip_lock_mode), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
-                modifier = Modifier.weight(1f)
-            )
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+            ) {
+                Text(stringResource(R.string.chip_lock_mode))
+            }
         }
 
         Surface(
@@ -591,24 +590,23 @@ internal fun AstroPanelContent(
             Text(stringResource(R.string.label_capture_sequence), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             
             if (onRuleChanged != null) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    FilterChip(
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    SegmentedButton(
                         selected = ruleDivisor == AppConfig.DEFAULT_RULE_DIVISOR,
                         onClick = { onRuleChanged(AppConfig.DEFAULT_RULE_DIVISOR) },
                         enabled = enabled,
-                        label = { Text(stringResource(R.string.chip_500_rule), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
-                        modifier = Modifier.weight(1f)
-                    )
-                    FilterChip(
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                    ) {
+                        Text(stringResource(R.string.chip_500_rule))
+                    }
+                    SegmentedButton(
                         selected = ruleDivisor == AppConfig.TIGHT_RULE_DIVISOR,
                         onClick = { onRuleChanged(AppConfig.TIGHT_RULE_DIVISOR) },
                         enabled = enabled,
-                        label = { Text(stringResource(R.string.chip_400_rule), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
-                        modifier = Modifier.weight(1f)
-                    )
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                    ) {
+                        Text(stringResource(R.string.chip_400_rule))
+                    }
                 }
             }
 
@@ -1676,19 +1674,18 @@ internal fun PlannerSettingsSectionContent(vm: PulsarViewModel) {
             fontWeight = FontWeight.Medium,
         )
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            cacheOptions.forEach { hours ->
-                FilterChip(
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            cacheOptions.forEachIndexed { index, hours ->
+                SegmentedButton(
                     selected = currentInterval == hours,
                     onClick = {
                         currentInterval = hours
                         vm.plannerManager.cacheIntervalHours = hours
                     },
-                    label = { Text(stringResource(R.string.planner_cache_hours, hours)) },
-                )
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = cacheOptions.size),
+                ) {
+                    Text(stringResource(R.string.planner_cache_hours, hours))
+                }
             }
         }
     }
