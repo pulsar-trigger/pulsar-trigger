@@ -32,7 +32,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import kotlinx.coroutines.launch
 import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.DeviceState
@@ -923,7 +922,7 @@ private fun AddStepDialog(
     }
 }
 
-// ─── Edit step bottom sheet ──────────────────────────────────────────────────
+// ─── Edit step (full-screen) ─────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -933,55 +932,42 @@ private fun EditStepDialog(
     onSave: (FlowStep) -> Unit,
 ) {
     var current by remember { mutableStateOf(step) }
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        dragHandle = { BottomSheetDefaults.DragHandle() },
-    ) {
+    BackHandler(onBack = onDismiss)
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(step.type.displayName(context)) },
+                navigationIcon = {
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                    }
+                },
+                actions = {
+                    TextButton(onClick = { onSave(current) }) {
+                        Text(stringResource(R.string.save))
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 24.dp)
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // Intervalometer/Astro panels include their own title
-            if (step.type != FlowStepType.INTERVALOMETER && step.type != FlowStepType.ASTRO) {
-                val context = LocalContext.current
-                Text(
-                    step.type.displayName(context),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-
             when (step.type) {
                 FlowStepType.INTERVALOMETER -> IntervalometerStepEditor(current) { current = it }
                 FlowStepType.ASTRO -> AstroStepEditor(current) { current = it }
                 FlowStepType.PAUSE -> PauseStepEditor(current) { current = it }
             }
 
-            Row(
-                horizontalArrangement = Arrangement.End,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                TextButton(onClick = {
-                    scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
-                }) { Text(stringResource(R.string.cancel)) }
-                Spacer(Modifier.width(8.dp))
-                Button(
-                    onClick = {
-                        scope.launch { sheetState.hide() }.invokeOnCompletion { onSave(current) }
-                    },
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Text(stringResource(R.string.save))
-                }
-            }
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
