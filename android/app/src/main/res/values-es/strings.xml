@@ -66,8 +66,7 @@
     <string name="status_capturing_stars">Capturando estrellas…</string>
     <string name="status_ready_astro">Listo para secuencia astro</string>
     <string name="panel_intervalometer">Intervalómetro</string>
-    <string name="panel_intervalometer_desc">Automatiza secuencias timelapse complejas o capturas en ráfaga con precisión.</string>
-    <string name="panel_intervalometer_tip">Configura los tiempos individualmente abajo. Para modo bulb, asegúrate de que el intervalo sea mayor que la exposición.</string>
+    <string name="panel_intervalometer_desc">Automatiza secuencias timelapse complejas o capturas en ráfaga con precisión. Tu cámara debe estar en modo Bulb.</string>
     <string name="label_sequence_estimate">Estimación de secuencia</string>
     <string name="label_shots">Fotos</string>
     <string name="label_total_duration">Duración total</string>

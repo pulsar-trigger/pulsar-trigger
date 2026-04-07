@@ -66,8 +66,7 @@
     <string name="status_capturing_stars">星を撮影中…</string>
     <string name="status_ready_astro">天体撮影シーケンス準備完了</string>
     <string name="panel_intervalometer">インターバロメーター</string>
-    <string name="panel_intervalometer_desc">精密なタイミングで複雑なタイムラプスシーケンスや連続撮影を自動化します。</string>
-    <string name="panel_intervalometer_tip">以下で個別のタイミングを設定します。バルブモードでは、インターバルが露出時間より長くなるようにしてください。</string>
+    <string name="panel_intervalometer_desc">精密なタイミングで複雑なタイムラプスシーケンスや連続撮影を自動化します。カメラをバルブモードに設定してください。</string>
     <string name="label_sequence_estimate">シーケンス見積もり</string>
     <string name="label_shots">ショット数</string>
     <string name="label_total_duration">合計時間</string>

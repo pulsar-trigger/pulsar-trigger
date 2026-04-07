@@ -65,9 +65,14 @@ import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 @Composable
 internal fun DefaultActions(vm: PulsarViewModel, isRunning: Boolean) {
     val connected = LocalDeviceConnected.current
+    val shotCount by vm.shotCount.collectAsState()
+    val maxShots by vm.maxShotCount.collectAsState()
     DefaultActionsContent(
         connected = connected,
         isRunning = isRunning,
+        shotCount = shotCount,
+        maxShotCount = maxShots,
+        onShotCountChanged = { vm.setShotCount(it) },
         onStart = { vm.start() },
         onStop = { vm.stop() },
     )
@@ -77,6 +82,9 @@ internal fun DefaultActions(vm: PulsarViewModel, isRunning: Boolean) {
 internal fun DefaultActionsContent(
     connected: Boolean,
     isRunning: Boolean,
+    shotCount: Int,
+    maxShotCount: Int,
+    onShotCountChanged: (Int) -> Unit,
     onStart: () -> Unit,
     onStop: () -> Unit,
     modifier: Modifier = Modifier
@@ -86,21 +94,38 @@ internal fun DefaultActionsContent(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Button(
-            onClick = { if (isRunning) onStop() else onStart() },
-            enabled = connected,
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (isRunning) MaterialTheme.colorScheme.error
-                else MaterialTheme.colorScheme.primary
-            ),
-            modifier = Modifier.height(56.dp).fillMaxWidth()
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text(
-                text = if (isRunning) stringResource(R.string.btn_stop) else stringResource(R.string.btn_start),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
+            Box(modifier = Modifier.weight(1f)) {
+                IntStepperField(
+                    label = stringResource(R.string.label_number_of_shots),
+                    value = shotCount,
+                    onValueChange = { onShotCountChanged(it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT)) },
+                    min = AppConfig.MIN_SHOT_COUNT,
+                    max = maxShotCount,
+                    enabled = connected && !isRunning,
+                )
+            }
+
+            Button(
+                onClick = { if (isRunning) onStop() else onStart() },
+                enabled = connected,
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isRunning) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.primary
+                ),
+                modifier = Modifier.height(56.dp).weight(1f)
+            ) {
+                Text(
+                    text = if (isRunning) stringResource(R.string.btn_stop) else stringResource(R.string.btn_start),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
 
         Text(
@@ -229,11 +254,14 @@ internal fun ManualActionsContent(
 internal fun AstroActions(vm: PulsarViewModel, isRunning: Boolean) {
     val connected = LocalDeviceConnected.current
     val ruleDivisor by vm.astroRuleDivisor.collectAsState()
+    val shotCount by vm.astroShotCount.collectAsState()
     AstroActionsContent(
         connected = connected,
         isRunning = isRunning,
         ruleDivisor = ruleDivisor,
+        shotCount = shotCount,
         onRuleChanged = { vm.setAstroRuleDivisor(it) },
+        onShotCountChanged = { vm.setAstroShotCount(it) },
         onStart = { vm.start() },
         onStop = { vm.stop() }
     )
@@ -244,7 +272,9 @@ internal fun AstroActionsContent(
     connected: Boolean,
     isRunning: Boolean,
     ruleDivisor: Int,
+    shotCount: Int,
     onRuleChanged: (Int) -> Unit,
+    onShotCountChanged: (Int) -> Unit,
     onStart: () -> Unit,
     onStop: () -> Unit,
     modifier: Modifier = Modifier
@@ -274,21 +304,38 @@ internal fun AstroActionsContent(
             )
         }
 
-        Button(
-            onClick = { if (isRunning) onStop() else onStart() },
-            enabled = connected,
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (isRunning) MaterialTheme.colorScheme.error
-                                 else MaterialTheme.colorScheme.primary
-            ),
-            modifier = Modifier.fillMaxWidth().height(56.dp)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text(
-                text = stringResource(if (isRunning) R.string.btn_stop_astro else R.string.btn_start_astro),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
+            Box(modifier = Modifier.weight(1f)) {
+                IntStepperField(
+                    label = stringResource(R.string.label_number_of_shots),
+                    value = shotCount,
+                    onValueChange = { onShotCountChanged(it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT)) },
+                    min = AppConfig.MIN_SHOT_COUNT,
+                    max = AppConfig.DEFAULT_MAX_SHOTS,
+                    enabled = connected && !isRunning,
+                )
+            }
+
+            Button(
+                onClick = { if (isRunning) onStop() else onStart() },
+                enabled = connected,
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isRunning) MaterialTheme.colorScheme.error
+                                     else MaterialTheme.colorScheme.primary
+                ),
+                modifier = Modifier.height(56.dp).weight(1f)
+            ) {
+                Text(
+                    text = stringResource(if (isRunning) R.string.btn_stop_astro else R.string.btn_start_astro),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
 
         Text(
@@ -305,17 +352,14 @@ internal fun IntervalometerPanel(vm: PulsarViewModel, enabled: Boolean = true) {
     val exposure by vm.exposureMs.collectAsState()
     val count by vm.shotCount.collectAsState()
     val delayVal by vm.delayMs.collectAsState()
-    val maxShots by vm.maxShotCount.collectAsState()
 
     IntervalometerPanelContent(
         intervalMs = interval,
         exposureMs = exposure,
         shotCount = count,
         delayMs = delayVal,
-        maxShotCount = maxShots,
         onIntervalChanged = { vm.setIntervalMs(it) },
         onExposureChanged = { vm.setExposureMs(it) },
-        onShotCountChanged = { vm.setShotCount(it) },
         onDelayChanged = { vm.setDelayMs(it) },
         enabled = enabled
     )
@@ -328,36 +372,21 @@ internal fun IntervalometerPanelContent(
     exposureMs: Long,
     shotCount: Int,
     delayMs: Long,
-    maxShotCount: Int = 999,
     onIntervalChanged: (Long) -> Unit,
     onExposureChanged: (Long) -> Unit,
-    onShotCountChanged: (Int) -> Unit,
     onDelayChanged: (Long) -> Unit,
+    onShotCountChanged: ((Int) -> Unit)? = null,
+    maxShotCount: Int = 999,
     enabled: Boolean = true,
 ) {
     val totalSequenceTimeMs = delayMs + shotCount.toLong() * (exposureMs + intervalMs) - intervalMs
 
     Column(verticalArrangement = Arrangement.spacedBy(24.dp), modifier = modifier) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(stringResource(R.string.panel_intervalometer), style = MaterialTheme.typography.titleLarge)
-            Text(
-                stringResource(R.string.panel_intervalometer_desc),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                tonalElevation = 2.dp,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    stringResource(R.string.panel_intervalometer_tip),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(12.dp),
-                )
-            }
-        }
+        Text(
+            stringResource(R.string.panel_intervalometer_desc),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
 
         Surface(
             shape = RoundedCornerShape(16.dp),
@@ -417,14 +446,16 @@ internal fun IntervalometerPanelContent(
                 enabled = enabled,
             )
 
-            IntStepperField(
-                label = stringResource(R.string.label_number_of_shots),
-                value = shotCount,
-                onValueChange = { onShotCountChanged(it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT)) },
-                min = AppConfig.MIN_SHOT_COUNT,
-                max = maxShotCount,
-                enabled = enabled,
-            )
+            if (onShotCountChanged != null) {
+                IntStepperField(
+                    label = stringResource(R.string.label_number_of_shots),
+                    value = shotCount,
+                    onValueChange = { onShotCountChanged(it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT)) },
+                    min = AppConfig.MIN_SHOT_COUNT,
+                    max = maxShotCount,
+                    enabled = enabled,
+                )
+            }
 
             TimePicker(
                 totalMs = delayMs,
@@ -452,8 +483,6 @@ internal fun ManualPanelContent(
         verticalArrangement = Arrangement.spacedBy(20.dp),
         modifier = modifier
     ) {
-        Text(stringResource(R.string.panel_manual), style = MaterialTheme.typography.titleLarge)
-
         Text(
             stringResource(R.string.panel_manual_desc),
             style = MaterialTheme.typography.bodyMedium,
@@ -503,7 +532,6 @@ internal fun AstroPanel(vm: PulsarViewModel, enabled: Boolean = true) {
         onCropFactorChanged = { vm.setAstroCropFactor(it) },
         onFocalLengthChanged = { vm.setAstroFocalLength(it) },
         onGapMsChanged = { vm.setAstroGapMs(it) },
-        onShotCountChanged = { vm.setAstroShotCount(it) },
         onDelayMsChanged = { vm.setAstroDelayMs(it) },
         enabled = enabled
     )
@@ -522,8 +550,8 @@ internal fun AstroPanelContent(
     onCropFactorChanged: (Float) -> Unit,
     onFocalLengthChanged: (Int) -> Unit,
     onGapMsChanged: (Long) -> Unit,
-    onShotCountChanged: (Int) -> Unit,
     onDelayMsChanged: (Long) -> Unit,
+    onShotCountChanged: ((Int) -> Unit)? = null,
     enabled: Boolean = true,
 ) {
     val maxExposureS = ruleDivisor.toDouble() / (focalLength * cropFactor)
@@ -533,7 +561,6 @@ internal fun AstroPanelContent(
 
     Column(verticalArrangement = Arrangement.spacedBy(24.dp), modifier = modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(stringResource(R.string.panel_astro), style = MaterialTheme.typography.titleLarge)
             Text(
                 stringResource(R.string.panel_astro_desc),
                 style = MaterialTheme.typography.bodyMedium,
@@ -650,14 +677,16 @@ internal fun AstroPanelContent(
                 enabled = enabled,
             )
 
-            IntStepperField(
-                label = stringResource(R.string.label_number_of_shots),
-                value = shotCount,
-                onValueChange = { onShotCountChanged(it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT)) },
-                min = AppConfig.MIN_SHOT_COUNT,
-                max = AppConfig.DEFAULT_MAX_SHOTS,
-                enabled = enabled,
-            )
+            if (onShotCountChanged != null) {
+                IntStepperField(
+                    label = stringResource(R.string.label_number_of_shots),
+                    value = shotCount,
+                    onValueChange = { onShotCountChanged(it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT)) },
+                    min = AppConfig.MIN_SHOT_COUNT,
+                    max = AppConfig.DEFAULT_MAX_SHOTS,
+                    enabled = enabled,
+                )
+            }
 
             TimePicker(
                 totalMs = delayMs,

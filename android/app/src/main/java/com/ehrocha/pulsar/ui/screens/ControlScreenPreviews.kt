@@ -132,6 +132,71 @@ private fun ManualPanelPreview() {
     }
 }
 
+// ── Default Actions Preview ─────────────────────────────────────────────────
+
+@Preview(showBackground = true, widthDp = 380, heightDp = 200, name = "Default Actions")
+@Composable
+private fun DefaultActionsPreview() {
+    MaterialTheme(colorScheme = DarkColorScheme) {
+        var shotCount by remember { mutableIntStateOf(50) }
+        Surface(modifier = Modifier.fillMaxSize()) {
+            DefaultActionsContent(
+                connected = true,
+                isRunning = false,
+                shotCount = shotCount,
+                maxShotCount = 999,
+                onShotCountChanged = { shotCount = it },
+                onStart = {},
+                onStop = {},
+                modifier = Modifier.padding(16.dp),
+            )
+        }
+    }
+}
+
+// ── Astro Actions Preview ───────────────────────────────────────────────────
+
+@Preview(showBackground = true, widthDp = 380, heightDp = 240, name = "Astro Actions")
+@Composable
+private fun AstroActionsPreview() {
+    MaterialTheme(colorScheme = DarkColorScheme) {
+        var shotCount by remember { mutableIntStateOf(100) }
+        var ruleDivisor by remember { mutableIntStateOf(AppConfig.DEFAULT_RULE_DIVISOR) }
+        Surface(modifier = Modifier.fillMaxSize()) {
+            AstroActionsContent(
+                connected = true,
+                isRunning = false,
+                ruleDivisor = ruleDivisor,
+                shotCount = shotCount,
+                onRuleChanged = { ruleDivisor = it },
+                onShotCountChanged = { shotCount = it },
+                onStart = {},
+                onStop = {},
+                modifier = Modifier.padding(16.dp),
+            )
+        }
+    }
+}
+
+// ── Manual Actions Preview ──────────────────────────────────────────────────
+
+@Preview(showBackground = true, widthDp = 380, heightDp = 240, name = "Manual Actions")
+@Composable
+private fun ManualActionsPreview() {
+    MaterialTheme(colorScheme = DarkColorScheme) {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            ManualActionsContent(
+                connected = true,
+                mode = TriggerMode.PRESS_HOLD,
+                onModeSelected = {},
+                onShutterDown = {},
+                onShutterUp = {},
+                modifier = Modifier.padding(16.dp),
+            )
+        }
+    }
+}
+
 // ── Settings Preview ────────────────────────────────────────────────────────
 
 @Preview(showBackground = true, widthDp = 380, heightDp = 700, name = "Settings")

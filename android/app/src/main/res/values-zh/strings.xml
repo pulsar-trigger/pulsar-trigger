@@ -66,8 +66,7 @@
     <string name="status_capturing_stars">正在拍摄星空…</string>
     <string name="status_ready_astro">天文序列已就绪</string>
     <string name="panel_intervalometer">间隔计时器</string>
-    <string name="panel_intervalometer_desc">使用精准定时自动拍摄复杂延时序列或连拍。</string>
-    <string name="panel_intervalometer_tip">在下方配置各项定时参数。使用B门模式时，请确保间隔时间长于曝光时间。</string>
+    <string name="panel_intervalometer_desc">使用精准定时自动拍摄复杂延时序列或连拍。请将相机设置为B门模式。</string>
     <string name="label_sequence_estimate">序列预估</string>
     <string name="label_shots">拍摄张数</string>
     <string name="label_total_duration">总时长</string>

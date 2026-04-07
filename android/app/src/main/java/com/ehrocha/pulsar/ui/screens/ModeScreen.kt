@@ -37,6 +37,9 @@ import kotlinx.coroutines.delay
 import com.ehrocha.pulsar.ui.components.BatteryIndicator
 import com.ehrocha.pulsar.ui.components.NightModeToggle
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
+import com.ehrocha.pulsar.ble.StatusFrame
+import androidx.compose.ui.tooling.preview.Preview
+import com.ehrocha.pulsar.ui.theme.DarkColorScheme
 
 @Composable
 fun ModeScreen(
@@ -86,25 +89,29 @@ fun ModeScreen(
                     TriggerMode.ASTRO -> vm.astroShotCount.collectAsState().value
                     else -> 0
                 }
-                val cycleMs = when (targetMode) {
+                val exposureMs: Long
+                val gapMs: Long
+                when (targetMode) {
                     TriggerMode.INTERVALOMETER -> {
-                        val intv = vm.intervalMs.collectAsState().value
-                        val exp = vm.exposureMs.collectAsState().value
-                        exp + intv
+                        gapMs = vm.intervalMs.collectAsState().value
+                        exposureMs = vm.exposureMs.collectAsState().value
                     }
                     TriggerMode.ASTRO -> {
-                        val gap = vm.astroGapMs.collectAsState().value
+                        gapMs = vm.astroGapMs.collectAsState().value
                         val fl = vm.astroFocalLength.collectAsState().value
                         val cf = vm.astroCropFactor.collectAsState().value
                         val rd = vm.astroRuleDivisor.collectAsState().value
-                        val expMs = (rd.toDouble() / (fl * cf) * 1000).toLong().coerceAtLeast(AppConfig.MIN_ASTRO_EXPOSURE_MS)
-                        expMs + gap
+                        exposureMs = (rd.toDouble() / (fl * cf) * 1000).toLong().coerceAtLeast(AppConfig.MIN_ASTRO_EXPOSURE_MS)
                     }
-                    else -> 1L
+                    else -> {
+                        exposureMs = 1L
+                        gapMs = 0L
+                    }
                 }
                 RunningStatusContent(
                     totalShots = totalShots,
-                    cycleMs = cycleMs,
+                    exposureMs = exposureMs,
+                    gapMs = gapMs,
                 )
             } else {
                 Column(
@@ -378,19 +385,34 @@ fun ModeSettingsScreen(
 @Composable
 private fun RunningStatusContent(
     totalShots: Int,
-    cycleMs: Long,
+    exposureMs: Long,
+    gapMs: Long,
 ) {
     val status = LocalDeviceStatus.current ?: return
+    val cycleMs = exposureMs + gapMs
+
     // ── Local countdown: start from firmware's timeRemainingMs and tick down ──
     var lastUpdateTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var lastRemainingMs by remember { mutableLongStateOf(status.timeRemainingMs) }
     var liveRemainingMs by remember { mutableLongStateOf(status.timeRemainingMs) }
+
+    // Track phase start so we can compute per-phase countdown
+    var phaseStartTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var lastState by remember { mutableStateOf(status.state) }
 
     // When firmware sends a new status, reset the baseline
     LaunchedEffect(status.timeRemainingMs, status.shotsTaken) {
         lastUpdateTime = System.currentTimeMillis()
         lastRemainingMs = status.timeRemainingMs
         liveRemainingMs = status.timeRemainingMs
+    }
+
+    // Detect phase transitions (RUNNING ↔ WAITING)
+    LaunchedEffect(status.state) {
+        if (status.state != lastState) {
+            phaseStartTime = System.currentTimeMillis()
+            lastState = status.state
+        }
     }
 
     // Tick every 100 ms to update the countdown locally
@@ -402,19 +424,33 @@ private fun RunningStatusContent(
         }
     }
 
-    // ── Smooth progress: shots completed + fractional current cycle ──
-    val totalTimeMs = if (totalShots > 0) totalShots.toLong() * cycleMs - (cycleMs - cycleMs) else 1L
-    val elapsedMs = if (totalShots > 0) {
-        val completedMs = status.shotsTaken.toLong() * cycleMs
-        val cycleElapsed = (lastRemainingMs - liveRemainingMs).coerceAtLeast(0)
-        completedMs + cycleElapsed
-    } else 0L
+    // ── Per-phase countdown ──
+    val phaseDurationMs = when (status.state) {
+        DeviceState.RUNNING -> exposureMs
+        DeviceState.WAITING -> gapMs
+        else -> 0L
+    }
+    val phaseElapsed = System.currentTimeMillis() - phaseStartTime
+    val phaseRemainingMs = (phaseDurationMs - phaseElapsed).coerceAtLeast(0)
+
+    // ── Shot display number: +1 during exposure so user sees "working on shot N" ──
+    val displayShots = when (status.state) {
+        DeviceState.RUNNING -> status.shotsTaken + 1
+        else -> status.shotsTaken
+    }
+
+    // ── Smooth continuous progress ──
+    // Base progress from completed shots + fractional progress within current cycle
+    val cycleElapsedMs = (System.currentTimeMillis() - lastUpdateTime).let { elapsed ->
+        (lastRemainingMs - (lastRemainingMs - elapsed).coerceAtLeast(0))
+    }
+    val fractionalCycle = if (cycleMs > 0) cycleElapsedMs.toFloat() / cycleMs else 0f
     val rawProgress = if (totalShots > 0) {
-        (status.shotsTaken.toFloat() + (1f - liveRemainingMs.toFloat() / lastRemainingMs.coerceAtLeast(1))) / totalShots
+        (status.shotsTaken.toFloat() + fractionalCycle.coerceIn(0f, 1f)) / totalShots
     } else 0f
     val smoothProgress by animateFloatAsState(
         targetValue = rawProgress.coerceIn(0f, 1f),
-        animationSpec = tween(durationMillis = 150),
+        animationSpec = tween(durationMillis = 300),
         label = "progress",
     )
 
@@ -461,14 +497,23 @@ private fun RunningStatusContent(
                     fontWeight = FontWeight.Bold,
                     color = stateColor,
                 )
+                // Phase countdown next to state badge
+                if (phaseDurationMs > 0 && phaseRemainingMs > 0) {
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = formatTimeRemaining(phaseRemainingMs),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = stateColor,
+                    )
+                }
             }
         }
 
         Spacer(Modifier.height(32.dp))
 
-        // Shot counter
+        // Shot counter — starts at 1 during exposure
         Text(
-            text = "${status.shotsTaken}",
+            text = "$displayShots",
             style = MaterialTheme.typography.displayLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
@@ -494,7 +539,7 @@ private fun RunningStatusContent(
 
         Spacer(Modifier.height(24.dp))
 
-        // Time remaining
+        // Total time remaining
         if (liveRemainingMs > 0) {
             Text(
                 text = formatTimeRemaining(liveRemainingMs),
@@ -517,4 +562,34 @@ private fun formatTimeRemaining(ms: Long): String {
     val s = totalSec % 60
     return if (h > 0) "%d:%02d:%02d".format(h, m, s)
     else "%d:%02d".format(m, s)
+}
+
+// ── Running Status Preview ──────────────────────────────────────────────────
+
+@Preview(showBackground = true, widthDp = 380, heightDp = 600, name = "Running Status")
+@Composable
+private fun RunningStatusPreview() {
+    val mockStatus = StatusFrame(
+        state = DeviceState.RUNNING,
+        mode = 0x01,
+        shotsTaken = 3,
+        timeRemainingMs = 125_000L,
+        batteryPct = 78,
+        errorCode = 0,
+    )
+    MaterialTheme(colorScheme = DarkColorScheme) {
+        CompositionLocalProvider(LocalDeviceStatus provides mockStatus) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                tonalElevation = 1.dp,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                RunningStatusContent(
+                    totalShots = 50,
+                    exposureMs = 2_000L,
+                    gapMs = 3_000L,
+                )
+            }
+        }
+    }
 }

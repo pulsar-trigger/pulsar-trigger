@@ -82,8 +82,7 @@
 
     <!-- IntervalometerPanel -->
     <string name="panel_intervalometer">Intervalometer</string>
-    <string name="panel_intervalometer_desc">Automate complex timelapse sequences or burst captures with precision timing.</string>
-    <string name="panel_intervalometer_tip">Configure individual timings below. For bulb mode, ensure the interval is longer than the exposure.</string>
+    <string name="panel_intervalometer_desc">Automate complex timelapse sequences or burst captures with precision timing. Your camera must be set to Bulb mode.</string>
     <string name="label_sequence_estimate">Sequence Estimate</string>
     <string name="label_shots">Shots</string>
     <string name="label_total_duration">Total Duration</string>

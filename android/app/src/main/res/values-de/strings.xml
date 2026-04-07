@@ -66,8 +66,7 @@
     <string name="status_capturing_stars">Sterne werden aufgenommen…</string>
     <string name="status_ready_astro">Bereit für Astro-Sequenz</string>
     <string name="panel_intervalometer">Intervalltimer</string>
-    <string name="panel_intervalometer_desc">Automatisiere komplexe Zeitraffersequenzen oder Serienaufnahmen mit präzisem Timing.</string>
-    <string name="panel_intervalometer_tip">Stelle die einzelnen Zeitwerte unten ein. Im Bulb-Modus muss das Intervall länger als die Belichtung sein.</string>
+    <string name="panel_intervalometer_desc">Automatisiere komplexe Zeitraffersequenzen oder Serienaufnahmen mit präzisem Timing. Deine Kamera muss auf Bulb-Modus eingestellt sein.</string>
     <string name="label_sequence_estimate">Sequenzschätzung</string>
     <string name="label_shots">Aufnahmen</string>
     <string name="label_total_duration">Gesamtdauer</string>
