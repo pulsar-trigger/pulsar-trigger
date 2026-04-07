@@ -67,6 +67,7 @@ fun CustomFlowScreen(
 
     var screenState by remember { mutableStateOf(FlowScreenState.LIBRARY) }
     var editingFlowName by remember { mutableStateOf<String?>(null) }
+    var savedSnapshot by remember { mutableStateOf<List<FlowStep>>(emptyList()) }
 
     // When a flow is running, always show the editor
     LaunchedEffect(running) {
@@ -74,10 +75,13 @@ fun CustomFlowScreen(
     }
 
     var showExitDialog by remember { mutableStateOf(false) }
+    var showUnsavedDialog by remember { mutableStateOf(false) }
 
     BackHandler(enabled = running || screenState == FlowScreenState.EDITOR) {
         if (running) {
             showExitDialog = true
+        } else if (editingFlowName != null && steps != savedSnapshot) {
+            showUnsavedDialog = true
         } else {
             screenState = FlowScreenState.LIBRARY
             editingFlowName = null
@@ -91,17 +95,20 @@ fun CustomFlowScreen(
             onNewFlow = {
                 vm.saveFlowSteps(emptyList())
                 editingFlowName = null
+                savedSnapshot = emptyList()
                 screenState = FlowScreenState.EDITOR
             },
             onEditFlow = { flow ->
                 vm.loadSavedFlow(flow.name)
                 editingFlowName = flow.name
+                savedSnapshot = flow.steps
                 screenState = FlowScreenState.EDITOR
             },
             onDeleteFlow = { name -> vm.deleteSavedFlow(name) },
             onRunFlow = { flow ->
                 vm.loadSavedFlow(flow.name)
                 editingFlowName = flow.name
+                savedSnapshot = flow.steps
                 screenState = FlowScreenState.EDITOR
                 vm.startFlow()
             },
@@ -115,8 +122,12 @@ fun CustomFlowScreen(
             currentStep = currentStep,
             editingFlowName = editingFlowName,
             onBack = {
-                screenState = FlowScreenState.LIBRARY
-                editingFlowName = null
+                if (editingFlowName != null && steps != savedSnapshot) {
+                    showUnsavedDialog = true
+                } else {
+                    screenState = FlowScreenState.LIBRARY
+                    editingFlowName = null
+                }
             },
             onFlowNameChanged = { editingFlowName = it },
         )
@@ -140,6 +151,34 @@ fun CustomFlowScreen(
             dismissButton = {
                 TextButton(onClick = { showExitDialog = false }) {
                     Text(stringResource(R.string.btn_keep_running))
+                }
+            },
+        )
+    }
+
+    // ── Unsaved changes dialog ───────────────────────────────────────
+    if (showUnsavedDialog) {
+        AlertDialog(
+            onDismissRequest = { showUnsavedDialog = false },
+            title = { Text(stringResource(R.string.dialog_unsaved_title)) },
+            text = { Text(stringResource(R.string.dialog_unsaved_msg)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showUnsavedDialog = false
+                    editingFlowName?.let { vm.saveFlowAs(it) }
+                    screenState = FlowScreenState.LIBRARY
+                    editingFlowName = null
+                }) {
+                    Text(stringResource(R.string.btn_save_and_exit))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showUnsavedDialog = false
+                    screenState = FlowScreenState.LIBRARY
+                    editingFlowName = null
+                }) {
+                    Text(stringResource(R.string.btn_discard), color = MaterialTheme.colorScheme.error)
                 }
             },
         )
