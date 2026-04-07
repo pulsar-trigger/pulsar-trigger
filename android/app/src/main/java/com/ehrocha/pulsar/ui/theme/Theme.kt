@@ -71,6 +71,9 @@ val RedLightColorScheme = darkColorScheme(
 /** Global theme mode — survives recomposition. */
 val LocalNightMode = compositionLocalOf { mutableStateOf(ThemeMode.Dark) }
 
+/** When true, night mode cannot be changed by a single tap — long-press to unlock. */
+val LocalNightModeLocked = compositionLocalOf { mutableStateOf(false) }
+
 /** Global device status — available to every composable without parameter threading. */
 val LocalDeviceStatus = compositionLocalOf<StatusFrame?> { null }
 

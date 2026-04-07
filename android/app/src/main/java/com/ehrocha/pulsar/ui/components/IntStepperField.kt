@@ -5,11 +5,10 @@
 
 package com.ehrocha.pulsar.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
@@ -17,11 +16,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.R
@@ -48,8 +44,8 @@ fun IntStepperField(
     presets: List<Int>? = null,
     presetLabel: (Int) -> String = { it.toString() },
 ) {
-    val focusManager = LocalFocusManager.current
     var text by remember(value) { mutableStateOf(value.toString()) }
+    var showNumPad by remember { mutableStateOf(false) }
 
     val resolvedPresets = presets ?: remember(min, max) {
         if (max <= min) listOf(min)
@@ -81,29 +77,28 @@ fun IntStepperField(
                 Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.cd_decrease))
             }
 
-            OutlinedTextField(
-                value = text,
-                onValueChange = { raw -> text = raw.filter { it.isDigit() } },
-                textStyle = MaterialTheme.typography.titleLarge.copy(
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                ),
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Number,
-                    imeAction = ImeAction.Done,
-                ),
-                keyboardActions = KeyboardActions(onDone = {
-                    val parsed = text.toIntOrNull()?.coerceIn(min, max) ?: value
-                    onValueChange(parsed)
-                    text = parsed.toString()
-                    focusManager.clearFocus()
-                }),
-                singleLine = true,
-                enabled = enabled,
-                modifier = Modifier.weight(1f),
+            OutlinedCard(
                 shape = RoundedCornerShape(12.dp),
-            )
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp)
+                    .clickable(enabled = enabled) { showNumPad = true },
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    Text(
+                        text = text,
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            textAlign = TextAlign.Center,
+                            fontWeight = FontWeight.Bold,
+                            color = if (enabled) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                        ),
+                    )
+                }
+            }
 
             FilledTonalIconButton(
                 onClick = { onValueChange((value + step).coerceIn(min, max)) },
@@ -126,5 +121,17 @@ fun IntStepperField(
                 )
             }
         }
+    }
+
+    if (showNumPad) {
+        NumPadDialog(
+            initialValue = value.toString(),
+            onConfirm = { raw ->
+                val parsed = raw.toIntOrNull()?.coerceIn(min, max) ?: value
+                onValueChange(parsed)
+                showNumPad = false
+            },
+            onDismiss = { showNumPad = false },
+        )
     }
 }

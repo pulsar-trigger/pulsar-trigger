@@ -107,6 +107,7 @@ internal fun DefaultActionsContent(
                     min = AppConfig.MIN_SHOT_COUNT,
                     max = maxShotCount,
                     enabled = connected && !isRunning,
+                    presets = emptyList(),
                 )
             }
 
@@ -317,6 +318,7 @@ internal fun AstroActionsContent(
                     min = AppConfig.MIN_SHOT_COUNT,
                     max = AppConfig.DEFAULT_MAX_SHOTS,
                     enabled = connected && !isRunning,
+                    presets = emptyList(),
                 )
             }
 
@@ -454,6 +456,7 @@ internal fun IntervalometerPanelContent(
                     min = AppConfig.MIN_SHOT_COUNT,
                     max = maxShotCount,
                     enabled = enabled,
+                    presets = emptyList(),
                 )
             }
 
@@ -685,6 +688,7 @@ internal fun AstroPanelContent(
                     min = AppConfig.MIN_SHOT_COUNT,
                     max = AppConfig.DEFAULT_MAX_SHOTS,
                     enabled = enabled,
+                    presets = emptyList(),
                 )
             }
 

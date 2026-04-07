@@ -315,6 +315,10 @@
     <string name="planner_tab_sessions">セッション</string>
     <string name="planner_no_locations">保存された場所はありません</string>
     <string name="planner_no_sessions">計画されたセッションはありません</string>
+    <string name="planner_no_upcoming">今後のイベントはありません</string>
+    <string name="planner_no_past">過去のイベントはありません</string>
+    <string name="tab_upcoming">今後</string>
+    <string name="tab_past">過去</string>
     <string name="planner_add_session">セッションを追加</string>
     <string name="planner_add_location_title">場所を追加</string>
     <string name="planner_add_session_title">セッションを計画</string>
@@ -364,6 +368,7 @@
     <string name="verdict_poor">悪い</string>
     <string name="verdict_unknown">不明</string>
     <string name="night_mode_toggle">ナイトモード</string>
+    <string name="night_mode_locked">ナイトモード（ロック中 — 長押しで解除）</string>
     <string name="card_dew_point">露点</string>
     <string name="dew_warning">結露リスク — レンズの曇りの可能性</string>
     <string name="dew_critical">高結露リスク — レンズの曇りの可能性大！</string>
@@ -378,4 +383,18 @@
     <string name="card_planets">今夜の惑星</string>
     <string name="planet_visible">観測可能</string>
     <string name="planet_low">低い</string>
+
+    <!-- UI Lock -->
+    <string name="btn_lock_ui">UIをロック</string>
+    <string name="btn_unlock_ui">UIをロック解除</string>
+    <string name="swipe_to_unlock">スワイプしてロック解除</string>
+
+    <!-- Exit confirmation -->
+    <string name="dialog_exit_running_title">シーケンス実行中</string>
+    <string name="dialog_exit_running_msg">シーケンスがまだ実行中です。停止して終了しますか？</string>
+    <string name="btn_stop_and_exit">停止して終了</string>
+    <string name="btn_keep_running">続行</string>
+
+    <!-- Flow timeline -->
+    <string name="flow_timeline_progress">ステップ %1$d / %2$d</string>
 </resources>

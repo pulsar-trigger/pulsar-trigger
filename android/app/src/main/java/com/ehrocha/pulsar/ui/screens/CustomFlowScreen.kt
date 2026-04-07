@@ -6,6 +6,9 @@
 package com.ehrocha.pulsar.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +23,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -31,6 +35,7 @@ import androidx.compose.ui.window.Dialog
 import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.DeviceState
+import com.ehrocha.pulsar.ble.StatusFrame
 import com.ehrocha.pulsar.model.FlowStep
 import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.model.SavedFlow
@@ -65,8 +70,12 @@ fun CustomFlowScreen(
         if (running) screenState = FlowScreenState.EDITOR
     }
 
+    var showExitDialog by remember { mutableStateOf(false) }
+
     BackHandler(enabled = running || screenState == FlowScreenState.EDITOR) {
-        if (!running) {
+        if (running) {
+            showExitDialog = true
+        } else {
             screenState = FlowScreenState.LIBRARY
             editingFlowName = null
         }
@@ -109,9 +118,30 @@ fun CustomFlowScreen(
             onFlowNameChanged = { editingFlowName = it },
         )
     }
-}
 
-// ─── Flow Library (landing page) ─────────────────────────────────────────────
+    // ── Exit confirmation dialog while flow is running ───────────────
+    if (showExitDialog) {
+        AlertDialog(
+            onDismissRequest = { showExitDialog = false },
+            title = { Text(stringResource(R.string.dialog_exit_running_title)) },
+            text = { Text(stringResource(R.string.dialog_exit_running_msg)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showExitDialog = false
+                    vm.stopFlow()
+                    onBack()
+                }) {
+                    Text(stringResource(R.string.btn_stop_and_exit), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExitDialog = false }) {
+                    Text(stringResource(R.string.btn_keep_running))
+                }
+            },
+        )
+    }
+}
 
 @Composable
 private fun FlowLibraryView(
@@ -380,6 +410,16 @@ private fun FlowEditorView(
         }
 
         Spacer(Modifier.height(12.dp))
+
+        // ── Flow timeline progress bar ───────────────────────────────────
+        if (running && steps.isNotEmpty()) {
+            FlowTimelineBar(
+                steps = steps,
+                currentStep = currentStep,
+                status = status,
+            )
+            Spacer(Modifier.height(12.dp))
+        }
 
         // ── Step list ────────────────────────────────────────────────────
         Surface(
@@ -1020,4 +1060,103 @@ private fun SaveFlowDialog(
     }
 }
 
+// ─── Flow Timeline Progress Bar ──────────────────────────────────────────────
+
+/** Estimate total duration for a single flow step (in ms). */
+private fun FlowStep.estimatedDurationMs(): Long = when (type) {
+    FlowStepType.PAUSE -> 0L
+    FlowStepType.ASTRO -> delayMs + shotCount * (exposureMs + gapMs)
+    else -> delayMs + shotCount * intervalMs
+}
+
+@Composable
+private fun FlowTimelineBar(
+    steps: List<FlowStep>,
+    currentStep: Int,
+    status: StatusFrame?,
+) {
+    val durations = remember(steps) { steps.map { it.estimatedDurationMs() } }
+    val totalMs = remember(durations) { durations.sum().coerceAtLeast(1L) }
+
+    // Per-step weight (pause steps get a small fixed slice)
+    val weights = remember(durations, totalMs) {
+        durations.map { d -> if (d <= 0L) 0.02f else (d.toFloat() / totalMs) }
+    }
+
+    // Compute within-step fraction for the current step
+    val withinStepFraction = if (
+        currentStep in steps.indices &&
+        status != null &&
+        steps[currentStep].type != FlowStepType.PAUSE
+    ) {
+        val step = steps[currentStep]
+        val taken = status.shotsTaken.coerceAtLeast(0)
+        (taken.toFloat() / step.shotCount.coerceAtLeast(1)).coerceIn(0f, 1f)
+    } else 0f
+
+    val animatedFraction by animateFloatAsState(
+        targetValue = withinStepFraction,
+        animationSpec = tween(durationMillis = 400),
+        label = "stepFraction",
+    )
+
+    // Summary text
+    val completedSteps = if (currentStep >= 0) currentStep else 0
+    val label = stringResource(
+        R.string.flow_timeline_progress,
+        completedSteps + 1,
+        steps.size,
+    )
+
+    Column {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(4.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .clip(RoundedCornerShape(4.dp)),
+        ) {
+            weights.forEachIndexed { index, weight ->
+                val color = when {
+                    index < currentStep -> MaterialTheme.colorScheme.primary
+                    index == currentStep -> MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                    else -> MaterialTheme.colorScheme.surfaceVariant
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(weight)
+                        .fillMaxHeight()
+                        .background(
+                            if (index == currentStep)
+                                MaterialTheme.colorScheme.surfaceVariant
+                            else color,
+                        ),
+                ) {
+                    if (index == currentStep) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(animatedFraction)
+                                .background(MaterialTheme.colorScheme.primary),
+                        )
+                    }
+                }
+                // Thin gap between segments
+                if (index < weights.lastIndex) {
+                    Spacer(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .fillMaxHeight()
+                            .background(MaterialTheme.colorScheme.surface),
+                    )
+                }
+            }
+        }
+    }
+}
 

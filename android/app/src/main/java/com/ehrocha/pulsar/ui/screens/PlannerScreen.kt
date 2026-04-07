@@ -106,7 +106,15 @@ fun PlannerScreen(
             }
         }
 
-        // ── Events list ──────────────────────────────────────────────
+        // ── Events list (tabbed: Upcoming / Past) ────────────────────
+        val today = LocalDate.now()
+        val upcoming = state.events
+            .filter { it.endDate >= today }
+            .sortedBy { it.startDate }
+        val past = state.events
+            .filter { it.endDate < today }
+            .sortedByDescending { it.startDate }
+
         if (state.events.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -132,29 +140,69 @@ fun PlannerScreen(
                 }
             }
         } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                items(state.events.sortedBy { it.startDate }, key = { it.id }) { event ->
-                    val sessions = state.sessions.filter { it.eventId == event.id }
-                    EventCard(
-                        event = event,
-                        sessionCount = sessions.size,
-                        bestVerdict = sessions.maxByOrNull { it.verdict.ordinal }?.verdict
-                            ?: PlannerVerdict.UNKNOWN,
-                        onClick = { onEventSessions(event) },
-                        onShare = {
-                            plannerManager.exportEvent(event.id)?.let { json ->
-                                val intent = Intent(Intent.ACTION_SEND).apply {
-                                    type = "text/plain"
-                                    putExtra(Intent.EXTRA_TEXT, json)
-                                }
-                                it.startActivity(Intent.createChooser(intent, null))
-                            }
+            var selectedTab by remember { mutableIntStateOf(0) }
+            val tabs = listOf(
+                stringResource(R.string.tab_upcoming) to upcoming,
+                stringResource(R.string.tab_past) to past,
+            )
+
+            TabRow(selectedTabIndex = selectedTab) {
+                tabs.forEachIndexed { index, (title, events) ->
+                    Tab(
+                        selected = selectedTab == index,
+                        onClick = { selectedTab = index },
+                        text = {
+                            Text(
+                                if (events.isNotEmpty()) "$title (${events.size})"
+                                else title,
+                            )
                         },
-                        onDelete = { plannerManager.removeEvent(event.id) },
                     )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            val displayedEvents = tabs[selectedTab].second
+            if (displayedEvents.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        stringResource(
+                            if (selectedTab == 0) R.string.planner_no_upcoming
+                            else R.string.planner_no_past,
+                        ),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    items(displayedEvents, key = { it.id }) { event ->
+                        val sessions = state.sessions.filter { it.eventId == event.id }
+                        EventCard(
+                            event = event,
+                            sessionCount = sessions.size,
+                            bestVerdict = sessions.maxByOrNull { it.verdict.ordinal }?.verdict
+                                ?: PlannerVerdict.UNKNOWN,
+                            onClick = { onEventSessions(event) },
+                            onShare = {
+                                plannerManager.exportEvent(event.id)?.let { json ->
+                                    val intent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_TEXT, json)
+                                    }
+                                    it.startActivity(Intent.createChooser(intent, null))
+                                }
+                            },
+                            onDelete = { plannerManager.removeEvent(event.id) },
+                        )
+                    }
                 }
             }
         }

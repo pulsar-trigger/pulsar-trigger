@@ -40,6 +40,12 @@ import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 import com.ehrocha.pulsar.ble.StatusFrame
 import androidx.compose.ui.tooling.preview.Preview
 import com.ehrocha.pulsar.ui.theme.DarkColorScheme
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.input.pointer.pointerInput
 
 @Composable
 fun ModeScreen(
@@ -52,10 +58,17 @@ fun ModeScreen(
     val mode by vm.currentMode.collectAsState()
     val isRunning = status?.state == DeviceState.RUNNING || status?.state == DeviceState.WAITING
 
+    var uiLocked by remember { mutableStateOf(false) }
+
+    // Auto-unlock when sequence finishes
+    LaunchedEffect(isRunning) { if (!isRunning) uiLocked = false }
+
+    var showExitDialog by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) { vm.selectMode(targetMode) }
 
-    // Block system back button while a job is running
-    BackHandler(enabled = isRunning) { /* swallow – user must press STOP */ }
+    // Show confirmation dialog instead of silently swallowing back press
+    BackHandler(enabled = isRunning) { showExitDialog = true }
 
     Column(
         modifier = Modifier
@@ -74,6 +87,22 @@ fun ModeScreen(
                 else -> targetMode.name.replace('_', ' ')
             }
             Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+
+            Spacer(Modifier.weight(1f))
+
+            // Lock toggle — only visible when a sequence is running
+            if (isRunning && targetMode != TriggerMode.PRESS_HOLD) {
+                IconButton(onClick = { uiLocked = !uiLocked }) {
+                    Icon(
+                        if (uiLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                        contentDescription = stringResource(
+                            if (uiLocked) R.string.btn_unlock_ui else R.string.btn_lock_ui
+                        ),
+                        tint = if (uiLocked) MaterialTheme.colorScheme.error
+                               else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
 
         Spacer(Modifier.height(12.dp))
@@ -136,13 +165,40 @@ fun ModeScreen(
             if (isRunning) vm.updateNotification()
         }
 
-        when (targetMode) {
-            TriggerMode.PRESS_HOLD -> ManualActions(vm, mode)
-            TriggerMode.ASTRO -> AstroActions(vm, isRunning)
-            else -> DefaultActions(vm, isRunning)
+        if (uiLocked) {
+            SwipeToUnlockBar(onUnlocked = { uiLocked = false })
+        } else {
+            when (targetMode) {
+                TriggerMode.PRESS_HOLD -> ManualActions(vm, mode)
+                TriggerMode.ASTRO -> AstroActions(vm, isRunning)
+                else -> DefaultActions(vm, isRunning)
+            }
         }
 
         Spacer(Modifier.height(8.dp))
+    }
+
+    // ── Exit confirmation dialog while sequence is running ───────────
+    if (showExitDialog) {
+        AlertDialog(
+            onDismissRequest = { showExitDialog = false },
+            title = { Text(stringResource(R.string.dialog_exit_running_title)) },
+            text = { Text(stringResource(R.string.dialog_exit_running_msg)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showExitDialog = false
+                    vm.stop()
+                    onBack()
+                }) {
+                    Text(stringResource(R.string.btn_stop_and_exit), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExitDialog = false }) {
+                    Text(stringResource(R.string.btn_keep_running))
+                }
+            },
+        )
     }
 }
 
@@ -377,6 +433,51 @@ fun ModeSettingsScreen(
                     TriggerMode.ASTRO -> AstroSettingsPanel(vm)
                     else -> {}
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SwipeToUnlockBar(onUnlocked: () -> Unit) {
+    var dragOffset by remember { mutableFloatStateOf(0f) }
+    val unlockThreshold = 200f
+
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        if (dragOffset > unlockThreshold) onUnlocked()
+                        dragOffset = 0f
+                    },
+                    onDragCancel = { dragOffset = 0f },
+                    onHorizontalDrag = { _, delta ->
+                        dragOffset = (dragOffset + delta).coerceAtLeast(0f)
+                    },
+                )
+            },
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Lock,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    stringResource(R.string.swipe_to_unlock),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.width(4.dp))
+                Text("→", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

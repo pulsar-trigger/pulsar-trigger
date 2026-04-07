@@ -315,6 +315,10 @@
     <string name="planner_tab_sessions">Sitzungen</string>
     <string name="planner_no_locations">Noch keine Standorte gespeichert</string>
     <string name="planner_no_sessions">Noch keine Sitzungen geplant</string>
+    <string name="planner_no_upcoming">Keine kommenden Ereignisse</string>
+    <string name="planner_no_past">Keine vergangenen Ereignisse</string>
+    <string name="tab_upcoming">Kommende</string>
+    <string name="tab_past">Vergangene</string>
     <string name="planner_add_session">Sitzung hinzufügen</string>
     <string name="planner_add_location_title">Standort hinzufügen</string>
     <string name="planner_add_session_title">Sitzung planen</string>
@@ -364,6 +368,7 @@
     <string name="verdict_poor">Schlecht</string>
     <string name="verdict_unknown">Unbekannt</string>
     <string name="night_mode_toggle">Nachtmodus</string>
+    <string name="night_mode_locked">Nachtmodus (gesperrt — lange drücken zum Entsperren)</string>
     <string name="card_dew_point">Taupunkt</string>
     <string name="dew_warning">Taurisiko — Objektivbeschlag möglich</string>
     <string name="dew_critical">Hohes Taurisiko — Beschlag wahrscheinlich!</string>
@@ -378,4 +383,18 @@
     <string name="card_planets">Planeten heute Nacht</string>
     <string name="planet_visible">Sichtbar</string>
     <string name="planet_low">Niedrig</string>
+
+    <!-- UI Lock -->
+    <string name="btn_lock_ui">UI sperren</string>
+    <string name="btn_unlock_ui">UI entsperren</string>
+    <string name="swipe_to_unlock">Wischen zum Entsperren</string>
+
+    <!-- Exit confirmation -->
+    <string name="dialog_exit_running_title">Sequenz läuft</string>
+    <string name="dialog_exit_running_msg">Eine Sequenz läuft noch. Stoppen und beenden?</string>
+    <string name="btn_stop_and_exit">Stoppen und Beenden</string>
+    <string name="btn_keep_running">Weiterlaufen</string>
+
+    <!-- Flow timeline -->
+    <string name="flow_timeline_progress">Schritt %1$d von %2$d</string>
 </resources>

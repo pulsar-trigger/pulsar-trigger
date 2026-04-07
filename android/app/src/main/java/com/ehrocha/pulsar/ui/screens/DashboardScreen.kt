@@ -5,6 +5,10 @@
 
 package com.ehrocha.pulsar.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,6 +24,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -454,7 +459,7 @@ fun DashboardScreen(
 
             // ── Sun card ─────────────────────────────────────────────
             state.sun?.let { sun ->
-                DashCard(title = stringResource(R.string.card_sun), icon = Icons.Default.WbSunny) {
+                DashCard(title = stringResource(R.string.card_sun), icon = Icons.Default.WbSunny, initiallyExpanded = false) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -479,7 +484,7 @@ fun DashboardScreen(
 
             // ── Moon card ────────────────────────────────────────────
             state.moon?.let { moon ->
-                DashCard(title = stringResource(R.string.card_moon), icon = Icons.Default.NightsStay) {
+                DashCard(title = stringResource(R.string.card_moon), icon = Icons.Default.NightsStay, initiallyExpanded = false) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(moon.emoji, fontSize = 48.sp)
                         Spacer(Modifier.width(16.dp))
@@ -537,7 +542,7 @@ fun DashboardScreen(
 
             // ── Milky Way card ───────────────────────────────────────
             state.milkyWay?.let { mw ->
-                DashCard(title = stringResource(R.string.card_milky_way), icon = Icons.Default.AutoAwesome) {
+                DashCard(title = stringResource(R.string.card_milky_way), icon = Icons.Default.AutoAwesome, initiallyExpanded = false) {
                     Surface(
                         color = if (mw.visible) Color(0xFF2E7D32).copy(alpha = 0.15f)
                                 else Color(0xFFE65100).copy(alpha = 0.15f),
@@ -589,7 +594,7 @@ fun DashboardScreen(
             state.bortle?.let { b ->
                 val bInt = b.bortleClass.toInt().coerceIn(1, 9)
                 val good = bInt <= 4
-                DashCard(title = stringResource(R.string.card_bortle), icon = Icons.Default.Lightbulb) {
+                DashCard(title = stringResource(R.string.card_bortle), icon = Icons.Default.Lightbulb, initiallyExpanded = false) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -636,7 +641,7 @@ fun DashboardScreen(
 
             // ── Weather card ─────────────────────────────────────────
             state.weather?.let { weather ->
-                DashCard(title = stringResource(R.string.card_weather), icon = Icons.Default.Cloud) {
+                DashCard(title = stringResource(R.string.card_weather), icon = Icons.Default.Cloud, initiallyExpanded = false) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
@@ -710,6 +715,7 @@ fun DashboardScreen(
                     DashCard(
                         title = stringResource(R.string.card_dew_point),
                         icon = Icons.Default.WaterDrop,
+                        initiallyExpanded = false,
                     ) {
                         Surface(
                             color = (if (isCritical) Color(0xFFE65100) else Color(0xFFF9A825)).copy(alpha = 0.15f),
@@ -746,6 +752,7 @@ fun DashboardScreen(
                 DashCard(
                     title = stringResource(R.string.card_twilight),
                     icon = Icons.Default.Gradient,
+                    initiallyExpanded = false,
                 ) {
                     val phases = listOfNotNull(
                         tw.civilEnd?.let { stringResource(R.string.tw_civil_end) to it },
@@ -806,6 +813,7 @@ fun DashboardScreen(
                 DashCard(
                     title = stringResource(R.string.card_planets),
                     icon = Icons.Default.Public,
+                    initiallyExpanded = false,
                 ) {
                     state.planets.forEach { planet ->
                         Row(
@@ -870,6 +878,7 @@ fun DashboardScreen(
                     title = if (isToday2) stringResource(R.string.card_forecast)
                             else stringResource(R.string.card_forecast_day),
                     icon = Icons.Default.Schedule,
+                    initiallyExpanded = false,
                 ) {
                     hours.forEach { h ->
                         Row(
@@ -945,23 +954,54 @@ fun DashboardScreen(
 internal fun DashCard(
     title: String,
     icon: ImageVector,
+    initiallyExpanded: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Text(
-        title,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
+    var expanded by remember { mutableStateOf(initiallyExpanded) }
+    val rotation by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        label = "chevron",
     )
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth(),
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { expanded = !expanded }
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-            content = content,
+        Text(
+            title,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f),
         )
+        Icon(
+            Icons.Default.ExpandMore,
+            contentDescription = if (expanded) stringResource(R.string.cd_collapse)
+            else stringResource(R.string.cd_expand),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .size(20.dp)
+                .rotate(rotation),
+        )
+    }
+    AnimatedVisibility(
+        visible = expanded,
+        enter = expandVertically(),
+        exit = shrinkVertically(),
+    ) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = 2.dp,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                content = content,
+            )
+        }
     }
 }
 

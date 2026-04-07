@@ -5,7 +5,7 @@ I have started this project a few years ago, but as I did not have time to take 
 
 I built this for my own benefit while photographing, but I figured if this is useful for me, maybe this is useful to other people, so, why not open source it? 
 
-I you happen to try the app/firmware and want to suggest a fix, improvement or new feature, please open an issue and I will consider it. While i love the idea of collaboration, I still have not thought about the details on how to make this happen, so if you feel like contributing, just reach out and we will try to figure this out.
+If you happen to try the app/firmware and want to suggest a fix, improvement or new feature, please open an issue and I will consider it. While i love the idea of collaboration, I still have not thought about the details on how to make this happen, so if you feel like contributing, just reach out and we will try to figure this out.
 
 
 **Android app** (BLE client) ↔ **ESP32 firmware** (BLE server + camera control).
@@ -29,7 +29,18 @@ I you happen to try the app/firmware and want to suggest a fix, improvement or n
 | | Version | Source of truth |
 |---|---------|----------------|
 | Firmware | 0.5.0 | `firmware/platformio.ini` build flags → `config.h` via `#ifndef` |
-| Android  | 0.25.0 | `android/app/build.gradle.kts` → `BuildConfig.VERSION_NAME` |
+| Android  | 0.30.0 | `android/app/build.gradle.kts` → `BuildConfig.VERSION_NAME` |
+
+> ### 🐉 Here Be Dragons — Safety Warning
+>
+> **Pulsar drives camera shutter/focus lines through ESP32 GPIO pins.**
+> Connecting GPIOs directly to your camera's remote-release port can permanently damage the camera's internal circuitry.
+>
+> **Always use an optocoupler** (e.g., PC817, 4N35) between the ESP32 and the camera.
+> The optocoupler provides electrical isolation — the ESP32 side and the camera side share no common ground, so voltage spikes, logic-level mismatches, or wiring mistakes cannot reach the camera.
+>
+> **We are not responsible for any damage to cameras, ESP32 devices, or other equipment, use this at your own risk.**
+> Double-check your circuit before powering on. If you are unsure, consult the [wiring guide](docs/wiring.md) or open an issue.
 
 ---
 

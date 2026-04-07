@@ -6,9 +6,13 @@
 package com.ehrocha.pulsar.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Nightlight
 import androidx.compose.material3.Icon
@@ -17,12 +21,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,6 +36,7 @@ import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 import com.ehrocha.pulsar.ui.theme.LocalNightMode
+import com.ehrocha.pulsar.ui.theme.LocalNightModeLocked
 import com.ehrocha.pulsar.ui.theme.ThemeMode
 
 private val LedIdle = Color(0xFF4CAF50)
@@ -103,23 +110,43 @@ fun BatteryIndicator() {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NightModeToggle() {
     val nightMode = LocalNightMode.current
-    IconButton(onClick = {
-        nightMode.value = when (nightMode.value) {
-            ThemeMode.Light -> ThemeMode.Dark
-            ThemeMode.Dark -> ThemeMode.RedLight
-            ThemeMode.RedLight -> ThemeMode.Light
-        }
-    }) {
+    val locked = LocalNightModeLocked.current
+
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .combinedClickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = androidx.compose.material3.ripple(),
+                role = Role.Button,
+                onClick = {
+                    if (!locked.value) {
+                        nightMode.value = when (nightMode.value) {
+                            ThemeMode.Light -> ThemeMode.Dark
+                            ThemeMode.Dark -> ThemeMode.RedLight
+                            ThemeMode.RedLight -> ThemeMode.Light
+                        }
+                    }
+                },
+                onLongClick = {
+                    locked.value = !locked.value
+                },
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
         Icon(
             when (nightMode.value) {
                 ThemeMode.Light -> Icons.Default.LightMode
                 ThemeMode.Dark -> Icons.Default.Nightlight
                 ThemeMode.RedLight -> Icons.Default.Nightlight
             },
-            contentDescription = stringResource(R.string.night_mode_toggle),
+            contentDescription = stringResource(
+                if (locked.value) R.string.night_mode_locked else R.string.night_mode_toggle,
+            ),
             modifier = Modifier.size(20.dp),
             tint = when (nightMode.value) {
                 ThemeMode.Light -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -127,5 +154,16 @@ fun NightModeToggle() {
                 ThemeMode.RedLight -> Color(0xFFCC4444)
             },
         )
+        // Lock badge
+        if (locked.value) {
+            Icon(
+                Icons.Default.Lock,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(10.dp)
+                    .align(Alignment.BottomEnd),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        }
     }
 }

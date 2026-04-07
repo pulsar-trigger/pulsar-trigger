@@ -313,6 +313,10 @@
     <string name="planner_tab_sessions">Sesiones</string>
     <string name="planner_no_locations">Sin ubicaciones guardadas</string>
     <string name="planner_no_sessions">Sin sesiones planificadas</string>
+    <string name="planner_no_upcoming">Sin eventos próximos</string>
+    <string name="planner_no_past">Sin eventos pasados</string>
+    <string name="tab_upcoming">Próximos</string>
+    <string name="tab_past">Pasados</string>
     <string name="planner_add_session">Añadir sesión</string>
     <string name="planner_add_location_title">Añadir ubicación</string>
     <string name="planner_add_session_title">Planificar una sesión</string>
@@ -362,6 +366,7 @@
     <string name="verdict_poor">Malo</string>
     <string name="verdict_unknown">Desconocido</string>
     <string name="night_mode_toggle">Modo nocturno</string>
+    <string name="night_mode_locked">Modo nocturno (bloqueado — mantén pulsado para desbloquear)</string>
     <string name="card_dew_point">Punto de rocío</string>
     <string name="dew_warning">Riesgo de rocío — posible empañamiento del lente</string>
     <string name="dew_critical">Alto riesgo de rocío — ¡empañamiento probable!</string>
@@ -376,4 +381,18 @@
     <string name="card_planets">Planetas esta noche</string>
     <string name="planet_visible">Visible</string>
     <string name="planet_low">Bajo</string>
+
+    <!-- UI Lock -->
+    <string name="btn_lock_ui">Bloquear UI</string>
+    <string name="btn_unlock_ui">Desbloquear UI</string>
+    <string name="swipe_to_unlock">Desliza para desbloquear</string>
+
+    <!-- Exit confirmation -->
+    <string name="dialog_exit_running_title">Secuencia en Ejecución</string>
+    <string name="dialog_exit_running_msg">Una secuencia aún está en ejecución. ¿Detener y salir?</string>
+    <string name="btn_stop_and_exit">Detener y Salir</string>
+    <string name="btn_keep_running">Continuar</string>
+
+    <!-- Flow timeline -->
+    <string name="flow_timeline_progress">Paso %1$d de %2$d</string>
 </resources>
