@@ -164,10 +164,6 @@ fun ModeScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        LaunchedEffect(isRunning, status?.shotsTaken) {
-            if (isRunning) vm.updateNotification()
-        }
-
         if (uiLocked) {
             SwipeToUnlockBar(onUnlocked = { uiLocked = false })
         } else {

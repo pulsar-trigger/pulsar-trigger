@@ -16,8 +16,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
@@ -36,7 +34,6 @@ fun ScrollPicker(
     label: String? = null,
     format: (Int) -> String = { "%02d".format(it) },
 ) {
-    val haptic = LocalHapticFeedback.current
     val alpha = if (enabled) 1f else 0.4f
 
     var showNumPad by remember { mutableStateOf(false) }
@@ -46,7 +43,6 @@ fun ScrollPicker(
         val newVal = (value + delta).coerceIn(range)
         if (newVal != value) {
             onValueChange(newVal)
-            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         }
     }
 

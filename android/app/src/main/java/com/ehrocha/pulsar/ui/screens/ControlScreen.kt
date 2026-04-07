@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,6 +62,47 @@ import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel.Companion.SAFE_OUTPUT_PINS
 import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PanelHelpHeader(title: String, helpText: String) {
+    val tooltipState = rememberTooltipState(isPersistent = true)
+    val scope = rememberCoroutineScope()
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        TooltipBox(
+            positionProvider = TooltipDefaults.rememberRichTooltipPositionProvider(),
+            tooltip = {
+                RichTooltip(
+                    title = { Text(title) },
+                    action = {
+                        TextButton(onClick = { scope.launch { tooltipState.dismiss() } }) {
+                            Text(stringResource(R.string.action_dismiss))
+                        }
+                    },
+                ) {
+                    Text(helpText)
+                }
+            },
+            state = tooltipState,
+        ) {
+            IconButton(onClick = { scope.launch { tooltipState.show() } }) {
+                Icon(
+                    Icons.Outlined.Info,
+                    contentDescription = stringResource(R.string.cd_help),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+    }
+}
 
 @Composable
 internal fun DefaultActions(vm: PulsarViewModel, isRunning: Boolean) {
@@ -310,10 +352,9 @@ internal fun IntervalometerPanelContent(
     val totalSequenceTimeMs = delayMs + shotCount.toLong() * (exposureMs + intervalMs) - intervalMs
 
     Column(verticalArrangement = Arrangement.spacedBy(24.dp), modifier = modifier) {
-        Text(
-            stringResource(R.string.panel_intervalometer_desc),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        PanelHelpHeader(
+            title = stringResource(R.string.panel_intervalometer),
+            helpText = stringResource(R.string.panel_intervalometer_help),
         )
 
         Surface(
@@ -412,10 +453,9 @@ internal fun ManualPanelContent(
         verticalArrangement = Arrangement.spacedBy(20.dp),
         modifier = modifier
     ) {
-        Text(
-            stringResource(R.string.panel_manual_desc),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        PanelHelpHeader(
+            title = stringResource(R.string.panel_manual),
+            helpText = stringResource(R.string.panel_manual_help),
         )
 
         Surface(
@@ -492,13 +532,10 @@ internal fun AstroPanelContent(
     val totalTimeMs = delayMs + shotCount.toLong() * (maxExposureMs + gapMs) - gapMs
 
     Column(verticalArrangement = Arrangement.spacedBy(24.dp), modifier = modifier) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(
-                stringResource(R.string.panel_astro_desc),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        PanelHelpHeader(
+            title = stringResource(R.string.panel_astro),
+            helpText = stringResource(R.string.panel_astro_help),
+        )
 
         Surface(
             shape = RoundedCornerShape(16.dp),
@@ -913,10 +950,9 @@ internal fun GpioPinsSectionContent(vm: PulsarViewModel) {
     val focusPin by vm.pinFocus.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            stringResource(R.string.gpio_pins_desc),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        PanelHelpHeader(
+            title = stringResource(R.string.section_gpio_pins),
+            helpText = stringResource(R.string.gpio_pins_help),
         )
 
         GpioPinSelector(
@@ -981,10 +1017,9 @@ internal fun BackupRestoreSectionContent(vm: PulsarViewModel) {
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            stringResource(R.string.backup_restore_desc),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        PanelHelpHeader(
+            title = stringResource(R.string.section_backup_restore),
+            helpText = stringResource(R.string.backup_restore_help),
         )
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -1519,8 +1554,6 @@ internal fun IntervalometerSettingsPanel(vm: PulsarViewModel) {
     val maxShots by vm.maxShotCount.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text(stringResource(R.string.section_default_values), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-
         Surface(
             shape = RoundedCornerShape(12.dp),
             tonalElevation = 2.dp,
@@ -1530,10 +1563,9 @@ internal fun IntervalometerSettingsPanel(vm: PulsarViewModel) {
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                Text(
-                    stringResource(R.string.default_values_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                PanelHelpHeader(
+                    title = stringResource(R.string.section_default_values),
+                    helpText = stringResource(R.string.default_values_help),
                 )
 
                 TimePicker(
@@ -1613,10 +1645,9 @@ internal fun IntervalometerSettingsPanel(vm: PulsarViewModel) {
 @Composable
 internal fun AstroSettingsPanel(vm: PulsarViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text(
-            stringResource(R.string.settings_astro_desc),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        PanelHelpHeader(
+            title = stringResource(R.string.panel_astro),
+            helpText = stringResource(R.string.settings_astro_help),
         )
 
         AstroPanel(vm, enabled = true)
@@ -1655,16 +1686,9 @@ internal fun PlannerSettingsSectionContent(vm: PulsarViewModel) {
     var currentInterval by remember { mutableLongStateOf(vm.plannerManager.cacheIntervalHours) }
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text(
-            stringResource(R.string.section_planner),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-        )
-
-        Text(
-            stringResource(R.string.planner_cache_desc),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        PanelHelpHeader(
+            title = stringResource(R.string.section_planner),
+            helpText = stringResource(R.string.planner_cache_help),
         )
 
         // Cache interval selector

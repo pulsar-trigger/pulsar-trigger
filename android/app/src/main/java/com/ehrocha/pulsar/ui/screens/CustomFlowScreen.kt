@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.DeviceState
@@ -932,11 +933,18 @@ private fun EditStepDialog(
 ) {
     var current by remember { mutableStateOf(step) }
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
         Surface(
             shape = RoundedCornerShape(24.dp),
             tonalElevation = 8.dp,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .navigationBarsPadding()
+                .imePadding(),
         ) {
             Column(
                 modifier = Modifier

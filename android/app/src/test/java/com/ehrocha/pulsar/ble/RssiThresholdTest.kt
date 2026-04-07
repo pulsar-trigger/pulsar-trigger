@@ -37,11 +37,6 @@ class RssiThresholdTest {
     }
 
     @Test
-    fun `vibrate cooldown is positive`() {
-        assertTrue(AppConfig.BLE_RSSI_VIBRATE_COOLDOWN_MS > 0L)
-    }
-
-    @Test
     fun `poll interval is reasonable`() {
         assertTrue(
             "Poll interval should be between 500ms and 10s",

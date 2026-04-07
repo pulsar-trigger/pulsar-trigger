@@ -7,8 +7,6 @@ package com.ehrocha.pulsar.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -110,16 +108,16 @@ fun IntStepperField(
         }
 
         if (resolvedPresets.isNotEmpty()) {
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(resolvedPresets) { preset ->
-                    FilterChip(
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                resolvedPresets.forEachIndexed { index, preset ->
+                    SegmentedButton(
                         selected = value == preset,
                         onClick = { if (enabled) onValueChange(preset) },
                         enabled = enabled,
-                        label = { Text(presetLabel(preset), style = MaterialTheme.typography.labelSmall) },
-                    )
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = resolvedPresets.size),
+                    ) {
+                        Text(presetLabel(preset), style = MaterialTheme.typography.labelSmall)
+                    }
                 }
             }
         }

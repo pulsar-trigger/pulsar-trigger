@@ -110,7 +110,7 @@ object AppConfig {
 
     /** Quick-pick presets shown as chips below the focal-length stepper.
      *  Covers common astro primes and zooms. */
-    val FOCAL_LENGTH_PRESETS = listOf(14, 24, 35, 50, 85, 135, 200, 400, 600)
+    val FOCAL_LENGTH_PRESETS = listOf(14, 24, 50, 85, 135, 200)
 
     // ── GPIO defaults ───────────────────────────────────────────────────
     // ESP32 GPIO numbers used by the Pulsar hardware to drive the
@@ -163,10 +163,6 @@ object AppConfig {
     /** RSSI value (dBm) at or below which the signal is considered weak and
      *  a haptic warning fires. Below this the connection may drop soon. */
     const val BLE_RSSI_WEAK = -80
-
-    /** Minimum interval between proximity-warning vibrations (ms). Prevents
-     *  continuous buzzing when hovering near the threshold. */
-    const val BLE_RSSI_VIBRATE_COOLDOWN_MS = 10_000L
 
     /** Throttle between consecutive BLE writes during OTA upload (ms).
      *  Prevents flooding the device's receive buffer. */

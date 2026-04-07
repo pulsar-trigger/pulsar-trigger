@@ -53,6 +53,8 @@
     <string name="cd_move_up">Move up</string>
     <string name="cd_move_down">Move down</string>
     <string name="cd_settings">Settings</string>
+    <string name="cd_help">Help</string>
+    <string name="action_dismiss">OK</string>
 
     <!-- DefaultActions -->
     <string name="btn_stop">Stop</string>
@@ -83,6 +85,7 @@
     <!-- IntervalometerPanel -->
     <string name="panel_intervalometer">Intervalometer</string>
     <string name="panel_intervalometer_desc">Automate complex timelapse sequences or burst captures with precision timing. Your camera must be set to Bulb mode.</string>
+    <string name="panel_intervalometer_help">Automate complex timelapse sequences or burst captures with precision timing.\n\n• Set your camera to Bulb mode so Pulsar controls the shutter.\n• Interval is the time from the start of one shot to the next.\n• Exposure is how long the shutter stays open per shot.\n• Start Delay gives you time to step away before the sequence begins.\n• The Sequence Estimate card shows total duration and duty cycle.</string>
     <string name="label_sequence_estimate">Sequence Estimate</string>
     <string name="label_shots">Shots</string>
     <string name="label_total_duration">Total Duration</string>
@@ -95,6 +98,7 @@
     <!-- ManualPanel -->
     <string name="panel_manual">Manual Shutter</string>
     <string name="panel_manual_desc">Control the shutter directly. Choose Hold (press and hold) or Lock (toggle on/off).</string>
+    <string name="panel_manual_help">Direct manual shutter control with two modes.\n\n• HOLD: The shutter stays open as long as you press the button. Release to close. Ideal for quick bulb shots.\n• LOCK: Tap once to open the shutter, tap again to close. Best for long exposures where you don\u2019t want to hold the button.\n\nSwitch between Hold and Lock using the segmented buttons in the action area.</string>
     <string name="panel_manual_tip">Toggle behaviour using the chips in the action area below.</string>
     <string name="panel_manual_lock_info">LOCK: Tap the center button once to open the shutter, tap again to close. Best for long bulb exposures.</string>
     <string name="panel_manual_hold_info">HOLD: Shutter remains open as long as the center button is pressed. Ideal for quick bursts.</string>
@@ -102,6 +106,7 @@
     <!-- AstroPanel -->
     <string name="panel_astro">Astro Mode</string>
     <string name="panel_astro_desc">Pinpoint stars by calculating the maximum shutter speed to prevent trails.</string>
+    <string name="panel_astro_help">Calculate the longest exposure that keeps stars as sharp points instead of trails.\n\n• Choose your sensor preset (crop factor) and lens focal length.\n• The 500 Rule is a classic formula; the 400 Rule is tighter and better for high-resolution sensors.\n• Formula: Rule ÷ (focal length × crop factor) = max seconds.\n• Gap is the pause between exposures for the camera to write to card.\n• Adjust shot count and delay just like in Intervalometer mode.</string>
     <string name="panel_astro_tip">Switch rules at the bottom. Rule 400 is ideal for high-resolution sensors.</string>
     <string name="label_rule_readout">%1$d Rule Readout</string>
     <string name="label_effective_focal">%1$smm Effective</string>
@@ -123,11 +128,13 @@
     <string name="label_device_name">Device Name</string>
     <string name="section_gpio_pins">GPIO Pins</string>
     <string name="gpio_pins_desc">Choose which ESP32 GPIO pins drive the shutter and focus optocouplers. Changes are sent to the device and saved.</string>
+    <string name="gpio_pins_help">Configure the ESP32 GPIO pins connected to your shutter and focus optocouplers.\n\n• Only safe output-capable pins are listed.\n• Changes are sent to the device immediately and persisted in flash.\n• The shutter and focus pins must be different.\n• Not available in simulator mode.</string>
     <string name="label_shutter_pin">Shutter Pin</string>
     <string name="label_focus_pin">Focus Pin</string>
     <string name="gpio_simulator_note">GPIO configuration not available in simulator mode</string>
     <string name="section_backup_restore">Backup &amp; Restore</string>
     <string name="backup_restore_desc">Export settings to Google Drive or local storage, and import them on another device.</string>
+    <string name="backup_restore_help">Save and restore all your Pulsar settings.\n\n• Export creates a JSON file with all preferences, defaults, GPIO config, and planner data.\n• Import loads settings from a previously exported file.\n• Use this to transfer your setup to a new phone or as a safety backup.</string>
     <string name="toast_settings_exported">Settings exported</string>
     <string name="toast_export_failed">Export failed: %1$s</string>
     <string name="toast_settings_imported">Settings imported</string>
@@ -175,6 +182,7 @@
     <!-- Default values settings -->
     <string name="section_default_values">Default Values</string>
     <string name="default_values_desc">Set default values for the Intervalometer. These are applied when the app starts.</string>
+    <string name="default_values_help">Factory defaults for the Intervalometer mode.\n\n• These values are loaded when the app starts or after a reset.\n• Interval is the gap between shots; Exposure is how long the shutter stays open.\n• Adjust shot count and start delay to match your typical workflow.\n• Tap \"Reset to Factory Defaults\" to restore the original values.</string>
     <string name="label_default_interval">Default Interval (gap)</string>
     <string name="label_default_exposure">Default Exposure</string>
     <string name="label_default_start_delay">Default Start Delay</string>
@@ -227,6 +235,7 @@
     <string name="settings_intervalometer">Intervalometer Settings</string>
     <string name="settings_astro">Astro Settings</string>
     <string name="settings_astro_desc">Astro mode calculates exposure times from your optics. Configure lens and sensor defaults here, or adjust them in the mode screen.</string>
+    <string name="settings_astro_help">Configure your default optics for astrophotography.\n\n• Sensor preset sets the crop factor for your camera body.\n• Focal length determines the maximum safe exposure time.\n• The 500/400 rule calculates: Rule ÷ (focal length × crop) = max seconds.\n• These defaults are also adjustable directly in the Astro mode screen.</string>
 
     <!-- MainActivity update dialog -->
     <string name="dialog_updates_available">Updates Available</string>
@@ -396,6 +405,7 @@
     <string name="planner_resolving_location">Resolving location…</string>
     <string name="planner_time_window">Time window</string>
     <string name="planner_cache_desc">Session dashboard data is cached locally to reduce API calls. Choose how often it should be refreshed.</string>
+    <string name="planner_cache_help">Control how often weather and sky-condition data is refreshed.\n\n• Dashboard data (weather, moon phase, cloud cover) is cached locally.\n• A shorter interval gives fresher data but uses more API calls.\n• 24 h is a good balance for most sessions planned a day ahead.</string>
     <string name="planner_cache_interval">Refresh interval</string>
     <string name="planner_cache_hours">%1$d h</string>
 

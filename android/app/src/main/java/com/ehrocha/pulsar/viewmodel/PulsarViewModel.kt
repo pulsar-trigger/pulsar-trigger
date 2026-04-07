@@ -13,10 +13,8 @@ import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.os.ParcelUuid
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
@@ -165,15 +163,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     // permissions may not yet be granted when the ViewModel is created.
     private val scanner get() = btManager?.adapter?.bluetoothLeScanner
 
-    // ── Notification / cancel ────────────────────────────────────────────
-    private val cancelReceiver = object : BroadcastReceiver() {
-        override fun onReceive(ctx: Context, intent: Intent) {
-            if (intent.action == PulsarNotificationService.ACTION_CANCEL) {
-                stop()
-            }
-        }
-    }
-
     init {
         // Forward BLE manager state to ViewModel flows
         viewModelScope.launch {
@@ -208,33 +197,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         _shotCount.value = _defaultShotCount.value
         _delayMs.value = _defaultDelayMs.value
 
-        app.registerReceiver(
-            cancelReceiver,
-            IntentFilter(PulsarNotificationService.ACTION_CANCEL),
-            Context.RECEIVER_NOT_EXPORTED,
-        )
-
-        // Auto-update notification as status frames arrive (throttled)
-        viewModelScope.launch {
-            var lastNotifShots = -1
-            var lastNotifTimeMs = 0L
-            status.collect { frame ->
-                if (frame != null && (frame.state == DeviceState.RUNNING || frame.state == DeviceState.WAITING)) {
-                    val now = System.currentTimeMillis()
-                    val shotsChanged = frame.shotsTaken != lastNotifShots
-                    val elapsed = now - lastNotifTimeMs
-                    if (shotsChanged || elapsed >= NOTIFICATION_THROTTLE_MS) {
-                        lastNotifShots = frame.shotsTaken
-                        lastNotifTimeMs = now
-                        updateNotification()
-                    }
-                } else if (frame != null && frame.state == DeviceState.IDLE) {
-                    lastNotifShots = -1
-                    dismissNotification()
-                }
-            }
-        }
-
         // Auto-check for updates on connect
         viewModelScope.launch {
             _connected.collect { isConnected ->
@@ -253,20 +215,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         if (frame.fwVersion.isNotEmpty()) {
                             firmwareManager.checkForUpdate(frame.fwVersion)
                         }
-                    }
-                }
-            }
-        }
-
-        // Proximity warning — vibrate when RSSI drops below weak threshold
-        viewModelScope.launch {
-            var lastVibrateMs = 0L
-            bleManager.rssi.collect { rssiValue ->
-                if (rssiValue != null && rssiValue <= AppConfig.BLE_RSSI_WEAK && _connected.value) {
-                    val now = System.currentTimeMillis()
-                    if (now - lastVibrateMs >= AppConfig.BLE_RSSI_VIBRATE_COOLDOWN_MS) {
-                        lastVibrateMs = now
-                        triggerProximityWarning()
                     }
                 }
             }
@@ -466,7 +414,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         _flowRunning.value = false
         _flowPaused.value = false
         _flowCurrentStep.value = -1
-        dismissNotification()
     }
 
     private suspend fun executeFlowStep(step: FlowStep) {
@@ -475,7 +422,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 _flowPaused.value = true
                 if (step.wakeOnPause) {
                     wakeScreen()
-                    triggerProximityWarning()  // double-pulse vibration
                 }
                 // Wait until user taps Continue
                 while (_flowPaused.value) {
@@ -633,7 +579,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
         sendConfig()
         bleManager.sendCommand(CommandBuilder.start())
-        updateNotification()
     }
 
     fun stop() {
@@ -642,7 +587,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         bleManager.sendCommand(CommandBuilder.stop())
-        dismissNotification()
     }
 
     fun singleShot() {
@@ -785,18 +729,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ── Notification helpers ─────────────────────────────────────────────
-    fun updateNotification() {
-        val app = getApplication<Application>()
-        val s = status.value
-        val intent = Intent(app, PulsarNotificationService::class.java).apply {
-            putExtra(PulsarNotificationService.EXTRA_MODE, _currentMode.value.name.replace('_', ' '))
-            putExtra(PulsarNotificationService.EXTRA_SHOTS, s?.shotsTaken ?: 0)
-            putExtra(PulsarNotificationService.EXTRA_TOTAL, _shotCount.value)
-            putExtra(PulsarNotificationService.EXTRA_STATE, s?.state?.name ?: "RUNNING")
-        }
-        app.startForegroundService(intent)
-    }
-
     fun updateOtaNotification(title: String, text: String, progress: Int = -1, done: Boolean = false) {
         val app = getApplication<Application>()
         val intent = Intent(app, PulsarNotificationService::class.java).apply {
@@ -809,26 +741,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         app.startForegroundService(intent)
     }
 
-    private fun dismissNotification() {
+    private fun dismissOtaNotification() {
         val app = getApplication<Application>()
         app.stopService(Intent(app, PulsarNotificationService::class.java))
-    }
-
-    @Suppress("DEPRECATION")
-    private fun triggerProximityWarning() {
-        val app = getApplication<Application>()
-        val vibrator = app.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
-            ?: return
-        // Two short pulses — distinct "proximity warning" pattern
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            vibrator.vibrate(
-                android.os.VibrationEffect.createWaveform(
-                    longArrayOf(0, 120, 100, 120), -1,
-                ),
-            )
-        } else {
-            vibrator.vibrate(longArrayOf(0, 120, 100, 120), -1)
-        }
     }
 
     /** Turn the screen on briefly so the user sees the pause prompt. */
@@ -850,10 +765,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         stopScan()
         simulatorJob?.cancel()
         flowJob?.cancel()
-        dismissNotification()
-        try {
-            getApplication<Application>().unregisterReceiver(cancelReceiver)
-        } catch (_: Exception) {}
         bleManager.disconnectDevice()
     }
 }
