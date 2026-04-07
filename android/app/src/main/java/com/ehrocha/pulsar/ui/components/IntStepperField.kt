@@ -7,6 +7,8 @@ package com.ehrocha.pulsar.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -30,7 +32,6 @@ import kotlin.math.roundToInt
  *               are computed from [min]..[max].
  * @param presetLabel optional transform for preset chip text (e.g. adding "mm" suffix).
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IntStepperField(
     label: String,
@@ -109,33 +110,16 @@ fun IntStepperField(
         }
 
         if (resolvedPresets.isNotEmpty()) {
-            var expanded by remember { mutableStateOf(false) }
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { if (enabled) expanded = it },
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                OutlinedTextField(
-                    value = presetLabel(value),
-                    onValueChange = {},
-                    readOnly = true,
-                    enabled = enabled,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth(),
-                    textStyle = MaterialTheme.typography.bodyMedium,
-                )
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
-                ) {
-                    resolvedPresets.forEach { preset ->
-                        DropdownMenuItem(
-                            text = { Text(presetLabel(preset)) },
-                            onClick = {
-                                onValueChange(preset)
-                                expanded = false
-                            },
-                        )
-                    }
+                items(resolvedPresets) { preset ->
+                    FilterChip(
+                        selected = value == preset,
+                        onClick = { if (enabled) onValueChange(preset) },
+                        enabled = enabled,
+                        label = { Text(presetLabel(preset), style = MaterialTheme.typography.labelSmall) },
+                    )
                 }
             }
         }

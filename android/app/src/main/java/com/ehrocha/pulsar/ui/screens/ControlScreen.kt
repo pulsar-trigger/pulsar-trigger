@@ -65,14 +65,9 @@ import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 @Composable
 internal fun DefaultActions(vm: PulsarViewModel, isRunning: Boolean) {
     val connected = LocalDeviceConnected.current
-    val shotCount by vm.shotCount.collectAsState()
-    val maxShots by vm.maxShotCount.collectAsState()
     DefaultActionsContent(
         connected = connected,
         isRunning = isRunning,
-        shotCount = shotCount,
-        maxShotCount = maxShots,
-        onShotCountChanged = { vm.setShotCount(it) },
         onStart = { vm.start() },
         onStop = { vm.stop() },
     )
@@ -82,9 +77,6 @@ internal fun DefaultActions(vm: PulsarViewModel, isRunning: Boolean) {
 internal fun DefaultActionsContent(
     connected: Boolean,
     isRunning: Boolean,
-    shotCount: Int,
-    maxShotCount: Int,
-    onShotCountChanged: (Int) -> Unit,
     onStart: () -> Unit,
     onStop: () -> Unit,
     modifier: Modifier = Modifier
@@ -94,39 +86,21 @@ internal fun DefaultActionsContent(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth()
+        Button(
+            onClick = { if (isRunning) onStop() else onStart() },
+            enabled = connected,
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isRunning) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.primary
+            ),
+            modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
-            Box(modifier = Modifier.weight(1f)) {
-                IntStepperField(
-                    label = stringResource(R.string.label_number_of_shots),
-                    value = shotCount,
-                    onValueChange = { onShotCountChanged(it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT)) },
-                    min = AppConfig.MIN_SHOT_COUNT,
-                    max = maxShotCount,
-                    enabled = connected && !isRunning,
-                    presets = emptyList(),
-                )
-            }
-
-            Button(
-                onClick = { if (isRunning) onStop() else onStart() },
-                enabled = connected,
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isRunning) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.primary
-                ),
-                modifier = Modifier.height(56.dp).weight(1f)
-            ) {
-                Text(
-                    text = if (isRunning) stringResource(R.string.btn_stop) else stringResource(R.string.btn_start),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            Text(
+                text = if (isRunning) stringResource(R.string.btn_stop) else stringResource(R.string.btn_start),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
         }
 
         Text(
@@ -254,15 +228,9 @@ internal fun ManualActionsContent(
 @Composable
 internal fun AstroActions(vm: PulsarViewModel, isRunning: Boolean) {
     val connected = LocalDeviceConnected.current
-    val ruleDivisor by vm.astroRuleDivisor.collectAsState()
-    val shotCount by vm.astroShotCount.collectAsState()
     AstroActionsContent(
         connected = connected,
         isRunning = isRunning,
-        ruleDivisor = ruleDivisor,
-        shotCount = shotCount,
-        onRuleChanged = { vm.setAstroRuleDivisor(it) },
-        onShotCountChanged = { vm.setAstroShotCount(it) },
         onStart = { vm.start() },
         onStop = { vm.stop() }
     )
@@ -272,10 +240,6 @@ internal fun AstroActions(vm: PulsarViewModel, isRunning: Boolean) {
 internal fun AstroActionsContent(
     connected: Boolean,
     isRunning: Boolean,
-    ruleDivisor: Int,
-    shotCount: Int,
-    onRuleChanged: (Int) -> Unit,
-    onShotCountChanged: (Int) -> Unit,
     onStart: () -> Unit,
     onStop: () -> Unit,
     modifier: Modifier = Modifier
@@ -285,59 +249,21 @@ internal fun AstroActionsContent(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
+        Button(
+            onClick = { if (isRunning) onStop() else onStart() },
+            enabled = connected,
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isRunning) MaterialTheme.colorScheme.error
+                                 else MaterialTheme.colorScheme.primary
+            ),
+            modifier = Modifier.fillMaxWidth().height(56.dp)
         ) {
-            FilterChip(
-                selected = ruleDivisor == AppConfig.DEFAULT_RULE_DIVISOR,
-                onClick = { onRuleChanged(AppConfig.DEFAULT_RULE_DIVISOR) },
-                enabled = connected && !isRunning,
-                label = { Text(stringResource(R.string.chip_500_rule), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
-                modifier = Modifier.weight(1f)
+            Text(
+                text = stringResource(if (isRunning) R.string.btn_stop_astro else R.string.btn_start_astro),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
             )
-            FilterChip(
-                selected = ruleDivisor == AppConfig.TIGHT_RULE_DIVISOR,
-                onClick = { onRuleChanged(AppConfig.TIGHT_RULE_DIVISOR) },
-                enabled = connected && !isRunning,
-                label = { Text(stringResource(R.string.chip_400_rule), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Box(modifier = Modifier.weight(1f)) {
-                IntStepperField(
-                    label = stringResource(R.string.label_number_of_shots),
-                    value = shotCount,
-                    onValueChange = { onShotCountChanged(it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT)) },
-                    min = AppConfig.MIN_SHOT_COUNT,
-                    max = AppConfig.DEFAULT_MAX_SHOTS,
-                    enabled = connected && !isRunning,
-                    presets = emptyList(),
-                )
-            }
-
-            Button(
-                onClick = { if (isRunning) onStop() else onStart() },
-                enabled = connected,
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isRunning) MaterialTheme.colorScheme.error
-                                     else MaterialTheme.colorScheme.primary
-                ),
-                modifier = Modifier.height(56.dp).weight(1f)
-            ) {
-                Text(
-                    text = stringResource(if (isRunning) R.string.btn_stop_astro else R.string.btn_start_astro),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
         }
 
         Text(
@@ -363,6 +289,7 @@ internal fun IntervalometerPanel(vm: PulsarViewModel, enabled: Boolean = true) {
         onIntervalChanged = { vm.setIntervalMs(it) },
         onExposureChanged = { vm.setExposureMs(it) },
         onDelayChanged = { vm.setDelayMs(it) },
+        onShotCountChanged = { vm.setShotCount(it) },
         enabled = enabled
     )
 }
@@ -448,6 +375,13 @@ internal fun IntervalometerPanelContent(
                 enabled = enabled,
             )
 
+            TimePicker(
+                totalMs = delayMs,
+                onChanged = { onDelayChanged(it) },
+                label = stringResource(R.string.label_start_delay) + " (hh:mm:ss)",
+                enabled = enabled,
+            )
+
             if (onShotCountChanged != null) {
                 IntStepperField(
                     label = stringResource(R.string.label_number_of_shots),
@@ -459,13 +393,6 @@ internal fun IntervalometerPanelContent(
                     presets = emptyList(),
                 )
             }
-
-            TimePicker(
-                totalMs = delayMs,
-                onChanged = { onDelayChanged(it) },
-                label = stringResource(R.string.label_start_delay) + " (hh:mm:ss)",
-                enabled = enabled,
-            )
         }
     }
 }
@@ -536,6 +463,8 @@ internal fun AstroPanel(vm: PulsarViewModel, enabled: Boolean = true) {
         onFocalLengthChanged = { vm.setAstroFocalLength(it) },
         onGapMsChanged = { vm.setAstroGapMs(it) },
         onDelayMsChanged = { vm.setAstroDelayMs(it) },
+        onRuleChanged = { vm.setAstroRuleDivisor(it) },
+        onShotCountChanged = { vm.setAstroShotCount(it) },
         enabled = enabled
     )
 }
@@ -554,6 +483,7 @@ internal fun AstroPanelContent(
     onFocalLengthChanged: (Int) -> Unit,
     onGapMsChanged: (Long) -> Unit,
     onDelayMsChanged: (Long) -> Unit,
+    onRuleChanged: ((Int) -> Unit)? = null,
     onShotCountChanged: ((Int) -> Unit)? = null,
     enabled: Boolean = true,
 ) {
@@ -631,33 +561,15 @@ internal fun AstroPanelContent(
             
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(R.string.label_sensor_preset), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                var sensorExpanded by remember { mutableStateOf(false) }
-                val selectedPreset = SENSOR_PRESETS.find { it.crop == cropFactor }
-                ExposedDropdownMenuBox(
-                    expanded = sensorExpanded,
-                    onExpandedChange = { if (enabled) sensorExpanded = it },
-                ) {
-                    OutlinedTextField(
-                        value = selectedPreset?.let { stringResource(it.labelRes) } ?: "$cropFactor×",
-                        onValueChange = {},
-                        readOnly = true,
-                        enabled = enabled,
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = sensorExpanded) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth(),
-                        textStyle = MaterialTheme.typography.bodyMedium,
-                    )
-                    ExposedDropdownMenu(
-                        expanded = sensorExpanded,
-                        onDismissRequest = { sensorExpanded = false },
-                    ) {
-                        SENSOR_PRESETS.forEach { preset ->
-                            DropdownMenuItem(
-                                text = { Text(stringResource(preset.labelRes)) },
-                                onClick = {
-                                    onCropFactorChanged(preset.crop)
-                                    sensorExpanded = false
-                                },
-                            )
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    SENSOR_PRESETS.forEachIndexed { index, preset ->
+                        SegmentedButton(
+                            selected = cropFactor == preset.crop,
+                            onClick = { if (enabled) onCropFactorChanged(preset.crop) },
+                            enabled = enabled,
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = SENSOR_PRESETS.size),
+                        ) {
+                            Text("${preset.shortLabel}\n${preset.crop}×", style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, maxLines = 2)
                         }
                     }
                 }
@@ -678,10 +590,39 @@ internal fun AstroPanelContent(
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(stringResource(R.string.label_capture_sequence), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             
+            if (onRuleChanged != null) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    FilterChip(
+                        selected = ruleDivisor == AppConfig.DEFAULT_RULE_DIVISOR,
+                        onClick = { onRuleChanged(AppConfig.DEFAULT_RULE_DIVISOR) },
+                        enabled = enabled,
+                        label = { Text(stringResource(R.string.chip_500_rule), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    FilterChip(
+                        selected = ruleDivisor == AppConfig.TIGHT_RULE_DIVISOR,
+                        onClick = { onRuleChanged(AppConfig.TIGHT_RULE_DIVISOR) },
+                        enabled = enabled,
+                        label = { Text(stringResource(R.string.chip_400_rule), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
             TimePicker(
                 totalMs = gapMs,
                 onChanged = { onGapMsChanged(it) },
                 label = stringResource(R.string.label_interval) + " (hh:mm:ss)",
+                enabled = enabled,
+            )
+
+            TimePicker(
+                totalMs = delayMs,
+                onChanged = { onDelayMsChanged(it) },
+                label = stringResource(R.string.label_start_delay) + " (hh:mm:ss)",
                 enabled = enabled,
             )
 
@@ -696,24 +637,17 @@ internal fun AstroPanelContent(
                     presets = emptyList(),
                 )
             }
-
-            TimePicker(
-                totalMs = delayMs,
-                onChanged = { onDelayMsChanged(it) },
-                label = stringResource(R.string.label_start_delay) + " (hh:mm:ss)",
-                enabled = enabled,
-            )
         }
     }
 }
 
-private data class SensorPreset(val labelRes: Int, val crop: Float)
+private data class SensorPreset(val labelRes: Int, val shortLabel: String, val crop: Float)
 
 private val SENSOR_PRESETS = listOf(
-    SensorPreset(R.string.preset_full_frame, 1.0f),
-    SensorPreset(R.string.preset_aps_c_canon, 1.6f),
-    SensorPreset(R.string.preset_aps_c_nikon_sony, 1.5f),
-    SensorPreset(R.string.preset_micro_43, 2.0f),
+    SensorPreset(R.string.preset_full_frame, "FF", 1.0f),
+    SensorPreset(R.string.preset_aps_c_canon, "APS-C", 1.6f),
+    SensorPreset(R.string.preset_aps_c_nikon_sony, "APS-C", 1.5f),
+    SensorPreset(R.string.preset_micro_43, "M4/3", 2.0f),
 )
 
 internal fun formatDuration(ms: Long): String {

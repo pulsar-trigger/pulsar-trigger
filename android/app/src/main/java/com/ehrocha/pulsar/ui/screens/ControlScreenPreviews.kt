@@ -30,6 +30,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -106,6 +107,7 @@ private fun AstroPanelPreview() {
                 onGapMsChanged = { gapMs = it },
                 onShotCountChanged = { shotCount = it },
                 onDelayMsChanged = { delayMs = it },
+                onRuleChanged = { ruleDivisor = it },
             )
         }
     }
@@ -134,18 +136,14 @@ private fun ManualPanelPreview() {
 
 // ── Default Actions Preview ─────────────────────────────────────────────────
 
-@Preview(showBackground = true, widthDp = 380, heightDp = 200, name = "Default Actions")
+@Preview(showBackground = true, widthDp = 380, heightDp = 150, name = "Default Actions")
 @Composable
 private fun DefaultActionsPreview() {
     MaterialTheme(colorScheme = DarkColorScheme) {
-        var shotCount by remember { mutableIntStateOf(50) }
         Surface(modifier = Modifier.fillMaxSize()) {
             DefaultActionsContent(
                 connected = true,
                 isRunning = false,
-                shotCount = shotCount,
-                maxShotCount = 999,
-                onShotCountChanged = { shotCount = it },
                 onStart = {},
                 onStop = {},
                 modifier = Modifier.padding(16.dp),
@@ -156,20 +154,14 @@ private fun DefaultActionsPreview() {
 
 // ── Astro Actions Preview ───────────────────────────────────────────────────
 
-@Preview(showBackground = true, widthDp = 380, heightDp = 240, name = "Astro Actions")
+@Preview(showBackground = true, widthDp = 380, heightDp = 150, name = "Astro Actions")
 @Composable
 private fun AstroActionsPreview() {
     MaterialTheme(colorScheme = DarkColorScheme) {
-        var shotCount by remember { mutableIntStateOf(100) }
-        var ruleDivisor by remember { mutableIntStateOf(AppConfig.DEFAULT_RULE_DIVISOR) }
         Surface(modifier = Modifier.fillMaxSize()) {
             AstroActionsContent(
                 connected = true,
                 isRunning = false,
-                ruleDivisor = ruleDivisor,
-                shotCount = shotCount,
-                onRuleChanged = { ruleDivisor = it },
-                onShotCountChanged = { shotCount = it },
                 onStart = {},
                 onStop = {},
                 modifier = Modifier.padding(16.dp),
@@ -706,9 +698,9 @@ private fun TimePickerPreview() {
     }
 }
 
-// ── IntStepperField Preview (dropdown presets) ──────────────────────────────
+// ── IntStepperField Preview (scrollable chip presets) ────────────────────────
 
-@Preview(showBackground = true, widthDp = 380, heightDp = 250, name = "IntStepper – Dropdown Presets")
+@Preview(showBackground = true, widthDp = 380, heightDp = 250, name = "IntStepper – Chip Presets")
 @Composable
 private fun IntStepperFieldPreview() {
     MaterialTheme(colorScheme = DarkColorScheme) {
@@ -729,45 +721,31 @@ private fun IntStepperFieldPreview() {
     }
 }
 
-// ── Sensor Preset Dropdown Preview ──────────────────────────────────────────
+// ── Sensor Preset Segmented Buttons Preview ─────────────────────────────────
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Preview(showBackground = true, widthDp = 380, heightDp = 200, name = "Sensor Preset – Dropdown")
+@Preview(showBackground = true, widthDp = 380, heightDp = 150, name = "Sensor Preset – Segmented")
 @Composable
-private fun SensorPresetDropdownPreview() {
+private fun SensorPresetSegmentedPreview() {
     MaterialTheme(colorScheme = DarkColorScheme) {
         var cropFactor by remember { mutableFloatStateOf(1.0f) }
+        data class PresetItem(val shortLabel: String, val crop: Float)
+        val presets = listOf(
+            PresetItem("FF", 1.0f),
+            PresetItem("APS-C", 1.6f),
+            PresetItem("APS-C", 1.5f),
+            PresetItem("M4/3", 2.0f),
+        )
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Sensor Preset", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                var expanded by remember { mutableStateOf(false) }
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = it },
-                ) {
-                    OutlinedTextField(
-                        value = when (cropFactor) {
-                            1.0f -> "Full Frame (1.0×)"
-                            1.6f -> "APS-C Canon (1.6×)"
-                            1.5f -> "APS-C Nikon/Sony (1.5×)"
-                            2.0f -> "Micro 4/3 (2.0×)"
-                            else -> "${cropFactor}×"
-                        },
-                        onValueChange = {},
-                        readOnly = true,
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                        modifier = Modifier.menuAnchor().fillMaxWidth(),
-                        textStyle = MaterialTheme.typography.bodyMedium,
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false },
-                    ) {
-                        listOf(1.0f to "Full Frame", 1.6f to "APS-C Canon", 1.5f to "APS-C Nikon/Sony", 2.0f to "Micro 4/3").forEach { (crop, name) ->
-                            DropdownMenuItem(
-                                text = { Text(name) },
-                                onClick = { cropFactor = crop; expanded = false },
-                            )
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    presets.forEachIndexed { index, preset ->
+                        SegmentedButton(
+                            selected = cropFactor == preset.crop,
+                            onClick = { cropFactor = preset.crop },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = presets.size),
+                        ) {
+                            Text("${preset.shortLabel}\n${preset.crop}×", style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, maxLines = 2)
                         }
                     }
                 }
