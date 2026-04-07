@@ -38,44 +38,15 @@ fun MainMenuScreen(
     vm: PulsarViewModel,
     onModeSelected: (TriggerMode) -> Unit,
     onModeSettingsSelected: (TriggerMode) -> Unit,
-    onSettingsSelected: () -> Unit,
     onCustomFlowSelected: () -> Unit = {},
     onDashboardSelected: () -> Unit = {},
     onPlannerSelected: () -> Unit = {},
 ) {
-    val deviceName by vm.deviceName.collectAsState()
-
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp),
-        ) {
-            Text(
-                text = deviceName.uppercase(),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp,
-                modifier = Modifier.weight(1f),
-            )
-            BatteryIndicator()
-            NightModeToggle()
-            Spacer(Modifier.width(4.dp))
-            IconButton(onClick = onSettingsSelected) {
-                Icon(
-                    Icons.Default.Settings,
-                    contentDescription = stringResource(R.string.menu_settings),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
 
         MenuCard(
             title = stringResource(R.string.mode_astro_dashboard),

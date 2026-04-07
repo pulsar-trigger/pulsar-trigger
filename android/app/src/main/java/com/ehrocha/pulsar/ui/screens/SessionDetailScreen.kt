@@ -104,8 +104,6 @@ fun SessionDetailScreen(
             }) {
                 Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.refresh))
             }
-            BatteryIndicator()
-            NightModeToggle()
         }
 
         if (state.loading && state.location == null) {

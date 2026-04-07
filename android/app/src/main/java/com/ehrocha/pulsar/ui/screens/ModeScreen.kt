@@ -71,9 +71,6 @@ fun ModeScreen(
                 else -> targetMode.name.replace('_', ' ')
             }
             Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.weight(1f))
-            BatteryIndicator()
-            NightModeToggle()
         }
 
         Spacer(Modifier.height(12.dp))
@@ -218,9 +215,6 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
             )
-            Spacer(Modifier.weight(1f))
-            BatteryIndicator()
-            NightModeToggle()
         }
 
         Spacer(Modifier.height(12.dp))
@@ -356,9 +350,6 @@ fun ModeSettingsScreen(
             }
             Spacer(Modifier.width(4.dp))
             Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.weight(1f))
-            BatteryIndicator()
-            NightModeToggle()
         }
 
         Spacer(Modifier.height(12.dp))

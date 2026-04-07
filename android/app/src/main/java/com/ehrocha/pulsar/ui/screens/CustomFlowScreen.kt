@@ -137,9 +137,6 @@ private fun FlowLibraryView(
             }
             Spacer(Modifier.width(4.dp))
             Text(stringResource(R.string.flow_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.weight(1f))
-            BatteryIndicator()
-            NightModeToggle()
         }
 
         Spacer(Modifier.height(12.dp))
@@ -380,9 +377,6 @@ private fun FlowEditorView(
                     )
                 }
             }
-            Spacer(Modifier.weight(1f))
-            BatteryIndicator()
-            NightModeToggle()
         }
 
         Spacer(Modifier.height(12.dp))

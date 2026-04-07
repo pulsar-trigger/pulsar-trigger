@@ -12,7 +12,9 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -20,11 +22,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Nightlight
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Surface
@@ -36,12 +41,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.ble.OtaState
 import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.update.AppUpdateState
+import com.ehrocha.pulsar.ui.components.BatteryIndicator
+import com.ehrocha.pulsar.ui.components.NightModeToggle
 import com.ehrocha.pulsar.ui.screens.MainMenuScreen
 import com.ehrocha.pulsar.ui.screens.ModeScreen
 import com.ehrocha.pulsar.ui.screens.ModeSettingsScreen
@@ -188,18 +197,49 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
     }
 
     val deviceStatus by vm.status.collectAsState()
+    val deviceName by vm.deviceName.collectAsState()
     CompositionLocalProvider(
         LocalDeviceStatus provides deviceStatus,
         LocalDeviceConnected provides connected,
     ) {
-    Box(Modifier.fillMaxSize()) {
+    Column(Modifier.fillMaxSize()) {
+        // ── Persistent top bar (hidden on Scan screen) ───────────────
+        if (currentScreen !is AppScreen.Scan) {
+            Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                ) {
+                    Text(
+                        text = deviceName.uppercase(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        modifier = Modifier.weight(1f),
+                    )
+                    BatteryIndicator()
+                    NightModeToggle()
+                    Spacer(Modifier.width(4.dp))
+                    IconButton(onClick = { currentScreen = AppScreen.Settings() }) {
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = stringResource(R.string.menu_settings),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+        }
+        // ── Screen content ───────────────────────────────────────────
+        Box(Modifier.fillMaxSize()) {
         when (val screen = currentScreen) {
             AppScreen.Scan -> ScanScreen(vm) { currentScreen = AppScreen.Menu }
             AppScreen.Menu -> MainMenuScreen(
                 vm = vm,
                 onModeSelected = { currentScreen = AppScreen.Mode(it) },
                 onModeSettingsSelected = { currentScreen = AppScreen.ModeSettings(it) },
-                onSettingsSelected = { currentScreen = AppScreen.Settings() },
                 onCustomFlowSelected = { currentScreen = AppScreen.CustomFlow },
                 onDashboardSelected = { currentScreen = AppScreen.Dashboard },
                 onPlannerSelected = { currentScreen = AppScreen.Planner },
@@ -297,6 +337,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                 )
             }
         }
+    }
     }
     }
 }

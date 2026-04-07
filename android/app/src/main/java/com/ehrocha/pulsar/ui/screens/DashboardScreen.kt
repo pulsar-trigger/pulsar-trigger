@@ -105,8 +105,6 @@ fun DashboardScreen(
             IconButton(onClick = { scope.launch { dashboardManager.refresh(state.selectedDate) } }) {
                 Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.refresh))
             }
-            BatteryIndicator()
-            NightModeToggle()
         }
 
         // ── Date selector chip ───────────────────────────────────────

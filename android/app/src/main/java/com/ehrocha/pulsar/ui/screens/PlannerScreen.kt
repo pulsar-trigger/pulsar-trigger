@@ -104,8 +104,6 @@ fun PlannerScreen(
             IconButton(onClick = { showAddEvent = true }) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.planner_add))
             }
-            BatteryIndicator()
-            NightModeToggle()
         }
 
         // ── Events list ──────────────────────────────────────────────
@@ -239,8 +237,6 @@ fun EventSessionsScreen(
             IconButton(onClick = { showAddSession = true }) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.session_add))
             }
-            BatteryIndicator()
-            NightModeToggle()
         }
 
         if (sessions.isEmpty()) {

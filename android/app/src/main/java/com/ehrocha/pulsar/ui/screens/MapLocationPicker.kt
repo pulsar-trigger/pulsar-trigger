@@ -110,8 +110,6 @@ fun MapLocationPicker(
                     Icon(Icons.Default.Check, contentDescription = stringResource(R.string.save))
                 }
             }
-            BatteryIndicator()
-            NightModeToggle()
         }
 
         // ── Selection info ───────────────────────────────────────────
