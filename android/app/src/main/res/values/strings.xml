@@ -340,6 +340,7 @@
     <string name="flow_state_idle">Idle</string>
     <string name="flow_state_error">Error</string>
     <string name="flow_shot_count">Shot %1$d of %2$d</string>
+    <string name="flow_total_time">Total: %1$s</string>
     <string name="flow_time_remaining_long">%1$dm %2$ds remaining</string>
     <string name="flow_time_remaining_short">%1$ds remaining</string>
     <string name="flow_waiting_for_user">Waiting for user</string>

@@ -50,6 +50,7 @@ import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 import java.text.DateFormat
 import java.util.Date
+import kotlinx.coroutines.delay
 
 private enum class FlowScreenState { LIBRARY, EDITOR }
 
@@ -318,15 +319,24 @@ private fun SavedFlowCard(
                 }
             }
 
-            // Step type summary chips
+            // Step flow summary with arrows
             if (flow.steps.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    flow.steps.take(6).forEach { step ->
+                    flow.steps.take(6).forEachIndexed { idx, step ->
                         val context = LocalContext.current
+                        if (idx > 0) {
+                            Icon(
+                                Icons.Default.ArrowForward,
+                                contentDescription = null,
+                                modifier = Modifier.size(12.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            )
+                        }
                         Surface(
                             shape = RoundedCornerShape(6.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant,
@@ -350,6 +360,12 @@ private fun SavedFlowCard(
                         }
                     }
                     if (flow.steps.size > 6) {
+                        Icon(
+                            Icons.Default.ArrowForward,
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        )
                         Text(
                             "+${flow.steps.size - 6}",
                             style = MaterialTheme.typography.labelSmall,
@@ -357,6 +373,25 @@ private fun SavedFlowCard(
                             modifier = Modifier.align(Alignment.CenterVertically),
                         )
                     }
+                }
+
+                // Total estimated time
+                val totalMs = flow.steps.sumOf { it.estimatedDurationMs() }
+                if (totalMs > 0) {
+                    Spacer(Modifier.height(4.dp))
+                    val totalSec = totalMs / 1000
+                    val h = totalSec / 3600
+                    val m = (totalSec % 3600) / 60
+                    val s = totalSec % 60
+                    val timeStr = when {
+                        h > 0 -> "%d:%02d:%02d".format(h, m, s)
+                        else -> "%d:%02d".format(m, s)
+                    }
+                    Text(
+                        stringResource(R.string.flow_total_time, timeStr),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }
@@ -736,7 +771,57 @@ private fun FlowStepCard(
             if (isCurrent && status != null && step.type != FlowStepType.PAUSE) {
                 Spacer(Modifier.height(8.dp))
 
-                // State label
+                // ── Local countdown: tick down from firmware baseline ──
+                var lastUpdateTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+                var lastRemainingMs by remember { mutableLongStateOf(status.timeRemainingMs) }
+                var liveRemainingMs by remember { mutableLongStateOf(status.timeRemainingMs) }
+
+                var phaseStartTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+                var lastState by remember { mutableStateOf(status.state) }
+
+                LaunchedEffect(status.timeRemainingMs, status.shotsTaken) {
+                    lastUpdateTime = System.currentTimeMillis()
+                    lastRemainingMs = status.timeRemainingMs
+                    liveRemainingMs = status.timeRemainingMs
+                }
+
+                LaunchedEffect(status.state) {
+                    if (status.state != lastState) {
+                        phaseStartTime = System.currentTimeMillis()
+                        lastState = status.state
+                    }
+                }
+
+                LaunchedEffect(lastUpdateTime) {
+                    while (true) {
+                        delay(100L)
+                        val elapsed = System.currentTimeMillis() - lastUpdateTime
+                        liveRemainingMs = (lastRemainingMs - elapsed).coerceAtLeast(0)
+                    }
+                }
+
+                // ── Per-phase countdown ──
+                val exposureMs = when (step.type) {
+                    FlowStepType.ASTRO -> {
+                        val expSec = step.ruleDivisor.toDouble() / (step.focalLength * step.cropFactor)
+                        (expSec * 1000).toLong()
+                    }
+                    else -> step.exposureMs
+                }
+                val gapMs = when (step.type) {
+                    FlowStepType.ASTRO -> step.gapMs
+                    else -> step.intervalMs - step.exposureMs
+                }
+                val cycleMs = exposureMs + gapMs
+                val phaseDurationMs = when (status.state) {
+                    DeviceState.RUNNING -> exposureMs
+                    DeviceState.WAITING -> gapMs
+                    else -> 0L
+                }
+                val phaseElapsed = System.currentTimeMillis() - phaseStartTime
+                val phaseRemainingMs = (phaseDurationMs - phaseElapsed).coerceAtLeast(0)
+
+                // State label + phase countdown
                 val stateLabel = when (status.state) {
                     DeviceState.RUNNING -> stringResource(R.string.flow_state_exposing)
                     DeviceState.WAITING -> stringResource(R.string.flow_state_waiting)
@@ -750,41 +835,70 @@ private fun FlowStepCard(
                     DeviceState.ERROR -> Color(0xFFFF1744)
                 }
 
+                // Shot display: +1 during exposure so user sees "working on shot N"
+                val displayShots = when (status.state) {
+                    DeviceState.RUNNING -> status.shotsTaken + 1
+                    else -> status.shotsTaken
+                }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // State badge
+                    // State badge with phase countdown
                     Surface(
                         shape = RoundedCornerShape(6.dp),
                         color = stateColor.copy(alpha = 0.15f),
                     ) {
-                        Text(
-                            stateLabel,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = stateColor,
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                        )
+                        ) {
+                            Text(
+                                stateLabel,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = stateColor,
+                            )
+                            if (phaseDurationMs > 0 && phaseRemainingMs > 0) {
+                                Spacer(Modifier.width(4.dp))
+                                val pSec = phaseRemainingMs / 1000
+                                Text(
+                                    "%d:%02d".format(pSec / 60, pSec % 60),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = stateColor,
+                                )
+                            }
+                        }
                     }
 
                     Spacer(Modifier.weight(1f))
 
-                    // Shot counter
+                    // Shot counter (starts at 1)
                     Text(
-                        stringResource(R.string.flow_shot_count, status.shotsTaken, step.shotCount),
+                        stringResource(R.string.flow_shot_count, displayShots, step.shotCount),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                 }
 
-                // Progress bar
+                // Smooth progress bar
                 val targetCount = step.shotCount
                 if (targetCount > 0) {
                     Spacer(Modifier.height(6.dp))
+                    val cycleElapsedMs = (System.currentTimeMillis() - lastUpdateTime).let { elapsed ->
+                        (lastRemainingMs - (lastRemainingMs - elapsed).coerceAtLeast(0))
+                    }
+                    val fractionalCycle = if (cycleMs > 0) cycleElapsedMs.toFloat() / cycleMs else 0f
+                    val rawProgress = (status.shotsTaken.toFloat() + fractionalCycle.coerceIn(0f, 1f)) / targetCount
+                    val smoothProgress by animateFloatAsState(
+                        targetValue = rawProgress.coerceIn(0f, 1f),
+                        animationSpec = tween(durationMillis = 300),
+                        label = "flowStepProgress",
+                    )
                     LinearProgressIndicator(
-                        progress = { (status.shotsTaken.toFloat() / targetCount).coerceIn(0f, 1f) },
+                        progress = { smoothProgress },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(4.dp),
@@ -793,20 +907,22 @@ private fun FlowStepCard(
                     )
                 }
 
-                // Time remaining
-                if (status.timeRemainingMs > 0) {
+                // Time remaining + finish time
+                if (liveRemainingMs > 0) {
                     Spacer(Modifier.height(4.dp))
-                    val secs = status.timeRemainingMs / 1000
-                    val timeStr = if (secs >= 60) stringResource(R.string.flow_time_remaining_long, secs / 60, secs % 60)
-                                  else stringResource(R.string.flow_time_remaining_short, secs)
+                    val totalSec = liveRemainingMs / 1000
+                    val timeStr = if (totalSec >= 60)
+                        stringResource(R.string.flow_time_remaining_long, totalSec / 60, totalSec % 60)
+                    else
+                        stringResource(R.string.flow_time_remaining_short, totalSec)
                     Text(
                         timeStr,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
                     )
-                    val finishTime = remember(status.timeRemainingMs) {
+                    val finishTime = remember(liveRemainingMs / 1000) {
                         DateFormat.getTimeInstance(DateFormat.SHORT)
-                            .format(Date(System.currentTimeMillis() + status.timeRemainingMs))
+                            .format(Date(System.currentTimeMillis() + liveRemainingMs))
                     }
                     Text(
                         stringResource(R.string.finishes_at, finishTime),
