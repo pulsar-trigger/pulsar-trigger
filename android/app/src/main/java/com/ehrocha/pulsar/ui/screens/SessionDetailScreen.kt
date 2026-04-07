@@ -321,7 +321,7 @@ fun SessionDetailScreen(
                             else stringResource(R.string.verdict_moon_bright),
                             moon.goodForAstro,
                         )
-                    } ?: if (!state.loading) UnknownVerdictRow("🌑")
+                    } ?: if (!state.loading) UnknownVerdictRow("🌑") else Unit
 
                     // Weather
                     state.weather?.let { weather ->
@@ -337,7 +337,7 @@ fun SessionDetailScreen(
                             },
                             good,
                         )
-                    } ?: if (!state.loading) UnknownVerdictRow("☁️")
+                    } ?: if (!state.loading) UnknownVerdictRow("☁️") else Unit
 
                     // Milky Way
                     state.milkyWay?.let { mw ->
@@ -347,7 +347,7 @@ fun SessionDetailScreen(
                             else stringResource(R.string.verdict_mw_not_visible),
                             mw.visible,
                         )
-                    } ?: if (!state.loading) UnknownVerdictRow("🌌")
+                    } ?: if (!state.loading) UnknownVerdictRow("🌌") else Unit
 
                     // Bortle
                     state.bortle?.let { b ->
@@ -357,7 +357,7 @@ fun SessionDetailScreen(
                             stringResource(R.string.verdict_bortle, bInt),
                             bInt <= 4,
                         )
-                    } ?: if (!state.loading) UnknownVerdictRow("💡")
+                    } ?: if (!state.loading) UnknownVerdictRow("💡") else Unit
 
                     // Best photo windows
                     if (state.bestWindows.isNotEmpty()) {

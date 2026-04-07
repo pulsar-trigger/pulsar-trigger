@@ -540,7 +540,7 @@ internal fun AstroPanel(vm: PulsarViewModel, enabled: Boolean = true) {
     )
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun AstroPanelContent(
     modifier: Modifier = Modifier,

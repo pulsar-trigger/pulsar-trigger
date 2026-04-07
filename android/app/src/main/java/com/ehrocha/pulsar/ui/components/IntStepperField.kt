@@ -30,6 +30,7 @@ import kotlin.math.roundToInt
  *               are computed from [min]..[max].
  * @param presetLabel optional transform for preset chip text (e.g. adding "mm" suffix).
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IntStepperField(
     label: String,
