@@ -56,7 +56,9 @@ import com.ehrocha.pulsar.ui.screens.SessionDetailScreen
 import com.ehrocha.pulsar.ui.screens.MapLocationPicker
 import com.ehrocha.pulsar.ui.screens.MapPickerResult
 import com.ehrocha.pulsar.ui.theme.DarkColorScheme
+import com.ehrocha.pulsar.ui.theme.LightColorScheme
 import com.ehrocha.pulsar.ui.theme.RedLightColorScheme
+import com.ehrocha.pulsar.ui.theme.ThemeMode
 import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 import com.ehrocha.pulsar.ui.theme.LocalNightMode
@@ -74,8 +76,12 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val nightMode = remember { mutableStateOf(false) }
-            val colorScheme = if (nightMode.value) RedLightColorScheme else DarkColorScheme
+            val nightMode = remember { mutableStateOf(ThemeMode.Dark) }
+            val colorScheme = when (nightMode.value) {
+                ThemeMode.Light -> LightColorScheme
+                ThemeMode.Dark -> DarkColorScheme
+                ThemeMode.RedLight -> RedLightColorScheme
+            }
             CompositionLocalProvider(LocalNightMode provides nightMode) {
             MaterialTheme(colorScheme = colorScheme) {
                 Surface(

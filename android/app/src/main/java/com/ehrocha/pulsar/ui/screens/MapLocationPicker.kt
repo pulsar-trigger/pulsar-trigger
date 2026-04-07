@@ -6,7 +6,6 @@
 package com.ehrocha.pulsar.ui.screens
 
 import android.location.Geocoder
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -27,6 +26,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ui.components.BatteryIndicator
 import com.ehrocha.pulsar.ui.components.NightModeToggle
+import com.ehrocha.pulsar.ui.theme.LocalNightMode
+import com.ehrocha.pulsar.ui.theme.ThemeMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -51,7 +52,7 @@ fun MapLocationPicker(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val isDark = isSystemInDarkTheme()
+    val isDark = LocalNightMode.current.value != ThemeMode.Light
 
     var selectedLat by remember { mutableDoubleStateOf(initialLat) }
     var selectedLon by remember { mutableDoubleStateOf(initialLon) }

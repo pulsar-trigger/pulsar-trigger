@@ -29,6 +29,7 @@ import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.ble.StatusFrame
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 import com.ehrocha.pulsar.ui.theme.LocalNightMode
+import com.ehrocha.pulsar.ui.theme.ThemeMode
 
 @Composable
 fun BatteryIndicator() {
@@ -73,12 +74,26 @@ fun BatteryIndicator() {
 @Composable
 fun NightModeToggle() {
     val nightMode = LocalNightMode.current
-    IconButton(onClick = { nightMode.value = !nightMode.value }) {
+    IconButton(onClick = {
+        nightMode.value = when (nightMode.value) {
+            ThemeMode.Light -> ThemeMode.Dark
+            ThemeMode.Dark -> ThemeMode.RedLight
+            ThemeMode.RedLight -> ThemeMode.Light
+        }
+    }) {
         Icon(
-            if (nightMode.value) Icons.Default.LightMode else Icons.Default.Nightlight,
+            when (nightMode.value) {
+                ThemeMode.Light -> Icons.Default.LightMode
+                ThemeMode.Dark -> Icons.Default.Nightlight
+                ThemeMode.RedLight -> Icons.Default.Nightlight
+            },
             contentDescription = stringResource(R.string.night_mode_toggle),
             modifier = Modifier.size(20.dp),
-            tint = if (nightMode.value) Color(0xFFCC4444) else MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = when (nightMode.value) {
+                ThemeMode.Light -> MaterialTheme.colorScheme.onSurfaceVariant
+                ThemeMode.Dark -> MaterialTheme.colorScheme.onSurfaceVariant
+                ThemeMode.RedLight -> Color(0xFFCC4444)
+            },
         )
     }
 }

@@ -6,16 +6,31 @@
 package com.ehrocha.pulsar.ui.theme
 
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
 import com.ehrocha.pulsar.ble.StatusFrame
+
+enum class ThemeMode { Light, Dark, RedLight }
 
 val PulsarViolet = Color(0xFFB15CFF)
 val PulsarDark = Color(0xFF1C1B1F)
 val PulsarSurface = Color(0xFF252429)
 val PulsarOnSurface = Color(0xFFE6E1E5)
 val PulsarSecondary = Color(0xFF353439)
+
+val LightColorScheme = lightColorScheme(
+    primary = PulsarViolet,
+    onPrimary = Color.White,
+    background = Color(0xFFFFFBFE),
+    surface = Color(0xFFFFFBFE),
+    onBackground = Color(0xFF1C1B1F),
+    onSurface = Color(0xFF1C1B1F),
+    surfaceVariant = Color(0xFFE7E0EC),
+    onSurfaceVariant = Color(0xFF49454F),
+    outline = Color(0xFF79747E),
+)
 
 val DarkColorScheme = darkColorScheme(
     primary = PulsarViolet,
@@ -53,8 +68,8 @@ val RedLightColorScheme = darkColorScheme(
     onSecondaryContainer = Color(0xFFCC4444),
 )
 
-/** Global flag for night mode — survives recomposition. */
-val LocalNightMode = compositionLocalOf { mutableStateOf(false) }
+/** Global theme mode — survives recomposition. */
+val LocalNightMode = compositionLocalOf { mutableStateOf(ThemeMode.Dark) }
 
 /** Global device status — available to every composable without parameter threading. */
 val LocalDeviceStatus = compositionLocalOf<StatusFrame?> { null }
