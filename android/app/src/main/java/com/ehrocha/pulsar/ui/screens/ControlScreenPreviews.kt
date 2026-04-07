@@ -668,3 +668,110 @@ fun ManualSettingsPreview() {
         }
     }
 }
+
+// ── ScrollPicker Preview (no edit icon, no unit label) ──────────────────────
+
+@Preview(showBackground = true, widthDp = 200, heightDp = 200, name = "ScrollPicker – Clean")
+@Composable
+private fun ScrollPickerPreview() {
+    MaterialTheme(colorScheme = DarkColorScheme) {
+        var value by remember { mutableIntStateOf(15) }
+        Surface(modifier = Modifier.fillMaxSize()) {
+            Box(contentAlignment = Alignment.Center) {
+                com.ehrocha.pulsar.ui.components.ScrollPicker(
+                    value = value,
+                    range = 0..59,
+                    onValueChange = { value = it },
+                )
+            }
+        }
+    }
+}
+
+// ── TimePicker Preview (hh:mm:ss embedded in title) ─────────────────────────
+
+@Preview(showBackground = true, widthDp = 380, heightDp = 200, name = "TimePicker – Labelled")
+@Composable
+private fun TimePickerPreview() {
+    MaterialTheme(colorScheme = DarkColorScheme) {
+        var ms by remember { mutableLongStateOf(7_500L) }
+        Surface(modifier = Modifier.fillMaxSize()) {
+            com.ehrocha.pulsar.ui.components.TimePicker(
+                totalMs = ms,
+                onChanged = { ms = it },
+                label = "Exposure (hh:mm:ss)",
+                modifier = Modifier.padding(16.dp),
+            )
+        }
+    }
+}
+
+// ── IntStepperField Preview (dropdown presets) ──────────────────────────────
+
+@Preview(showBackground = true, widthDp = 380, heightDp = 250, name = "IntStepper – Dropdown Presets")
+@Composable
+private fun IntStepperFieldPreview() {
+    MaterialTheme(colorScheme = DarkColorScheme) {
+        var focal by remember { mutableIntStateOf(24) }
+        Surface(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                com.ehrocha.pulsar.ui.components.IntStepperField(
+                    label = "Focal Length",
+                    value = focal,
+                    onValueChange = { focal = it },
+                    min = AppConfig.MIN_FOCAL_LENGTH,
+                    max = AppConfig.MAX_FOCAL_LENGTH,
+                    presets = AppConfig.FOCAL_LENGTH_PRESETS,
+                    presetLabel = { "${it}mm" },
+                )
+            }
+        }
+    }
+}
+
+// ── Sensor Preset Dropdown Preview ──────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true, widthDp = 380, heightDp = 200, name = "Sensor Preset – Dropdown")
+@Composable
+private fun SensorPresetDropdownPreview() {
+    MaterialTheme(colorScheme = DarkColorScheme) {
+        var cropFactor by remember { mutableFloatStateOf(1.0f) }
+        Surface(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Sensor Preset", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                var expanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = it },
+                ) {
+                    OutlinedTextField(
+                        value = when (cropFactor) {
+                            1.0f -> "Full Frame (1.0×)"
+                            1.6f -> "APS-C Canon (1.6×)"
+                            1.5f -> "APS-C Nikon/Sony (1.5×)"
+                            2.0f -> "Micro 4/3 (2.0×)"
+                            else -> "${cropFactor}×"
+                        },
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        textStyle = MaterialTheme.typography.bodyMedium,
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                    ) {
+                        listOf(1.0f to "Full Frame", 1.6f to "APS-C Canon", 1.5f to "APS-C Nikon/Sony", 2.0f to "Micro 4/3").forEach { (crop, name) ->
+                            DropdownMenuItem(
+                                text = { Text(name) },
+                                onClick = { cropFactor = crop; expanded = false },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
