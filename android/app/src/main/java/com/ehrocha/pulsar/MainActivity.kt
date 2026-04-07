@@ -50,6 +50,7 @@ import com.ehrocha.pulsar.ble.OtaState
 import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.update.AppUpdateState
 import com.ehrocha.pulsar.ui.components.BatteryIndicator
+import com.ehrocha.pulsar.ui.components.SignalStrengthIndicator
 import com.ehrocha.pulsar.ui.components.NightModeToggle
 import com.ehrocha.pulsar.ui.screens.MainMenuScreen
 import com.ehrocha.pulsar.ui.screens.ModeScreen
@@ -69,6 +70,7 @@ import com.ehrocha.pulsar.ui.theme.LightColorScheme
 import com.ehrocha.pulsar.ui.theme.RedLightColorScheme
 import com.ehrocha.pulsar.ui.theme.ThemeMode
 import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
+import com.ehrocha.pulsar.ui.theme.LocalDeviceRssi
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 import com.ehrocha.pulsar.ui.theme.LocalNightMode
 import com.ehrocha.pulsar.ui.theme.LocalNightModeLocked
@@ -176,9 +178,11 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
 
     val deviceStatus by vm.status.collectAsState()
     val deviceName by vm.deviceName.collectAsState()
+    val deviceRssi by vm.rssi.collectAsState()
     CompositionLocalProvider(
         LocalDeviceStatus provides deviceStatus,
         LocalDeviceConnected provides connected,
+        LocalDeviceRssi provides deviceRssi,
     ) {
     Column(Modifier.fillMaxSize()) {
         // ── Persistent top bar (hidden on Scan screen) ───────────────
@@ -198,6 +202,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                         modifier = Modifier.weight(1f),
                     )
                     BatteryIndicator()
+                    SignalStrengthIndicator()
                     NightModeToggle()
                     Spacer(Modifier.width(4.dp))
                     val hasAnyUpdate = hasFwUpdate || hasAppUpdate

@@ -48,6 +48,8 @@ import com.ehrocha.pulsar.ui.components.BatteryIndicator
 import com.ehrocha.pulsar.ui.components.NightModeToggle
 import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
+import java.text.DateFormat
+import java.util.Date
 
 private enum class FlowScreenState { LIBRARY, EDITOR }
 
@@ -802,6 +804,15 @@ private fun FlowStepCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
                     )
+                    val finishTime = remember(status.timeRemainingMs) {
+                        DateFormat.getTimeInstance(DateFormat.SHORT)
+                            .format(Date(System.currentTimeMillis() + status.timeRemainingMs))
+                    }
+                    Text(
+                        stringResource(R.string.finishes_at, finishTime),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.5f),
+                    )
                 }
             }
 
@@ -1007,6 +1018,28 @@ private fun PauseStepEditor(step: FlowStep, onChange: (FlowStep) -> Unit) {
         modifier = Modifier.fillMaxWidth(),
         supportingText = { Text(stringResource(R.string.pause_message_hint)) },
     )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                stringResource(R.string.label_wake_on_pause),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                stringResource(R.string.wake_on_pause_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(
+            checked = step.wakeOnPause,
+            onCheckedChange = { onChange(step.copy(wakeOnPause = it)) },
+        )
+    }
 }
 
 // ─── Save Flow dialog ────────────────────────────────────────────────────────

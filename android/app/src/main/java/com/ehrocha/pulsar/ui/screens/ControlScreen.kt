@@ -437,14 +437,14 @@ internal fun IntervalometerPanelContent(
             TimePicker(
                 totalMs = exposureMs,
                 onChanged = { onExposureChanged(it) },
-                label = stringResource(R.string.label_exposure),
+                label = stringResource(R.string.label_exposure) + " (hh:mm:ss)",
                 enabled = enabled,
             )
 
             TimePicker(
                 totalMs = intervalMs,
                 onChanged = { onIntervalChanged(it) },
-                label = stringResource(R.string.label_interval),
+                label = stringResource(R.string.label_interval) + " (hh:mm:ss)",
                 enabled = enabled,
             )
 
@@ -463,7 +463,7 @@ internal fun IntervalometerPanelContent(
             TimePicker(
                 totalMs = delayMs,
                 onChanged = { onDelayChanged(it) },
-                label = stringResource(R.string.label_start_delay),
+                label = stringResource(R.string.label_start_delay) + " (hh:mm:ss)",
                 enabled = enabled,
             )
         }
@@ -569,18 +569,6 @@ internal fun AstroPanelContent(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                tonalElevation = 2.dp,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    stringResource(R.string.panel_astro_tip),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(12.dp),
-                )
-            }
         }
 
         Surface(
@@ -643,17 +631,34 @@ internal fun AstroPanelContent(
             
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(R.string.label_sensor_preset), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                var sensorExpanded by remember { mutableStateOf(false) }
+                val selectedPreset = SENSOR_PRESETS.find { it.crop == cropFactor }
+                ExposedDropdownMenuBox(
+                    expanded = sensorExpanded,
+                    onExpandedChange = { if (enabled) sensorExpanded = it },
                 ) {
-                    SENSOR_PRESETS.forEach { preset ->
-                        FilterChip(
-                            selected = cropFactor == preset.crop,
-                            onClick = { if (enabled) onCropFactorChanged(preset.crop) },
-                            enabled = enabled,
-                            label = { Text(stringResource(preset.labelRes), style = MaterialTheme.typography.labelMedium) },
-                        )
+                    OutlinedTextField(
+                        value = selectedPreset?.let { stringResource(it.labelRes) } ?: "$cropFactor×",
+                        onValueChange = {},
+                        readOnly = true,
+                        enabled = enabled,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = sensorExpanded) },
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        textStyle = MaterialTheme.typography.bodyMedium,
+                    )
+                    ExposedDropdownMenu(
+                        expanded = sensorExpanded,
+                        onDismissRequest = { sensorExpanded = false },
+                    ) {
+                        SENSOR_PRESETS.forEach { preset ->
+                            DropdownMenuItem(
+                                text = { Text(stringResource(preset.labelRes)) },
+                                onClick = {
+                                    onCropFactorChanged(preset.crop)
+                                    sensorExpanded = false
+                                },
+                            )
+                        }
                     }
                 }
             }
@@ -676,7 +681,7 @@ internal fun AstroPanelContent(
             TimePicker(
                 totalMs = gapMs,
                 onChanged = { onGapMsChanged(it) },
-                label = stringResource(R.string.label_interval),
+                label = stringResource(R.string.label_interval) + " (hh:mm:ss)",
                 enabled = enabled,
             )
 
@@ -695,7 +700,7 @@ internal fun AstroPanelContent(
             TimePicker(
                 totalMs = delayMs,
                 onChanged = { onDelayMsChanged(it) },
-                label = stringResource(R.string.label_start_delay),
+                label = stringResource(R.string.label_start_delay) + " (hh:mm:ss)",
                 enabled = enabled,
             )
         }

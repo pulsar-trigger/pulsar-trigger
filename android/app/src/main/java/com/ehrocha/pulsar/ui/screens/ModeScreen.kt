@@ -40,6 +40,8 @@ import com.ehrocha.pulsar.ui.components.NightModeToggle
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 import com.ehrocha.pulsar.ble.StatusFrame
 import androidx.compose.ui.tooling.preview.Preview
+import java.text.DateFormat
+import java.util.Date
 import com.ehrocha.pulsar.ui.theme.DarkColorScheme
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.material.icons.filled.Lock
@@ -663,6 +665,15 @@ private fun RunningStatusContent(
                 text = stringResource(R.string.status_remaining),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            val finishTime = remember(liveRemainingMs) {
+                DateFormat.getTimeInstance(DateFormat.SHORT)
+                    .format(Date(System.currentTimeMillis() + liveRemainingMs))
+            }
+            Text(
+                text = stringResource(R.string.finishes_at, finishTime),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
             )
         }
     }

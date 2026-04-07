@@ -154,6 +154,20 @@ object AppConfig {
     /** Delay between reconnection attempts (ms). */
     const val BLE_RETRY_DELAY_MS = 200
 
+    /** How often the app polls BLE RSSI while connected (ms). */
+    const val BLE_RSSI_POLL_INTERVAL_MS = 2_000L
+
+    /** RSSI value (dBm) at or above which the signal is considered strong. */
+    const val BLE_RSSI_GOOD = -60
+
+    /** RSSI value (dBm) at or below which the signal is considered weak and
+     *  a haptic warning fires. Below this the connection may drop soon. */
+    const val BLE_RSSI_WEAK = -80
+
+    /** Minimum interval between proximity-warning vibrations (ms). Prevents
+     *  continuous buzzing when hovering near the threshold. */
+    const val BLE_RSSI_VIBRATE_COOLDOWN_MS = 10_000L
+
     /** Throttle between consecutive BLE writes during OTA upload (ms).
      *  Prevents flooding the device's receive buffer. */
     const val OTA_CHUNK_DELAY_MS = 10L

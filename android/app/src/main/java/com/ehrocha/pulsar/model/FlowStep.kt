@@ -33,6 +33,8 @@ data class FlowStep(
     val gapMs: Long = AppConfig.DEFAULT_ASTRO_GAP_MS,
     // Pause
     val pauseLabel: String = "Adjust camera settings",
+    /** When true, the screen wakes and vibrates when this pause step is reached. */
+    val wakeOnPause: Boolean = true,
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
@@ -46,6 +48,7 @@ data class FlowStep(
         put("ruleDivisor", ruleDivisor)
         put("gapMs", gapMs)
         put("pauseLabel", pauseLabel)
+        put("wakeOnPause", wakeOnPause)
     }
 
     companion object {
@@ -62,6 +65,7 @@ data class FlowStep(
             ruleDivisor = json.optInt("ruleDivisor", AppConfig.DEFAULT_RULE_DIVISOR),
             gapMs = json.optLong("gapMs", AppConfig.DEFAULT_ASTRO_GAP_MS),
             pauseLabel = json.optString("pauseLabel", "Adjust camera settings"),
+            wakeOnPause = json.optBoolean("wakeOnPause", true),
         )
 
         fun serializeList(steps: List<FlowStep>): String {

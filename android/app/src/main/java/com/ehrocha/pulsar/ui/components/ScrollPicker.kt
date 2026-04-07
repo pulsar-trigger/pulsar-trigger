@@ -10,7 +10,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
@@ -91,24 +90,12 @@ fun ScrollPicker(
                 )
                 .clickable(enabled = enabled) { showNumPad = true },
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                Text(
-                    text = format(value),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(Modifier.width(2.dp))
-                Icon(
-                    Icons.Default.Edit,
-                    contentDescription = null,
-                    modifier = Modifier.size(12.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                )
-            }
+            Text(
+                text = format(value),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
+                textAlign = TextAlign.Center,
+            )
         }
 
         Spacer(Modifier.height(2.dp))

@@ -79,3 +79,6 @@ val LocalDeviceStatus = compositionLocalOf<StatusFrame?> { null }
 
 /** Global connection flag — true when a BLE device is connected. */
 val LocalDeviceConnected = compositionLocalOf { false }
+
+/** Global BLE RSSI value — null when not connected or not yet polled. */
+val LocalDeviceRssi = compositionLocalOf<Int?> { null }

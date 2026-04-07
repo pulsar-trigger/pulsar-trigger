@@ -10,6 +10,7 @@ import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import no.nordicsemi.android.ble.BleManager
@@ -52,6 +53,12 @@ class PulsarBleManager(context: Context) : BleManager(context) {
 
     private val _mtu = MutableStateFlow(AppConfig.BLE_DEFAULT_MTU)  // default BLE MTU
     val mtu: StateFlow<Int> = _mtu
+
+    private val _rssi = MutableStateFlow<Int?>(null)
+    val rssi: StateFlow<Int?> = _rssi
+
+    private val rssiScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private var rssiJob: Job? = null
 
     override fun isRequiredServiceSupported(gatt: BluetoothGatt): Boolean {
         val svc = gatt.getService(PulsarUuids.SERVICE) ?: return false
@@ -105,6 +112,17 @@ class PulsarBleManager(context: Context) : BleManager(context) {
 
         sendCommand(CommandBuilder.statusRequest())
         Log.i(TAG, "Initialized — notifications enabled, status requested")
+
+        // Start periodic RSSI polling
+        rssiJob?.cancel()
+        rssiJob = rssiScope.launch {
+            while (isActive) {
+                readRssi().with { _, rssiValue ->
+                    _rssi.value = rssiValue
+                }.enqueue()
+                delay(AppConfig.BLE_RSSI_POLL_INTERVAL_MS)
+            }
+        }
     }
 
     override fun onServicesInvalidated() {
@@ -113,6 +131,8 @@ class PulsarBleManager(context: Context) : BleManager(context) {
         otaCtrlChar = null
         otaDataChar = null
         _connectionState.value = false
+        rssiJob?.cancel()
+        _rssi.value = null
     }
 
     fun sendCommand(packet: ByteArray) {

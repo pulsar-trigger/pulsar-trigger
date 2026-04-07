@@ -55,7 +55,6 @@ fun TimePicker(
                 value = hours,
                 range = 0..maxHours,
                 onValueChange = { onChanged(recompose(h = it)) },
-                label = "h",
                 enabled = enabled,
                 modifier = Modifier.weight(1f),
             )
@@ -64,7 +63,6 @@ fun TimePicker(
                 value = minutes,
                 range = 0..59,
                 onValueChange = { onChanged(recompose(m = it)) },
-                label = "m",
                 enabled = enabled,
                 modifier = Modifier.weight(1f),
             )
@@ -73,7 +71,6 @@ fun TimePicker(
                 value = seconds,
                 range = 0..59,
                 onValueChange = { onChanged(recompose(s = it)) },
-                label = "s",
                 enabled = enabled,
                 modifier = Modifier.weight(1f),
             )
@@ -83,7 +80,6 @@ fun TimePicker(
                     value = millis,
                     range = 0..99,
                     onValueChange = { onChanged(recompose(ms = it)) },
-                    label = "ms",
                     enabled = enabled,
                     format = { "%02d".format(it) },
                     modifier = Modifier.weight(1f),
@@ -99,6 +95,6 @@ private fun Separator() {
         text = ":",
         style = MaterialTheme.typography.titleLarge,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 2.dp).padding(top = 14.dp),
+        modifier = Modifier.padding(horizontal = 2.dp),
     )
 }

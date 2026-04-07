@@ -55,6 +55,7 @@ fun LiveStatusPanelPreview() {
                 ),
                 currentMode = TriggerMode.INTERVALOMETER,
                 deviceName = "Pulsar-Duza",
+                rssi = -45,  // strong signal
             )
 
             Spacer(Modifier.height(12.dp))
@@ -72,6 +73,7 @@ fun LiveStatusPanelPreview() {
                 ),
                 currentMode = TriggerMode.INTERVALOMETER,
                 deviceName = "Pulsar-Duza",
+                rssi = -70,  // medium signal
             )
 
             Spacer(Modifier.height(12.dp))
@@ -106,6 +108,7 @@ fun LiveStatusPanelPreview() {
                 ),
                 currentMode = TriggerMode.INTERVALOMETER,
                 deviceName = "Pulsar",
+                rssi = -88,  // weak signal
             )
         }
     }

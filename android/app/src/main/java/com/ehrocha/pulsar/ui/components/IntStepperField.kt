@@ -7,7 +7,6 @@ package com.ehrocha.pulsar.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -31,7 +30,6 @@ import kotlin.math.roundToInt
  *               are computed from [min]..[max].
  * @param presetLabel optional transform for preset chip text (e.g. adding "mm" suffix).
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun IntStepperField(
     label: String,
@@ -109,16 +107,35 @@ fun IntStepperField(
             }
         }
 
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            resolvedPresets.forEach { preset ->
-                SuggestionChip(
-                    onClick = { if (enabled) onValueChange(preset) },
-                    label = { Text(presetLabel(preset), style = MaterialTheme.typography.labelSmall) },
+        if (resolvedPresets.isNotEmpty()) {
+            var expanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { if (enabled) expanded = it },
+            ) {
+                OutlinedTextField(
+                    value = presetLabel(value),
+                    onValueChange = {},
+                    readOnly = true,
                     enabled = enabled,
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    textStyle = MaterialTheme.typography.bodyMedium,
                 )
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                ) {
+                    resolvedPresets.forEach { preset ->
+                        DropdownMenuItem(
+                            text = { Text(presetLabel(preset)) },
+                            onClick = {
+                                onValueChange(preset)
+                                expanded = false
+                            },
+                        )
+                    }
+                }
             }
         }
     }

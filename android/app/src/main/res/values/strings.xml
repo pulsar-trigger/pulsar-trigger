@@ -220,6 +220,8 @@
     <string name="state_waiting">Waiting</string>
     <string name="status_of_shots">of %1$d shots</string>
     <string name="status_remaining">remaining</string>
+    <string name="finishes_at">Finishes at %1$s</string>
+    <string name="stat_finishes_at">Finishes at</string>
 
     <!-- ModeSettingsScreen -->
     <string name="settings_intervalometer">Intervalometer Settings</string>
@@ -334,6 +336,8 @@
     <string name="flow_waiting_for_user">Waiting for user</string>
     <string name="label_pause_message">Pause message</string>
     <string name="pause_message_hint">Shown when flow reaches this step</string>
+    <string name="label_wake_on_pause">Wake screen on pause</string>
+    <string name="wake_on_pause_hint">Turn on screen and vibrate when this pause step is reached</string>
     <string name="dialog_save_flow">Save Flow</string>
     <string name="label_flow_name">Flow name</string>
     <string name="flow_name_exists">A flow with this name already exists and will be replaced.</string>

@@ -27,9 +27,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.ble.StatusFrame
 import com.ehrocha.pulsar.ble.TriggerMode
+import java.text.DateFormat
+import java.util.Date
 
 @Composable
 fun LiveStatusPanel(
@@ -37,6 +40,7 @@ fun LiveStatusPanel(
     status: StatusFrame?,
     currentMode: TriggerMode,
     deviceName: String = "Pulsar",
+    rssi: Int? = null,
     modifier: Modifier = Modifier,
 ) {
     val stateColor by animateColorAsState(
@@ -101,6 +105,35 @@ fun LiveStatusPanel(
 
                 // Battery Badge
                 if (status != null) {
+                    // Signal strength mini-bars
+                    if (connected && rssi != null) {
+                        val bars = when {
+                            rssi >= AppConfig.BLE_RSSI_GOOD -> 3
+                            rssi >= AppConfig.BLE_RSSI_WEAK -> 2
+                            else -> 1
+                        }
+                        val sigColor = when (bars) {
+                            3 -> Color(0xFF4CAF50)
+                            2 -> Color(0xFFFFA726)
+                            else -> Color(0xFFFF1744)
+                        }
+                        Row(
+                            verticalAlignment = Alignment.Bottom,
+                            horizontalArrangement = Arrangement.spacedBy(1.5.dp),
+                            modifier = Modifier.padding(end = 6.dp),
+                        ) {
+                            listOf(5.dp, 8.dp, 11.dp).forEachIndexed { i, h ->
+                                Box(
+                                    Modifier
+                                        .width(3.dp)
+                                        .height(h)
+                                        .clip(RoundedCornerShape(1.dp))
+                                        .background(if (i < bars) sigColor else Color(0xFF3A3A3A)),
+                                )
+                            }
+                        }
+                    }
+
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                         shape = RoundedCornerShape(8.dp)
@@ -140,6 +173,11 @@ fun LiveStatusPanel(
                     StatusStat(stringResource(R.string.stat_captured), "${status.shotsTaken}")
                     if (status.timeRemainingMs > 0) {
                         StatusStat(stringResource(R.string.stat_est_remaining), formatTimeRemaining(status.timeRemainingMs))
+                        val finishTime = remember(status.timeRemainingMs) {
+                            DateFormat.getTimeInstance(DateFormat.SHORT)
+                                .format(Date(System.currentTimeMillis() + status.timeRemainingMs))
+                        }
+                        StatusStat(stringResource(R.string.stat_finishes_at), finishTime)
                     }
                 }
             }

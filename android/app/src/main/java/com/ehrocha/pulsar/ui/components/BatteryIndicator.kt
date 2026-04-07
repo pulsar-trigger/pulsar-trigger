@@ -34,6 +34,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.DeviceState
+import com.ehrocha.pulsar.AppConfig
+import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
+import com.ehrocha.pulsar.ui.theme.LocalDeviceRssi
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 import com.ehrocha.pulsar.ui.theme.LocalNightMode
 import com.ehrocha.pulsar.ui.theme.LocalNightModeLocked
@@ -164,6 +167,55 @@ fun NightModeToggle() {
                     .align(Alignment.BottomEnd),
                 tint = MaterialTheme.colorScheme.primary,
             )
+        }
+    }
+}
+
+// ── Signal Strength Indicator ─────────────────────────────────────────────
+
+private val SignalGood = Color(0xFF4CAF50)
+private val SignalMedium = Color(0xFFFFA726)
+private val SignalWeak = Color(0xFFFF1744)
+private val SignalOff = Color(0xFF3A3A3A)
+
+/**
+ * Compact BLE signal strength indicator showing 3 bars sized S/M/L.
+ * Colour reflects the current RSSI against [AppConfig] thresholds.
+ * Hidden when not connected.
+ */
+@Composable
+fun SignalStrengthIndicator() {
+    val connected = LocalDeviceConnected.current
+    if (!connected) return
+
+    val rssi = LocalDeviceRssi.current
+    val bars = when {
+        rssi == null -> 0
+        rssi >= AppConfig.BLE_RSSI_GOOD -> 3
+        rssi >= AppConfig.BLE_RSSI_WEAK -> 2
+        else -> 1
+    }
+    val color = when (bars) {
+        3 -> SignalGood
+        2 -> SignalMedium
+        1 -> SignalWeak
+        else -> SignalOff
+    }
+
+    Row(
+        verticalAlignment = Alignment.Bottom,
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        modifier = Modifier.padding(horizontal = 4.dp),
+    ) {
+        val barHeights = listOf(6.dp, 10.dp, 14.dp)
+        barHeights.forEachIndexed { index, height ->
+            Canvas(modifier = Modifier.size(width = 4.dp, height = height)) {
+                drawRoundRect(
+                    color = if (index < bars) color else SignalOff,
+                    cornerRadius = CornerRadius(1.dp.toPx()),
+                    size = Size(size.width, size.height),
+                )
+            }
         }
     }
 }

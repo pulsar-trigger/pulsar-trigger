@@ -89,6 +89,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     val deviceInfo: StateFlow<DeviceInfo?> = bleManager.deviceInfo
 
+    val rssi: StateFlow<Int?> = bleManager.rssi
+
     // ── Simulator ────────────────────────────────────────────────────────
     private val _simulatorActive = MutableStateFlow(false)
     val simulatorActive: StateFlow<Boolean> = _simulatorActive
@@ -251,6 +253,20 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         if (frame.fwVersion.isNotEmpty()) {
                             firmwareManager.checkForUpdate(frame.fwVersion)
                         }
+                    }
+                }
+            }
+        }
+
+        // Proximity warning — vibrate when RSSI drops below weak threshold
+        viewModelScope.launch {
+            var lastVibrateMs = 0L
+            bleManager.rssi.collect { rssiValue ->
+                if (rssiValue != null && rssiValue <= AppConfig.BLE_RSSI_WEAK && _connected.value) {
+                    val now = System.currentTimeMillis()
+                    if (now - lastVibrateMs >= AppConfig.BLE_RSSI_VIBRATE_COOLDOWN_MS) {
+                        lastVibrateMs = now
+                        triggerProximityWarning()
                     }
                 }
             }
@@ -457,6 +473,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         when (step.type) {
             FlowStepType.PAUSE -> {
                 _flowPaused.value = true
+                if (step.wakeOnPause) {
+                    wakeScreen()
+                    triggerProximityWarning()  // double-pulse vibration
+                }
                 // Wait until user taps Continue
                 while (_flowPaused.value) {
                     coroutineContext.ensureActive()
@@ -792,6 +812,37 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private fun dismissNotification() {
         val app = getApplication<Application>()
         app.stopService(Intent(app, PulsarNotificationService::class.java))
+    }
+
+    @Suppress("DEPRECATION")
+    private fun triggerProximityWarning() {
+        val app = getApplication<Application>()
+        val vibrator = app.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+            ?: return
+        // Two short pulses — distinct "proximity warning" pattern
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            vibrator.vibrate(
+                android.os.VibrationEffect.createWaveform(
+                    longArrayOf(0, 120, 100, 120), -1,
+                ),
+            )
+        } else {
+            vibrator.vibrate(longArrayOf(0, 120, 100, 120), -1)
+        }
+    }
+
+    /** Turn the screen on briefly so the user sees the pause prompt. */
+    @Suppress("DEPRECATION")
+    private fun wakeScreen() {
+        val app = getApplication<Application>()
+        val pm = app.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager ?: return
+        val wl = pm.newWakeLock(
+            android.os.PowerManager.FULL_WAKE_LOCK
+                or android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP
+                or android.os.PowerManager.ON_AFTER_RELEASE,
+            "pulsar:pause_wake",
+        )
+        wl.acquire(5_000L)  // auto-release after 5 seconds
     }
 
     override fun onCleared() {

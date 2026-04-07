@@ -12,7 +12,8 @@ If you happen to try the app/firmware and want to suggest a fix, improvement or 
 
 ### Author
 
-**Eduardo Henrique Rocha** — System Z Infrastructure Architect, passionate about mainframe modernization, cloud architecture, electronics, and photography.
+**Eduardo Henrique Rocha** — System Z Infrastructure Architect, passionate about mainframe modernization, cloud architecture, electronics, dyi and photography.
+
 
 > 📷 See my photography on Instagram: [**@ehrocha.br**](https://www.instagram.com/ehrocha.br/)
 
