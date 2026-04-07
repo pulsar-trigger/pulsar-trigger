@@ -19,6 +19,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -26,47 +28,77 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.DeviceState
-import com.ehrocha.pulsar.ble.StatusFrame
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 import com.ehrocha.pulsar.ui.theme.LocalNightMode
 import com.ehrocha.pulsar.ui.theme.ThemeMode
 
+private val LedIdle = Color(0xFF4CAF50)
+private val LedRunning = Color(0xFFFF1744)
+private val LedWaiting = Color(0xFFFFA726)
+private val LedError = Color(0xFFFF1744)
+private val LedOff = Color(0xFF3A3A3A)
+
+@Composable
+private fun StateLed(label: String, color: Color, active: Boolean) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Canvas(modifier = Modifier.size(width = 14.dp, height = 6.dp)) {
+            drawRoundRect(
+                color = if (active) color else LedOff,
+                cornerRadius = CornerRadius(3.dp.toPx()),
+                size = Size(size.width, size.height),
+            )
+        }
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontSize = 7.sp,
+            color = if (active) color else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
+            lineHeight = 8.sp,
+        )
+    }
+}
+
 @Composable
 fun BatteryIndicator() {
     val status = LocalDeviceStatus.current
-    if (status != null) {
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-            shape = RoundedCornerShape(8.dp),
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(8.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-            ) {
-                val ledColor = when (status.state) {
-                    DeviceState.RUNNING, DeviceState.WAITING -> Color(0xFFFF1744)
-                    DeviceState.ERROR -> Color(0xFFFFA000)
-                    else -> Color(0xFF4CAF50)
-                }
-                Canvas(modifier = Modifier.size(8.dp)) {
-                    drawCircle(color = ledColor)
-                }
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    text = "${status.batteryPct}%",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = if (status.batteryPct < 20) Color(0xFFFF1744)
-                            else MaterialTheme.colorScheme.onSurface,
-                )
-                Spacer(Modifier.width(4.dp))
-                val battIcon = when {
-                    status.batteryPct > 75 -> "󰁹"
-                    status.batteryPct > 25 -> "󰁾"
-                    else -> "󰁺"
-                }
-                Text(text = battIcon, fontSize = 16.sp)
+            StateLed("IDL", LedIdle, status?.state == DeviceState.IDLE)
+            StateLed("RUN", LedRunning, status?.state == DeviceState.RUNNING)
+            StateLed("WAI", LedWaiting, status?.state == DeviceState.WAITING)
+            StateLed("ERR", LedError, status?.state == DeviceState.ERROR)
+            Spacer(Modifier.width(4.dp))
+            val battText = if (status != null) "${status.batteryPct}%" else "—"
+            Text(
+                text = battText,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = when {
+                    status == null -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                    status.batteryPct < 20 -> Color(0xFFFF1744)
+                    else -> MaterialTheme.colorScheme.onSurface
+                },
+            )
+            val battIcon = when {
+                status == null -> "󰁺"
+                status.batteryPct > 75 -> "󰁹"
+                status.batteryPct > 25 -> "󰁾"
+                else -> "󰁺"
             }
+            Text(
+                text = battIcon,
+                fontSize = 16.sp,
+                color = if (status == null)
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                else Color.Unspecified,
+            )
         }
     }
 }
