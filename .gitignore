@@ -1,6 +1,7 @@
 # ESP32 / PlatformIO
 firmware/.pio/
 firmware/.vscode/
+firmware/.venv/
 firmware/lib/
 
 # Android / Gradle

@@ -9,6 +9,7 @@
 
 #include <esp_ota_ops.h>
 #include <esp_partition.h>
+#include <esp_chip_info.h>
 #include <Arduino.h>
 
 // Forward declaration — implemented in ble_server.cpp
@@ -35,6 +36,26 @@ bool ota_in_progress() {
 static void send_ota_status(OtaStatus status) {
     uint8_t buf[1] = { status };
     ble_ota_notify(buf, 1);
+}
+
+/// Return the chip model byte matching DeviceInfoFrame encoding:
+/// 1=ESP32, 2=ESP32-S2, 3=ESP32-S3, 4=ESP32-C3
+static uint8_t get_chip_model_id() {
+    esp_chip_info_t chip;
+    esp_chip_info(&chip);
+    switch (chip.model) {
+        case CHIP_ESP32:   return 1;
+        case CHIP_ESP32S2: return 2;
+        case CHIP_ESP32S3: return 3;
+        case CHIP_ESP32C3: return 4;
+        default:           return 0;
+    }
+}
+
+/// Send OTA_READY with chip model byte so the client can verify the binary matches.
+static void send_ota_ready() {
+    uint8_t buf[2] = { OTA_READY, get_chip_model_id() };
+    ble_ota_notify(buf, sizeof(buf));
 }
 
 void ota_handle_control(const uint8_t* data, size_t len) {
@@ -69,7 +90,7 @@ void ota_handle_control(const uint8_t* data, size_t len) {
             _ota_active = true;
             Serial.printf("[OTA] BEGIN — %u bytes → partition '%s'\n",
                           _ota_total_size, _ota_partition->label);
-            send_ota_status(OTA_READY);
+            send_ota_ready();
             break;
         }
 

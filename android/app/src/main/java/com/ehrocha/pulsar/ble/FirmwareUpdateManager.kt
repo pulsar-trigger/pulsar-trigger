@@ -45,6 +45,22 @@ class FirmwareUpdateManager(
     companion object {
         private const val TAG = "FirmwareOTA"
         private const val CHUNK_DELAY_MS = AppConfig.OTA_CHUNK_DELAY_MS
+
+        /** Map chip model string from DeviceInfo → GitHub release asset suffix. */
+        private fun assetSuffixForChip(chipModel: String?): String = when (chipModel) {
+            "ESP32" -> "-esp32.bin"
+            "ESP32-S3" -> "-esp32s3.bin"
+            else -> ".bin"
+        }
+
+        /** Map chip model string from DeviceInfo → expected chip ID byte. */
+        private fun chipIdForModel(chipModel: String?): Int = when (chipModel) {
+            "ESP32" -> 1
+            "ESP32-S2" -> 2
+            "ESP32-S3" -> 3
+            "ESP32-C3" -> 4
+            else -> 0
+        }
     }
 
     private val _state = MutableStateFlow(OtaState.IDLE)
@@ -125,6 +141,15 @@ class FirmwareUpdateManager(
                     throw Exception("Firmware rejected OTA begin")
                 }
 
+                // Verify chip model from OTA_READY matches device info
+                val expectedChipId = chipIdForModel(bleManager.deviceInfo.value?.chipModel)
+                val reportedChipId = bleManager.otaChipModel.value
+                if (expectedChipId != 0 && reportedChipId != null && reportedChipId != expectedChipId) {
+                    throw Exception(
+                        "Chip model mismatch: expected $expectedChipId, firmware reported $reportedChipId"
+                    )
+                }
+
                 // Phase 3: Stream firmware chunks
                 val chunkSize = bleManager.otaChunkSize()
                 var offset = 0
@@ -186,7 +211,10 @@ class FirmwareUpdateManager(
     }
 
     private fun fetchLatestRelease(): FirmwareRelease? {
-        val asset = fetchGitHubRelease(tagPrefix = "firmware-v", assetSuffix = ".bin", perPage = 5)
+        val chipModel = bleManager.deviceInfo.value?.chipModel
+        val suffix = assetSuffixForChip(chipModel)
+        Log.i(TAG, "Looking for firmware asset with suffix '$suffix' (chip=$chipModel)")
+        val asset = fetchGitHubRelease(tagPrefix = "firmware-v", assetSuffix = suffix, perPage = 5)
             ?: return null
         return FirmwareRelease(
             version = asset.version,

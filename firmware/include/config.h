@@ -6,16 +6,34 @@
 #pragma once
 
 // ── GPIO pins ────────────────────────────────────────────────────────────────
-#define DEFAULT_PIN_SHUTTER  25     // optocoupler → camera shutter
-#define DEFAULT_PIN_FOCUS    26     // optocoupler → camera focus
-#define PIN_LED       GPIO_NUM_2    // on-board LED (status)
-#define PIN_BATTERY   GPIO_NUM_33   // analog — battery voltage divider
+#ifdef BOARD_M5STICKS3
+  // M5StickS3: Grove HY2.0-4P port (G9, G10) for optocoupler
+  #define DEFAULT_PIN_SHUTTER  9
+  #define DEFAULT_PIN_FOCUS    10
+  // No dedicated status LED GPIO — use M5Unified display
+  #define PIN_LED       GPIO_NUM_NC
+  // Battery via M5PM1 I2C PMIC — no ADC pin
+  #define PIN_BATTERY   GPIO_NUM_NC
+#else
+  // Generic ESP32-DevKit: standard GPIO mapping
+  #define DEFAULT_PIN_SHUTTER  25     // optocoupler → camera shutter
+  #define DEFAULT_PIN_FOCUS    26     // optocoupler → camera focus
+  #define PIN_LED       GPIO_NUM_2    // on-board LED (status)
+  #define PIN_BATTERY   GPIO_NUM_33   // analog — battery voltage divider
+#endif
 
 // ── Safe digital-output pins for shutter / focus ─────────────────────────────
-// Excluded: 0,2,5,12,15 (boot-strapping), 6-11 (flash), 34-39 (input-only)
-static const uint8_t SAFE_OUTPUT_PINS[] = {
-    4, 13, 14, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27
-};
+#ifdef BOARD_M5STICKS3
+  // Hat2-Bus exposes: G1-G8, G43, G44;  Grove: G9, G10
+  static const uint8_t SAFE_OUTPUT_PINS[] = {
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 43, 44
+  };
+#else
+  // ESP32-DevKit: exclude boot-strapping, flash, input-only pins
+  static const uint8_t SAFE_OUTPUT_PINS[] = {
+      4, 13, 14, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27
+  };
+#endif
 #define SAFE_OUTPUT_PIN_COUNT  (sizeof(SAFE_OUTPUT_PINS) / sizeof(SAFE_OUTPUT_PINS[0]))
 
 // ── Timing defaults ──────────────────────────────────────────────────────────
@@ -60,6 +78,10 @@ static const uint8_t SAFE_OUTPUT_PINS[] = {
 #define OTA_DATA_UUID         "0000ff12-0000-1000-8000-00805f9b34fb"
 
 // ── Battery ──────────────────────────────────────────────────────────────────
-#define BATTERY_FULL_MV       4200
-#define BATTERY_EMPTY_MV      3200
-#define BATTERY_DIVIDER_RATIO 2.0   // resistor divider factor
+#ifndef BOARD_M5STICKS3
+  // Generic ESP32: direct ADC via resistor divider
+  #define BATTERY_FULL_MV       4200
+  #define BATTERY_EMPTY_MV      3200
+  #define BATTERY_DIVIDER_RATIO 2.0   // resistor divider factor
+#endif
+// M5StickS3 reads battery via M5PM1 PMIC — no ADC defines needed

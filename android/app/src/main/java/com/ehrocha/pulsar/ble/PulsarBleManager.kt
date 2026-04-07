@@ -46,6 +46,10 @@ class PulsarBleManager(context: Context) : BleManager(context) {
     private val _otaStatus = MutableStateFlow<OtaStatus?>(null)
     val otaStatus: StateFlow<OtaStatus?> = _otaStatus
 
+    /** Chip model byte from OTA_READY response (1=ESP32, 3=ESP32-S3, etc.) */
+    private val _otaChipModel = MutableStateFlow<Int?>(null)
+    val otaChipModel: StateFlow<Int?> = _otaChipModel
+
     private val _mtu = MutableStateFlow(AppConfig.BLE_DEFAULT_MTU)  // default BLE MTU
     val mtu: StateFlow<Int> = _mtu
 
@@ -84,6 +88,10 @@ class PulsarBleManager(context: Context) : BleManager(context) {
             setNotificationCallback(ctrl).with { _, data ->
                 data.value?.takeIf { it.isNotEmpty() }?.let { bytes ->
                     _otaStatus.value = OtaStatus.fromByte(bytes[0])
+                    // OTA_READY carries chip model in byte[1]
+                    if (bytes[0] == OtaStatus.READY.id && bytes.size >= 2) {
+                        _otaChipModel.value = bytes[1].toInt() and 0xFF
+                    }
                 }
             }
             enableNotifications(ctrl).enqueue()
