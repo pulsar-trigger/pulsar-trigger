@@ -32,7 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.launch
 import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.DeviceState
@@ -923,8 +923,9 @@ private fun AddStepDialog(
     }
 }
 
-// ─── Edit step dialog ────────────────────────────────────────────────────────
+// ─── Edit step bottom sheet ──────────────────────────────────────────────────
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EditStepDialog(
     step: FlowStep,
@@ -932,51 +933,53 @@ private fun EditStepDialog(
     onSave: (FlowStep) -> Unit,
 ) {
     var current by remember { mutableStateOf(step) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
 
-    Dialog(
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        sheetState = sheetState,
+        dragHandle = { BottomSheetDefaults.DragHandle() },
     ) {
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            tonalElevation = 8.dp,
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .navigationBarsPadding()
-                .imePadding(),
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 24.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+            // Intervalometer/Astro panels include their own title
+            if (step.type != FlowStepType.INTERVALOMETER && step.type != FlowStepType.ASTRO) {
+                val context = LocalContext.current
+                Text(
+                    step.type.displayName(context),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+
+            when (step.type) {
+                FlowStepType.INTERVALOMETER -> IntervalometerStepEditor(current) { current = it }
+                FlowStepType.ASTRO -> AstroStepEditor(current) { current = it }
+                FlowStepType.PAUSE -> PauseStepEditor(current) { current = it }
+            }
+
+            Row(
+                horizontalArrangement = Arrangement.End,
+                modifier = Modifier.fillMaxWidth(),
             ) {
-                // Intervalometer/Astro panels include their own title
-                if (step.type != FlowStepType.INTERVALOMETER && step.type != FlowStepType.ASTRO) {
-                    val context = LocalContext.current
-                    Text(
-                        step.type.displayName(context),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-
-                when (step.type) {
-                    FlowStepType.INTERVALOMETER -> IntervalometerStepEditor(current) { current = it }
-                    FlowStepType.ASTRO -> AstroStepEditor(current) { current = it }
-                    FlowStepType.PAUSE -> PauseStepEditor(current) { current = it }
-                }
-
-                Row(
-                    horizontalArrangement = Arrangement.End,
-                    modifier = Modifier.fillMaxWidth(),
+                TextButton(onClick = {
+                    scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
+                }) { Text(stringResource(R.string.cancel)) }
+                Spacer(Modifier.width(8.dp))
+                Button(
+                    onClick = {
+                        scope.launch { sheetState.hide() }.invokeOnCompletion { onSave(current) }
+                    },
+                    shape = RoundedCornerShape(12.dp),
                 ) {
-                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-                    Spacer(Modifier.width(8.dp))
-                    Button(onClick = { onSave(current) }, shape = RoundedCornerShape(12.dp)) {
-                        Text(stringResource(R.string.save))
-                    }
+                    Text(stringResource(R.string.save))
                 }
             }
         }
