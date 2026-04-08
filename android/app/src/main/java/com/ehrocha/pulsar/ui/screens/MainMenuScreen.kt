@@ -6,6 +6,8 @@
 package com.ehrocha.pulsar.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -23,23 +25,20 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.R
-import com.ehrocha.pulsar.ble.TriggerMode
+import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
-import com.ehrocha.pulsar.ui.components.BatteryIndicator
-import com.ehrocha.pulsar.ui.components.NightModeToggle
+import kotlinx.coroutines.launch
 
 @Composable
 fun MainMenuScreen(
     vm: PulsarViewModel,
-    onModeSelected: (TriggerMode) -> Unit,
-    onModeSettingsSelected: (TriggerMode) -> Unit,
+    onQuickFlow: (FlowStepType) -> Unit,
+    onManualSelected: () -> Unit,
     onCustomFlowSelected: () -> Unit = {},
     onDashboardSelected: () -> Unit = {},
     onPlannerSelected: () -> Unit = {},
@@ -53,6 +52,13 @@ fun MainMenuScreen(
     val hasFwUpdate = fwState == com.ehrocha.pulsar.ble.OtaState.AVAILABLE && fwRelease != null
     val hasAppUpdate = appState == com.ehrocha.pulsar.update.AppUpdateState.AVAILABLE && appRelease != null
     var bannerDismissed by remember { mutableStateOf(false) }
+
+    val tabs = listOf(
+        stringResource(R.string.tab_trigger),
+        stringResource(R.string.tab_tools),
+    )
+    val pagerState = rememberPagerState(pageCount = { tabs.size })
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -119,73 +125,81 @@ fun MainMenuScreen(
             Spacer(Modifier.height(12.dp))
         }
 
-        MenuCard(
-            title = stringResource(R.string.mode_astro_dashboard),
-            description = stringResource(R.string.mode_astro_dashboard_desc),
-            icon = Icons.Default.NightsStay,
-            onClick = onDashboardSelected,
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        MenuCard(
-            title = stringResource(R.string.mode_planner),
-            description = stringResource(R.string.mode_planner_desc),
-            icon = Icons.Default.DateRange,
-            onClick = onPlannerSelected,
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        MenuCard(
-            title = stringResource(R.string.mode_alignment),
-            description = stringResource(R.string.mode_alignment_desc),
-            icon = Icons.Default.Explore,
-            onClick = onAlignmentSelected,
-        )
-
-        Spacer(Modifier.height(20.dp))
-
-        Text(
-            stringResource(R.string.section_modes),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        Column(
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+        // ── Tab row ──────────────────────────────────────────────────
+        TabRow(
+            selectedTabIndex = pagerState.currentPage,
+            containerColor = MaterialTheme.colorScheme.surface,
         ) {
-            MenuCard(
-                title = stringResource(R.string.mode_intervalometer),
-                description = stringResource(R.string.mode_intervalometer_desc),
-                icon = Icons.Default.Timer,
-                onClick = { onModeSelected(TriggerMode.INTERVALOMETER) },
-                onGearClick = { onModeSettingsSelected(TriggerMode.INTERVALOMETER) },
-            )
-            MenuCard(
-                title = stringResource(R.string.mode_astro),
-                description = stringResource(R.string.mode_astro_desc),
-                icon = Icons.Default.Stars,
-                onClick = { onModeSelected(TriggerMode.ASTRO) },
-                onGearClick = { onModeSettingsSelected(TriggerMode.ASTRO) },
-            )
-            MenuCard(
-                title = stringResource(R.string.mode_manual),
-                description = stringResource(R.string.mode_manual_desc),
-                icon = Icons.Default.TouchApp,
-                onClick = { onModeSelected(TriggerMode.PRESS_HOLD) },
-            )
-            MenuCard(
-                title = stringResource(R.string.mode_custom_flow),
-                description = stringResource(R.string.mode_custom_flow_desc),
-                icon = Icons.AutoMirrored.Filled.ViewList,
-                onClick = onCustomFlowSelected,
-            )
+            tabs.forEachIndexed { index, title ->
+                Tab(
+                    selected = pagerState.currentPage == index,
+                    onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
+                    text = { Text(title) },
+                )
+            }
         }
 
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(12.dp))
+
+        // ── Pager ────────────────────────────────────────────────────
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.weight(1f),
+        ) { page ->
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                when (page) {
+                    0 -> { // Trigger
+                        MenuCard(
+                            title = stringResource(R.string.mode_intervalometer),
+                            description = stringResource(R.string.mode_intervalometer_desc),
+                            icon = Icons.Default.Timer,
+                            onClick = { onQuickFlow(FlowStepType.INTERVALOMETER) },
+                        )
+                        MenuCard(
+                            title = stringResource(R.string.mode_astro),
+                            description = stringResource(R.string.mode_astro_desc),
+                            icon = Icons.Default.Stars,
+                            onClick = { onQuickFlow(FlowStepType.ASTRO) },
+                        )
+                        MenuCard(
+                            title = stringResource(R.string.mode_manual),
+                            description = stringResource(R.string.mode_manual_desc),
+                            icon = Icons.Default.TouchApp,
+                            onClick = onManualSelected,
+                        )
+                        MenuCard(
+                            title = stringResource(R.string.mode_custom_flow),
+                            description = stringResource(R.string.mode_custom_flow_desc),
+                            icon = Icons.AutoMirrored.Filled.ViewList,
+                            onClick = onCustomFlowSelected,
+                        )
+                    }
+                    1 -> { // Tools
+                        MenuCard(
+                            title = stringResource(R.string.mode_astro_dashboard),
+                            description = stringResource(R.string.mode_astro_dashboard_desc),
+                            icon = Icons.Default.NightsStay,
+                            onClick = onDashboardSelected,
+                        )
+                        MenuCard(
+                            title = stringResource(R.string.mode_planner),
+                            description = stringResource(R.string.mode_planner_desc),
+                            icon = Icons.Default.DateRange,
+                            onClick = onPlannerSelected,
+                        )
+                        MenuCard(
+                            title = stringResource(R.string.mode_alignment),
+                            description = stringResource(R.string.mode_alignment_desc),
+                            icon = Icons.Default.Explore,
+                            onClick = onAlignmentSelected,
+                        )
+                    }
+                }
+            }
+        }
 
         TextButton(
             onClick = { vm.disconnect() },
@@ -200,7 +214,6 @@ private fun MenuCard(
     description: String,
     icon: ImageVector,
     onClick: () -> Unit,
-    onGearClick: (() -> Unit)? = null,
 ) {
     Surface(
         onClick = onClick,
@@ -233,26 +246,12 @@ private fun MenuCard(
                 )
             }
             Spacer(Modifier.width(8.dp))
-            if (onGearClick != null) {
-                IconButton(
-                    onClick = onGearClick,
-                    modifier = Modifier.size(36.dp),
-                ) {
-                    Icon(
-                        Icons.Default.Tune,
-                        contentDescription = "Settings",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            } else {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
+            )
         }
     }
 }

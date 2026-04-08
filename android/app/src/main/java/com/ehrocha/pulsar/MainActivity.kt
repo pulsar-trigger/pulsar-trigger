@@ -171,11 +171,12 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
         if (currentScreen == AppScreen.Menu) {
             vm.status.filterNotNull().first().let { s ->
                 if (s.state == DeviceState.RUNNING || s.state == DeviceState.WAITING) {
-                    // Use the ViewModel's selected mode (avoids ambiguity when
-                    // firmware modes like ASTRO share the same byte as INTERVALOMETER)
                     val mode = vm.currentMode.value
-                    if (mode != TriggerMode.TRACKER) {
-                        currentScreen = AppScreen.Mode(mode)
+                    when (mode) {
+                        TriggerMode.TRACKER -> { /* stay on menu */ }
+                        TriggerMode.PRESS_HOLD, TriggerMode.PRESS_LOCK ->
+                            currentScreen = AppScreen.Mode(mode)
+                        else -> currentScreen = AppScreen.CustomFlow
                     }
                 }
             }
@@ -238,8 +239,11 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
             AppScreen.Scan -> ScanScreen(vm) { currentScreen = AppScreen.Menu }
             AppScreen.Menu -> MainMenuScreen(
                 vm = vm,
-                onModeSelected = { currentScreen = AppScreen.Mode(it) },
-                onModeSettingsSelected = { currentScreen = AppScreen.ModeSettings(it) },
+                onQuickFlow = { type ->
+                    vm.loadQuickMode(type)
+                    currentScreen = AppScreen.CustomFlow
+                },
+                onManualSelected = { currentScreen = AppScreen.Mode(TriggerMode.PRESS_HOLD) },
                 onCustomFlowSelected = { currentScreen = AppScreen.CustomFlow },
                 onDashboardSelected = { currentScreen = AppScreen.Dashboard },
                 onPlannerSelected = { currentScreen = AppScreen.Planner },

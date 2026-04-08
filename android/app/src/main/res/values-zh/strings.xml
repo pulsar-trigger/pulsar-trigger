@@ -8,6 +8,8 @@
     <string name="use_simulator">使用模拟器</string>
     <string name="simulator_description">无需真实设备即可体验应用</string>
     <string name="unknown_device">未知设备</string>
+    <string name="tab_trigger">触发</string>
+    <string name="tab_tools">工具</string>
     <string name="section_modes">模式</string>
     <string name="mode_intervalometer">间隔计时器</string>
     <string name="mode_intervalometer_desc">精准定时自动拍摄延时序列</string>
@@ -15,7 +17,7 @@
     <string name="mode_astro_desc">通过计算曝光时间拍摄星空</string>
     <string name="mode_manual">手动</string>
     <string name="mode_manual_desc">直接快门控制 — 按住或锁定模式</string>
-    <string name="mode_custom_flow">自定义流程</string>
+    <string name="mode_custom_flow">序列</string>
     <string name="mode_custom_flow_desc">组合多种模式构建多步骤序列</string>
     <string name="mode_astro_dashboard">天文仪表盘</string>
     <string name="mode_astro_dashboard_desc">天气、月相、波特尔等级及天空状况</string>
