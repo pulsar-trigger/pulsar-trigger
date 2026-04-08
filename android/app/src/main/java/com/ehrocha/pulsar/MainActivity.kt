@@ -173,7 +173,10 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                 if (s.state == DeviceState.RUNNING || s.state == DeviceState.WAITING) {
                     // Use the ViewModel's selected mode (avoids ambiguity when
                     // firmware modes like ASTRO share the same byte as INTERVALOMETER)
-                    currentScreen = AppScreen.Mode(vm.currentMode.value)
+                    val mode = vm.currentMode.value
+                    if (mode != TriggerMode.TRACKER) {
+                        currentScreen = AppScreen.Mode(mode)
+                    }
                 }
             }
         }

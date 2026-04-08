@@ -6,11 +6,9 @@
 package com.ehrocha.pulsar.ui.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.Timer
@@ -25,15 +23,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
+import com.ehrocha.pulsar.ui.components.BatteryIndicator
+import com.ehrocha.pulsar.ui.components.NightModeToggle
 
 @Composable
 fun MainMenuScreen(
@@ -119,88 +119,73 @@ fun MainMenuScreen(
             Spacer(Modifier.height(12.dp))
         }
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        MenuCard(
+            title = stringResource(R.string.mode_astro_dashboard),
+            description = stringResource(R.string.mode_astro_dashboard_desc),
+            icon = Icons.Default.NightsStay,
+            onClick = onDashboardSelected,
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        MenuCard(
+            title = stringResource(R.string.mode_planner),
+            description = stringResource(R.string.mode_planner_desc),
+            icon = Icons.Default.DateRange,
+            onClick = onPlannerSelected,
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        MenuCard(
+            title = stringResource(R.string.mode_alignment),
+            description = stringResource(R.string.mode_alignment_desc),
+            icon = Icons.Default.Explore,
+            onClick = onAlignmentSelected,
+        )
+
+        Spacer(Modifier.height(20.dp))
+
+        Text(
+            stringResource(R.string.section_modes),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        Column(
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.weight(1f),
         ) {
-            // ── Tools ────────────────────────────────────────────────
-            item {
-                MenuTile(
-                    title = stringResource(R.string.mode_astro_dashboard),
-                    icon = Icons.Default.NightsStay,
-                    onClick = onDashboardSelected,
-                )
-            }
-            item {
-                MenuTile(
-                    title = stringResource(R.string.mode_planner),
-                    icon = Icons.Default.DateRange,
-                    onClick = onPlannerSelected,
-                )
-            }
-            item {
-                MenuTile(
-                    title = stringResource(R.string.mode_alignment),
-                    icon = Icons.Default.Explore,
-                    onClick = onAlignmentSelected,
-                )
-            }
-
-            // ── Modes section header ─────────────────────────────────
-            item(span = { GridItemSpan(2) }) {
-                Text(
-                    stringResource(R.string.section_modes),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
-            }
-
-            item {
-                MenuTile(
-                    title = stringResource(R.string.mode_intervalometer),
-                    icon = Icons.Default.Timer,
-                    onClick = { onModeSelected(TriggerMode.INTERVALOMETER) },
-                    onGearClick = { onModeSettingsSelected(TriggerMode.INTERVALOMETER) },
-                )
-            }
-            item {
-                MenuTile(
-                    title = stringResource(R.string.mode_astro),
-                    icon = Icons.Default.Stars,
-                    onClick = { onModeSelected(TriggerMode.ASTRO) },
-                    onGearClick = { onModeSettingsSelected(TriggerMode.ASTRO) },
-                )
-            }
-            item {
-                MenuTile(
-                    title = stringResource(R.string.mode_manual),
-                    icon = Icons.Default.TouchApp,
-                    onClick = { onModeSelected(TriggerMode.PRESS_HOLD) },
-                )
-            }
-            item {
-                MenuTile(
-                    title = stringResource(R.string.mode_custom_flow),
-                    icon = Icons.AutoMirrored.Filled.ViewList,
-                    onClick = onCustomFlowSelected,
-                )
-            }
-
-            // ── Settings ─────────────────────────────────────────────
-            item(span = { GridItemSpan(2) }) {
-                Spacer(Modifier.height(8.dp))
-            }
-            item {
-                MenuTile(
-                    title = stringResource(R.string.menu_settings),
-                    icon = Icons.Default.Settings,
-                    onClick = onSettingsSelected,
-                )
-            }
+            MenuCard(
+                title = stringResource(R.string.mode_intervalometer),
+                description = stringResource(R.string.mode_intervalometer_desc),
+                icon = Icons.Default.Timer,
+                onClick = { onModeSelected(TriggerMode.INTERVALOMETER) },
+                onGearClick = { onModeSettingsSelected(TriggerMode.INTERVALOMETER) },
+            )
+            MenuCard(
+                title = stringResource(R.string.mode_astro),
+                description = stringResource(R.string.mode_astro_desc),
+                icon = Icons.Default.Stars,
+                onClick = { onModeSelected(TriggerMode.ASTRO) },
+                onGearClick = { onModeSettingsSelected(TriggerMode.ASTRO) },
+            )
+            MenuCard(
+                title = stringResource(R.string.mode_manual),
+                description = stringResource(R.string.mode_manual_desc),
+                icon = Icons.Default.TouchApp,
+                onClick = { onModeSelected(TriggerMode.PRESS_HOLD) },
+            )
+            MenuCard(
+                title = stringResource(R.string.mode_custom_flow),
+                description = stringResource(R.string.mode_custom_flow_desc),
+                icon = Icons.AutoMirrored.Filled.ViewList,
+                onClick = onCustomFlowSelected,
+            )
         }
+
+        Spacer(Modifier.weight(1f))
 
         TextButton(
             onClick = { vm.disconnect() },
@@ -210,59 +195,63 @@ fun MainMenuScreen(
 }
 
 @Composable
-private fun MenuTile(
+private fun MenuCard(
     title: String,
+    description: String,
     icon: ImageVector,
     onClick: () -> Unit,
     onGearClick: (() -> Unit)? = null,
 ) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(1f),
+        modifier = Modifier.fillMaxWidth(),
     ) {
-        Box {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(12.dp),
-            ) {
-                Icon(
-                    icon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(32.dp),
-                )
-                Spacer(Modifier.height(8.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(20.dp),
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp),
+            )
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
                 Text(
                     title,
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            Spacer(Modifier.width(8.dp))
             if (onGearClick != null) {
                 IconButton(
                     onClick = onGearClick,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .size(32.dp),
+                    modifier = Modifier.size(36.dp),
                 ) {
                     Icon(
                         Icons.Default.Tune,
-                        contentDescription = stringResource(R.string.cd_settings),
+                        contentDescription = "Settings",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(20.dp),
                     )
                 }
+            } else {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
             }
         }
     }
