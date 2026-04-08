@@ -16,7 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MyLocation
-import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,6 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.view.WindowManager
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.viewmodel.AlignmentViewModel
 import kotlin.math.abs
@@ -51,6 +51,15 @@ fun AlignmentScreen(
     // Acquire location on entry
     LaunchedEffect(Unit) {
         alignVm.acquireLocation()
+    }
+
+    // Keep screen awake while alignment is active
+    val activity = androidx.compose.ui.platform.LocalContext.current as? android.app.Activity
+    DisposableEffect(Unit) {
+        activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        onDispose {
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
     }
 
     val altError = pitch - targetAlt
@@ -98,11 +107,6 @@ fun AlignmentScreen(
 
             Spacer(Modifier.height(8.dp))
 
-            // ── Sensor status row ────────────────────────────────────
-            SensorCard(sensorsActive = sensorsActive)
-
-            Spacer(Modifier.height(8.dp))
-
             // ── Location row ─────────────────────────────────────────
             LocationCard(
                 locationReady = locationReady,
@@ -139,51 +143,6 @@ fun AlignmentScreen(
             )
 
             Spacer(Modifier.height(24.dp))
-        }
-    }
-}
-
-// ── Sensor Status Card ───────────────────────────────────────────────────
-
-@Composable
-private fun SensorCard(sensorsActive: Boolean) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(16.dp),
-        ) {
-            Icon(
-                Icons.Default.PhoneAndroid,
-                contentDescription = null,
-                tint = if (sensorsActive) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                modifier = Modifier.size(24.dp),
-            )
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    stringResource(R.string.alignment_sensors),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    if (sensorsActive) {
-                        stringResource(R.string.alignment_sensors_active)
-                    } else {
-                        stringResource(R.string.alignment_sensors_waiting)
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
         }
     }
 }
