@@ -1,0 +1,453 @@
+/*
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Pulsar Trigger contributors
+ */
+
+package com.ehrocha.pulsar.ui.screens
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.BluetoothSearching
+import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.viewmodel.AlignmentViewModel
+import com.ehrocha.pulsar.viewmodel.PulsarViewModel
+import kotlin.math.abs
+import kotlin.math.min
+
+@Composable
+fun AlignmentScreen(
+    vm: PulsarViewModel,
+    onBack: () -> Unit,
+    alignVm: AlignmentViewModel = viewModel(),
+) {
+    val connected by vm.connected.collectAsState()
+    val pitchValue by vm.trackerPitch.collectAsState()
+    val pitch = pitchValue ?: 0f
+    val trackerActive = pitchValue != null
+    val trueAz by alignVm.trueAzimuth.collectAsState()
+    val latitude by alignVm.latitude.collectAsState()
+    val declination by alignVm.declination.collectAsState()
+    val targetAlt by alignVm.targetAltitude.collectAsState()
+    val targetAz by alignVm.targetAzimuth.collectAsState()
+    val locationReady by alignVm.locationReady.collectAsState()
+
+    // Acquire location and enable tracker mode on entry
+    LaunchedEffect(Unit) {
+        alignVm.acquireLocation()
+        vm.enableTrackerMode()
+    }
+    // Stop tracker mode when leaving the screen
+    DisposableEffect(Unit) {
+        onDispose { vm.disableTrackerMode() }
+    }
+
+    val altError = pitch - targetAlt
+    val rawAzError = shortestAngle(trueAz, targetAz)
+
+    val isSouthern = latitude < 0
+    val poleLabel = if (isSouthern) {
+        stringResource(R.string.alignment_true_south)
+    } else {
+        stringResource(R.string.alignment_true_north)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+    ) {
+        // ── Top bar ──────────────────────────────────────────────────
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(vertical = 8.dp),
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.back),
+                )
+            }
+            Text(
+                stringResource(R.string.alignment_title),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            // ── Connection row ───────────────────────────────────────
+            ConnectionCard(connected = connected, trackerActive = trackerActive)
+
+            Spacer(Modifier.height(8.dp))
+
+            // ── Location row ─────────────────────────────────────────
+            LocationCard(
+                locationReady = locationReady,
+                latitude = latitude,
+                declination = declination,
+                poleLabel = poleLabel,
+                onRefresh = { alignVm.acquireLocation() },
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            // ── Crosshair indicator ──────────────────────────────────
+            CrosshairIndicator(
+                altError = altError,
+                azError = rawAzError,
+                connected = trackerActive,
+            )
+
+            Spacer(Modifier.height(16.dp))
+
+            // ── Numeric readouts ─────────────────────────────────────
+            ReadoutSection(
+                pitch = pitch,
+                targetAlt = targetAlt,
+                altError = altError,
+                trueAz = trueAz,
+                targetAz = targetAz,
+                azError = rawAzError,
+                poleLabel = poleLabel,
+                connected = trackerActive,
+            )
+
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+// ── BLE Connection Card ──────────────────────────────────────────────────
+
+@Composable
+private fun ConnectionCard(
+    connected: Boolean,
+    trackerActive: Boolean,
+) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(16.dp),
+        ) {
+            Icon(
+                if (connected) Icons.Default.Bluetooth else Icons.Default.BluetoothSearching,
+                contentDescription = null,
+                tint = if (trackerActive) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.alignment_tracker),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    when {
+                        trackerActive -> stringResource(R.string.alignment_tracker_active)
+                        connected -> stringResource(R.string.alignment_connected)
+                        else -> stringResource(R.string.alignment_disconnected)
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+// ── Location Card ────────────────────────────────────────────────────────
+
+@Composable
+private fun LocationCard(
+    locationReady: Boolean,
+    latitude: Double,
+    declination: Float,
+    poleLabel: String,
+    onRefresh: () -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(16.dp),
+        ) {
+            Icon(
+                Icons.Default.MyLocation,
+                contentDescription = null,
+                tint = if (locationReady) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                if (locationReady) {
+                    Text(
+                        stringResource(
+                            R.string.alignment_location_info,
+                            "%.2f".format(latitude),
+                            "%.1f".format(declination),
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Text(
+                        stringResource(R.string.alignment_target_pole, poleLabel),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    Text(
+                        stringResource(R.string.alignment_no_location),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            TextButton(onClick = onRefresh) {
+                Text(stringResource(R.string.alignment_refresh))
+            }
+        }
+    }
+}
+
+// ── Crosshair Indicator ──────────────────────────────────────────────────
+
+@Composable
+private fun CrosshairIndicator(
+    altError: Float,
+    azError: Float,
+    connected: Boolean,
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    val outline = MaterialTheme.colorScheme.outline
+    val error = MaterialTheme.colorScheme.error
+    val good = Color(0xFF4CAF50)
+
+    // Clamp errors to ±30° for display; full range = 60°
+    val maxAngle = 30f
+    val clampedAlt = altError.coerceIn(-maxAngle, maxAngle)
+    val clampedAz = azError.coerceIn(-maxAngle, maxAngle)
+
+    val totalError = kotlin.math.sqrt(altError * altError + azError * azError)
+    val dotColor = when {
+        !connected -> outline
+        totalError < 1f -> good
+        totalError < 5f -> primary
+        else -> error
+    }
+
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .padding(16.dp),
+    ) {
+        val cx = size.width / 2f
+        val cy = size.height / 2f
+        val radius = min(cx, cy)
+
+        // ── Concentric rings (10° increments) ────────────────────
+        for (i in 1..3) {
+            val r = radius * i / 3f
+            drawCircle(
+                color = outline.copy(alpha = 0.3f),
+                radius = r,
+                center = Offset(cx, cy),
+                style = Stroke(width = 1.dp.toPx()),
+            )
+        }
+
+        // ── Crosshair lines ─────────────────────────────────────
+        drawLine(
+            color = outline.copy(alpha = 0.5f),
+            start = Offset(cx - radius, cy),
+            end = Offset(cx + radius, cy),
+            strokeWidth = 1.dp.toPx(),
+        )
+        drawLine(
+            color = outline.copy(alpha = 0.5f),
+            start = Offset(cx, cy - radius),
+            end = Offset(cx, cy + radius),
+            strokeWidth = 1.dp.toPx(),
+        )
+
+        // ── Current position dot ─────────────────────────────────
+        // Map error to pixel offset: azError → X, altError → Y (inverted)
+        val dotX = cx + (clampedAz / maxAngle) * radius
+        val dotY = cy - (clampedAlt / maxAngle) * radius // up = positive altitude
+
+        drawCircle(
+            color = dotColor,
+            radius = 10.dp.toPx(),
+            center = Offset(dotX, dotY),
+        )
+
+        // Inner white dot
+        drawCircle(
+            color = Color.White,
+            radius = 3.dp.toPx(),
+            center = Offset(dotX, dotY),
+        )
+    }
+}
+
+// ── Numeric Readouts ─────────────────────────────────────────────────────
+
+@Composable
+private fun ReadoutSection(
+    pitch: Float,
+    targetAlt: Float,
+    altError: Float,
+    trueAz: Float,
+    targetAz: Float,
+    azError: Float,
+    poleLabel: String,
+    connected: Boolean,
+) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // ── Altitude row ─────────────────────────────────────
+            Text(
+                stringResource(R.string.alignment_altitude),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.height(4.dp))
+            Row(Modifier.fillMaxWidth()) {
+                ReadoutValue(
+                    label = stringResource(R.string.alignment_current),
+                    value = if (connected) "%.1f°".format(pitch) else "—",
+                    modifier = Modifier.weight(1f),
+                )
+                ReadoutValue(
+                    label = stringResource(R.string.alignment_target),
+                    value = "%.1f°".format(targetAlt),
+                    modifier = Modifier.weight(1f),
+                )
+                ReadoutValue(
+                    label = stringResource(R.string.alignment_error),
+                    value = if (connected) "%+.1f°".format(altError) else "—",
+                    modifier = Modifier.weight(1f),
+                    valueColor = errorColor(altError, connected),
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(16.dp))
+
+            // ── Azimuth row ──────────────────────────────────────
+            Text(
+                stringResource(R.string.alignment_azimuth_label, poleLabel),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.height(4.dp))
+            Row(Modifier.fillMaxWidth()) {
+                ReadoutValue(
+                    label = stringResource(R.string.alignment_current),
+                    value = "%.1f°".format(trueAz),
+                    modifier = Modifier.weight(1f),
+                )
+                ReadoutValue(
+                    label = stringResource(R.string.alignment_target),
+                    value = "%.0f°".format(targetAz),
+                    modifier = Modifier.weight(1f),
+                )
+                ReadoutValue(
+                    label = stringResource(R.string.alignment_error),
+                    value = "%+.1f°".format(azError),
+                    modifier = Modifier.weight(1f),
+                    valueColor = errorColor(azError, true),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReadoutValue(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    valueColor: Color = MaterialTheme.colorScheme.onSurface,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = valueColor,
+        )
+    }
+}
+
+@Composable
+private fun errorColor(error: Float, active: Boolean): Color {
+    if (!active) return MaterialTheme.colorScheme.onSurfaceVariant
+    val absErr = abs(error)
+    return when {
+        absErr < 1f -> Color(0xFF4CAF50)
+        absErr < 5f -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.error
+    }
+}
+
+/** Shortest signed angular distance (result in −180..180). */
+private fun shortestAngle(from: Float, to: Float): Float {
+    val d = (to - from).mod(360f)
+    return if (d > 180f) d - 360f else d
+}

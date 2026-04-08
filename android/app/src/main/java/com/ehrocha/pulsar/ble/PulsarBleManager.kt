@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.StateFlow
 import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.data.Data
 import com.ehrocha.pulsar.AppConfig
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 class PulsarBleManager(context: Context) : BleManager(context) {
 
@@ -33,6 +35,8 @@ class PulsarBleManager(context: Context) : BleManager(context) {
     @Volatile
     private var otaDataChar: BluetoothGattCharacteristic? = null
     @Volatile
+    private var pitchChar: BluetoothGattCharacteristic? = null
+    @Volatile
     private var shouldRefreshCache = false
 
     private val _status = MutableStateFlow<StatusFrame?>(null)
@@ -40,6 +44,9 @@ class PulsarBleManager(context: Context) : BleManager(context) {
 
     private val _deviceInfo = MutableStateFlow<DeviceInfo?>(null)
     val deviceInfo: StateFlow<DeviceInfo?> = _deviceInfo
+
+    private val _trackerPitch = MutableStateFlow<Float?>(null)
+    val trackerPitch: StateFlow<Float?> = _trackerPitch
 
     private val _connectionState = MutableStateFlow(false)
     val connectionState: StateFlow<Boolean> = _connectionState
@@ -64,6 +71,7 @@ class PulsarBleManager(context: Context) : BleManager(context) {
         val svc = gatt.getService(PulsarUuids.SERVICE) ?: return false
         cmdChar = svc.getCharacteristic(PulsarUuids.CHAR_COMMAND)
         statusChar = svc.getCharacteristic(PulsarUuids.CHAR_STATUS)
+        pitchChar = svc.getCharacteristic(PulsarUuids.CHAR_PITCH)  // optional — new firmware only
 
         // OTA service is optional (old firmware may not have it)
         gatt.getService(PulsarUuids.OTA_SERVICE)?.let { otaSvc ->
@@ -89,6 +97,18 @@ class PulsarBleManager(context: Context) : BleManager(context) {
             }
         }
         enableNotifications(statusChar).enqueue()
+
+        // Subscribe to pitch notifications (tracker alignment mode — optional)
+        pitchChar?.let { pitch ->
+            setNotificationCallback(pitch).with { _, data ->
+                data.value?.takeIf { it.size >= 4 }?.let { bytes ->
+                    _trackerPitch.value = ByteBuffer.wrap(bytes)
+                        .order(ByteOrder.LITTLE_ENDIAN)
+                        .float
+                }
+            }
+            enableNotifications(pitch).enqueue()
+        }
 
         // Subscribe to OTA control notifications (status feedback)
         otaCtrlChar?.let { ctrl ->
@@ -128,6 +148,7 @@ class PulsarBleManager(context: Context) : BleManager(context) {
     override fun onServicesInvalidated() {
         cmdChar = null
         statusChar = null
+        pitchChar = null
         otaCtrlChar = null
         otaDataChar = null
         _connectionState.value = false

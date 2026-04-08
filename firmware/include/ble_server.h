@@ -13,6 +13,9 @@ void ble_init();
 /// Send raw bytes on the Status characteristic (notify).
 void ble_notify(const uint8_t* data, size_t len);
 
+/// Send pitch (degrees) on the Pitch characteristic (notify) — tracker mode.
+void ble_notify_pitch(float pitch);
+
 /// Returns true when a BLE central is connected.
 bool ble_connected();
 

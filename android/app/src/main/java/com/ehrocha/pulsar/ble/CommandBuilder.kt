@@ -60,6 +60,10 @@ object CommandBuilder {
         return frame(Cmd.SET_MODE, byteArrayOf(TriggerMode.PRESS_LOCK.id))
     }
 
+    fun setTracker(): ByteArray {
+        return frame(Cmd.SET_MODE, byteArrayOf(TriggerMode.TRACKER.id))
+    }
+
     /** Astro mode reuses intervalometer on firmware side. */
     fun setAstro(
         intervalMs: Long,

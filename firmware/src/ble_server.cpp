@@ -26,6 +26,7 @@ static Preferences _prefs;
 static char _deviceName[7 + BLE_NAME_SUFFIX_MAX + 1]; // "Pulsar-" + suffix + NUL
 static BLECharacteristic* _cmdChar     = nullptr;
 static BLECharacteristic* _statusChar  = nullptr;
+static BLECharacteristic* _pitchChar   = nullptr;
 static BLECharacteristic* _otaCtrlChar = nullptr;
 static BLECharacteristic* _otaDataChar = nullptr;
 static bool _connected = false;
@@ -269,6 +270,13 @@ void ble_init() {
     );
     _statusChar->addDescriptor(new BLE2902());
 
+    // Pitch characteristic (notify — tracker alignment mode)
+    _pitchChar = svc->createCharacteristic(
+        CHAR_PITCH_UUID,
+        BLECharacteristic::PROPERTY_NOTIFY
+    );
+    _pitchChar->addDescriptor(new BLE2902());
+
     svc->start();
 
     // ── OTA service (separate service UUID) ──────────────────────────────
@@ -310,6 +318,13 @@ void ble_notify(const uint8_t* data, size_t len) {
     if (_statusChar && _connected) {
         _statusChar->setValue(const_cast<uint8_t*>(data), len);
         _statusChar->notify();
+    }
+}
+
+void ble_notify_pitch(float pitch) {
+    if (_pitchChar && _connected) {
+        _pitchChar->setValue(reinterpret_cast<uint8_t*>(&pitch), sizeof(float));
+        _pitchChar->notify();
     }
 }
 

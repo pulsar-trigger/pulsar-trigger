@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -42,6 +43,7 @@ fun MainMenuScreen(
     onCustomFlowSelected: () -> Unit = {},
     onDashboardSelected: () -> Unit = {},
     onPlannerSelected: () -> Unit = {},
+    onAlignmentSelected: () -> Unit = {},
     onSettingsSelected: () -> Unit = {},
 ) {
     val fwState by vm.firmwareManager.state.collectAsState()
@@ -131,6 +133,15 @@ fun MainMenuScreen(
             description = stringResource(R.string.mode_planner_desc),
             icon = Icons.Default.DateRange,
             onClick = onPlannerSelected,
+        )
+
+        Spacer(Modifier.height(12.dp))
+
+        MenuCard(
+            title = stringResource(R.string.mode_alignment),
+            description = stringResource(R.string.mode_alignment_desc),
+            icon = Icons.Default.Explore,
+            onClick = onAlignmentSelected,
         )
 
         Spacer(Modifier.height(20.dp))

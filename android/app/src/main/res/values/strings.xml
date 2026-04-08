@@ -483,4 +483,24 @@
 
     <!-- In-app update badge -->
     <string name="update_available_badge">Update</string>
+
+    <!-- Tracker Alignment -->
+    <string name="mode_alignment">Tracker Alignment</string>
+    <string name="mode_alignment_desc">Polar-align your star tracker using IMU &amp; compass</string>
+    <string name="alignment_title">Tracker Alignment</string>
+    <string name="alignment_tracker">Pulsar Tracker</string>
+    <string name="alignment_connected">Connected</string>
+    <string name="alignment_tracker_active">Receiving pitch data</string>
+    <string name="alignment_disconnected">Not connected</string>
+    <string name="alignment_no_location">Waiting for GPS location…</string>
+    <string name="alignment_location_info">Lat %1$s°  Declination %2$s°</string>
+    <string name="alignment_target_pole">Target: %1$s</string>
+    <string name="alignment_refresh">Refresh</string>
+    <string name="alignment_true_north">True North</string>
+    <string name="alignment_true_south">True South</string>
+    <string name="alignment_altitude">Altitude (Pitch)</string>
+    <string name="alignment_azimuth_label">Azimuth → %1$s</string>
+    <string name="alignment_current">Current</string>
+    <string name="alignment_target">Target</string>
+    <string name="alignment_error">Error</string>
 </resources>

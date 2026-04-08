@@ -41,3 +41,6 @@ const IntervalParams& triggers_interval_params();
 
 /// Get time remaining for the current sequence (ms).
 uint32_t triggers_time_remaining_ms();
+
+/// Get current filtered pitch in degrees (tracker alignment mode).
+float triggers_tracker_pitch();

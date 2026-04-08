@@ -61,6 +61,7 @@ import com.ehrocha.pulsar.ui.screens.ScanScreen
 import com.ehrocha.pulsar.ui.screens.SettingsScreen
 import com.ehrocha.pulsar.ui.screens.SettingsSection
 import com.ehrocha.pulsar.ui.screens.CustomFlowScreen
+import com.ehrocha.pulsar.ui.screens.AlignmentScreen
 import com.ehrocha.pulsar.ui.screens.DashboardScreen
 import com.ehrocha.pulsar.ui.screens.PlannerScreen
 import com.ehrocha.pulsar.ui.screens.EventSessionsScreen
@@ -239,6 +240,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                 onCustomFlowSelected = { currentScreen = AppScreen.CustomFlow },
                 onDashboardSelected = { currentScreen = AppScreen.Dashboard },
                 onPlannerSelected = { currentScreen = AppScreen.Planner },
+                onAlignmentSelected = { currentScreen = AppScreen.Alignment },
                 onSettingsSelected = { currentScreen = AppScreen.Settings(SettingsSection.UPDATES) },
             )
             is AppScreen.Mode -> {
@@ -333,6 +335,13 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                     onBack = { currentScreen = AppScreen.EventSessions(screen.event) },
                 )
             }
+            AppScreen.Alignment -> {
+                BackHandler { currentScreen = AppScreen.Menu }
+                AlignmentScreen(
+                    vm = vm,
+                    onBack = { currentScreen = AppScreen.Menu },
+                )
+            }
         }
     }
     }
@@ -352,4 +361,5 @@ private sealed class AppScreen {
     data class MapPicker(val event: PlannerEvent, val initialLat: Double = 0.0, val initialLon: Double = 0.0) : AppScreen()
     data class EventSessions(val event: PlannerEvent, val mapResult: MapPickerResult? = null) : AppScreen()
     data class SessionDetail(val session: PlannerSession, val event: PlannerEvent) : AppScreen()
+    data object Alignment : AppScreen()
 }

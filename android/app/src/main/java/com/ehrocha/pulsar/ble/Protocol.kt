@@ -12,6 +12,7 @@ object PulsarUuids {
     val SERVICE: UUID       = UUID.fromString("0000ff00-0000-1000-8000-00805f9b34fb")
     val CHAR_COMMAND: UUID  = UUID.fromString("0000ff01-0000-1000-8000-00805f9b34fb")
     val CHAR_STATUS: UUID   = UUID.fromString("0000ff02-0000-1000-8000-00805f9b34fb")
+    val CHAR_PITCH: UUID    = UUID.fromString("0000ff03-0000-1000-8000-00805f9b34fb")
 
     // OTA service
     val OTA_SERVICE: UUID   = UUID.fromString("0000ff10-0000-1000-8000-00805f9b34fb")
@@ -36,6 +37,7 @@ object Cmd {
 enum class TriggerMode(val id: Byte) {
     INTERVALOMETER(0x01),
     ASTRO(0x01),          // uses intervalometer on firmware
+    TRACKER(0x02),
     PRESS_HOLD(0x06),
     PRESS_LOCK(0x07),
     CUSTOM_FLOW(0x7F.toByte()),  // app-orchestrated, never sent to firmware

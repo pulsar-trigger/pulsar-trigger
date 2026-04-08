@@ -256,6 +256,53 @@ static void draw_center_lock() {
     _sprite.drawString(locked ? "LOCKED" : "UNLOCK", cx, cy);
 }
 
+// ── Center zone: Tracker Alignment ───────────────────────────────────────────
+static void draw_center_tracker() {
+    int cx = W / 2;
+    int cy = CENTER_Y + CENTER_H / 2;
+
+    // Mode label
+    _sprite.setTextDatum(top_center);
+    _sprite.setTextColor(COL_TEXT_DIM);
+    _sprite.setFont(&fonts::Font0);
+    _sprite.setTextSize(1);
+    _sprite.drawString("TRACKER ALIGN", cx, CENTER_Y + 2);
+
+    // Pitch value — large
+    float pitch = triggers_tracker_pitch();
+    char pitch_str[16];
+    snprintf(pitch_str, sizeof(pitch_str), "%.1f", pitch);
+
+    _sprite.setTextDatum(middle_center);
+    _sprite.setTextColor(COL_TEXT);
+    _sprite.setFont(&fonts::FreeSans9pt7b);
+    _sprite.setTextSize(W >= 200 ? 2 : 1);
+    _sprite.drawString(pitch_str, cx, cy - 8);
+
+    // Degree symbol + label
+    _sprite.setTextSize(1);
+    _sprite.setFont(&fonts::Font0);
+    _sprite.setTextColor(COL_TEXT_DIM);
+    _sprite.drawString("PITCH (deg)", cx, cy + 14);
+
+    // Graphical bar: center = 0°, left = -90°, right = +90°
+    int bar_w = W - 20;
+    int bar_h = 6;
+    int bar_x = 10;
+    int bar_y = CENTER_Y + CENTER_H - 16;
+    _sprite.fillRoundRect(bar_x, bar_y, bar_w, bar_h, 2, COL_BAR_BG);
+
+    // Center tick mark (0°)
+    _sprite.drawFastVLine(cx, bar_y - 2, bar_h + 4, COL_TEXT_DIM);
+
+    // Current pitch indicator
+    float clamped = pitch;
+    if (clamped < -90.0f) clamped = -90.0f;
+    if (clamped >  90.0f) clamped =  90.0f;
+    int indicator_x = bar_x + (int)((clamped + 90.0f) / 180.0f * bar_w);
+    _sprite.fillCircle(indicator_x, bar_y + bar_h / 2, 4, COL_VIOLET);
+}
+
 // ── Public API ───────────────────────────────────────────────────────────────
 
 void display_init() {
@@ -319,6 +366,7 @@ void display_update() {
         case MODE_INTERVALOMETER: draw_center_intervalometer(); break;
         case MODE_PRESS_HOLD:    draw_center_hold();           break;
         case MODE_PRESS_LOCK:    draw_center_lock();           break;
+        case MODE_TRACKER:       draw_center_tracker();        break;
         default:                 draw_center_idle();            break;
     }
 

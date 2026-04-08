@@ -24,6 +24,7 @@ enum Cmd : uint8_t {
 enum Mode : uint8_t {
     MODE_NONE          = 0x00,
     MODE_INTERVALOMETER = 0x01,
+    MODE_TRACKER       = 0x02,
     MODE_PRESS_HOLD    = 0x06,
     MODE_PRESS_LOCK    = 0x07,
 };

@@ -89,6 +89,9 @@
 #define CHAR_COMMAND_UUID     "0000ff01-0000-1000-8000-00805f9b34fb"
 #define CHAR_STATUS_UUID      "0000ff02-0000-1000-8000-00805f9b34fb"
 
+// ── Tracker pitch characteristic (on main service) ──────────────────────────
+#define CHAR_PITCH_UUID       "0000ff03-0000-1000-8000-00805f9b34fb"
+
 // ── OTA BLE characteristics ──────────────────────────────────────────────────
 #define OTA_SERVICE_UUID      "0000ff10-0000-1000-8000-00805f9b34fb"
 #define OTA_CONTROL_UUID      "0000ff11-0000-1000-8000-00805f9b34fb"
