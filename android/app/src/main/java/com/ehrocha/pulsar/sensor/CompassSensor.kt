@@ -14,8 +14,16 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 
+/** Orientation reading from phone sensors. */
+data class OrientationReading(
+    /** Magnetic azimuth in degrees [0..360). Apply declination externally. */
+    val azimuthDeg: Float,
+    /** Pitch (tilt) in degrees [−90..90]. Positive = phone tilted back. */
+    val pitchDeg: Float,
+)
+
 /**
- * Provides a Flow of compass azimuth (true north heading) in degrees [0..360).
+ * Provides a Flow of phone orientation (azimuth + pitch).
  *
  * Uses TYPE_ACCELEROMETER + TYPE_MAGNETIC_FIELD → getRotationMatrix → getOrientation.
  * Magnetic declination must be applied externally to convert to true north.
@@ -24,8 +32,9 @@ import kotlinx.coroutines.flow.callbackFlow
  *   1. SensorManager.getRotationMatrix(R, null, gravity, geomagnetic)
  *   2. SensorManager.getOrientation(R, values)
  *      values[0] = azimuth in radians [-π..π] from magnetic north
+ *      values[1] = pitch in radians [-π..π]
  *   3. magneticAzimuth = Math.toDegrees(values[0]).mod(360)
- *   4. trueAzimuth = (magneticAzimuth + declination).mod(360)
+ *   4. pitch = −Math.toDegrees(values[1])  (negate: face-up tilt = positive)
  */
 class CompassSensor(context: Context) {
 
@@ -33,10 +42,10 @@ class CompassSensor(context: Context) {
         context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
 
     /**
-     * Emits magnetic azimuth in degrees [0..360).
+     * Emits [OrientationReading] with magnetic azimuth and pitch.
      * Apply [android.hardware.GeomagneticField] declination to get true north.
      */
-    fun azimuthFlow(): Flow<Float> = callbackFlow {
+    fun orientationFlow(): Flow<OrientationReading> = callbackFlow {
         val gravity = FloatArray(3)
         val geomagnetic = FloatArray(3)
         val rotationMatrix = FloatArray(9)
@@ -63,11 +72,13 @@ class CompassSensor(context: Context) {
                     )
                     if (ok) {
                         SensorManager.getOrientation(rotationMatrix, orientation)
-                        // orientation[0] = azimuth in radians from magnetic north
                         val azimuthDeg = Math.toDegrees(orientation[0].toDouble())
                             .toFloat()
                             .mod(360f)
-                        trySend(azimuthDeg)
+                        // orientation[1] = pitch: negative when tilted back
+                        // Negate so tilting the phone back (raising the top edge) gives positive pitch
+                        val pitchDeg = -Math.toDegrees(orientation[1].toDouble()).toFloat()
+                        trySend(OrientationReading(azimuthDeg, pitchDeg))
                     }
                 }
             }

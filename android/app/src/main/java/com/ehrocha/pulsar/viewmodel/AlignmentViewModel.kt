@@ -22,9 +22,12 @@ import kotlin.math.abs
 /**
  * ViewModel for Tracker Alignment Helper.
  *
- * Handles compass azimuth (via phone sensors) and GPS location / magnetic
- * declination.  Pitch data comes from the already-connected Pulsar device
- * via [PulsarViewModel.trackerPitch] — no separate BLE connection needed.
+ * Uses the phone's own sensors for **all** orientation data:
+ *   - Accelerometer + magnetometer → azimuth (compass heading) and pitch (tilt)
+ *   - GPS → latitude (target elevation) and magnetic declination
+ *
+ * No BLE connection to the Pulsar device is required.  Place the phone flat
+ * on the tracker base and the crosshair guides the user to polar alignment.
  *
  * ── Formula summary ──────────────────────────────────────────────────────
  *   True Azimuth = (magneticAzimuth + magneticDeclination) mod 360
@@ -37,9 +40,15 @@ class AlignmentViewModel(private val app: Application) : AndroidViewModel(app) {
         private const val TAG = "AlignmentVM"
     }
 
-    // ── Compass state ────────────────────────────────────────────────────
+    // ── Sensor state ─────────────────────────────────────────────────────
     private val _trueAzimuth = MutableStateFlow(0f)
     val trueAzimuth: StateFlow<Float> = _trueAzimuth
+
+    private val _pitch = MutableStateFlow(0f)
+    val pitch: StateFlow<Float> = _pitch
+
+    private val _sensorsActive = MutableStateFlow(false)
+    val sensorsActive: StateFlow<Boolean> = _sensorsActive
 
     // ── Location & targets ───────────────────────────────────────────────
     private val _latitude = MutableStateFlow(0.0)
@@ -59,12 +68,14 @@ class AlignmentViewModel(private val app: Application) : AndroidViewModel(app) {
 
     // ── Internal ─────────────────────────────────────────────────────────
     private val compassSensor = CompassSensor(app)
-    private var compassJob: Job? = null
+    private var sensorJob: Job? = null
 
     init {
-        compassJob = viewModelScope.launch {
-            compassSensor.azimuthFlow().collect { magnetic ->
-                _trueAzimuth.value = (magnetic + _declination.value).mod(360f)
+        sensorJob = viewModelScope.launch {
+            compassSensor.orientationFlow().collect { reading ->
+                _trueAzimuth.value = (reading.azimuthDeg + _declination.value).mod(360f)
+                _pitch.value = reading.pitchDeg
+                _sensorsActive.value = true
             }
         }
     }
@@ -98,6 +109,6 @@ class AlignmentViewModel(private val app: Application) : AndroidViewModel(app) {
 
     override fun onCleared() {
         super.onCleared()
-        compassJob?.cancel()
+        sensorJob?.cancel()
     }
 }

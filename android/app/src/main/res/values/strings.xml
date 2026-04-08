@@ -450,12 +450,11 @@
 
     <!-- Tracker Alignment -->
     <string name="mode_alignment">Tracker Alignment</string>
-    <string name="mode_alignment_desc">Polar-align your star tracker using IMU &amp; compass</string>
+    <string name="mode_alignment_desc">Polar-align your star tracker using phone sensors</string>
     <string name="alignment_title">Tracker Alignment</string>
-    <string name="alignment_tracker">Pulsar Tracker</string>
-    <string name="alignment_connected">Connected</string>
-    <string name="alignment_tracker_active">Receiving pitch data</string>
-    <string name="alignment_disconnected">Not connected</string>
+    <string name="alignment_sensors">Phone Sensors</string>
+    <string name="alignment_sensors_active">Compass &amp; tilt active</string>
+    <string name="alignment_sensors_waiting">Waiting for sensors…</string>
     <string name="alignment_no_location">Waiting for GPS location…</string>
     <string name="alignment_location_info">Lat %1$s°  Declination %2$s°</string>
     <string name="alignment_target_pole">Target: %1$s</string>

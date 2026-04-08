@@ -89,8 +89,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     val rssi: StateFlow<Int?> = bleManager.rssi
 
-    val trackerPitch: StateFlow<Float?> = bleManager.trackerPitch
-
     // ── Simulator ────────────────────────────────────────────────────────
     private val _simulatorActive = MutableStateFlow(false)
     val simulatorActive: StateFlow<Boolean> = _simulatorActive
@@ -637,17 +635,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             _status.value = _status.value?.copy(state = DeviceState.IDLE)
             return
         }
-        bleManager.sendCommand(CommandBuilder.stop())
-    }
-
-    /** Activate tracker alignment mode on firmware (IMU pitch over BLE). */
-    fun enableTrackerMode() {
-        bleManager.sendCommand(CommandBuilder.setTracker())
-        bleManager.sendCommand(CommandBuilder.start())
-    }
-
-    /** Deactivate tracker alignment mode on firmware. */
-    fun disableTrackerMode() {
         bleManager.sendCommand(CommandBuilder.stop())
     }
 

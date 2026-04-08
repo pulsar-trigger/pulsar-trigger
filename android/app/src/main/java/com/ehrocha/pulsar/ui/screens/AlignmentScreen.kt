@@ -12,9 +12,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Bluetooth
-import androidx.compose.material.icons.filled.BluetoothSearching
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,20 +27,16 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.viewmodel.AlignmentViewModel
-import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import kotlin.math.abs
 import kotlin.math.min
 
 @Composable
 fun AlignmentScreen(
-    vm: PulsarViewModel,
     onBack: () -> Unit,
     alignVm: AlignmentViewModel = viewModel(),
 ) {
-    val connected by vm.connected.collectAsState()
-    val pitchValue by vm.trackerPitch.collectAsState()
-    val pitch = pitchValue ?: 0f
-    val trackerActive = pitchValue != null
+    val pitch by alignVm.pitch.collectAsState()
+    val sensorsActive by alignVm.sensorsActive.collectAsState()
     val trueAz by alignVm.trueAzimuth.collectAsState()
     val latitude by alignVm.latitude.collectAsState()
     val declination by alignVm.declination.collectAsState()
@@ -49,14 +44,9 @@ fun AlignmentScreen(
     val targetAz by alignVm.targetAzimuth.collectAsState()
     val locationReady by alignVm.locationReady.collectAsState()
 
-    // Acquire location and enable tracker mode on entry
+    // Acquire location on entry
     LaunchedEffect(Unit) {
         alignVm.acquireLocation()
-        vm.enableTrackerMode()
-    }
-    // Stop tracker mode when leaving the screen
-    DisposableEffect(Unit) {
-        onDispose { vm.disableTrackerMode() }
     }
 
     val altError = pitch - targetAlt
@@ -99,8 +89,8 @@ fun AlignmentScreen(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // ── Connection row ───────────────────────────────────────
-            ConnectionCard(connected = connected, trackerActive = trackerActive)
+            // ── Sensor status row ────────────────────────────────────
+            SensorCard(sensorsActive = sensorsActive)
 
             Spacer(Modifier.height(8.dp))
 
@@ -119,7 +109,7 @@ fun AlignmentScreen(
             CrosshairIndicator(
                 altError = altError,
                 azError = rawAzError,
-                connected = trackerActive,
+                active = sensorsActive,
             )
 
             Spacer(Modifier.height(16.dp))
@@ -133,7 +123,7 @@ fun AlignmentScreen(
                 targetAz = targetAz,
                 azError = rawAzError,
                 poleLabel = poleLabel,
-                connected = trackerActive,
+                active = sensorsActive,
             )
 
             Spacer(Modifier.height(24.dp))
@@ -141,13 +131,10 @@ fun AlignmentScreen(
     }
 }
 
-// ── BLE Connection Card ──────────────────────────────────────────────────
+// ── Sensor Status Card ───────────────────────────────────────────────────
 
 @Composable
-private fun ConnectionCard(
-    connected: Boolean,
-    trackerActive: Boolean,
-) {
+private fun SensorCard(sensorsActive: Boolean) {
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
@@ -159,9 +146,9 @@ private fun ConnectionCard(
             modifier = Modifier.padding(16.dp),
         ) {
             Icon(
-                if (connected) Icons.Default.Bluetooth else Icons.Default.BluetoothSearching,
+                Icons.Default.PhoneAndroid,
                 contentDescription = null,
-                tint = if (trackerActive) {
+                tint = if (sensorsActive) {
                     MaterialTheme.colorScheme.primary
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant
@@ -171,15 +158,15 @@ private fun ConnectionCard(
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    stringResource(R.string.alignment_tracker),
+                    stringResource(R.string.alignment_sensors),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    when {
-                        trackerActive -> stringResource(R.string.alignment_tracker_active)
-                        connected -> stringResource(R.string.alignment_connected)
-                        else -> stringResource(R.string.alignment_disconnected)
+                    if (sensorsActive) {
+                        stringResource(R.string.alignment_sensors_active)
+                    } else {
+                        stringResource(R.string.alignment_sensors_waiting)
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -256,7 +243,7 @@ private fun LocationCard(
 private fun CrosshairIndicator(
     altError: Float,
     azError: Float,
-    connected: Boolean,
+    active: Boolean,
 ) {
     val primary = MaterialTheme.colorScheme.primary
     val outline = MaterialTheme.colorScheme.outline
@@ -270,7 +257,7 @@ private fun CrosshairIndicator(
 
     val totalError = kotlin.math.sqrt(altError * altError + azError * azError)
     val dotColor = when {
-        !connected -> outline
+        !active -> outline
         totalError < 1f -> good
         totalError < 5f -> primary
         else -> error
@@ -342,7 +329,7 @@ private fun ReadoutSection(
     targetAz: Float,
     azError: Float,
     poleLabel: String,
-    connected: Boolean,
+    active: Boolean,
 ) {
     Surface(
         shape = RoundedCornerShape(16.dp),
@@ -361,7 +348,7 @@ private fun ReadoutSection(
             Row(Modifier.fillMaxWidth()) {
                 ReadoutValue(
                     label = stringResource(R.string.alignment_current),
-                    value = if (connected) "%.1f°".format(pitch) else "—",
+                    value = if (active) "%.1f°".format(pitch) else "—",
                     modifier = Modifier.weight(1f),
                 )
                 ReadoutValue(
@@ -371,9 +358,9 @@ private fun ReadoutSection(
                 )
                 ReadoutValue(
                     label = stringResource(R.string.alignment_error),
-                    value = if (connected) "%+.1f°".format(altError) else "—",
+                    value = if (active) "%+.1f°".format(altError) else "—",
                     modifier = Modifier.weight(1f),
-                    valueColor = errorColor(altError, connected),
+                    valueColor = errorColor(altError, active),
                 )
             }
 

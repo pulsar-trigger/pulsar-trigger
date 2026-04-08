@@ -354,7 +354,6 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
             AppScreen.Alignment -> {
                 BackHandler { currentScreen = AppScreen.Menu }
                 AlignmentScreen(
-                    vm = vm,
                     onBack = { currentScreen = AppScreen.Menu },
                 )
             }
