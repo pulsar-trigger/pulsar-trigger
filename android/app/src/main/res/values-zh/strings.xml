@@ -17,8 +17,8 @@
     <string name="mode_astro_desc">通过计算曝光时间拍摄星空</string>
     <string name="mode_manual">手动</string>
     <string name="mode_manual_desc">直接快门控制 — 按住或锁定模式</string>
-    <string name="mode_custom_flow">序列</string>
-    <string name="mode_custom_flow_desc">组合多种模式构建多步骤序列</string>
+    <string name="mode_custom_flow">流程和预设</string>
+    <string name="mode_custom_flow_desc">创建多步骤流程并保存预设</string>
     <string name="mode_astro_dashboard">天文仪表盘</string>
     <string name="mode_astro_dashboard_desc">天气、月相、波特尔等级及天空状况</string>
     <string name="menu_settings">设置</string>
@@ -266,7 +266,7 @@
 
     <string name="flow_title">自定义流程</string>
     <string name="flow_no_saved">暂无已保存的流程</string>
-    <string name="flow_create_instruction">创建流程以串联多种拍摄\n模式、暂停和序列。</string>
+    <string name="flow_create_instruction">创建流程以串联多种拍摄\n模式、暂停和预设。</string>
     <string name="btn_new_flow">新建流程</string>
     <string name="dialog_delete_flow">删除流程</string>
     <string name="dialog_delete_flow_msg">删除 \"%1$s\"？此操作无法撤销。</string>
@@ -274,7 +274,7 @@
     <string name="flow_step_count">%1$d 个步骤</string>
     <string name="flow_step_count_plural">%1$d 个步骤</string>
     <string name="flow_no_steps">暂无步骤</string>
-    <string name="flow_add_steps_instruction">添加步骤以构建自定义拍摄流程。\n可混合使用不同模式、暂停和序列。</string>
+    <string name="flow_add_steps_instruction">添加步骤以构建自定义拍摄流程。\n可混合使用不同模式、暂停和预设。</string>
     <string name="btn_add_step">添加步骤</string>
     <string name="btn_save_as">另存为…</string>
     <string name="btn_stop_flow">停止流程</string>

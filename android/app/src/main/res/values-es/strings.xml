@@ -15,8 +15,8 @@
     <string name="mode_astro_desc">Astrofotografía con tiempos de exposición calculados</string>
     <string name="mode_manual">Manual</string>
     <string name="mode_manual_desc">Control directo del obturador — modo mantener o bloquear</string>
-    <string name="mode_custom_flow">Flujo Personalizado</string>
-    <string name="mode_custom_flow_desc">Crea secuencias combinando cualquier modo</string>
+    <string name="mode_custom_flow">Flujos y Presets</string>
+    <string name="mode_custom_flow_desc">Crea flujos multi-paso y guarda presets</string>
     <string name="mode_astro_dashboard">Panel Astro</string>
     <string name="mode_astro_dashboard_desc">Clima, fase lunar, escala Bortle &amp; condiciones del cielo</string>
     <string name="menu_settings">Ajustes</string>
@@ -264,7 +264,7 @@
 
     <string name="flow_title">Flujo Personalizado</string>
     <string name="flow_no_saved">No hay flujos guardados</string>
-    <string name="flow_create_instruction">Crea un flujo para encadenar múltiples modos\nde disparo, pausas y secuencias.</string>
+    <string name="flow_create_instruction">Crea un flujo para encadenar múltiples modos\nde disparo, pausas y presets.</string>
     <string name="btn_new_flow">Nuevo flujo</string>
     <string name="dialog_delete_flow">Eliminar Flujo</string>
     <string name="dialog_delete_flow_msg">¿Eliminar \"%1$s\"? Esta acción no se puede deshacer.</string>
@@ -272,7 +272,7 @@
     <string name="flow_step_count">%1$d paso</string>
     <string name="flow_step_count_plural">%1$d pasos</string>
     <string name="flow_no_steps">Sin pasos aún</string>
-    <string name="flow_add_steps_instruction">Añade pasos para construir tu flujo de disparo.\nCombina modos, pausas y secuencias.</string>
+    <string name="flow_add_steps_instruction">Añade pasos para construir tu flujo de disparo.\nCombina modos, pausas y presets.</string>
     <string name="btn_add_step">Añadir Paso</string>
     <string name="btn_save_as">Guardar Como…</string>
     <string name="btn_stop_flow">Detener flujo</string>

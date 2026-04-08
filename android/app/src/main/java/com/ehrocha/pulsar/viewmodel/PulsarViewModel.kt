@@ -357,15 +357,15 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     // ── Custom Flow management ───────────────────────────────────────────
 
-    /** Load a single-step flow pre-filled with the user's default settings. */
+    /** Load a single-step flow pre-filled with the user's current working settings. */
     fun loadQuickMode(type: FlowStepType) {
         val step = when (type) {
             FlowStepType.INTERVALOMETER -> FlowStep(
                 type = FlowStepType.INTERVALOMETER,
-                intervalMs = _defaultIntervalMs.value,
-                exposureMs = _defaultExposureMs.value,
-                shotCount = _defaultShotCount.value,
-                delayMs = _defaultDelayMs.value,
+                intervalMs = _intervalMs.value,
+                exposureMs = _exposureMs.value,
+                shotCount = _shotCount.value,
+                delayMs = _delayMs.value,
             )
             FlowStepType.ASTRO -> FlowStep(
                 type = FlowStepType.ASTRO,

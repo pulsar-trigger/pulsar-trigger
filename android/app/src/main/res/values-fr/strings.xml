@@ -15,8 +15,8 @@
     <string name="mode_astro_desc">Photographie stellaire avec calcul des temps d\'exposition</string>
     <string name="mode_manual">Manuel</string>
     <string name="mode_manual_desc">Contrôle direct de l\'obturateur — mode maintien ou verrouillage</string>
-    <string name="mode_custom_flow">Séquence personnalisée</string>
-    <string name="mode_custom_flow_desc">Créez des séquences multi-étapes combinant tous les modes</string>
+    <string name="mode_custom_flow">Flux &amp; Préréglages</string>
+    <string name="mode_custom_flow_desc">Créez des flux multi-étapes et sauvegardez des préréglages</string>
     <string name="mode_astro_dashboard">Tableau de bord Astro</string>
     <string name="mode_astro_dashboard_desc">Météo, phase lunaire, échelle de Bortle &amp; conditions du ciel</string>
     <string name="menu_settings">Paramètres</string>
@@ -266,7 +266,7 @@
 
     <string name="flow_title">Séquence personnalisée</string>
     <string name="flow_no_saved">Aucune séquence enregistrée</string>
-    <string name="flow_create_instruction">Créez une séquence pour enchaîner plusieurs\nmodes de prise de vue, pauses et séquences.</string>
+    <string name="flow_create_instruction">Créez une séquence pour enchaîner plusieurs\nmodes de prise de vue, pauses et préréglages.</string>
     <string name="btn_new_flow">Nouvelle séquence</string>
     <string name="dialog_delete_flow">Supprimer la séquence</string>
     <string name="dialog_delete_flow_msg">Supprimer \"%1$s\" ? Cette action est irréversible.</string>
@@ -274,7 +274,7 @@
     <string name="flow_step_count">%1$d étape</string>
     <string name="flow_step_count_plural">%1$d étapes</string>
     <string name="flow_no_steps">Aucune étape pour l\'instant</string>
-    <string name="flow_add_steps_instruction">Ajoutez des étapes pour construire votre séquence personnalisée.\nCombinez modes, pauses et séquences.</string>
+    <string name="flow_add_steps_instruction">Ajoutez des étapes pour construire votre séquence personnalisée.\nCombinez modes, pauses et préréglages.</string>
     <string name="btn_add_step">Ajouter une étape</string>
     <string name="btn_save_as">Enregistrer sous…</string>
     <string name="btn_stop_flow">Arrêter la séquence</string>

@@ -15,8 +15,8 @@
     <string name="mode_astro_desc">Sternenfotografie mit berechneten Belichtungszeiten</string>
     <string name="mode_manual">Manuell</string>
     <string name="mode_manual_desc">Direkte Auslösersteuerung — Halten oder Sperren</string>
-    <string name="mode_custom_flow">Benutzerdefinierter Ablauf</string>
-    <string name="mode_custom_flow_desc">Mehrstufige Sequenzen aus beliebigen Modi zusammenstellen</string>
+    <string name="mode_custom_flow">Abläufe &amp; Vorlagen</string>
+    <string name="mode_custom_flow_desc">Mehrstufige Abläufe erstellen und Vorlagen speichern</string>
     <string name="mode_astro_dashboard">Astro-Dashboard</string>
     <string name="mode_astro_dashboard_desc">Wetter, Mondphase, Bortle-Skala &amp; Himmelsbedingungen</string>
     <string name="menu_settings">Einstellungen</string>
@@ -266,7 +266,7 @@
 
     <string name="flow_title">Benutzerdefinierter Ablauf</string>
     <string name="flow_no_saved">Keine gespeicherten Abläufe</string>
-    <string name="flow_create_instruction">Erstelle einen Ablauf, um mehrere Aufnahme-\nmodi, Pausen und Sequenzen zu verketten.</string>
+    <string name="flow_create_instruction">Erstelle einen Ablauf, um mehrere Aufnahme-\nmodi, Pausen und Vorlagen zu verketten.</string>
     <string name="btn_new_flow">Neuer ablauf</string>
     <string name="dialog_delete_flow">Ablauf löschen</string>
     <string name="dialog_delete_flow_msg">\"%1$s\" löschen? Dies kann nicht rückgängig gemacht werden.</string>
@@ -274,7 +274,7 @@
     <string name="flow_step_count">%1$d Schritt</string>
     <string name="flow_step_count_plural">%1$d Schritte</string>
     <string name="flow_no_steps">Noch keine Schritte</string>
-    <string name="flow_add_steps_instruction">Füge Schritte hinzu, um deinen benutzerdefinierten\nAufnahmeablauf zu erstellen. Kombiniere Modi, Pausen und Sequenzen.</string>
+    <string name="flow_add_steps_instruction">Füge Schritte hinzu, um deinen benutzerdefinierten\nAufnahmeablauf zu erstellen. Kombiniere Modi, Pausen und Vorlagen.</string>
     <string name="btn_add_step">Schritt hinzufügen</string>
     <string name="btn_save_as">Speichern unter…</string>
     <string name="btn_stop_flow">Ablauf stoppen</string>

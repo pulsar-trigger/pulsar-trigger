@@ -15,8 +15,8 @@
     <string name="mode_astro_desc">計算された露出時間で星を撮影</string>
     <string name="mode_manual">マニュアル</string>
     <string name="mode_manual_desc">シャッターを直接操作 — ホールドまたはロックモード</string>
-    <string name="mode_custom_flow">カスタムフロー</string>
-    <string name="mode_custom_flow_desc">任意のモードを組み合わせたマルチステップシーケンスを作成</string>
+    <string name="mode_custom_flow">フロー＆プリセット</string>
+    <string name="mode_custom_flow_desc">マルチステップフローを作成し、プリセットとして保存</string>
     <string name="mode_astro_dashboard">天体ダッシュボード</string>
     <string name="mode_astro_dashboard_desc">天気、月齢、ボートル・スケール＆空の状態</string>
     <string name="menu_settings">設定</string>
@@ -266,7 +266,7 @@
 
     <string name="flow_title">カスタムフロー</string>
     <string name="flow_no_saved">保存済みフローなし</string>
-    <string name="flow_create_instruction">フローを作成して複数の撮影\nモード、一時停止、シーケンスを連結します。</string>
+    <string name="flow_create_instruction">フローを作成して複数の撮影\nモード、一時停止、プリセットを連結します。</string>
     <string name="btn_new_flow">新規フロー</string>
     <string name="dialog_delete_flow">フローを削除</string>
     <string name="dialog_delete_flow_msg">\"%1$s\" を削除しますか？この操作は元に戻せません。</string>
@@ -274,7 +274,7 @@
     <string name="flow_step_count">%1$d ステップ</string>
     <string name="flow_step_count_plural">%1$d ステップ</string>
     <string name="flow_no_steps">ステップなし</string>
-    <string name="flow_add_steps_instruction">カスタム撮影フローにステップを追加します。\nモード、一時停止、シーケンスを組み合わせます。</string>
+    <string name="flow_add_steps_instruction">カスタム撮影フローにステップを追加します。\nモード、一時停止、プリセットを組み合わせます。</string>
     <string name="btn_add_step">ステップを追加</string>
     <string name="btn_save_as">名前を付けて保存…</string>
     <string name="btn_stop_flow">フロー停止</string>

@@ -15,8 +15,8 @@
     <string name="mode_astro_desc">Astrofotografia com tempos de exposição calculados</string>
     <string name="mode_manual">Manual</string>
     <string name="mode_manual_desc">Controle direto do obturador — modo segurar ou travar</string>
-    <string name="mode_custom_flow">Fluxo Personalizado</string>
-    <string name="mode_custom_flow_desc">Monte sequências combinando qualquer modo</string>
+    <string name="mode_custom_flow">Fluxos &amp; Predefinições</string>
+    <string name="mode_custom_flow_desc">Monte fluxos multi-etapas e salve predefinições</string>
     <string name="mode_astro_dashboard">Painel Astro</string>
     <string name="mode_astro_dashboard_desc">Clima, fase lunar, escala Bortle &amp; condições do céu</string>
     <string name="menu_settings">Configurações</string>
@@ -266,7 +266,7 @@
 
     <string name="flow_title">Fluxo Personalizado</string>
     <string name="flow_no_saved">Nenhum fluxo salvo</string>
-    <string name="flow_create_instruction">Crie um fluxo para encadear múltiplos modos\nde disparo, pausas e sequências.</string>
+    <string name="flow_create_instruction">Crie um fluxo para encadear múltiplos modos\nde disparo, pausas e predefinições.</string>
     <string name="btn_new_flow">Novo fluxo</string>
     <string name="dialog_delete_flow">Excluir Fluxo</string>
     <string name="dialog_delete_flow_msg">Excluir \"%1$s\"? Esta ação não pode ser desfeita.</string>
@@ -274,7 +274,7 @@
     <string name="flow_step_count">%1$d etapa</string>
     <string name="flow_step_count_plural">%1$d etapas</string>
     <string name="flow_no_steps">Nenhuma etapa ainda</string>
-    <string name="flow_add_steps_instruction">Adicione etapas para montar seu fluxo de disparo.\nCombine modos, pausas e sequências.</string>
+    <string name="flow_add_steps_instruction">Adicione etapas para montar seu fluxo de disparo.\nCombine modos, pausas e predefinições.</string>
     <string name="btn_add_step">Adicionar Etapa</string>
     <string name="btn_save_as">Salvar Como…</string>
     <string name="btn_stop_flow">Parar fluxo</string>

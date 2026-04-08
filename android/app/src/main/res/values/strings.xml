@@ -21,8 +21,8 @@
     <string name="mode_astro_desc">Star photography with calculated exposure times</string>
     <string name="mode_manual">Manual</string>
     <string name="mode_manual_desc">Direct shutter control — hold or lock mode</string>
-    <string name="mode_custom_flow">Sequences</string>
-    <string name="mode_custom_flow_desc">Build multi-step sequences mixing any mode</string>
+    <string name="mode_custom_flow">Flows &amp; Presets</string>
+    <string name="mode_custom_flow_desc">Build multi-step flows and save presets</string>
     <string name="mode_astro_dashboard">Astro Dashboard</string>
     <string name="mode_astro_dashboard_desc">Weather, moon phase, Bortle scale &amp; sky conditions</string>
     <string name="menu_settings">Settings</string>
@@ -324,7 +324,7 @@
     <!-- CustomFlowScreen -->
     <string name="flow_title">Custom Flow</string>
     <string name="flow_no_saved">No saved flows</string>
-    <string name="flow_create_instruction">Create a flow to chain multiple shooting\nmodes, pauses, and sequences.</string>
+    <string name="flow_create_instruction">Create a flow to chain multiple shooting\nmodes, pauses, and presets.</string>
     <string name="btn_new_flow">New Flow</string>
     <string name="dialog_delete_flow">Delete Flow</string>
     <string name="dialog_delete_flow_msg">Delete \"%1$s\"? This cannot be undone.</string>
@@ -332,7 +332,7 @@
     <string name="flow_step_count">%1$d step</string>
     <string name="flow_step_count_plural">%1$d steps</string>
     <string name="flow_no_steps">No steps yet</string>
-    <string name="flow_add_steps_instruction">Add steps to build your custom shooting flow.\nMix modes, pauses, and sequences.</string>
+    <string name="flow_add_steps_instruction">Add steps to build your custom shooting flow.\nMix modes, pauses, and presets.</string>
     <string name="btn_add_step">Add Step</string>
     <string name="btn_save_as">Save As…</string>
     <string name="btn_stop_flow">Stop Flow</string>
