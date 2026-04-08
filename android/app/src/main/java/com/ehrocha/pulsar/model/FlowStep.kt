@@ -86,7 +86,7 @@ data class FlowStep(
 fun FlowStep.summaryLabel(context: Context): String = when (type) {
     FlowStepType.INTERVALOMETER -> context.getString(R.string.step_summary_intervalometer, shotCount, exposureMs, intervalMs)
     FlowStepType.ASTRO -> {
-        val expS = ruleDivisor.toDouble() / (focalLength * cropFactor)
+        val expS = AppConfig.astroExposureS(focalLength, cropFactor, ruleDivisor)
         context.getString(R.string.step_summary_astro, shotCount, String.format("%.1f", expS), focalLength)
     }
     FlowStepType.PAUSE -> pauseLabel

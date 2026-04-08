@@ -36,8 +36,7 @@ import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import kotlinx.coroutines.delay
-import com.ehrocha.pulsar.ui.components.BatteryIndicator
-import com.ehrocha.pulsar.ui.components.NightModeToggle
+
 import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 import com.ehrocha.pulsar.ble.StatusFrame
@@ -89,7 +88,7 @@ fun ModeScreen(
             val title = when (targetMode) {
                 TriggerMode.INTERVALOMETER -> stringResource(R.string.mode_intervalometer)
                 TriggerMode.ASTRO -> stringResource(R.string.mode_astro)
-                TriggerMode.PRESS_HOLD -> stringResource(R.string.mode_manual)
+                TriggerMode.PRESS_HOLD, TriggerMode.PRESS_LOCK -> stringResource(R.string.mode_manual)
                 else -> targetMode.name.replace('_', ' ')
             }
             Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)

@@ -526,8 +526,8 @@ internal fun AstroPanelContent(
     onShotCountChanged: ((Int) -> Unit)? = null,
     enabled: Boolean = true,
 ) {
-    val maxExposureS = ruleDivisor.toDouble() / (focalLength * cropFactor)
-    val maxExposureMs = (maxExposureS * 1000).toLong().coerceAtLeast(AppConfig.MIN_ASTRO_EXPOSURE_MS)
+    val maxExposureMs = AppConfig.astroExposureMs(focalLength, cropFactor, ruleDivisor)
+    val maxExposureS = AppConfig.astroExposureS(focalLength, cropFactor, ruleDivisor)
     val intervalMs = maxExposureMs + gapMs
     val totalTimeMs = delayMs + shotCount.toLong() * (maxExposureMs + gapMs) - gapMs
 
@@ -1372,7 +1372,7 @@ private fun UpdatesSection(vm: PulsarViewModel) {
         HorizontalDivider()
 
         // ── App ──────────────────────────────────────────────────────
-        Text("App", style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.label_app), style = MaterialTheme.typography.titleSmall)
 
         Text(
             "Current: v$appVersion",

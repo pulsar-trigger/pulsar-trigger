@@ -10,7 +10,6 @@
     <string name="unknown_device">未知设备</string>
     <string name="tab_trigger">触发</string>
     <string name="tab_tools">工具</string>
-    <string name="section_modes">模式</string>
     <string name="mode_intervalometer">间隔计时器</string>
     <string name="mode_intervalometer_desc">精准定时自动拍摄延时序列</string>
     <string name="mode_astro">天文</string>
@@ -22,7 +21,6 @@
     <string name="mode_astro_dashboard">天文仪表盘</string>
     <string name="mode_astro_dashboard_desc">天气、月相、波特尔等级及天空状况</string>
     <string name="menu_settings">设置</string>
-    <string name="menu_settings_desc">设备配置与信息</string>
     <string name="disconnect">断开连接</string>
     <string name="back">返回</string>
     <string name="cancel">取消</string>
@@ -46,7 +44,6 @@
     <string name="cd_expand">展开</string>
     <string name="cd_move_up">上移</string>
     <string name="cd_move_down">下移</string>
-    <string name="cd_settings">设置</string>
     <string name="btn_stop">停止</string>
     <string name="btn_start">开始</string>
     <string name="status_sequence_running">序列运行中…</string>
@@ -68,7 +65,6 @@
     <string name="status_capturing_stars">正在拍摄星空…</string>
     <string name="status_ready_astro">天文序列已就绪</string>
     <string name="panel_intervalometer">间隔计时器</string>
-    <string name="panel_intervalometer_desc">使用精准定时自动拍摄复杂延时序列或连拍。请将相机设置为B门模式。</string>
     <string name="label_sequence_estimate">序列预估</string>
     <string name="label_shots">拍摄张数</string>
     <string name="label_total_duration">总时长</string>
@@ -78,13 +74,10 @@
     <string name="label_start_delay">启动延迟</string>
     <string name="label_number_of_shots">拍摄张数</string>
     <string name="panel_manual">手动快门</string>
-    <string name="panel_manual_desc">直接控制快门。选择按住（按住不放）或锁定（切换开/关）模式。</string>
     <string name="panel_manual_tip">使用下方操作区域中的标签切换行为模式。</string>
     <string name="panel_manual_lock_info">锁定：点按中央按钮一次打开快门，再点按一次关闭。适合长时间B门曝光。</string>
     <string name="panel_manual_hold_info">按住：按住中央按钮时快门保持打开。适合快速连拍。</string>
     <string name="panel_astro">天文模式</string>
-    <string name="panel_astro_desc">通过计算最大快门速度精确拍摄星点，防止星轨拖线。</string>
-    <string name="panel_astro_tip">在底部切换法则。400 法则适用于高分辨率传感器。</string>
     <string name="label_rule_readout">%1$d 法则读数</string>
     <string name="label_effective_focal">%1$smm 等效焦距</string>
     <string name="label_max_exposure">最大曝光</string>
@@ -102,12 +95,10 @@
     <string name="section_device">设备</string>
     <string name="label_device_name">设备名称</string>
     <string name="section_gpio_pins">GPIO 引脚</string>
-    <string name="gpio_pins_desc">选择驱动快门和对焦光耦合器的 ESP32 GPIO 引脚。更改会发送到设备并保存。</string>
     <string name="label_shutter_pin">快门引脚</string>
     <string name="label_focus_pin">对焦引脚</string>
     <string name="gpio_simulator_note">模拟器模式下无法配置 GPIO</string>
     <string name="section_backup_restore">备份 &amp; 恢复</string>
-    <string name="backup_restore_desc">将设置导出到 Google Drive 或本地存储，并在其他设备上导入。</string>
     <string name="toast_settings_exported">设置已导出</string>
     <string name="toast_export_failed">导出失败：%1$s</string>
     <string name="toast_settings_imported">设置已导入</string>
@@ -146,7 +137,6 @@
     <string name="status_download_complete">下载完成 — 安装程序将自动打开。</string>
     <string name="status_update_check_failed">检查更新失败</string>
     <string name="section_default_values">默认值</string>
-    <string name="default_values_desc">设置间隔计时器的默认值。这些值将在应用启动时生效。</string>
     <string name="label_default_interval">默认间隔（间隙）</string>
     <string name="label_default_exposure">默认曝光</string>
     <string name="label_default_start_delay">默认启动延迟</string>
@@ -186,22 +176,17 @@
     <string name="status_remaining">剩余</string>
     <string name="settings_intervalometer">间隔计时器设置</string>
     <string name="settings_astro">天文设置</string>
-    <string name="settings_astro_desc">天文模式根据您的光学配置计算曝光时间。在此配置镜头和传感器默认值，也可在模式界面中调整。</string>
     <string name="dialog_updates_available">有可用更新</string>
     <string name="update_firmware_available">固件 v%1$s 可用</string>
     <string name="update_app_available">应用 v%1$s 可用</string>
-    <string name="update_go_to_settings">前往设置安装更新。</string>
     <string name="btn_go_to_settings">前往设置</string>
-    <string name="btn_later">稍后</string>
     <string name="dashboard_title">天文仪表盘</string>
     <string name="status_fetching_data">正在获取位置 &amp; 数据…</string>
-    <string name="card_location">位置</string>
     <string name="card_summary">摘要</string>
     <string name="location_north">北</string>
     <string name="location_south">南</string>
     <string name="location_east">东</string>
     <string name="location_west">西</string>
-    <string name="location_altitude">海拔：%.0f 米</string>
 
     <!-- Summary verdict chips -->
     <string name="verdict_moon_good">暗月</string>
@@ -213,7 +198,6 @@
     <string name="verdict_mw_visible">银河可见</string>
     <string name="verdict_mw_not_visible">银河不可见</string>
     <string name="verdict_bortle">波特尔 %1$d</string>
-    <string name="verdict_best_window">最佳：%1$s – %2$s</string>
 
     <string name="card_moon">月相</string>
     <string name="moon_illuminated">%.0f%% 照明</string>
@@ -261,7 +245,6 @@
     <string name="window_excellent">优秀</string>
     <string name="window_good">良好</string>
     <string name="window_fair">一般</string>
-    <string name="window_cloud">平均 %1$d%% 云量</string>
     <string name="window_no_clear">今晚未找到晴朗时段</string>
 
     <string name="flow_title">自定义流程</string>
@@ -297,13 +280,6 @@
     <string name="step_type_pause">暂停</string>
     <string name="step_summary_intervalometer">%1$d 张，%2$dms 曝光，%3$dms 间隔</string>
     <string name="step_summary_astro">%1$d 张，%2$ss 曝光（%3$dmm）</string>
-    <string name="default_pause_label">调整相机设置</string>
-    <string name="status_system_offline">系统离线</string>
-    <string name="status_disconnected">已断开连接</string>
-    <string name="status_syncing">同步中…</string>
-    <string name="stat_mode">模式</string>
-    <string name="stat_captured">已拍摄</string>
-    <string name="stat_est_remaining">预计剩余</string>
     <string name="notif_update_available">版本 %1$s 可用 — 打开以更新</string>
 
     <!-- Planner -->
@@ -311,23 +287,11 @@
     <string name="mode_planner_desc">保存地点并安排带有条件警报的拍摄会话</string>
     <string name="planner_title">会话规划器</string>
     <string name="planner_add">添加</string>
-    <string name="planner_tab_locations">地点</string>
-    <string name="planner_tab_sessions">会话</string>
-    <string name="planner_no_locations">尚无保存的地点</string>
     <string name="planner_no_sessions">尚无计划的会话</string>
     <string name="planner_no_upcoming">没有即将到来的事件</string>
     <string name="planner_no_past">没有过去的事件</string>
     <string name="tab_upcoming">即将</string>
     <string name="tab_past">过去</string>
-    <string name="planner_add_session">添加会话</string>
-    <string name="planner_add_location_title">添加地点</string>
-    <string name="planner_add_session_title">计划会话</string>
-    <string name="planner_location_name">地点名称</string>
-    <string name="planner_latitude">纬度</string>
-    <string name="planner_longitude">经度</string>
-    <string name="planner_location">地点</string>
-    <string name="planner_delete_location_title">删除地点？</string>
-    <string name="planner_delete_location_msg">删除 \"%1$s\" 及其所有会话？</string>
     <string name="planner_search_city">搜索城市</string>
     <string name="planner_use_gps">使用当前位置</string>
     <string name="planner_my_location">我的位置</string>
@@ -342,7 +306,6 @@
     <string name="planner_tap_to_select">点击地图选择位置</string>
     <string name="planner_resolving_location">正在解析位置…</string>
     <string name="planner_time_window">时间窗口</string>
-    <string name="planner_cache_desc">会话仪表板数据已缓存在本地以减少API调用。选择刷新间隔。</string>
     <string name="planner_cache_interval">刷新间隔</string>
     <string name="planner_cache_hours">%1$d 小时</string>
 

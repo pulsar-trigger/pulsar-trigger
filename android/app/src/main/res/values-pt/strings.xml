@@ -8,7 +8,6 @@
     <string name="use_simulator">Use Simulator</string>
     <string name="simulator_description">Explore the app without a real device</string>
     <string name="unknown_device">Unknown Device</string>
-    <string name="section_modes">Modos</string>
     <string name="mode_intervalometer">Intervalômetro</string>
     <string name="mode_intervalometer_desc">Automatize sequências timelapse com precisão</string>
     <string name="mode_astro">Astro</string>
@@ -20,7 +19,6 @@
     <string name="mode_astro_dashboard">Painel Astro</string>
     <string name="mode_astro_dashboard_desc">Clima, fase lunar, escala Bortle &amp; condições do céu</string>
     <string name="menu_settings">Configurações</string>
-    <string name="menu_settings_desc">Configuração e informações do dispositivo</string>
     <string name="disconnect">Desconectar</string>
     <string name="back">Voltar</string>
     <string name="cancel">Cancelar</string>
@@ -44,7 +42,6 @@
     <string name="cd_expand">Expandir</string>
     <string name="cd_move_up">Mover para cima</string>
     <string name="cd_move_down">Mover para baixo</string>
-    <string name="cd_settings">Configurações</string>
     <string name="btn_stop">Parar</string>
     <string name="btn_start">Iniciar</string>
     <string name="status_sequence_running">Sequência em execução…</string>
@@ -66,7 +63,6 @@
     <string name="status_capturing_stars">Capturando estrelas…</string>
     <string name="status_ready_astro">Pronto para sequência astro</string>
     <string name="panel_intervalometer">Intervalômetro</string>
-    <string name="panel_intervalometer_desc">Automatize sequências timelapse complexas ou capturas em rajada com precisão. Sua câmera deve estar no modo Bulb.</string>
     <string name="label_sequence_estimate">Estimativa da sequência</string>
     <string name="label_shots">Fotos</string>
     <string name="label_total_duration">Duração total</string>
@@ -76,13 +72,10 @@
     <string name="label_start_delay">Atraso inicial</string>
     <string name="label_number_of_shots">Número de fotos</string>
     <string name="panel_manual">Obturador Manual</string>
-    <string name="panel_manual_desc">Controle o obturador diretamente. Escolha Segurar (pressionar e segurar) ou Travar (alternar liga/desliga).</string>
     <string name="panel_manual_tip">Alterne o comportamento usando os chips na área de ação abaixo.</string>
     <string name="panel_manual_lock_info">TRAVAR: Toque no botão central uma vez para abrir o obturador, toque novamente para fechar. Ideal para exposições bulb longas.</string>
     <string name="panel_manual_hold_info">SEGURAR: O obturador permanece aberto enquanto o botão central estiver pressionado. Ideal para rajadas rápidas.</string>
     <string name="panel_astro">Modo Astro</string>
-    <string name="panel_astro_desc">Fotografe estrelas calculando a velocidade máxima do obturador para evitar rastros.</string>
-    <string name="panel_astro_tip">Alterne as regras na parte inferior. A Regra 400 é ideal para sensores de alta resolução.</string>
     <string name="label_rule_readout">Leitura regra %1$d</string>
     <string name="label_effective_focal">%1$smm Efetivo</string>
     <string name="label_max_exposure">Exposição máx.</string>
@@ -100,12 +93,10 @@
     <string name="section_device">Dispositivo</string>
     <string name="label_device_name">Nome do Dispositivo</string>
     <string name="section_gpio_pins">Pinos GPIO</string>
-    <string name="gpio_pins_desc">Escolha quais pinos GPIO do ESP32 controlam os optoacopladores de obturador e foco. As alterações são enviadas ao dispositivo e salvas.</string>
     <string name="label_shutter_pin">Pino do Obturador</string>
     <string name="label_focus_pin">Pino de Foco</string>
     <string name="gpio_simulator_note">Configuração GPIO não disponível no modo simulador</string>
     <string name="section_backup_restore">Backup &amp; restauração</string>
-    <string name="backup_restore_desc">Exporte configurações para o Google Drive ou armazenamento local e importe em outro dispositivo.</string>
     <string name="toast_settings_exported">Configurações exportadas</string>
     <string name="toast_export_failed">Falha ao exportar: %1$s</string>
     <string name="toast_settings_imported">Configurações importadas</string>
@@ -144,7 +135,6 @@
     <string name="status_download_complete">Download concluído — o instalador deve abrir automaticamente.</string>
     <string name="status_update_check_failed">Falha ao verificar atualização</string>
     <string name="section_default_values">Valores padrão</string>
-    <string name="default_values_desc">Defina valores padrão para o Intervalômetro. Eles são aplicados quando o app inicia.</string>
     <string name="label_default_interval">Intervalo Padrão (gap)</string>
     <string name="label_default_exposure">Exposição Padrão</string>
     <string name="label_default_start_delay">Atraso Inicial Padrão</string>
@@ -184,22 +174,17 @@
     <string name="status_remaining">restante</string>
     <string name="settings_intervalometer">Configurações do Intervalômetro</string>
     <string name="settings_astro">Configurações Astro</string>
-    <string name="settings_astro_desc">O modo Astro calcula tempos de exposição a partir das suas ópticas. Configure padrões de lente e sensor aqui, ou ajuste na tela do modo.</string>
     <string name="dialog_updates_available">Atualizações Disponíveis</string>
     <string name="update_firmware_available">Firmware v%1$s está disponível</string>
     <string name="update_app_available">App v%1$s está disponível</string>
-    <string name="update_go_to_settings">Vá para Configurações para instalar atualizações.</string>
     <string name="btn_go_to_settings">Ir para Configurações</string>
-    <string name="btn_later">Depois</string>
     <string name="dashboard_title">Painel Astro</string>
     <string name="status_fetching_data">Buscando localização &amp; dados…</string>
-    <string name="card_location">Localização</string>
     <string name="card_summary">Resumo</string>
     <string name="location_north">N</string>
     <string name="location_south">S</string>
     <string name="location_east">L</string>
     <string name="location_west">O</string>
-    <string name="location_altitude">Altitude: %.0f m</string>
 
     <!-- Summary verdict chips -->
     <string name="verdict_moon_good">Lua Escura</string>
@@ -211,7 +196,6 @@
     <string name="verdict_mw_visible">VL Visível</string>
     <string name="verdict_mw_not_visible">VL Não Visível</string>
     <string name="verdict_bortle">Bortle %1$d</string>
-    <string name="verdict_best_window">Melhor: %1$s – %2$s</string>
 
     <string name="card_moon">Fase da lua</string>
     <string name="moon_illuminated">%.0f%% iluminada</string>
@@ -261,7 +245,6 @@
     <string name="window_excellent">Excelente</string>
     <string name="window_good">Bom</string>
     <string name="window_fair">Razoável</string>
-    <string name="window_cloud">Média %1$d%% nuvens</string>
     <string name="window_no_clear">Nenhuma janela clara encontrada para esta noite</string>
 
     <string name="flow_title">Fluxo Personalizado</string>
@@ -297,13 +280,6 @@
     <string name="step_type_pause">Pausa</string>
     <string name="step_summary_intervalometer">%1$d fotos, %2$dms exp, %3$dms intervalo</string>
     <string name="step_summary_astro">%1$d fotos, %2$ss exp (%3$dmm)</string>
-    <string name="default_pause_label">Ajustar configurações da câmera</string>
-    <string name="status_system_offline">Sistema offline</string>
-    <string name="status_disconnected">Desconectado</string>
-    <string name="status_syncing">Sincronizando…</string>
-    <string name="stat_mode">Modo</string>
-    <string name="stat_captured">Capturadas</string>
-    <string name="stat_est_remaining">Tempo restante</string>
     <string name="notif_update_available">Versão %1$s disponível — abra para atualizar</string>
 
     <!-- Planner -->
@@ -311,23 +287,11 @@
     <string name="mode_planner_desc">Salve locais e agende sessões com alertas de condições</string>
     <string name="planner_title">Planejador de sessões</string>
     <string name="planner_add">Adicionar</string>
-    <string name="planner_tab_locations">Locais</string>
-    <string name="planner_tab_sessions">Sessões</string>
-    <string name="planner_no_locations">Nenhum local salvo ainda</string>
     <string name="planner_no_sessions">Nenhuma sessão planejada ainda</string>
     <string name="planner_no_upcoming">Nenhum evento futuro</string>
     <string name="planner_no_past">Nenhum evento passado</string>
     <string name="tab_upcoming">Próximos</string>
     <string name="tab_past">Passados</string>
-    <string name="planner_add_session">Adicionar sessão</string>
-    <string name="planner_add_location_title">Adicionar local</string>
-    <string name="planner_add_session_title">Planejar uma sessão</string>
-    <string name="planner_location_name">Nome do local</string>
-    <string name="planner_latitude">Latitude</string>
-    <string name="planner_longitude">Longitude</string>
-    <string name="planner_location">Local</string>
-    <string name="planner_delete_location_title">Excluir local?</string>
-    <string name="planner_delete_location_msg">Excluir \"%1$s\" e todas as suas sessões?</string>
     <string name="planner_search_city">Buscar cidade</string>
     <string name="planner_use_gps">Usar minha localização atual</string>
     <string name="planner_my_location">Minha localização</string>
@@ -342,7 +306,6 @@
     <string name="planner_tap_to_select">Toque no mapa para selecionar uma localização</string>
     <string name="planner_resolving_location">Resolvendo localização…</string>
     <string name="planner_time_window">Janela de tempo</string>
-    <string name="planner_cache_desc">Os dados dos painéis das sessões são guardados localmente para reduzir chamadas à API. Escolha a frequência de atualização.</string>
     <string name="planner_cache_interval">Intervalo de atualização</string>
     <string name="planner_cache_hours">%1$d h</string>
 

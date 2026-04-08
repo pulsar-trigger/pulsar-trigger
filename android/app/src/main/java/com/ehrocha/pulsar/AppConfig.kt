@@ -304,4 +304,17 @@ object AppConfig {
     /** Fake battery percentage shown when connected to the built-in
      *  simulator (no real hardware). */
     const val SIMULATOR_BATTERY_PCT = 85
+
+    // ── Astro helpers ───────────────────────────────────────────────────
+
+    /** Compute maximum astro exposure in milliseconds from optics params.
+     *  Applies the NPF / rule-of-N formula and clamps to [MIN_ASTRO_EXPOSURE_MS]. */
+    fun astroExposureMs(focalLength: Int, cropFactor: Float, ruleDivisor: Int): Long {
+        val exposureS = ruleDivisor.toDouble() / (focalLength * cropFactor)
+        return (exposureS * 1000).toLong().coerceAtLeast(MIN_ASTRO_EXPOSURE_MS)
+    }
+
+    /** Same computation but returns seconds as a Double (for display). */
+    fun astroExposureS(focalLength: Int, cropFactor: Float, ruleDivisor: Int): Double =
+        ruleDivisor.toDouble() / (focalLength * cropFactor)
 }

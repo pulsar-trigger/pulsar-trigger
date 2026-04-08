@@ -31,8 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.R
-import com.ehrocha.pulsar.ui.components.BatteryIndicator
-import com.ehrocha.pulsar.ui.components.NightModeToggle
+
 import com.ehrocha.pulsar.planner.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay

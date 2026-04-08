@@ -44,8 +44,7 @@ import com.ehrocha.pulsar.model.summaryLabel
 import com.ehrocha.pulsar.ui.components.IntStepperField
 import com.ehrocha.pulsar.ui.components.TimePicker
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
-import com.ehrocha.pulsar.ui.components.BatteryIndicator
-import com.ehrocha.pulsar.ui.components.NightModeToggle
+
 import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 import java.text.DateFormat
@@ -844,10 +843,7 @@ private fun FlowStepCard(
 
                 // ── Per-phase countdown ──
                 val exposureMs = when (step.type) {
-                    FlowStepType.ASTRO -> {
-                        val expSec = step.ruleDivisor.toDouble() / (step.focalLength * step.cropFactor)
-                        (expSec * 1000).toLong()
-                    }
+                    FlowStepType.ASTRO -> AppConfig.astroExposureMs(step.focalLength, step.cropFactor, step.ruleDivisor)
                     else -> step.exposureMs
                 }
                 val gapMs = when (step.type) {

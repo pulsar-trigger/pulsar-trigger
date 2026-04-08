@@ -8,7 +8,6 @@
     <string name="use_simulator">Simulator verwenden</string>
     <string name="simulator_description">Die App ohne echtes Gerät erkunden</string>
     <string name="unknown_device">Unbekanntes Gerät</string>
-    <string name="section_modes">Modi</string>
     <string name="mode_intervalometer">Intervalltimer</string>
     <string name="mode_intervalometer_desc">Zeitraffersequenzen mit präzisem Timing automatisieren</string>
     <string name="mode_astro">Astro</string>
@@ -20,7 +19,6 @@
     <string name="mode_astro_dashboard">Astro-Dashboard</string>
     <string name="mode_astro_dashboard_desc">Wetter, Mondphase, Bortle-Skala &amp; Himmelsbedingungen</string>
     <string name="menu_settings">Einstellungen</string>
-    <string name="menu_settings_desc">Gerätekonfiguration und Infos</string>
     <string name="disconnect">Trennen</string>
     <string name="back">Zurück</string>
     <string name="cancel">Abbrechen</string>
@@ -44,7 +42,6 @@
     <string name="cd_expand">Ausklappen</string>
     <string name="cd_move_up">Nach oben</string>
     <string name="cd_move_down">Nach unten</string>
-    <string name="cd_settings">Einstellungen</string>
     <string name="btn_stop">Stopp</string>
     <string name="btn_start">Start</string>
     <string name="status_sequence_running">Sequenz läuft…</string>
@@ -66,7 +63,6 @@
     <string name="status_capturing_stars">Sterne werden aufgenommen…</string>
     <string name="status_ready_astro">Bereit für Astro-Sequenz</string>
     <string name="panel_intervalometer">Intervalltimer</string>
-    <string name="panel_intervalometer_desc">Automatisiere komplexe Zeitraffersequenzen oder Serienaufnahmen mit präzisem Timing. Deine Kamera muss auf Bulb-Modus eingestellt sein.</string>
     <string name="label_sequence_estimate">Sequenzschätzung</string>
     <string name="label_shots">Aufnahmen</string>
     <string name="label_total_duration">Gesamtdauer</string>
@@ -76,13 +72,10 @@
     <string name="label_start_delay">Startverzögerung</string>
     <string name="label_number_of_shots">Anzahl der Aufnahmen</string>
     <string name="panel_manual">Manueller Auslöser</string>
-    <string name="panel_manual_desc">Steuere den Verschluss direkt. Wähle Halten (gedrückt halten) oder Sperren (ein-/ausschalten).</string>
     <string name="panel_manual_tip">Wechsle das Verhalten über die Chips im Aktionsbereich unten.</string>
     <string name="panel_manual_lock_info">SPERREN: Tippe einmal auf die mittlere Taste, um den Verschluss zu öffnen, und erneut, um ihn zu schließen. Ideal für lange Bulb-Belichtungen.</string>
     <string name="panel_manual_hold_info">HALTEN: Der Verschluss bleibt offen, solange die mittlere Taste gedrückt wird. Ideal für schnelle Serienaufnahmen.</string>
     <string name="panel_astro">Astro-Modus</string>
-    <string name="panel_astro_desc">Sterne punktförmig abbilden durch Berechnung der maximalen Belichtungszeit ohne Strichspuren.</string>
-    <string name="panel_astro_tip">Wechsle die Regel unten. Die 400er-Regel ist ideal für hochauflösende Sensoren.</string>
     <string name="label_rule_readout">%1$d-Regel Ergebnis</string>
     <string name="label_effective_focal">%1$smm Effektiv</string>
     <string name="label_max_exposure">Max. belichtung</string>
@@ -100,12 +93,10 @@
     <string name="section_device">Gerät</string>
     <string name="label_device_name">Gerätename</string>
     <string name="section_gpio_pins">Gpio-pins</string>
-    <string name="gpio_pins_desc">Wähle, welche ESP32 GPIO-Pins den Auslöser- und Fokus-Optokoppler ansteuern. Änderungen werden an das Gerät gesendet und gespeichert.</string>
     <string name="label_shutter_pin">Auslöser-Pin</string>
     <string name="label_focus_pin">Fokus-Pin</string>
     <string name="gpio_simulator_note">GPIO-Konfiguration im Simulatormodus nicht verfügbar</string>
     <string name="section_backup_restore">Sicherung &amp; Wiederherstellung</string>
-    <string name="backup_restore_desc">Einstellungen auf Google Drive oder lokalen Speicher exportieren und auf einem anderen Gerät importieren.</string>
     <string name="toast_settings_exported">Einstellungen exportiert</string>
     <string name="toast_export_failed">Export fehlgeschlagen: %1$s</string>
     <string name="toast_settings_imported">Einstellungen importiert</string>
@@ -144,7 +135,6 @@
     <string name="status_download_complete">Download abgeschlossen — das Installationsprogramm sollte sich automatisch öffnen.</string>
     <string name="status_update_check_failed">Update-Prüfung fehlgeschlagen</string>
     <string name="section_default_values">Standardwerte</string>
-    <string name="default_values_desc">Standardwerte für den Intervalltimer festlegen. Diese werden beim Start der App angewendet.</string>
     <string name="label_default_interval">Standardintervall (Pause)</string>
     <string name="label_default_exposure">Standardbelichtung</string>
     <string name="label_default_start_delay">Standard-Startverzögerung</string>
@@ -184,22 +174,17 @@
     <string name="status_remaining">verbleibend</string>
     <string name="settings_intervalometer">Intervalltimer-Einstellungen</string>
     <string name="settings_astro">Astro-Einstellungen</string>
-    <string name="settings_astro_desc">Der Astro-Modus berechnet Belichtungszeiten anhand deiner Optik. Konfiguriere hier Objektiv- und Sensorvorgaben oder passe sie im Modusbildschirm an.</string>
     <string name="dialog_updates_available">Updates verfügbar</string>
     <string name="update_firmware_available">Firmware v%1$s ist verfügbar</string>
     <string name="update_app_available">App v%1$s ist verfügbar</string>
-    <string name="update_go_to_settings">Gehe zu Einstellungen, um Updates zu installieren.</string>
     <string name="btn_go_to_settings">Zu Einstellungen</string>
-    <string name="btn_later">Später</string>
     <string name="dashboard_title">Astro-Dashboard</string>
     <string name="status_fetching_data">Standort &amp; Daten werden abgerufen…</string>
-    <string name="card_location">Standort</string>
     <string name="card_summary">Zusammenfassung</string>
     <string name="location_north">N</string>
     <string name="location_south">S</string>
     <string name="location_east">O</string>
     <string name="location_west">W</string>
-    <string name="location_altitude">Höhe: %.0f m</string>
 
     <!-- Summary verdict chips -->
     <string name="verdict_moon_good">Dunkler Mond</string>
@@ -211,7 +196,6 @@
     <string name="verdict_mw_visible">MW Sichtbar</string>
     <string name="verdict_mw_not_visible">MW Nicht Sichtbar</string>
     <string name="verdict_bortle">Bortle %1$d</string>
-    <string name="verdict_best_window">Optimal: %1$s – %2$s</string>
 
     <string name="card_moon">Mondphase</string>
     <string name="moon_illuminated">%.0f%% beleuchtet</string>
@@ -261,7 +245,6 @@
     <string name="window_excellent">Ausgezeichnet</string>
     <string name="window_good">Gut</string>
     <string name="window_fair">Mäßig</string>
-    <string name="window_cloud">Durchschn. %1$d%% Wolken</string>
     <string name="window_no_clear">Keine klaren Fenster für diese Nacht gefunden</string>
 
     <string name="flow_title">Benutzerdefinierter Ablauf</string>
@@ -297,13 +280,6 @@
     <string name="step_type_pause">Pause</string>
     <string name="step_summary_intervalometer">%1$d Aufn., %2$dms Bel., %3$dms Pause</string>
     <string name="step_summary_astro">%1$d Aufn., %2$ss Bel. (%3$dmm)</string>
-    <string name="default_pause_label">Kameraeinstellungen anpassen</string>
-    <string name="status_system_offline">System offline</string>
-    <string name="status_disconnected">Getrennt</string>
-    <string name="status_syncing">Synchronisierung…</string>
-    <string name="stat_mode">Modus</string>
-    <string name="stat_captured">Aufgenommen</string>
-    <string name="stat_est_remaining">Geschätzt verbl.</string>
     <string name="notif_update_available">Version %1$s verfügbar — öffnen zum Aktualisieren</string>
 
     <!-- Planner -->
@@ -311,23 +287,11 @@
     <string name="mode_planner_desc">Standorte speichern und Sitzungen mit Bedingungswarnungen planen</string>
     <string name="planner_title">Sitzungsplaner</string>
     <string name="planner_add">Hinzufügen</string>
-    <string name="planner_tab_locations">Standorte</string>
-    <string name="planner_tab_sessions">Sitzungen</string>
-    <string name="planner_no_locations">Noch keine Standorte gespeichert</string>
     <string name="planner_no_sessions">Noch keine Sitzungen geplant</string>
     <string name="planner_no_upcoming">Keine kommenden Ereignisse</string>
     <string name="planner_no_past">Keine vergangenen Ereignisse</string>
     <string name="tab_upcoming">Kommende</string>
     <string name="tab_past">Vergangene</string>
-    <string name="planner_add_session">Sitzung hinzufügen</string>
-    <string name="planner_add_location_title">Standort hinzufügen</string>
-    <string name="planner_add_session_title">Sitzung planen</string>
-    <string name="planner_location_name">Standortname</string>
-    <string name="planner_latitude">Breitengrad</string>
-    <string name="planner_longitude">Längengrad</string>
-    <string name="planner_location">Standort</string>
-    <string name="planner_delete_location_title">Standort löschen?</string>
-    <string name="planner_delete_location_msg">\"%1$s\" und alle zugehörigen Sitzungen löschen?</string>
     <string name="planner_search_city">Stadt suchen</string>
     <string name="planner_use_gps">Meinen aktuellen Standort verwenden</string>
     <string name="planner_my_location">Mein Standort</string>
@@ -342,7 +306,6 @@
     <string name="planner_tap_to_select">Tippen Sie auf die Karte, um einen Ort auszuwählen</string>
     <string name="planner_resolving_location">Ort wird aufgelöst…</string>
     <string name="planner_time_window">Zeitfenster</string>
-    <string name="planner_cache_desc">Sitzungs-Dashboard-Daten werden lokal zwischengespeichert, um API-Aufrufe zu reduzieren. Wählen Sie das Aktualisierungsintervall.</string>
     <string name="planner_cache_interval">Aktualisierungsintervall</string>
     <string name="planner_cache_hours">%1$d h</string>
 

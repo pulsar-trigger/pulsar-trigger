@@ -24,8 +24,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.ehrocha.pulsar.R
-import com.ehrocha.pulsar.ui.components.BatteryIndicator
-import com.ehrocha.pulsar.ui.components.NightModeToggle
+
 import com.ehrocha.pulsar.ui.theme.LocalNightMode
 import com.ehrocha.pulsar.ui.theme.ThemeMode
 import kotlinx.coroutines.Dispatchers

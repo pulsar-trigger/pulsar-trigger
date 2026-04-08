@@ -313,14 +313,6 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                     onEventSessions = { event -> currentScreen = AppScreen.EventSessions(event) },
                 )
             }
-            is AppScreen.PlannerWithTab -> {
-                BackHandler { currentScreen = AppScreen.Menu }
-                PlannerScreen(
-                    plannerManager = vm.plannerManager,
-                    onBack = { currentScreen = AppScreen.Menu },
-                    onEventSessions = { event -> currentScreen = AppScreen.EventSessions(event) },
-                )
-            }
             is AppScreen.MapPicker -> {
                 BackHandler { currentScreen = AppScreen.EventSessions(screen.event) }
                 MapLocationPicker(
@@ -381,7 +373,6 @@ private sealed class AppScreen {
     data class CustomFlow(val quickLaunch: Boolean = false) : AppScreen()
     data object Dashboard : AppScreen()
     data object Planner : AppScreen()
-    data class PlannerWithTab(val tab: Int) : AppScreen()
     data class MapPicker(val event: PlannerEvent, val initialLat: Double = 0.0, val initialLon: Double = 0.0) : AppScreen()
     data class EventSessions(val event: PlannerEvent, val mapResult: MapPickerResult? = null) : AppScreen()
     data class SessionDetail(val session: PlannerSession, val event: PlannerEvent) : AppScreen()

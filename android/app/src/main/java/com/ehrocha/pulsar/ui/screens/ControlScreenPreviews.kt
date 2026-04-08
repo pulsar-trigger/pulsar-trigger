@@ -35,10 +35,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.AppConfig
-import com.ehrocha.pulsar.ble.DeviceState
-import com.ehrocha.pulsar.ble.StatusFrame
 import com.ehrocha.pulsar.ble.TriggerMode
-import com.ehrocha.pulsar.ui.components.LiveStatusPanel
 import com.ehrocha.pulsar.ui.theme.DarkColorScheme
 
 // ── Intervalometer Preview ───────────────────────────────────────────────────
@@ -448,18 +445,11 @@ fun MainMenuPreview() {
                 .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
-            LiveStatusPanel(
-                connected = true,
-                status = StatusFrame(
-                    state = DeviceState.IDLE,
-                    mode = 0x01,
-                    shotsTaken = 0,
-                    timeRemainingMs = 0,
-                    batteryPct = 85,
-                    errorCode = 0,
-                ),
-                currentMode = TriggerMode.INTERVALOMETER,
-                deviceName = "Pulsar-Duza",
+            Text(
+                "PULSAR-DUZA",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(vertical = 12.dp),
             )
 
             Spacer(Modifier.height(24.dp))

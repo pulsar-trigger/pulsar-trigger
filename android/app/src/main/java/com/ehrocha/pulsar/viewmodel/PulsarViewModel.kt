@@ -471,8 +471,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             FlowStepType.ASTRO -> {
-                val expS = step.ruleDivisor.toDouble() / (step.focalLength * step.cropFactor)
-                val expMs = (expS * 1000).toLong().coerceAtLeast(AppConfig.MIN_ASTRO_EXPOSURE_MS)
+                val expMs = AppConfig.astroExposureMs(step.focalLength, step.cropFactor, step.ruleDivisor)
                 if (_simulatorActive.value) {
                     simulateShots(step.shotCount, expMs, step.gapMs, step.delayMs)
                 } else {
@@ -578,15 +577,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun sendConfig() {
+    private fun sendConfig() {
         if (_simulatorActive.value) return
         val packet = when (_currentMode.value) {
             TriggerMode.INTERVALOMETER -> CommandBuilder.setIntervalometer(
                 _intervalMs.value, _exposureMs.value, _shotCount.value, _delayMs.value
             )
             TriggerMode.ASTRO -> {
-                val exposureS = _astroRuleDivisor.value.toDouble() / (_astroFocalLength.value * _astroCropFactor.value)
-                val exposureMs = (exposureS * 1000).toLong().coerceAtLeast(AppConfig.MIN_ASTRO_EXPOSURE_MS)
+                val exposureMs = AppConfig.astroExposureMs(_astroFocalLength.value, _astroCropFactor.value, _astroRuleDivisor.value)
                 CommandBuilder.setAstro(
                     _astroGapMs.value, exposureMs, _astroShotCount.value, _astroDelayMs.value
                 )
@@ -614,18 +612,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         bleManager.sendCommand(CommandBuilder.stop())
-    }
-
-    fun singleShot() {
-        if (_simulatorActive.value) {
-            viewModelScope.launch {
-                _status.value = _status.value?.copy(state = DeviceState.RUNNING, shotsTaken = 1, timeRemainingMs = _exposureMs.value)
-                delay(_exposureMs.value)
-                _status.value = _status.value?.copy(state = DeviceState.IDLE, shotsTaken = 1, timeRemainingMs = 0L)
-            }
-            return
-        }
-        bleManager.sendCommand(CommandBuilder.shutter())
     }
 
     fun renameDevice(suffix: String) {
@@ -701,10 +687,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
         val expMs = when (mode) {
             TriggerMode.INTERVALOMETER -> _exposureMs.value
-            TriggerMode.ASTRO -> {
-                val s = _astroRuleDivisor.value.toDouble() / (_astroFocalLength.value * _astroCropFactor.value)
-                (s * 1000).toLong().coerceAtLeast(AppConfig.MIN_ASTRO_EXPOSURE_MS)
-            }
+            TriggerMode.ASTRO -> AppConfig.astroExposureMs(_astroFocalLength.value, _astroCropFactor.value, _astroRuleDivisor.value)
             else -> _exposureMs.value
         }
         val gapMs = when (mode) {
