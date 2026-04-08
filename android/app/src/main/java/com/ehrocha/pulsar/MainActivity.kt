@@ -50,6 +50,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.ble.OtaState
 import com.ehrocha.pulsar.ble.TriggerMode
+import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.update.AppUpdateState
 import com.ehrocha.pulsar.ui.components.BatteryIndicator
 import com.ehrocha.pulsar.ui.components.SignalStrengthIndicator
@@ -240,8 +241,12 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
             AppScreen.Menu -> MainMenuScreen(
                 vm = vm,
                 onQuickFlow = { type ->
-                    vm.loadQuickMode(type)
-                    currentScreen = AppScreen.CustomFlow
+                    val mode = when (type) {
+                        FlowStepType.INTERVALOMETER -> TriggerMode.INTERVALOMETER
+                        FlowStepType.ASTRO -> TriggerMode.ASTRO
+                        else -> return@MainMenuScreen
+                    }
+                    currentScreen = AppScreen.Mode(mode)
                 },
                 onManualSelected = { currentScreen = AppScreen.Mode(TriggerMode.PRESS_HOLD) },
                 onCustomFlowSelected = { currentScreen = AppScreen.CustomFlow },
@@ -256,6 +261,17 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                     vm = vm,
                     targetMode = screen.mode,
                     onBack = { currentScreen = AppScreen.Menu },
+                    onStartFlow = {
+                        vm.loadQuickMode(
+                            when (screen.mode) {
+                                TriggerMode.INTERVALOMETER -> FlowStepType.INTERVALOMETER
+                                TriggerMode.ASTRO -> FlowStepType.ASTRO
+                                else -> return@ModeScreen
+                            }
+                        )
+                        vm.startFlow()
+                        currentScreen = AppScreen.CustomFlow
+                    },
                 )
             }
             is AppScreen.Settings -> {

@@ -33,10 +33,12 @@ import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.ble.OtaState
 import com.ehrocha.pulsar.ble.TriggerMode
+import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import kotlinx.coroutines.delay
 import com.ehrocha.pulsar.ui.components.BatteryIndicator
 import com.ehrocha.pulsar.ui.components.NightModeToggle
+import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 import com.ehrocha.pulsar.ble.StatusFrame
 import androidx.compose.ui.tooling.preview.Preview
@@ -55,6 +57,7 @@ fun ModeScreen(
     vm: PulsarViewModel,
     targetMode: TriggerMode,
     onBack: () -> Unit,
+    onStartFlow: (() -> Unit)? = null,
 ) {
     val status = LocalDeviceStatus.current
     val deviceName by vm.deviceName.collectAsState()
@@ -169,8 +172,32 @@ fun ModeScreen(
         } else {
             when (targetMode) {
                 TriggerMode.PRESS_HOLD -> ManualActions(vm, mode)
-                TriggerMode.ASTRO -> AstroActions(vm, isRunning)
-                else -> DefaultActions(vm, isRunning)
+                TriggerMode.ASTRO -> {
+                    if (onStartFlow != null && !isRunning) {
+                        val connected = LocalDeviceConnected.current
+                        AstroActionsContent(
+                            connected = connected,
+                            isRunning = false,
+                            onStart = onStartFlow,
+                            onStop = { vm.stop() },
+                        )
+                    } else {
+                        AstroActions(vm, isRunning)
+                    }
+                }
+                else -> {
+                    if (onStartFlow != null && !isRunning) {
+                        val connected = LocalDeviceConnected.current
+                        DefaultActionsContent(
+                            connected = connected,
+                            isRunning = false,
+                            onStart = onStartFlow,
+                            onStop = { vm.stop() },
+                        )
+                    } else {
+                        DefaultActions(vm, isRunning)
+                    }
+                }
             }
         }
 
