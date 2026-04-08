@@ -58,6 +58,7 @@ private enum class FlowScreenState { LIBRARY, EDITOR }
 fun CustomFlowScreen(
     vm: PulsarViewModel,
     onBack: () -> Unit,
+    quickLaunch: Boolean = false,
 ) {
     val steps by vm.flowSteps.collectAsState()
     val saved by vm.savedFlows.collectAsState()
@@ -82,6 +83,8 @@ fun CustomFlowScreen(
             showExitDialog = true
         } else if (editingFlowName != null && steps != savedSnapshot) {
             showUnsavedDialog = true
+        } else if (quickLaunch) {
+            onBack()
         } else {
             screenState = FlowScreenState.LIBRARY
             editingFlowName = null
@@ -926,11 +929,15 @@ private fun FlowStepCard(
                 val targetCount = step.shotCount
                 if (targetCount > 0) {
                     Spacer(Modifier.height(6.dp))
-                    val cycleElapsedMs = (System.currentTimeMillis() - lastUpdateTime).let { elapsed ->
-                        (lastRemainingMs - (lastRemainingMs - elapsed).coerceAtLeast(0))
+                    // Progress = completed shots + fraction of current phase within the cycle
+                    val phaseElapsedForBar = (System.currentTimeMillis() - phaseStartTime).coerceAtLeast(0)
+                    val phaseProgress = if (phaseDurationMs > 0) (phaseElapsedForBar.toFloat() / phaseDurationMs).coerceIn(0f, 1f) else 0f
+                    val cycleFraction = when (status.state) {
+                        DeviceState.RUNNING -> phaseProgress * exposureMs / cycleMs.coerceAtLeast(1)
+                        DeviceState.WAITING -> (exposureMs.toFloat() / cycleMs.coerceAtLeast(1)) + phaseProgress * gapMs / cycleMs.coerceAtLeast(1)
+                        else -> 0f
                     }
-                    val fractionalCycle = if (cycleMs > 0) cycleElapsedMs.toFloat() / cycleMs else 0f
-                    val rawProgress = (status.shotsTaken.toFloat() + fractionalCycle.coerceIn(0f, 1f)) / targetCount
+                    val rawProgress = (status.shotsTaken.toFloat() + cycleFraction.coerceIn(0f, 1f)) / targetCount
                     val smoothProgress by animateFloatAsState(
                         targetValue = rawProgress.coerceIn(0f, 1f),
                         animationSpec = tween(durationMillis = 300),

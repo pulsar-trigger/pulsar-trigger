@@ -177,7 +177,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                         TriggerMode.TRACKER -> { /* stay on menu */ }
                         TriggerMode.PRESS_HOLD, TriggerMode.PRESS_LOCK ->
                             currentScreen = AppScreen.Mode(mode)
-                        else -> currentScreen = AppScreen.CustomFlow
+                        else -> currentScreen = AppScreen.CustomFlow()
                     }
                 }
             }
@@ -249,7 +249,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                     currentScreen = AppScreen.Mode(mode)
                 },
                 onManualSelected = { currentScreen = AppScreen.Mode(TriggerMode.PRESS_HOLD) },
-                onCustomFlowSelected = { currentScreen = AppScreen.CustomFlow },
+                onCustomFlowSelected = { currentScreen = AppScreen.CustomFlow() },
                 onDashboardSelected = { currentScreen = AppScreen.Dashboard },
                 onPlannerSelected = { currentScreen = AppScreen.Planner },
                 onAlignmentSelected = { currentScreen = AppScreen.Alignment },
@@ -270,7 +270,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                             }
                         )
                         vm.startFlow()
-                        currentScreen = AppScreen.CustomFlow
+                        currentScreen = AppScreen.CustomFlow(quickLaunch = true)
                     },
                 )
             }
@@ -290,11 +290,12 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                     onBack = { currentScreen = AppScreen.Menu },
                 )
             }
-            AppScreen.CustomFlow -> {
+            is AppScreen.CustomFlow -> {
                 BackHandler { currentScreen = AppScreen.Menu }
                 CustomFlowScreen(
                     vm = vm,
                     onBack = { currentScreen = AppScreen.Menu },
+                    quickLaunch = screen.quickLaunch,
                 )
             }
             AppScreen.Dashboard -> {
@@ -377,7 +378,7 @@ private sealed class AppScreen {
     data class Mode(val mode: TriggerMode) : AppScreen()
     data class ModeSettings(val mode: TriggerMode) : AppScreen()
     data class Settings(val initialSection: SettingsSection? = null) : AppScreen()
-    data object CustomFlow : AppScreen()
+    data class CustomFlow(val quickLaunch: Boolean = false) : AppScreen()
     data object Dashboard : AppScreen()
     data object Planner : AppScreen()
     data class PlannerWithTab(val tab: Int) : AppScreen()

@@ -61,6 +61,20 @@ pio run -t upload                   # flash
 cd android && ./gradlew assembleDebug
 ```
 
+## Version Bump (Android)
+
+Use the bump script instead of manual edits:
+
+```bash
+# With commit message (version trailer auto-appended):
+./scripts/bump-android.sh "Your commit message here"
+
+# Default message ("Bump Android version to X.Y.Z"):
+./scripts/bump-android.sh
+```
+
+The script bumps versionCode +1 and versionName minor +1, builds, tests, commits, and pushes in one step.
+
 ## General Instructions
 - Use `git pull --rebase` to keep a clean history.
 - Follow existing code style and architecture patterns as closely as possible.
