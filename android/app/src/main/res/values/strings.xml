@@ -469,6 +469,12 @@
     <string name="alignment_setup_title">Setup Instructions</string>
     <string name="alignment_setup_step1">1. Place your phone flat on the tracker base plate</string>
     <string name="alignment_setup_step2">2. Point the phone\'s top edge toward the celestial pole</string>
-    <string name="alignment_setup_step3">3. Adjust the tracker until the dot is centered on the crosshair</string>
+    <string name="alignment_setup_step3">3. Follow the two steps to align altitude, then azimuth</string>
     <string name="alignment_magnet_warning">Nearby magnets or motors may affect compass accuracy. Calibrate by moving the phone in a figure-8 pattern away from the tracker.</string>
+    <string name="alignment_step_altitude">Step 1 of 2 · Adjust Altitude</string>
+    <string name="alignment_step_azimuth">Step 2 of 2 · Adjust Azimuth → %1$s</string>
+    <string name="alignment_step_alt_hint">Tilt the tracker until the dot is centered</string>
+    <string name="alignment_step_az_hint">Rotate the base until the dot is centered</string>
+    <string name="alignment_next">Next →</string>
+    <string name="alignment_alt_locked">Altitude: %1$s° (error %2$s°)</string>
 </resources>

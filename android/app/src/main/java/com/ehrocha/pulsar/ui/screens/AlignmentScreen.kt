@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Warning
@@ -23,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -65,6 +67,8 @@ fun AlignmentScreen(
     val altError = pitch - targetAlt
     val rawAzError = shortestAngle(trueAz, targetAz)
 
+    var step by remember { mutableIntStateOf(1) }
+
     val isSouthern = latitude < 0
     val poleLabel = if (isSouthern) {
         stringResource(R.string.alignment_true_south)
@@ -102,10 +106,11 @@ fun AlignmentScreen(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // ── Setup instructions ───────────────────────────────────
-            SetupCard()
-
-            Spacer(Modifier.height(8.dp))
+            // ── Setup instructions (step 1 only) ─────────────────────
+            if (step == 1) {
+                SetupCard()
+                Spacer(Modifier.height(8.dp))
+            }
 
             // ── Location row ─────────────────────────────────────────
             LocationCard(
@@ -116,13 +121,29 @@ fun AlignmentScreen(
                 onRefresh = { alignVm.acquireLocation() },
             )
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
+
+            // ── Step header ──────────────────────────────────────────
+            StepHeader(step = step, poleLabel = poleLabel)
+
+            Spacer(Modifier.height(8.dp))
+
+            // ── Altitude locked chip (step 2) ────────────────────────
+            if (step == 2) {
+                AltitudeLockedChip(
+                    pitch = pitch,
+                    altError = altError,
+                    active = sensorsActive,
+                )
+                Spacer(Modifier.height(8.dp))
+            }
 
             // ── Crosshair indicator ──────────────────────────────────
             CrosshairIndicator(
                 altError = altError,
                 azError = rawAzError,
                 active = sensorsActive,
+                step = step,
             )
 
             // ── Magnetic interference hint ───────────────────────────
@@ -130,7 +151,7 @@ fun AlignmentScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // ── Numeric readouts ─────────────────────────────────────
+            // ── Numeric readouts (active axis only) ──────────────────
             ReadoutSection(
                 pitch = pitch,
                 targetAlt = targetAlt,
@@ -140,7 +161,29 @@ fun AlignmentScreen(
                 azError = rawAzError,
                 poleLabel = poleLabel,
                 active = sensorsActive,
+                step = step,
             )
+
+            Spacer(Modifier.height(16.dp))
+
+            // ── Step navigation ──────────────────────────────────────
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                if (step == 2) {
+                    OutlinedButton(onClick = { step = 1 }) {
+                        Text(stringResource(R.string.back))
+                    }
+                } else {
+                    Spacer(Modifier.width(1.dp))
+                }
+                if (step == 1) {
+                    Button(onClick = { step = 2 }) {
+                        Text(stringResource(R.string.alignment_next))
+                    }
+                }
+            }
 
             Spacer(Modifier.height(24.dp))
         }
@@ -215,6 +258,7 @@ private fun CrosshairIndicator(
     altError: Float,
     azError: Float,
     active: Boolean,
+    step: Int,
 ) {
     val primary = MaterialTheme.colorScheme.primary
     val outline = MaterialTheme.colorScheme.outline
@@ -226,11 +270,12 @@ private fun CrosshairIndicator(
     val clampedAlt = altError.coerceIn(-maxAngle, maxAngle)
     val clampedAz = azError.coerceIn(-maxAngle, maxAngle)
 
-    val totalError = kotlin.math.sqrt(altError * altError + azError * azError)
+    // Color dot based on active axis error only
+    val relevantError = if (step == 1) abs(altError) else abs(azError)
     val dotColor = when {
         !active -> outline
-        totalError < 1f -> good
-        totalError < 5f -> primary
+        relevantError < 1f -> good
+        relevantError < 5f -> primary
         else -> error
     }
 
@@ -255,24 +300,25 @@ private fun CrosshairIndicator(
             )
         }
 
-        // ── Crosshair lines ─────────────────────────────────────
+        // ── Crosshair lines (active axis highlighted) ────────────
         drawLine(
-            color = outline.copy(alpha = 0.5f),
+            color = outline.copy(alpha = if (step == 2) 0.6f else 0.2f),
             start = Offset(cx - radius, cy),
             end = Offset(cx + radius, cy),
-            strokeWidth = 1.dp.toPx(),
+            strokeWidth = if (step == 2) 2.dp.toPx() else 1.dp.toPx(),
         )
         drawLine(
-            color = outline.copy(alpha = 0.5f),
+            color = outline.copy(alpha = if (step == 1) 0.6f else 0.2f),
             start = Offset(cx, cy - radius),
             end = Offset(cx, cy + radius),
-            strokeWidth = 1.dp.toPx(),
+            strokeWidth = if (step == 1) 2.dp.toPx() else 1.dp.toPx(),
         )
 
         // ── Current position dot ─────────────────────────────────
-        // Map error to pixel offset: azError → X, altError → Y (inverted)
-        val dotX = cx + (clampedAz / maxAngle) * radius
-        val dotY = cy - (clampedAlt / maxAngle) * radius // up = positive altitude
+        // Step 1: dot moves vertically only (altitude)
+        // Step 2: dot moves horizontally only (azimuth)
+        val dotX = if (step == 1) cx else cx + (clampedAz / maxAngle) * radius
+        val dotY = if (step == 2) cy else cy - (clampedAlt / maxAngle) * radius
 
         drawCircle(
             color = dotColor,
@@ -286,6 +332,39 @@ private fun CrosshairIndicator(
             radius = 3.dp.toPx(),
             center = Offset(dotX, dotY),
         )
+
+        // ── Directional arrows ───────────────────────────────────
+        // Show arrows on the active axis when error > 1° to guide adjustment
+        val arrowSize = 12.dp.toPx()
+        val arrowColor = dotColor.copy(alpha = 0.8f)
+        val arrowOffset = radius + 20.dp.toPx() // just outside the outermost ring
+
+        if (active && relevantError > 1f) {
+            if (step == 1) {
+                // Vertical arrows — altitude
+                // Arrow points toward center: if dot is below center, arrow points up (tilt back more)
+                val arrowY = if (clampedAlt < 0) cy - arrowOffset else cy + arrowOffset
+                val arrowDir = if (clampedAlt < 0) -1f else 1f  // point toward center
+                val path = Path().apply {
+                    moveTo(cx, arrowY - arrowDir * arrowSize)
+                    lineTo(cx - arrowSize * 0.6f, arrowY)
+                    lineTo(cx + arrowSize * 0.6f, arrowY)
+                    close()
+                }
+                drawPath(path, arrowColor)
+            } else {
+                // Horizontal arrows — azimuth
+                val arrowX = if (clampedAz > 0) cx + arrowOffset else cx - arrowOffset
+                val arrowDir = if (clampedAz > 0) 1f else -1f
+                val path = Path().apply {
+                    moveTo(arrowX - arrowDir * arrowSize, cy)
+                    lineTo(arrowX, cy - arrowSize * 0.6f)
+                    lineTo(arrowX, cy + arrowSize * 0.6f)
+                    close()
+                }
+                drawPath(path, arrowColor)
+            }
+        }
     }
 }
 
@@ -301,6 +380,7 @@ private fun ReadoutSection(
     azError: Float,
     poleLabel: String,
     active: Boolean,
+    step: Int,
 ) {
     Surface(
         shape = RoundedCornerShape(16.dp),
@@ -309,60 +389,58 @@ private fun ReadoutSection(
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // ── Altitude row ─────────────────────────────────────
-            Text(
-                stringResource(R.string.alignment_altitude),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Spacer(Modifier.height(4.dp))
-            Row(Modifier.fillMaxWidth()) {
-                ReadoutValue(
-                    label = stringResource(R.string.alignment_current),
-                    value = if (active) "%.1f°".format(pitch) else "—",
-                    modifier = Modifier.weight(1f),
+            if (step == 1) {
+                // ── Altitude row ─────────────────────────────────
+                Text(
+                    stringResource(R.string.alignment_altitude),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
                 )
-                ReadoutValue(
-                    label = stringResource(R.string.alignment_target),
-                    value = "%.1f°".format(targetAlt),
-                    modifier = Modifier.weight(1f),
+                Spacer(Modifier.height(4.dp))
+                Row(Modifier.fillMaxWidth()) {
+                    ReadoutValue(
+                        label = stringResource(R.string.alignment_current),
+                        value = if (active) "%.1f°".format(pitch) else "—",
+                        modifier = Modifier.weight(1f),
+                    )
+                    ReadoutValue(
+                        label = stringResource(R.string.alignment_target),
+                        value = "%.1f°".format(targetAlt),
+                        modifier = Modifier.weight(1f),
+                    )
+                    ReadoutValue(
+                        label = stringResource(R.string.alignment_error),
+                        value = if (active) "%+.1f°".format(altError) else "—",
+                        modifier = Modifier.weight(1f),
+                        valueColor = errorColor(altError, active),
+                    )
+                }
+            } else {
+                // ── Azimuth row ──────────────────────────────────
+                Text(
+                    stringResource(R.string.alignment_azimuth_label, poleLabel),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
                 )
-                ReadoutValue(
-                    label = stringResource(R.string.alignment_error),
-                    value = if (active) "%+.1f°".format(altError) else "—",
-                    modifier = Modifier.weight(1f),
-                    valueColor = errorColor(altError, active),
-                )
-            }
-
-            Spacer(Modifier.height(16.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(16.dp))
-
-            // ── Azimuth row ──────────────────────────────────────
-            Text(
-                stringResource(R.string.alignment_azimuth_label, poleLabel),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Spacer(Modifier.height(4.dp))
-            Row(Modifier.fillMaxWidth()) {
-                ReadoutValue(
-                    label = stringResource(R.string.alignment_current),
-                    value = "%.1f°".format(trueAz),
-                    modifier = Modifier.weight(1f),
-                )
-                ReadoutValue(
-                    label = stringResource(R.string.alignment_target),
-                    value = "%.0f°".format(targetAz),
-                    modifier = Modifier.weight(1f),
-                )
-                ReadoutValue(
-                    label = stringResource(R.string.alignment_error),
-                    value = "%+.1f°".format(azError),
-                    modifier = Modifier.weight(1f),
-                    valueColor = errorColor(azError, true),
-                )
+                Spacer(Modifier.height(4.dp))
+                Row(Modifier.fillMaxWidth()) {
+                    ReadoutValue(
+                        label = stringResource(R.string.alignment_current),
+                        value = "%.1f°".format(trueAz),
+                        modifier = Modifier.weight(1f),
+                    )
+                    ReadoutValue(
+                        label = stringResource(R.string.alignment_target),
+                        value = "%.0f°".format(targetAz),
+                        modifier = Modifier.weight(1f),
+                    )
+                    ReadoutValue(
+                        label = stringResource(R.string.alignment_error),
+                        value = "%+.1f°".format(azError),
+                        modifier = Modifier.weight(1f),
+                        valueColor = errorColor(azError, true),
+                    )
+                }
             }
         }
     }
@@ -453,6 +531,61 @@ private fun SetupCard() {
                     )
                 }
             }
+        }
+    }
+}
+
+// ── Step Header ──────────────────────────────────────────────────────────
+
+@Composable
+private fun StepHeader(step: Int, poleLabel: String) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            if (step == 1) stringResource(R.string.alignment_step_altitude)
+            else stringResource(R.string.alignment_step_azimuth, poleLabel),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            if (step == 1) stringResource(R.string.alignment_step_alt_hint)
+            else stringResource(R.string.alignment_step_az_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+// ── Altitude Locked Chip ─────────────────────────────────────────────────
+
+@Composable
+private fun AltitudeLockedChip(pitch: Float, altError: Float, active: Boolean) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFF4CAF50).copy(alpha = 0.12f),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+        ) {
+            Icon(
+                Icons.Filled.Check,
+                contentDescription = null,
+                tint = Color(0xFF4CAF50),
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                if (active) stringResource(
+                    R.string.alignment_alt_locked,
+                    "%.1f".format(pitch),
+                    "%+.1f".format(altError),
+                ) else "—",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
         }
     }
 }
