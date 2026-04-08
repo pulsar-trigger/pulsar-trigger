@@ -53,6 +53,11 @@ class CompassSensor(context: Context) {
         var hasGravity = false
         var hasMagnetic = false
 
+        // Low-pass filter state (EMA)
+        val alpha = 0.12f
+        var filteredAz = Float.NaN
+        var filteredPitch = Float.NaN
+
         val listener = object : SensorEventListener {
             override fun onSensorChanged(event: SensorEvent) {
                 when (event.sensor.type) {
@@ -72,13 +77,23 @@ class CompassSensor(context: Context) {
                     )
                     if (ok) {
                         SensorManager.getOrientation(rotationMatrix, orientation)
-                        val azimuthDeg = Math.toDegrees(orientation[0].toDouble())
+                        val rawAz = Math.toDegrees(orientation[0].toDouble())
                             .toFloat()
                             .mod(360f)
-                        // orientation[1] = pitch: negative when tilted back
-                        // Negate so tilting the phone back (raising the top edge) gives positive pitch
-                        val pitchDeg = -Math.toDegrees(orientation[1].toDouble()).toFloat()
-                        trySend(OrientationReading(azimuthDeg, pitchDeg))
+                        val rawPitch = -Math.toDegrees(orientation[1].toDouble()).toFloat()
+
+                        // Low-pass filter (EMA) to smooth jitter
+                        if (filteredAz.isNaN()) {
+                            filteredAz = rawAz
+                            filteredPitch = rawPitch
+                        } else {
+                            // Circular EMA for azimuth (handles 0°/360° wrap)
+                            val dAz = ((rawAz - filteredAz + 540f) % 360f) - 180f
+                            filteredAz = (filteredAz + alpha * dAz).mod(360f)
+                            // Linear EMA for pitch
+                            filteredPitch += alpha * (rawPitch - filteredPitch)
+                        }
+                        trySend(OrientationReading(filteredAz, filteredPitch))
                     }
                 }
             }

@@ -5,15 +5,19 @@
 
 package com.ehrocha.pulsar.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -89,6 +93,11 @@ fun AlignmentScreen(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            // ── Setup instructions ───────────────────────────────────
+            SetupCard()
+
+            Spacer(Modifier.height(8.dp))
+
             // ── Sensor status row ────────────────────────────────────
             SensorCard(sensorsActive = sensorsActive)
 
@@ -111,6 +120,9 @@ fun AlignmentScreen(
                 azError = rawAzError,
                 active = sensorsActive,
             )
+
+            // ── Magnetic interference hint ───────────────────────────
+            MagnetWarning()
 
             Spacer(Modifier.height(16.dp))
 
@@ -430,6 +442,84 @@ private fun errorColor(error: Float, active: Boolean): Color {
         absErr < 1f -> Color(0xFF4CAF50)
         absErr < 5f -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.error
+    }
+}
+
+// ── Setup Instructions ───────────────────────────────────────────────────
+
+@Composable
+private fun SetupCard() {
+    var expanded by remember { mutableStateOf(true) }
+
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded },
+            ) {
+                Icon(
+                    Icons.Filled.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    stringResource(R.string.alignment_setup_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            AnimatedVisibility(visible = expanded) {
+                Column(modifier = Modifier.padding(top = 8.dp)) {
+                    Text(
+                        stringResource(R.string.alignment_setup_step1),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        stringResource(R.string.alignment_setup_step2),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        stringResource(R.string.alignment_setup_step3),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ── Magnetic Interference Warning ────────────────────────────────────────
+
+@Composable
+private fun MagnetWarning() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Icon(
+            Icons.Filled.Warning,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(16.dp),
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            stringResource(R.string.alignment_magnet_warning),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
