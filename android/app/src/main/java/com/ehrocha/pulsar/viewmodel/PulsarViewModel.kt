@@ -570,6 +570,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             TriggerMode.PRESS_HOLD -> CommandBuilder.setPressHold()
             TriggerMode.PRESS_LOCK -> CommandBuilder.setPressLock()
             TriggerMode.CUSTOM_FLOW -> return  // app-orchestrated, no single command
+            TriggerMode.TRACKER -> return      // IMU streaming, no config needed
         }
         bleManager.sendCommand(packet)
     }
