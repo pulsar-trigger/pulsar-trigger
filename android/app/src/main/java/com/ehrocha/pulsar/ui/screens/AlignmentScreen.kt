@@ -26,6 +26,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -49,6 +51,11 @@ fun AlignmentScreen(
     val targetAlt by alignVm.targetAltitude.collectAsState()
     val targetAz by alignVm.targetAzimuth.collectAsState()
     val locationReady by alignVm.locationReady.collectAsState()
+    val calibrated by alignVm.calibrated.collectAsState()
+    val compassAccuracy by alignVm.compassAccuracy.collectAsState()
+    val roll by alignVm.roll.collectAsState()
+
+    val haptic = LocalHapticFeedback.current
 
     // Acquire location on entry
     LaunchedEffect(Unit) {
@@ -67,7 +74,22 @@ fun AlignmentScreen(
     val altError = pitch - targetAlt
     val rawAzError = shortestAngle(trueAz, targetAz)
 
-    var step by remember { mutableIntStateOf(1) }
+    var step by remember { mutableIntStateOf(0) }
+
+    // Haptic feedback when aligned within ±0.5° on the active axis
+    val alignedThreshold = 0.5f
+    var wasAligned by remember { mutableStateOf(false) }
+    val isAligned = sensorsActive && step > 0 && when (step) {
+        1 -> abs(altError) < alignedThreshold
+        2 -> abs(rawAzError) < alignedThreshold
+        else -> false
+    }
+    LaunchedEffect(isAligned) {
+        if (isAligned && !wasAligned) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        }
+        wasAligned = isAligned
+    }
 
     val isSouthern = latitude < 0
     val poleLabel = if (isSouthern) {
@@ -100,19 +122,20 @@ fun AlignmentScreen(
             )
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            // ── Setup instructions (step 1 only) ─────────────────────
-            if (step == 1) {
+        if (step == 0) {
+            // ── Step 0: Setup (scrollable) ───────────────────────────
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                // ── Setup instructions ───────────────────────────────
                 SetupCard()
-                Spacer(Modifier.height(8.dp))
-            }
 
-            // ── Location row ─────────────────────────────────────────
+            Spacer(Modifier.height(8.dp))
+
+            // ── Location row ─────────────────────────────────────
             LocationCard(
                 locationReady = locationReady,
                 latitude = latitude,
@@ -123,36 +146,70 @@ fun AlignmentScreen(
 
             Spacer(Modifier.height(12.dp))
 
-            // ── Step header ──────────────────────────────────────────
+            // ── Compass accuracy warning ─────────────────────────
+            if (sensorsActive && compassAccuracy <= 1) {
+                CompassAccuracyWarning()
+                Spacer(Modifier.height(8.dp))
+            }
+
+            // ── Compass calibration ──────────────────────────────
+            if (locationReady && sensorsActive) {
+                CalibrationCard(
+                    calibrated = calibrated,
+                    isSouthern = isSouthern,
+                    onCalibrate = { alignVm.calibrateCompass() },
+                    onClear = { alignVm.clearCalibration() },
+                )
+                Spacer(Modifier.height(12.dp))
+            }
+
+            // ── Start alignment button ───────────────────────────
+            Button(
+                onClick = { step = 1 },
+                enabled = locationReady && sensorsActive,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.alignment_start))
+            }
+
+            Spacer(Modifier.height(24.dp))
+        }
+    } else {
+        // ── Steps 1 & 2: Fixed alignment screen ─────────────────
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            // ── Step header + locked chip ─────────────────────────
             StepHeader(step = step, poleLabel = poleLabel)
 
-            Spacer(Modifier.height(8.dp))
-
-            // ── Altitude locked chip (step 2) ────────────────────────
             if (step == 2) {
+                Spacer(Modifier.height(4.dp))
                 AltitudeLockedChip(
                     pitch = pitch,
                     altError = altError,
                     active = sensorsActive,
                 )
-                Spacer(Modifier.height(8.dp))
             }
 
-            // ── Crosshair indicator ──────────────────────────────────
+            // ── Crosshair fills available space ──────────────────
             CrosshairIndicator(
                 altError = altError,
                 azError = rawAzError,
                 active = sensorsActive,
                 step = step,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
             )
 
-            // ── Magnetic interference hint ───────────────────────────
-            MagnetWarning()
+            // ── Roll level indicator ─────────────────────────────
+            RollIndicator(roll = roll, active = sensorsActive)
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(4.dp))
 
-            // ── Numeric readouts (active axis only) ──────────────────
-            ReadoutSection(
+            // ── Compact readout row ──────────────────────────────
+            ReadoutRow(
                 pitch = pitch,
                 targetAlt = targetAlt,
                 altError = altError,
@@ -164,19 +221,15 @@ fun AlignmentScreen(
                 step = step,
             )
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
 
-            // ── Step navigation ──────────────────────────────────────
+            // ── Step navigation ──────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                if (step == 2) {
-                    OutlinedButton(onClick = { step = 1 }) {
-                        Text(stringResource(R.string.back))
-                    }
-                } else {
-                    Spacer(Modifier.width(1.dp))
+                OutlinedButton(onClick = { if (step == 1) step = 0 else step = 1 }) {
+                    Text(stringResource(R.string.back))
                 }
                 if (step == 1) {
                     Button(onClick = { step = 2 }) {
@@ -185,8 +238,9 @@ fun AlignmentScreen(
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(8.dp))
         }
+    }
     }
 }
 
@@ -259,6 +313,7 @@ private fun CrosshairIndicator(
     azError: Float,
     active: Boolean,
     step: Int,
+    modifier: Modifier = Modifier,
 ) {
     val primary = MaterialTheme.colorScheme.primary
     val outline = MaterialTheme.colorScheme.outline
@@ -280,10 +335,9 @@ private fun CrosshairIndicator(
     }
 
     Canvas(
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = modifier
             .aspectRatio(1f)
-            .padding(16.dp),
+            .padding(8.dp),
     ) {
         val cx = size.width / 2f
         val cy = size.height / 2f
@@ -368,84 +422,6 @@ private fun CrosshairIndicator(
     }
 }
 
-// ── Numeric Readouts ─────────────────────────────────────────────────────
-
-@Composable
-private fun ReadoutSection(
-    pitch: Float,
-    targetAlt: Float,
-    altError: Float,
-    trueAz: Float,
-    targetAz: Float,
-    azError: Float,
-    poleLabel: String,
-    active: Boolean,
-    step: Int,
-) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            if (step == 1) {
-                // ── Altitude row ─────────────────────────────────
-                Text(
-                    stringResource(R.string.alignment_altitude),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Spacer(Modifier.height(4.dp))
-                Row(Modifier.fillMaxWidth()) {
-                    ReadoutValue(
-                        label = stringResource(R.string.alignment_current),
-                        value = if (active) "%.1f°".format(pitch) else "—",
-                        modifier = Modifier.weight(1f),
-                    )
-                    ReadoutValue(
-                        label = stringResource(R.string.alignment_target),
-                        value = "%.1f°".format(targetAlt),
-                        modifier = Modifier.weight(1f),
-                    )
-                    ReadoutValue(
-                        label = stringResource(R.string.alignment_error),
-                        value = if (active) "%+.1f°".format(altError) else "—",
-                        modifier = Modifier.weight(1f),
-                        valueColor = errorColor(altError, active),
-                    )
-                }
-            } else {
-                // ── Azimuth row ──────────────────────────────────
-                Text(
-                    stringResource(R.string.alignment_azimuth_label, poleLabel),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Spacer(Modifier.height(4.dp))
-                Row(Modifier.fillMaxWidth()) {
-                    ReadoutValue(
-                        label = stringResource(R.string.alignment_current),
-                        value = "%.1f°".format(trueAz),
-                        modifier = Modifier.weight(1f),
-                    )
-                    ReadoutValue(
-                        label = stringResource(R.string.alignment_target),
-                        value = "%.0f°".format(targetAz),
-                        modifier = Modifier.weight(1f),
-                    )
-                    ReadoutValue(
-                        label = stringResource(R.string.alignment_error),
-                        value = "%+.1f°".format(azError),
-                        modifier = Modifier.weight(1f),
-                        valueColor = errorColor(azError, true),
-                    )
-                }
-            }
-        }
-    }
-}
-
 @Composable
 private fun ReadoutValue(
     label: String,
@@ -468,6 +444,73 @@ private fun ReadoutValue(
             fontWeight = FontWeight.Bold,
             color = valueColor,
         )
+    }
+}
+
+// ── Compact Readout Row (fixed-layout screens) ───────────────────────────
+
+@Composable
+private fun ReadoutRow(
+    pitch: Float,
+    targetAlt: Float,
+    altError: Float,
+    trueAz: Float,
+    targetAz: Float,
+    azError: Float,
+    poleLabel: String,
+    active: Boolean,
+    step: Int,
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (step == 1) {
+                Text("↕", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.width(8.dp))
+                ReadoutValue(
+                    label = stringResource(R.string.alignment_current),
+                    value = if (active) "%.1f°".format(pitch) else "—",
+                    modifier = Modifier.weight(1f),
+                )
+                ReadoutValue(
+                    label = stringResource(R.string.alignment_target),
+                    value = "%.1f°".format(targetAlt),
+                    modifier = Modifier.weight(1f),
+                )
+                ReadoutValue(
+                    label = stringResource(R.string.alignment_error),
+                    value = if (active) "%+.1f°".format(altError) else "—",
+                    modifier = Modifier.weight(1f),
+                    valueColor = errorColor(altError, active),
+                )
+            } else {
+                Text("↔", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.width(8.dp))
+                ReadoutValue(
+                    label = stringResource(R.string.alignment_current),
+                    value = "%.1f°".format(trueAz),
+                    modifier = Modifier.weight(1f),
+                )
+                ReadoutValue(
+                    label = stringResource(R.string.alignment_target),
+                    value = "%.0f°".format(targetAz),
+                    modifier = Modifier.weight(1f),
+                )
+                ReadoutValue(
+                    label = stringResource(R.string.alignment_error),
+                    value = "%+.1f°".format(azError),
+                    modifier = Modifier.weight(1f),
+                    valueColor = errorColor(azError, true),
+                )
+            }
+        }
     }
 }
 
@@ -535,6 +578,99 @@ private fun SetupCard() {
     }
 }
 
+// ── Compass Accuracy Warning ─────────────────────────────────────────────
+
+@Composable
+private fun CompassAccuracyWarning() {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.errorContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Icon(
+                Icons.Filled.Warning,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                stringResource(R.string.alignment_compass_poor),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+        }
+    }
+}
+
+// ── Compass Calibration ──────────────────────────────────────────────────
+
+@Composable
+private fun CalibrationCard(
+    calibrated: Boolean,
+    isSouthern: Boolean,
+    onCalibrate: () -> Unit,
+    onClear: () -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = if (calibrated) {
+            Color(0xFF4CAF50).copy(alpha = 0.12f)
+        } else {
+            MaterialTheme.colorScheme.tertiaryContainer
+        },
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            if (calibrated) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(
+                        Icons.Filled.Check,
+                        contentDescription = null,
+                        tint = Color(0xFF4CAF50),
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(R.string.alignment_calibrated),
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = onClear) {
+                        Text(
+                            stringResource(R.string.alignment_clear_calibration),
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
+                }
+            } else {
+                // ── Pole Finder Guide ────────────────────────────
+                PoleFinderGuide(isSouthern = isSouthern)
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    stringResource(R.string.alignment_calibrate_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                )
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = onCalibrate,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.alignment_calibrate))
+                }
+            }
+        }
+    }
+}
+
 // ── Step Header ──────────────────────────────────────────────────────────
 
 @Composable
@@ -590,28 +726,119 @@ private fun AltitudeLockedChip(pitch: Float, altError: Float, active: Boolean) {
     }
 }
 
-// ── Magnetic Interference Warning ────────────────────────────────────────
+// ── Pole Finder Guide ────────────────────────────────────────────────────
 
 @Composable
-private fun MagnetWarning() {
+private fun PoleFinderGuide(isSouthern: Boolean) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded },
+        ) {
+            Icon(
+                Icons.Filled.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                stringResource(
+                    if (isSouthern) R.string.alignment_pole_guide_south_title
+                    else R.string.alignment_pole_guide_north_title,
+                ),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                if (expanded) "▲" else "▼",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+            )
+        }
+        AnimatedVisibility(visible = expanded) {
+            Column(modifier = Modifier.padding(top = 8.dp)) {
+                if (isSouthern) {
+                    Text(
+                        stringResource(R.string.alignment_pole_guide_south_1),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        stringResource(R.string.alignment_pole_guide_south_2),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        stringResource(R.string.alignment_pole_guide_south_3),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    )
+                } else {
+                    Text(
+                        stringResource(R.string.alignment_pole_guide_north_1),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        stringResource(R.string.alignment_pole_guide_north_2),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ── Roll Level Indicator ─────────────────────────────────────────────────
+
+@Composable
+private fun RollIndicator(roll: Float, active: Boolean) {
+    val absRoll = abs(roll)
+    val rollColor = when {
+        !active -> MaterialTheme.colorScheme.onSurfaceVariant
+        absRoll < 1f -> Color(0xFF4CAF50)
+        absRoll < 5f -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.error
+    }
+
     Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.Top,
+            .padding(horizontal = 16.dp),
     ) {
-        Icon(
-            Icons.Filled.Warning,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(16.dp),
-        )
-        Spacer(Modifier.width(6.dp))
         Text(
-            stringResource(R.string.alignment_magnet_warning),
+            stringResource(R.string.alignment_roll_label),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            if (active) "%+.1f°".format(roll) else "—",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = rollColor,
+        )
+        if (active && absRoll < 1f) {
+            Spacer(Modifier.width(4.dp))
+            Icon(
+                Icons.Filled.Check,
+                contentDescription = null,
+                tint = Color(0xFF4CAF50),
+                modifier = Modifier.size(14.dp),
+            )
+        }
     }
 }
 
