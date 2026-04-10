@@ -7,7 +7,6 @@ package com.ehrocha.pulsar.ui.screens
 
 import android.view.WindowManager
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -30,13 +29,7 @@ import com.ehrocha.pulsar.viewmodel.AlignmentViewModel
 import kotlin.math.abs
 import kotlin.math.min
 
-// ── Night-mode palette (deep red on black) ───────────────────────────────
-private val NightBg = Color.Black
-private val NightDim = Color(0xFF661111)       // dim red for outlines/labels
-private val NightText = Color(0xFFCC3333)       // medium red for text
-private val NightBright = Color(0xFFFF4444)     // bright red for values/icons
-private val NightGood = Color(0xFF33FF33)       // bright green when aligned
-private val NightSurface = Color(0xFF0D0000)    // near-black card surface
+private val GoodGreen = Color(0xFF4CAF50)
 
 @Composable
 fun AlignmentScreen(
@@ -94,7 +87,6 @@ fun AlignmentScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(NightBg)
             .padding(horizontal = 16.dp),
     ) {
         // ── Top bar ──────────────────────────────────────────────────
@@ -106,14 +98,12 @@ fun AlignmentScreen(
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = stringResource(R.string.back),
-                    tint = NightText,
                 )
             }
             Text(
                 stringResource(R.string.alignment_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = NightBright,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -178,7 +168,11 @@ private fun LocationRow(
         Icon(
             Icons.Default.MyLocation,
             contentDescription = null,
-            tint = if (locationReady) NightBright else NightDim,
+            tint = if (locationReady) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
             modifier = Modifier.size(18.dp),
         )
         Spacer(Modifier.width(8.dp))
@@ -190,26 +184,22 @@ private fun LocationRow(
                     "%.1f".format(declination),
                 ),
                 style = MaterialTheme.typography.bodySmall,
-                color = NightText,
                 modifier = Modifier.weight(1f),
             )
             Text(
                 poleLabel,
                 style = MaterialTheme.typography.labelSmall,
-                color = NightDim,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
             Text(
                 stringResource(R.string.alignment_no_location),
                 style = MaterialTheme.typography.bodySmall,
-                color = NightDim,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f),
             )
             TextButton(onClick = onRefresh) {
-                Text(
-                    stringResource(R.string.alignment_refresh),
-                    color = NightBright,
-                )
+                Text(stringResource(R.string.alignment_refresh))
             }
         }
     }
@@ -226,9 +216,14 @@ private fun BullseyeReticle(
     allAligned: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val outline = MaterialTheme.colorScheme.outline
+    val primary = MaterialTheme.colorScheme.primary
+    val background = MaterialTheme.colorScheme.background
+    val errorColor = MaterialTheme.colorScheme.error
+
     // Colors switch to green when fully aligned
-    val reticleColor = if (allAligned) NightGood else NightDim
-    val bubbleColor = if (allAligned) NightGood else NightBright
+    val reticleColor = if (allAligned) GoodGreen else outline
+    val bubbleColor = if (allAligned) GoodGreen else primary
 
     // Clamp errors to ±30° for display; full range = 60°
     val maxAngle = 30f
@@ -289,7 +284,7 @@ private fun BullseyeReticle(
             )
             // Inner contrast dot
             drawCircle(
-                color = NightBg,
+                color = background,
                 radius = 4.dp.toPx(),
                 center = Offset(dotX, dotY),
             )
@@ -305,10 +300,10 @@ private fun BullseyeReticle(
         val rollDy = (rollBarHalf * Math.sin(rollRad)).toFloat()
 
         val rollColor = when {
-            allAligned -> NightGood
-            abs(roll) < 1f -> NightGood
-            abs(roll) < 5f -> NightBright
-            else -> Color(0xFFFF6666)
+            allAligned -> GoodGreen
+            abs(roll) < 1f -> GoodGreen
+            abs(roll) < 5f -> primary
+            else -> errorColor
         }
 
         drawLine(
@@ -389,11 +384,11 @@ private fun ReadoutRow(
     allAligned: Boolean,
 ) {
     val errColor = when {
-        allAligned -> NightGood
-        !active -> NightDim
-        abs(errorValue) < 0.5f -> NightGood
-        abs(errorValue) < 5f -> NightBright
-        else -> Color(0xFFFF6666)
+        allAligned -> GoodGreen
+        !active -> MaterialTheme.colorScheme.onSurfaceVariant
+        abs(errorValue) < 0.5f -> GoodGreen
+        abs(errorValue) < 5f -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.error
     }
 
     Row(
@@ -403,20 +398,19 @@ private fun ReadoutRow(
         Text(
             label,
             style = MaterialTheme.typography.labelSmall,
-            color = NightDim,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1.2f),
         )
         Text(
             current,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
-            color = NightText,
             modifier = Modifier.weight(1f),
         )
         Text(
             target,
             style = MaterialTheme.typography.bodySmall,
-            color = NightDim,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(0.8f),
         )
         Text(
