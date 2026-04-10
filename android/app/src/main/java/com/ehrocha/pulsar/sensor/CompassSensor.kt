@@ -35,12 +35,29 @@ data class OrientationReading(
  *
  * Magnetic declination must be applied externally to convert to true north.
  *
+ * ── Physical setup ───────────────────────────────────────────────────────
+ *   Phone lies flat on its back on the tracker plate (screen facing sky,
+ *   rear cameras touching the plate).  Top edge points toward the gears
+ *   (polar axis / celestial pole).  The whole assembly tilts together.
+ *
+ * ── Why NO remapCoordinateSystem ─────────────────────────────────────────
+ *   The default getOrientation() on the unremapped rotation matrix gives:
+ *     azimuth = compass heading of device Y (top edge → pole)
+ *     pitch   = tilt of top edge above horizontal (= tracker altitude)
+ *     roll    = left-right tilt (0 = level)
+ *   This is exactly what we need for a flat phone.
+ *
+ *   The commonly-seen remap(AXIS_X, AXIS_Z) is for an UPRIGHT phone
+ *   (screen facing the user, top edge pointing up).  Applying it to a
+ *   flat phone causes gimbal lock at pitch ≈ −90° — unusable.
+ *
  * ── Formula ──────────────────────────────────────────────────────────────
  *   1. SensorManager.getRotationMatrixFromVector(R, rotationVector)
- *   2. SensorManager.remapCoordinateSystem(R, AXIS_X, AXIS_Z, remappedR)
- *      (remap for phone lying flat on its back, top edge as pointer)
- *   3. SensorManager.getOrientation(remappedR, values)
- *      values[0] = azimuth, values[1] = pitch, values[2] = roll
+ *   2. SensorManager.getOrientation(R, values)
+ *      values[0] = azimuth (rad), values[1] = pitch (rad), values[2] = roll (rad)
+ *   3. azimuth = toDegrees(values[0]).mod(360)   → [0..360)
+ *   4. pitch   = −toDegrees(values[1])           → positive = tilted up
+ *   5. roll    = toDegrees(values[2])             → 0 = level
  */
 class CompassSensor(context: Context) {
 
@@ -53,7 +70,6 @@ class CompassSensor(context: Context) {
      */
     fun orientationFlow(): Flow<OrientationReading> = callbackFlow {
         val rotationMatrix = FloatArray(9)
-        val remappedMatrix = FloatArray(9)
         val orientation = FloatArray(3)
         var sensorAccuracy = SensorManager.SENSOR_STATUS_ACCURACY_HIGH
 
@@ -63,16 +79,9 @@ class CompassSensor(context: Context) {
 
                 SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)
 
-                // Remap for phone lying flat (screen up, top edge = pointer):
-                // X stays X, Y becomes Z
-                SensorManager.remapCoordinateSystem(
-                    rotationMatrix,
-                    SensorManager.AXIS_X,
-                    SensorManager.AXIS_Z,
-                    remappedMatrix,
-                )
-
-                SensorManager.getOrientation(remappedMatrix, orientation)
+                // No remap — the default rotation matrix gives correct
+                // azimuth/pitch/roll for a phone lying flat on its back.
+                SensorManager.getOrientation(rotationMatrix, orientation)
 
                 val azimuth = Math.toDegrees(orientation[0].toDouble())
                     .toFloat()
