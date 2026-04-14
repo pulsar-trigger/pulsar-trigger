@@ -38,19 +38,27 @@ JAVA_HOME=/opt/android-studio/jbr ./gradlew assembleDebug
 JAVA_HOME=/opt/android-studio/jbr ./gradlew testDebugUnitTest
 
 # Firmware
-cd firmware && pio run              # build
-pio run -t upload                   # flash
-pio device monitor                  # serial (115200 baud)
+cd firmware
+~/.platformio/penv/bin/pio run              # build
+~/.platformio/penv/bin/pio run -t upload    # flash
+~/.platformio/penv/bin/pio device monitor   # serial (115200 baud)
+~/.platformio/penv/bin/pio test -e native   # unit tests
 ```
 
-## Version Bump (Android)
+## Version Bump
 
 ```bash
-./scripts/bump-android.sh "Your commit message"   # custom message
-./scripts/bump-android.sh                          # default message
+./scripts/bump.sh "commit message"      # bump Android + firmware, commit, push
+./scripts/bump.sh -a "commit message"   # Android only
+./scripts/bump.sh -f "commit message"   # firmware only
+./scripts/bump.sh                       # both, default message
 ```
 
-Bumps versionCode +1 and versionName minor +1, builds, tests, commits, and pushes.
+- **"bump version" always means: increment version, commit, push** — never just edit the number
+- **Always bump the version for every component whose code changed** — Android and/or firmware
+- Android: `versionCode +1`, `versionName` minor +1 in `android/app/build.gradle.kts`
+- Firmware: minor +1 across all 4 envs in `firmware/platformio.ini` (`-DFW_VERSION_MINOR=N`)
+- Legacy Android-only script still available: `./scripts/bump-android.sh`
 
 ## Versions (source of truth)
 
@@ -58,6 +66,12 @@ Bumps versionCode +1 and versionName minor +1, builds, tests, commits, and pushe
 |-----------|------|
 | Firmware | `firmware/platformio.ini` build flags → `config.h` |
 | Android | `android/app/build.gradle.kts` → `BuildConfig.VERSION_NAME` |
+
+## Commit Conventions
+
+- No `Co-Authored-By` trailers unless explicitly asked
+- Commit message should describe the "why", not the "what"
+- Always bump version(s) as part of the commit when code changes
 
 ## Conventions
 
