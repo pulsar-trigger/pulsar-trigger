@@ -58,7 +58,6 @@ cd firmware
 - **Always bump the version for every component whose code changed** — Android and/or firmware
 - Android: `versionCode +1`, `versionName` minor +1 in `android/app/build.gradle.kts`
 - Firmware: minor +1 across all 4 envs in `firmware/platformio.ini` (`-DFW_VERSION_MINOR=N`)
-- Legacy Android-only script still available: `./scripts/bump-android.sh`
 
 ## Versions (source of truth)
 

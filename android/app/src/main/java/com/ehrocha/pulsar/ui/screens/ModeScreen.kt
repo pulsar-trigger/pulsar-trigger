@@ -427,54 +427,6 @@ fun SettingsScreen(
 }
 
 @Composable
-fun ModeSettingsScreen(
-    vm: PulsarViewModel,
-    targetMode: TriggerMode,
-    onBack: () -> Unit,
-) {
-    val title = when (targetMode) {
-        TriggerMode.INTERVALOMETER -> stringResource(R.string.settings_intervalometer)
-        TriggerMode.ASTRO -> stringResource(R.string.settings_astro)
-        else -> "${targetMode.name.replace('_', ' ')} Settings"
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-            }
-            Spacer(Modifier.width(4.dp))
-            Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            tonalElevation = 1.dp,
-            modifier = Modifier.weight(1f),
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-            ) {
-                when (targetMode) {
-                    TriggerMode.INTERVALOMETER -> IntervalometerSettingsPanel(vm)
-                    TriggerMode.ASTRO -> AstroSettingsPanel(vm)
-                    else -> {}
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun SwipeToUnlockBar(onUnlocked: () -> Unit) {
     var dragOffset by remember { mutableFloatStateOf(0f) }
     val unlockThreshold = 200f

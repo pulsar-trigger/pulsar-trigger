@@ -66,14 +66,13 @@ cd android && ./gradlew assembleDebug
 Use the bump script instead of manual edits:
 
 ```bash
-# With commit message (version trailer auto-appended):
-./scripts/bump-android.sh "Your commit message here"
-
-# Default message ("Bump Android version to X.Y.Z"):
-./scripts/bump-android.sh
+./scripts/bump.sh "commit message"      # bump Android + firmware, commit, push
+./scripts/bump.sh -a "commit message"   # Android only
+./scripts/bump.sh -f "commit message"   # firmware only
+./scripts/bump.sh                       # both, default message
 ```
 
-The script bumps versionCode +1 and versionName minor +1, builds, tests, commits, and pushes in one step.
+The script bumps versions, builds, tests, commits, and pushes in one step.
 
 ## General Instructions
 - Use `git pull --rebase` to keep a clean history.

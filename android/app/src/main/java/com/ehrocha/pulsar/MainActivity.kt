@@ -57,7 +57,6 @@ import com.ehrocha.pulsar.ui.components.SignalStrengthIndicator
 import com.ehrocha.pulsar.ui.components.NightModeToggle
 import com.ehrocha.pulsar.ui.screens.MainMenuScreen
 import com.ehrocha.pulsar.ui.screens.ModeScreen
-import com.ehrocha.pulsar.ui.screens.ModeSettingsScreen
 import com.ehrocha.pulsar.ui.screens.ScanScreen
 import com.ehrocha.pulsar.ui.screens.SettingsScreen
 import com.ehrocha.pulsar.ui.screens.SettingsSection
@@ -292,14 +291,6 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                     onBack = { currentScreen = AppScreen.Menu },
                 )
             }
-            is AppScreen.ModeSettings -> {
-                BackHandler { currentScreen = AppScreen.Menu }
-                ModeSettingsScreen(
-                    vm = vm,
-                    targetMode = screen.mode,
-                    onBack = { currentScreen = AppScreen.Menu },
-                )
-            }
             is AppScreen.CustomFlow -> {
                 BackHandler { currentScreen = AppScreen.Menu }
                 CustomFlowScreen(
@@ -377,7 +368,6 @@ private sealed class AppScreen {
     data object Scan : AppScreen()
     data object Menu : AppScreen()
     data class Mode(val mode: TriggerMode) : AppScreen()
-    data class ModeSettings(val mode: TriggerMode) : AppScreen()
     data class Settings(val initialSection: SettingsSection? = null) : AppScreen()
     data class CustomFlow(val quickLaunch: Boolean = false) : AppScreen()
     data object Dashboard : AppScreen()
