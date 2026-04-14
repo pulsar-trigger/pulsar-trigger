@@ -435,6 +435,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         if (!_simulatorActive.value) {
             bleManager.sendCommand(CommandBuilder.stop())
         }
+        // Reset status to IDLE immediately so UI doesn't show stale progress
+        _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
         _flowRunning.value = false
         _flowPaused.value = false
         _flowCurrentStep.value = -1
