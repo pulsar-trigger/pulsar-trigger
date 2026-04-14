@@ -60,7 +60,6 @@ static uint16_t read_u16_le(const uint8_t* data) {
 static void fire_and_count(uint32_t exposure_ms) {
     camera_shutter(exposure_ms, _focus_ms);
     _shots_taken++;
-    status_send(_state, _mode, _shots_taken, 0);
 }
 
 // ── Public API ───────────────────────────────────────────────────────────────
@@ -163,6 +162,21 @@ void triggers_tick() {
             if ((now - _next_fire_ms) < 0x80000000UL) {  // wraparound-safe: now >= _next_fire_ms
                 _state = STATE_RUNNING;
                 Serial.printf("[INTV] shot %u firing at %lu ms\n", _shots_taken + 1, millis());
+
+                // Notify app BEFORE the blocking exposure so it can show EXPOSING state
+                {
+                    uint32_t pre_remaining;
+                    if (_interval.count > 0) {
+                        uint16_t shots_left = _interval.count - _shots_taken;
+                        uint64_t cycle = (uint64_t)_interval.exposure_ms + _interval.interval_ms;
+                        uint64_t total = (uint64_t)shots_left * cycle - _interval.interval_ms;
+                        pre_remaining = (total > UINT32_MAX) ? UINT32_MAX : (uint32_t)total;
+                    } else {
+                        pre_remaining = _interval.exposure_ms;
+                    }
+                    status_send(_state, _mode, _shots_taken, pre_remaining);
+                }
+
                 fire_and_count(_interval.exposure_ms);
 
                 if (_interval.count > 0 && _shots_taken >= _interval.count) {

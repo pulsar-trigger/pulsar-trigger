@@ -494,15 +494,17 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         for (shot in 1..totalShots) {
             coroutineContext.ensureActive()
             val remaining = (totalShots - shot + 1) * (expMs + gapMs) - gapMs
+            // Exposure starts
             _status.value = _status.value?.copy(
                 state = DeviceState.RUNNING, shotsTaken = shot - 1, timeRemainingMs = remaining,
             )
             delay(expMs)
+            // Exposure ends — transition to WAITING with updated shot count
             _status.value = _status.value?.copy(
-                shotsTaken = shot, timeRemainingMs = remaining - expMs,
+                state = DeviceState.WAITING, shotsTaken = shot,
+                timeRemainingMs = (remaining - expMs).coerceAtLeast(0),
             )
             if (shot < totalShots) {
-                _status.value = _status.value?.copy(state = DeviceState.WAITING)
                 delay(gapMs)
             }
         }
@@ -707,14 +709,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     timeRemainingMs = remaining,
                 )
                 delay(expMs)
-                // Shot complete
+                // Shot complete — transition to WAITING with updated shot count
                 _status.value = _status.value?.copy(
+                    state = DeviceState.WAITING,
                     shotsTaken = shot,
-                    timeRemainingMs = remaining - expMs,
+                    timeRemainingMs = (remaining - expMs).coerceAtLeast(0),
                 )
                 // Gap (except after last shot)
                 if (shot < totalShots) {
-                    _status.value = _status.value?.copy(state = DeviceState.WAITING)
                     delay(gapMs)
                 }
             }
