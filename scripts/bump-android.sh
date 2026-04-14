@@ -26,12 +26,12 @@ sed -i "s/versionName = \"$CURRENT_NAME\"/versionName = \"$NEW_NAME\"/" "$GRADLE
 # ── Build ─────────────────────────────────────────────────────────────
 echo "Building…"
 cd android
-JAVA_HOME=/usr/lib/jvm/java-17-temurin-jdk ./gradlew assembleDebug --quiet
+JAVA_HOME=/opt/android-studio/jbr ./gradlew assembleDebug --quiet
 echo "Build OK"
 
 # ── Test ──────────────────────────────────────────────────────────────
 echo "Testing…"
-JAVA_HOME=/usr/lib/jvm/java-17-temurin-jdk ./gradlew testDebugUnitTest --quiet
+JAVA_HOME=/opt/android-studio/jbr ./gradlew testDebugUnitTest --quiet
 echo "Tests OK"
 cd "$REPO_ROOT"
 

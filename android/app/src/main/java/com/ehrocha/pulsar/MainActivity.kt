@@ -150,9 +150,16 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
     val appRelease by vm.appUpdateManager.latestRelease.collectAsState()
     var dismissedUpdateDialog by remember { mutableStateOf(false) }
 
+    // Auto-navigate should only fire once per connection (on initial connect
+    // to an already-running device), not every time Menu is visited.
+    var autoNavDone by remember { mutableStateOf(false) }
+
     // Reset dismissed flag when disconnected so it shows again on next connect
     LaunchedEffect(connected) {
-        if (!connected) dismissedUpdateDialog = false
+        if (!connected) {
+            dismissedUpdateDialog = false
+            autoNavDone = false
+        }
     }
 
     val hasFwUpdate = fwState == OtaState.AVAILABLE && fwRelease != null
@@ -167,9 +174,12 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
         if (!connected) currentScreen = AppScreen.Scan
     }
 
-    // Auto-navigate to running mode when connecting to a busy device
+    // Auto-navigate to running mode when connecting to a busy device.
+    // Only fires once per connection to avoid bouncing the user back after
+    // they press Stop (firmware may still report RUNNING briefly).
     LaunchedEffect(currentScreen) {
-        if (currentScreen == AppScreen.Menu) {
+        if (currentScreen == AppScreen.Menu && !autoNavDone) {
+            autoNavDone = true
             vm.status.filterNotNull().first().let { s ->
                 if (s.state == DeviceState.RUNNING || s.state == DeviceState.WAITING) {
                     val mode = vm.currentMode.value

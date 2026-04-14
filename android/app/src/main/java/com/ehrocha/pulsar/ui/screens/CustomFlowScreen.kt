@@ -848,7 +848,7 @@ private fun FlowStepCard(
                 }
                 val gapMs = when (step.type) {
                     FlowStepType.ASTRO -> step.gapMs
-                    else -> step.intervalMs - step.exposureMs
+                    else -> step.intervalMs
                 }
                 val cycleMs = exposureMs + gapMs
                 val phaseDurationMs = when (status.state) {
@@ -1253,8 +1253,11 @@ private fun SaveFlowDialog(
 /** Estimate total duration for a single flow step (in ms). */
 private fun FlowStep.estimatedDurationMs(): Long = when (type) {
     FlowStepType.PAUSE -> 0L
-    FlowStepType.ASTRO -> delayMs + shotCount * (exposureMs + gapMs)
-    else -> delayMs + shotCount * intervalMs
+    FlowStepType.ASTRO -> {
+        val expMs = AppConfig.astroExposureMs(focalLength, cropFactor, ruleDivisor)
+        delayMs + shotCount * (expMs + gapMs)
+    }
+    else -> delayMs + shotCount * (exposureMs + intervalMs)
 }
 
 @Composable
