@@ -850,7 +850,6 @@ private fun FlowStepCard(
                     FlowStepType.ASTRO -> step.gapMs
                     else -> step.intervalMs
                 }
-                val cycleMs = exposureMs + gapMs
                 val phaseDurationMs = when (status.state) {
                     DeviceState.RUNNING -> exposureMs
                     DeviceState.WAITING -> gapMs
@@ -921,30 +920,63 @@ private fun FlowStepCard(
                     )
                 }
 
-                // Smooth progress bar
-                val targetCount = step.shotCount
-                if (targetCount > 0) {
-                    Spacer(Modifier.height(6.dp))
-                    // Progress = completed shots + fraction of current phase within the cycle
-                    val phaseElapsedForBar = (System.currentTimeMillis() - phaseStartTime).coerceAtLeast(0)
-                    val phaseProgress = if (phaseDurationMs > 0) (phaseElapsedForBar.toFloat() / phaseDurationMs).coerceIn(0f, 1f) else 0f
-                    val cycleFraction = when (status.state) {
-                        DeviceState.RUNNING -> phaseProgress * exposureMs / cycleMs.coerceAtLeast(1)
-                        DeviceState.WAITING -> (exposureMs.toFloat() / cycleMs.coerceAtLeast(1)) + phaseProgress * gapMs / cycleMs.coerceAtLeast(1)
-                        else -> 0f
-                    }
-                    val rawProgress = (status.shotsTaken.toFloat() + cycleFraction.coerceIn(0f, 1f)) / targetCount
-                    val smoothProgress by animateFloatAsState(
-                        targetValue = rawProgress.coerceIn(0f, 1f),
-                        animationSpec = tween(durationMillis = 300),
-                        label = "flowStepProgress",
+                // Per-phase progress bars
+                val phaseElapsedForBar = (System.currentTimeMillis() - phaseStartTime).coerceAtLeast(0)
+                val exposureBarProgress = when (status.state) {
+                    DeviceState.RUNNING -> if (exposureMs > 0) (phaseElapsedForBar.toFloat() / exposureMs).coerceIn(0f, 1f) else 0f
+                    else -> 0f
+                }
+                val waitBarProgress = when (status.state) {
+                    DeviceState.WAITING -> if (gapMs > 0) (phaseElapsedForBar.toFloat() / gapMs).coerceIn(0f, 1f) else 0f
+                    else -> 0f
+                }
+                val smoothExposure by animateFloatAsState(
+                    targetValue = exposureBarProgress,
+                    animationSpec = tween(durationMillis = 300),
+                    label = "flowExposureProgress",
+                )
+                val smoothWait by animateFloatAsState(
+                    targetValue = waitBarProgress,
+                    animationSpec = tween(durationMillis = 300),
+                    label = "flowWaitProgress",
+                )
+
+                Spacer(Modifier.height(6.dp))
+
+                // Exposure bar
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        stringResource(R.string.flow_state_exposing),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFF4CAF50),
+                        modifier = Modifier.width(60.dp),
                     )
                     LinearProgressIndicator(
-                        progress = { smoothProgress },
+                        progress = { smoothExposure },
                         modifier = Modifier
-                            .fillMaxWidth()
+                            .weight(1f)
                             .height(4.dp),
-                        color = stateColor,
+                        color = Color(0xFF4CAF50),
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    )
+                }
+
+                Spacer(Modifier.height(4.dp))
+
+                // Wait bar
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        stringResource(R.string.flow_state_waiting),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFFFA726),
+                        modifier = Modifier.width(60.dp),
+                    )
+                    LinearProgressIndicator(
+                        progress = { smoothWait },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(4.dp),
+                        color = Color(0xFFFFA726),
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     )
                 }

@@ -526,7 +526,6 @@ private fun RunningStatusContent(
     gapMs: Long,
 ) {
     val status = LocalDeviceStatus.current ?: return
-    val cycleMs = exposureMs + gapMs
 
     // ── Local countdown: start from firmware's timeRemainingMs and tick down ──
     var lastUpdateTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -576,19 +575,24 @@ private fun RunningStatusContent(
         else -> status.shotsTaken
     }
 
-    // ── Smooth continuous progress ──
-    // Base progress from completed shots + fractional progress within current cycle
-    val cycleElapsedMs = (System.currentTimeMillis() - lastUpdateTime).let { elapsed ->
-        (lastRemainingMs - (lastRemainingMs - elapsed).coerceAtLeast(0))
+    // ── Per-phase progress (0→1 within current phase) ──
+    val exposureProgress = when (status.state) {
+        DeviceState.RUNNING -> if (exposureMs > 0) (phaseElapsed.toFloat() / exposureMs).coerceIn(0f, 1f) else 0f
+        else -> 0f
     }
-    val fractionalCycle = if (cycleMs > 0) cycleElapsedMs.toFloat() / cycleMs else 0f
-    val rawProgress = if (totalShots > 0) {
-        (status.shotsTaken.toFloat() + fractionalCycle.coerceIn(0f, 1f)) / totalShots
-    } else 0f
-    val smoothProgress by animateFloatAsState(
-        targetValue = rawProgress.coerceIn(0f, 1f),
+    val waitProgress = when (status.state) {
+        DeviceState.WAITING -> if (gapMs > 0) (phaseElapsed.toFloat() / gapMs).coerceIn(0f, 1f) else 0f
+        else -> 0f
+    }
+    val smoothExposureProgress by animateFloatAsState(
+        targetValue = exposureProgress,
         animationSpec = tween(durationMillis = 300),
-        label = "progress",
+        label = "exposureProgress",
+    )
+    val smoothWaitProgress by animateFloatAsState(
+        targetValue = waitProgress,
+        animationSpec = tween(durationMillis = 300),
+        label = "waitProgress",
     )
 
     val stateColor by animateColorAsState(
@@ -663,16 +667,45 @@ private fun RunningStatusContent(
 
         Spacer(Modifier.height(24.dp))
 
-        // Progress bar
-        LinearProgressIndicator(
-            progress = { smoothProgress },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(8.dp),
-            color = MaterialTheme.colorScheme.primary,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
-        )
+        // Exposure phase bar
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.state_exposing),
+                style = MaterialTheme.typography.labelSmall,
+                color = Color(0xFF00E676),
+                modifier = Modifier.width(72.dp),
+            )
+            LinearProgressIndicator(
+                progress = { smoothExposureProgress },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(8.dp),
+                color = Color(0xFF00E676),
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // Wait phase bar
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(R.string.state_waiting),
+                style = MaterialTheme.typography.labelSmall,
+                color = Color(0xFFFFD600),
+                modifier = Modifier.width(72.dp),
+            )
+            LinearProgressIndicator(
+                progress = { smoothWaitProgress },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(8.dp),
+                color = Color(0xFFFFD600),
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
+            )
+        }
 
         Spacer(Modifier.height(24.dp))
 
