@@ -76,8 +76,16 @@ if $BUMP_FIRMWARE; then
 
     echo "Testing firmware…"
     cd firmware
-    ~/.platformio/penv/bin/pio test -e native --silent
+    ~/.platformio/penv/bin/pio test -e native
     echo "Firmware tests OK"
+
+    echo "Building ESP32 firmware…"
+    ~/.platformio/penv/bin/pio run -e esp32
+    echo "ESP32 build OK"
+
+    echo "Building M5StickS3 firmware…"
+    ~/.platformio/penv/bin/pio run -e m5sticks3
+    echo "M5StickS3 build OK"
     cd "$REPO_ROOT"
 
     SUMMARY_PARTS+=("Firmware v$NEW_FW_NAME")

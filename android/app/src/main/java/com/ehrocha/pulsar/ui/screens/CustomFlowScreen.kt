@@ -200,6 +200,15 @@ private fun FlowLibraryView(
     val connected = LocalDeviceConnected.current
     var confirmDelete by remember { mutableStateOf<String?>(null) }
 
+    val presets = saved.filter { it.builtIn }
+    val userFlows = saved.filter { !it.builtIn }
+
+    val tabs = listOf(
+        stringResource(R.string.flow_tab_recommended),
+        stringResource(R.string.flow_tab_my_flows),
+    )
+    var selectedTab by remember { mutableIntStateOf(0) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -217,9 +226,25 @@ private fun FlowLibraryView(
             )
         }
 
+        Spacer(Modifier.height(8.dp))
+
+        // ── Tab row ──────────────────────────────────────────────────────
+        TabRow(
+            selectedTabIndex = selectedTab,
+            containerColor = MaterialTheme.colorScheme.surface,
+        ) {
+            tabs.forEachIndexed { index, title ->
+                Tab(
+                    selected = selectedTab == index,
+                    onClick = { selectedTab = index },
+                    text = { Text(title) },
+                )
+            }
+        }
+
         Spacer(Modifier.height(12.dp))
 
-        // ── Saved flows list ─────────────────────────────────────────────
+        // ── Tab content ─────────────────────────────────────────────────
         Surface(
             shape = RoundedCornerShape(16.dp),
             tonalElevation = 1.dp,
@@ -232,72 +257,34 @@ private fun FlowLibraryView(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                if (saved.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 48.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.PlaylistAdd,
-                                contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(Modifier.height(12.dp))
-                            Text(
-                                stringResource(R.string.flow_no_saved),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                stringResource(R.string.flow_create_instruction),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                            )
+                when (selectedTab) {
+                    0 -> { // Recommended (built-in presets)
+                        if (presets.isEmpty()) {
+                            FlowEmptyState()
+                        } else {
+                            presets.forEach { flow ->
+                                SavedFlowCard(
+                                    flow = flow,
+                                    onEdit = { onEditFlow(flow) },
+                                    onDelete = { },
+                                    onRun = { onRunFlow(flow) },
+                                )
+                            }
                         }
                     }
-                }
-
-                val presets = saved.filter { it.builtIn }
-                val userFlows = saved.filter { !it.builtIn }
-
-                if (presets.isNotEmpty()) {
-                    Text(
-                        stringResource(R.string.flow_section_presets),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    presets.forEach { flow ->
-                        SavedFlowCard(
-                            flow = flow,
-                            onEdit = { onEditFlow(flow) },
-                            onDelete = { },
-                            onRun = { onRunFlow(flow) },
-                        )
-                    }
-                }
-
-                if (userFlows.isNotEmpty()) {
-                    Text(
-                        stringResource(R.string.flow_section_custom),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(top = if (presets.isNotEmpty()) 12.dp else 0.dp),
-                    )
-                    userFlows.forEach { flow ->
-                        SavedFlowCard(
-                            flow = flow,
-                            onEdit = { onEditFlow(flow) },
-                            onDelete = { confirmDelete = flow.name },
-                            onRun = { onRunFlow(flow) },
-                        )
+                    1 -> { // My Flows (user-created)
+                        if (userFlows.isEmpty()) {
+                            FlowEmptyState()
+                        } else {
+                            userFlows.forEach { flow ->
+                                SavedFlowCard(
+                                    flow = flow,
+                                    onEdit = { onEditFlow(flow) },
+                                    onDelete = { confirmDelete = flow.name },
+                                    onRun = { onRunFlow(flow) },
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -337,6 +324,38 @@ private fun FlowLibraryView(
                 TextButton(onClick = { confirmDelete = null }) { Text(stringResource(R.string.cancel)) }
             },
         )
+    }
+}
+
+@Composable
+private fun FlowEmptyState() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 48.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                Icons.AutoMirrored.Filled.PlaylistAdd,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                stringResource(R.string.flow_no_saved),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                stringResource(R.string.flow_create_instruction),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
 
@@ -923,9 +942,9 @@ private fun FlowStepCard(
                     DeviceState.ERROR -> Color(0xFFFF1744)
                 }
 
-                // Shot display: +1 during exposure so user sees "working on shot N"
+                // Shot display: always +1 while active so count starts at 1
                 val displayShots = when (status.state) {
-                    DeviceState.RUNNING -> status.shotsTaken + 1
+                    DeviceState.RUNNING, DeviceState.WAITING -> status.shotsTaken + 1
                     else -> status.shotsTaken
                 }
 

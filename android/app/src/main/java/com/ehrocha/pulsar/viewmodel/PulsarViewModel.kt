@@ -139,6 +139,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val _astroGapMs = MutableStateFlow(AppConfig.DEFAULT_ASTRO_GAP_MS)          // gap between shots
     val astroGapMs: StateFlow<Long> = _astroGapMs
 
+    // ── Dark Frame params ───────────────────────────────────────────────────
+    private val _darkFrameCount = MutableStateFlow(10)
+    val darkFrameCount: StateFlow<Int> = _darkFrameCount
+    private val _darkFrameExposureMs = MutableStateFlow(AppConfig.DEFAULT_EXPOSURE_MS)
+    val darkFrameExposureMs: StateFlow<Long> = _darkFrameExposureMs
+    private val _darkFrameGapMs = MutableStateFlow(AppConfig.DEFAULT_ASTRO_GAP_MS)
+    val darkFrameGapMs: StateFlow<Long> = _darkFrameGapMs
+
     // ── GPIO pin config ──────────────────────────────────────────────────
     private val _pinShutter = MutableStateFlow(DEFAULT_PIN_SHUTTER)
     val pinShutter: StateFlow<Int> = _pinShutter
@@ -303,6 +311,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     fun setAstroGapMs(v: Long) { _astroGapMs.value = v.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS) }
     fun setAstroShotCount(v: Int) { _astroShotCount.value = v.coerceAtLeast(AppConfig.MIN_SHOT_COUNT) }
     fun setAstroDelayMs(v: Long) { _astroDelayMs.value = v }
+    fun setDarkFrameCount(v: Int) { _darkFrameCount.value = v.coerceAtLeast(AppConfig.MIN_SHOT_COUNT) }
+    fun setDarkFrameExposureMs(v: Long) { _darkFrameExposureMs.value = v.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS) }
+    fun setDarkFrameGapMs(v: Long) { _darkFrameGapMs.value = v.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS) }
 
     // ── Commands ─────────────────────────────────────────────────────────
     fun selectMode(mode: TriggerMode) {
@@ -381,7 +392,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             FlowStepType.PAUSE -> FlowStep(type = FlowStepType.PAUSE)
             FlowStepType.DARK_FRAME -> FlowStep(
                 type = FlowStepType.DARK_FRAME,
-                darkFrameExposureMs = _exposureMs.value,
+                darkFrameCount = _darkFrameCount.value,
+                darkFrameExposureMs = _darkFrameExposureMs.value,
+                darkFrameGapMs = _darkFrameGapMs.value,
             )
             FlowStepType.RAMP -> FlowStep(type = FlowStepType.RAMP)
         }
@@ -632,6 +645,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     _astroGapMs.value, exposureMs, _astroShotCount.value, _astroDelayMs.value
                 )
             }
+            TriggerMode.DARK_FRAME -> CommandBuilder.setIntervalometer(
+                _darkFrameGapMs.value, _darkFrameExposureMs.value, _darkFrameCount.value, 0L
+            )
             TriggerMode.PRESS_HOLD -> CommandBuilder.setPressHold()
             TriggerMode.PRESS_LOCK -> CommandBuilder.setPressLock()
             TriggerMode.CUSTOM_FLOW -> return  // app-orchestrated, no single command

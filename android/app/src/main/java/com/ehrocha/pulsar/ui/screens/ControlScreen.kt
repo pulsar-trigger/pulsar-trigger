@@ -630,6 +630,40 @@ internal fun AstroPanelContent(
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth().alpha(0.6f)
                 )
+
+                // NPF estimation note
+                if (ruleDivisor == AppConfig.NPF_RULE_DIVISOR) {
+                    var showNpfDialog by remember { mutableStateOf(false) }
+                    val estimatedPitch = AppConfig.estimatedPixelPitchUm(cropFactor)
+                    Text(
+                        stringResource(R.string.npf_estimation_note),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showNpfDialog = true }
+                            .padding(vertical = 2.dp),
+                    )
+                    if (showNpfDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showNpfDialog = false },
+                            title = { Text(stringResource(R.string.npf_dialog_title)) },
+                            text = {
+                                Text(stringResource(
+                                    R.string.npf_dialog_body,
+                                    "%.1f".format(estimatedPitch),
+                                    "2.8",
+                                ))
+                            },
+                            confirmButton = {
+                                TextButton(onClick = { showNpfDialog = false }) {
+                                    Text(stringResource(R.string.ok))
+                                }
+                            },
+                        )
+                    }
+                }
             }
         }
 
@@ -733,6 +767,90 @@ private val SENSOR_PRESETS = listOf(
     SensorPreset(R.string.preset_aps_c_nikon_sony, "APS-C", 1.5f),
     SensorPreset(R.string.preset_micro_43, "M4/3", 2.0f),
 )
+
+@Composable
+internal fun DarkFramePanel(vm: PulsarViewModel, enabled: Boolean = true) {
+    val count by vm.darkFrameCount.collectAsState()
+    val exposureMs by vm.darkFrameExposureMs.collectAsState()
+    val gapMs by vm.darkFrameGapMs.collectAsState()
+
+    DarkFramePanelContent(
+        count = count,
+        exposureMs = exposureMs,
+        gapMs = gapMs,
+        onCountChanged = { vm.setDarkFrameCount(it) },
+        onExposureMsChanged = { vm.setDarkFrameExposureMs(it) },
+        onGapMsChanged = { vm.setDarkFrameGapMs(it) },
+        enabled = enabled,
+    )
+}
+
+@Composable
+internal fun DarkFramePanelContent(
+    modifier: Modifier = Modifier,
+    count: Int,
+    exposureMs: Long,
+    gapMs: Long,
+    onCountChanged: (Int) -> Unit,
+    onExposureMsChanged: (Long) -> Unit,
+    onGapMsChanged: (Long) -> Unit,
+    enabled: Boolean = true,
+) {
+    val totalTimeMs = count.toLong() * (exposureMs + gapMs)
+
+    Column(verticalArrangement = Arrangement.spacedBy(24.dp), modifier = modifier) {
+        PanelHelpHeader(
+            title = stringResource(R.string.mode_dark_frame),
+            helpText = stringResource(R.string.dark_frame_hint),
+        )
+
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            tonalElevation = 4.dp,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.label_exposure), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(formatDuration(exposureMs), style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.label_total_duration), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(formatDuration(totalTimeMs), style = MaterialTheme.typography.headlineLarge)
+                    }
+                }
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            IntStepperField(
+                label = stringResource(R.string.label_dark_frame_count),
+                value = count,
+                onValueChange = { onCountChanged(it.coerceAtLeast(1)) },
+                min = 1,
+                max = 999,
+                enabled = enabled,
+                presets = listOf(10, 20, 30, 50),
+                presetLabel = { "$it" },
+            )
+
+            TimePicker(
+                totalMs = exposureMs,
+                onChanged = { onExposureMsChanged(it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS)) },
+                label = stringResource(R.string.label_exposure) + " (hh:mm:ss)",
+                enabled = enabled,
+            )
+
+            TimePicker(
+                totalMs = gapMs,
+                onChanged = { onGapMsChanged(it.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS)) },
+                label = stringResource(R.string.label_interval) + " (hh:mm:ss)",
+                enabled = enabled,
+            )
+        }
+    }
+}
 
 internal fun formatDuration(ms: Long): String {
     val totalS = (ms + 500) / 1000

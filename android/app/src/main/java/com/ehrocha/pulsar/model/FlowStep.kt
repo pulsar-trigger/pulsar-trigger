@@ -129,13 +129,16 @@ fun FlowStepType.displayName(context: Context): String = when (this) {
 
 // ── Saved Flow (named flow preset) ──────────────────────────────────────────
 
-/** Built-in 500-rule presets for common focal lengths. */
+/** Built-in NPF-rule presets for common focal lengths.
+ *  Uses [AppConfig.astroExposureMs] with [AppConfig.NPF_RULE_DIVISOR] to compute
+ *  scientifically grounded exposure times based on sensor pixel pitch. */
 object FlowPresets {
-    private fun preset(focalLengthMm: Int): SavedFlow {
-        val exposureS = 500.0 / focalLengthMm
-        val exposureMs = (exposureS * 1000).toLong()
+    private fun astroPreset(focalLengthMm: Int, cropFactor: Float = 1.0f): SavedFlow {
+        val exposureMs = AppConfig.astroExposureMs(focalLengthMm, cropFactor, AppConfig.NPF_RULE_DIVISOR)
+        val label = if (cropFactor == 1.0f) "NPF – ${focalLengthMm}mm FF"
+                    else "NPF – ${focalLengthMm}mm (${cropFactor}×)"
         return SavedFlow(
-            name = "500 Rule – ${focalLengthMm}mm",
+            name = label,
             steps = listOf(
                 FlowStep(
                     type = FlowStepType.PAUSE,
@@ -143,11 +146,33 @@ object FlowPresets {
                     wakeOnPause = true,
                 ),
                 FlowStep(
-                    type = FlowStepType.INTERVALOMETER,
-                    exposureMs = exposureMs,
-                    intervalMs = 4000L,
-                    delayMs = 0L,
+                    type = FlowStepType.ASTRO,
+                    focalLength = focalLengthMm,
+                    cropFactor = cropFactor,
+                    ruleDivisor = AppConfig.NPF_RULE_DIVISOR,
+                    gapMs = AppConfig.DEFAULT_ASTRO_GAP_MS,
                     shotCount = 100,
+                    delayMs = AppConfig.DEFAULT_ASTRO_DELAY_MS,
+                ),
+            ),
+            builtIn = true,
+        )
+    }
+
+    private fun darkFramePreset(exposureMs: Long, count: Int, label: String): SavedFlow {
+        return SavedFlow(
+            name = label,
+            steps = listOf(
+                FlowStep(
+                    type = FlowStepType.PAUSE,
+                    pauseLabel = "Put the lens cap on and keep the same temperature",
+                    wakeOnPause = true,
+                ),
+                FlowStep(
+                    type = FlowStepType.DARK_FRAME,
+                    darkFrameCount = count,
+                    darkFrameExposureMs = exposureMs,
+                    darkFrameGapMs = AppConfig.DEFAULT_ASTRO_GAP_MS,
                 ),
             ),
             builtIn = true,
@@ -155,12 +180,18 @@ object FlowPresets {
     }
 
     val ALL: List<SavedFlow> = listOf(
-        preset(14),
-        preset(16),
-        preset(24),
-        preset(50),
-        preset(85),
-        preset(100),
+        // Astro NPF presets — full frame
+        astroPreset(14),
+        astroPreset(24),
+        astroPreset(50),
+        astroPreset(85),
+        astroPreset(135),
+        astroPreset(200),
+        // Dark frame presets — common astro exposure durations
+        darkFramePreset(exposureMs = 15_000L, count = 20, label = "Dark Frames – 15s"),
+        darkFramePreset(exposureMs = 30_000L, count = 20, label = "Dark Frames – 30s"),
+        darkFramePreset(exposureMs = 60_000L, count = 20, label = "Dark Frames – 60s"),
+        darkFramePreset(exposureMs = 120_000L, count = 20, label = "Dark Frames – 120s"),
     )
 }
 

@@ -16,7 +16,7 @@
 
 // ── State ────────────────────────────────────────────────────────────────────
 static Mode  _mode  = MODE_NONE;
-static State _state = STATE_IDLE;
+static volatile State _state = STATE_IDLE;
 
 static IntervalParams  _interval = {};
 

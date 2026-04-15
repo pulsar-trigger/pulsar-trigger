@@ -299,7 +299,8 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     when (type) {
                         FlowStepType.INTERVALOMETER -> currentScreen = AppScreen.Mode(TriggerMode.INTERVALOMETER)
                         FlowStepType.ASTRO -> currentScreen = AppScreen.Mode(TriggerMode.ASTRO)
-                        FlowStepType.DARK_FRAME, FlowStepType.RAMP -> {
+                        FlowStepType.DARK_FRAME -> currentScreen = AppScreen.Mode(TriggerMode.DARK_FRAME)
+                        FlowStepType.RAMP -> {
                             vm.loadQuickMode(type)
                             currentScreen = AppScreen.CustomFlow()
                         }
@@ -325,6 +326,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                             when (screen.mode) {
                                 TriggerMode.INTERVALOMETER -> FlowStepType.INTERVALOMETER
                                 TriggerMode.ASTRO -> FlowStepType.ASTRO
+                                TriggerMode.DARK_FRAME -> FlowStepType.DARK_FRAME
                                 else -> return@ModeScreen
                             }
                         )

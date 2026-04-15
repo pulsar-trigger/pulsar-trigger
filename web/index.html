@@ -56,6 +56,40 @@
       color: var(--accent);
       margin-bottom: 1.5rem;
     }
+    .board-select {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+    }
+    .board-btn {
+      background: var(--bg);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 1.25rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex: 1;
+      max-width: 200px;
+    }
+    .board-btn:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+    .board-btn.active {
+      background: var(--accent);
+      color: var(--bg);
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+    .board-btn small {
+      display: block;
+      font-size: 0.75rem;
+      margin-top: 0.25rem;
+      opacity: 0.8;
+    }
     esp-web-install-button {
       display: block;
       margin: 1.5rem auto;
@@ -125,7 +159,18 @@
 
     <div class="version" id="version-badge">Loading version…</div>
 
-    <esp-web-install-button manifest="manifest.json">
+    <div class="board-select">
+      <button class="board-btn active" id="btn-esp32" onclick="selectBoard('esp32')">
+        ESP32
+        <small>Generic DevKit</small>
+      </button>
+      <button class="board-btn" id="btn-m5sticks3" onclick="selectBoard('m5sticks3')">
+        M5StickS3
+        <small>ESP32-S3</small>
+      </button>
+    </div>
+
+    <esp-web-install-button id="install-btn" manifest="manifest.json">
       <button slot="activate">Install Firmware</button>
       <span slot="unsupported">
         <div class="unsupported" style="display:block">
@@ -143,8 +188,9 @@
     <div class="steps">
       <h2>How to flash</h2>
       <ol>
-        <li>Connect your <strong>ESP32</strong> to this computer via USB</li>
-        <li>Click <strong>Install Firmware</strong> above</li>
+        <li>Select your <strong>board type</strong> above</li>
+        <li>Connect the board to this computer via USB</li>
+        <li>Click <strong>Install Firmware</strong></li>
         <li>Select the serial port when prompted</li>
         <li>Wait for the flash to complete (~30 seconds)</li>
         <li>Open the <strong>Pulsar</strong> Android app to connect via BLE</li>
@@ -158,14 +204,31 @@
   </footer>
 
   <script>
-    fetch("manifest.json")
-      .then(r => r.json())
-      .then(m => {
-        document.getElementById("version-badge").textContent = "Firmware " + m.version;
-      })
-      .catch(() => {
-        document.getElementById("version-badge").textContent = "Firmware";
-      });
+    const manifests = {
+      esp32: "manifest.json",
+      m5sticks3: "manifest-m5sticks3.json",
+    };
+
+    function selectBoard(board) {
+      document.querySelectorAll(".board-btn").forEach(b => b.classList.remove("active"));
+      document.getElementById("btn-" + board).classList.add("active");
+      document.getElementById("install-btn").setAttribute("manifest", manifests[board]);
+      loadVersion(manifests[board]);
+    }
+
+    function loadVersion(manifest) {
+      fetch(manifest)
+        .then(r => r.json())
+        .then(m => {
+          document.getElementById("version-badge").textContent = m.name + " " + m.version;
+        })
+        .catch(() => {
+          document.getElementById("version-badge").textContent = "Firmware";
+        });
+    }
+
+    // Load default
+    loadVersion(manifests.esp32);
   </script>
 </body>
 </html>

@@ -110,8 +110,11 @@
     <string name="panel_astro">Astro Mode</string>
     <string name="panel_astro_help">Calculate the longest exposure that keeps stars as sharp points instead of trails.\n\n• Choose your sensor preset (crop factor) and lens focal length.\n• 500 Rule: classic formula, generous — some trailing on modern sensors.\n• 400 Rule: tighter, better for high-resolution sensors.\n• NPF Rule: most accurate — uses pixel pitch and f/2.8 aperture for sharp stars.\n• Formula: Rule ÷ (focal length × crop factor) = max seconds.\n• Gap is the pause between exposures for the camera to write to card.\n• Adjust shot count and delay just like in Intervalometer mode.</string>
     <string name="label_rule_readout">%1$d Rule Readout</string>
-    <string name="label_npf_readout">NPF Rule Readout</string>
+    <string name="label_npf_readout">NPF Rule Readout (estimated)</string>
     <string name="label_npf_formula">NPF / (%1$d mm × %2$sx) = %3$ss</string>
+    <string name="npf_estimation_note">ⓘ This is an estimation — tap for details</string>
+    <string name="npf_dialog_title">NPF Rule Estimation</string>
+    <string name="npf_dialog_body">The NPF rule calculates: (35 × aperture + 30 × pixel pitch) ÷ (focal length × crop factor).\n\nSince Pulsar doesn\'t know your camera\'s exact sensor specs, we estimate based on your crop factor:\n\n• Pixel pitch: %1$s μm (typical for ~24 MP sensors of this format)\n• Aperture: f/%2$s (common for astro lenses)\n\nThese assumptions work well for most modern cameras. For higher-resolution sensors (e.g. 45–61 MP full frame), the actual pixel pitch is smaller, meaning this estimate is slightly generous — you may see minor trailing.\n\nFor exact results, use an online NPF calculator with your specific camera and lens specs, then enter the computed exposure manually in Intervalometer mode.</string>
     <string name="label_effective_focal">%1$smm Effective</string>
     <string name="label_max_exposure">Max Exposure</string>
     <string name="label_astro_formula">Formula: %1$d / (%2$d mm × %3$sx) = %4$ss</string>
@@ -315,11 +318,13 @@
 
     <!-- CustomFlowScreen -->
     <string name="flow_title">Flows &amp; Presets</string>
-    <string name="flow_help">Create multi-step shooting sequences that chain different modes together.\n\n• Combine intervalometer, astro, and pause steps\n• Save flows for reuse across sessions\n• Built-in 500 Rule presets for common focal lengths\n• Add pause steps with wake alerts between sequences\n\nTap + to create a new flow, or select a preset to run immediately.</string>
+    <string name="flow_help">Create multi-step shooting sequences that chain different modes together.\n\n• Combine intervalometer, astro, dark frames, and pause steps\n• Save flows for reuse across sessions\n• Built-in NPF Rule presets for common focal lengths\n• Add pause steps with wake alerts between sequences\n\nTap + to create a new flow, or select a preset to run immediately.</string>
     <string name="flow_no_saved">No saved flows</string>
     <string name="flow_create_instruction">Create a flow to chain multiple shooting\nmodes, pauses, and presets.</string>
-    <string name="flow_section_presets">500 Rule Presets</string>
+    <string name="flow_section_presets">NPF Rule Presets</string>
     <string name="flow_section_custom">My Flows</string>
+    <string name="flow_tab_recommended">Recommended</string>
+    <string name="flow_tab_my_flows">My Flows</string>
     <string name="btn_new_flow">New Flow</string>
     <string name="dialog_delete_flow">Delete Flow</string>
     <string name="dialog_delete_flow_msg">Delete \"%1$s\"? This cannot be undone.</string>

@@ -88,6 +88,7 @@ fun ModeScreen(
             val title = when (targetMode) {
                 TriggerMode.INTERVALOMETER -> stringResource(R.string.mode_intervalometer)
                 TriggerMode.ASTRO -> stringResource(R.string.mode_astro)
+                TriggerMode.DARK_FRAME -> stringResource(R.string.mode_dark_frame)
                 TriggerMode.PRESS_HOLD, TriggerMode.PRESS_LOCK -> stringResource(R.string.mode_manual)
                 else -> targetMode.name.replace('_', ' ')
             }
@@ -121,6 +122,7 @@ fun ModeScreen(
                 val totalShots = when (targetMode) {
                     TriggerMode.INTERVALOMETER -> vm.shotCount.collectAsState().value
                     TriggerMode.ASTRO -> vm.astroShotCount.collectAsState().value
+                    TriggerMode.DARK_FRAME -> vm.darkFrameCount.collectAsState().value
                     else -> 0
                 }
                 val exposureMs: Long
@@ -136,6 +138,10 @@ fun ModeScreen(
                         val cf = vm.astroCropFactor.collectAsState().value
                         val rd = vm.astroRuleDivisor.collectAsState().value
                         exposureMs = (rd.toDouble() / (fl * cf) * 1000).toLong().coerceAtLeast(AppConfig.MIN_ASTRO_EXPOSURE_MS)
+                    }
+                    TriggerMode.DARK_FRAME -> {
+                        exposureMs = vm.darkFrameExposureMs.collectAsState().value
+                        gapMs = vm.darkFrameGapMs.collectAsState().value
                     }
                     else -> {
                         exposureMs = 1L
@@ -157,6 +163,7 @@ fun ModeScreen(
                     when (targetMode) {
                         TriggerMode.INTERVALOMETER -> IntervalometerPanel(vm, enabled = !isRunning)
                         TriggerMode.ASTRO -> AstroPanel(vm, enabled = !isRunning)
+                        TriggerMode.DARK_FRAME -> DarkFramePanel(vm, enabled = !isRunning)
                         TriggerMode.PRESS_HOLD -> ManualPanel(vm)
                         else -> {}
                     }
@@ -191,6 +198,24 @@ fun ModeScreen(
                         )
                     } else {
                         AstroActions(vm, isRunning)
+                    }
+                }
+                TriggerMode.DARK_FRAME -> {
+                    if (onStartFlow != null && !isRunning) {
+                        val connected = LocalDeviceConnected.current
+                        val dfCount by vm.darkFrameCount.collectAsState()
+                        val dfExposureMs by vm.darkFrameExposureMs.collectAsState()
+                        val dfGapMs by vm.darkFrameGapMs.collectAsState()
+                        val totalMs = dfCount.toLong() * (dfExposureMs + dfGapMs)
+                        DefaultActionsContent(
+                            connected = connected,
+                            isRunning = false,
+                            onStart = onStartFlow,
+                            onStop = { vm.stop() },
+                            estimatedDuration = formatDuration(totalMs),
+                        )
+                    } else {
+                        DefaultActions(vm, isRunning)
                     }
                 }
                 else -> {
@@ -536,9 +561,9 @@ private fun RunningStatusContent(
     val phaseElapsed = System.currentTimeMillis() - phaseStartTime
     val phaseRemainingMs = (phaseDurationMs - phaseElapsed).coerceAtLeast(0)
 
-    // ── Shot display number: +1 during exposure so user sees "working on shot N" ──
+    // ── Shot display number: always +1 while active so count starts at 1 ──
     val displayShots = when (status.state) {
-        DeviceState.RUNNING -> status.shotsTaken + 1
+        DeviceState.RUNNING, DeviceState.WAITING -> status.shotsTaken + 1
         else -> status.shotsTaken
     }
 

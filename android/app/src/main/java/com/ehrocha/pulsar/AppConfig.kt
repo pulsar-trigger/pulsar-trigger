@@ -327,16 +327,19 @@ object AppConfig {
             ruleDivisor.toDouble() / (focalLength * cropFactor)
         }
 
+    /** Estimated pixel pitch (μm) from crop factor, assuming typical modern ~24 MP sensors. */
+    fun estimatedPixelPitchUm(cropFactor: Float): Double = when {
+        cropFactor <= 1.1f -> 5.9   // Full frame ~24 MP
+        cropFactor <= 1.55f -> 3.9  // APS-C Nikon/Sony
+        cropFactor <= 1.65f -> 3.7  // APS-C Canon
+        else -> 3.3                 // Micro 4/3
+    }
+
     /** Simplified NPF rule: (35 × aperture + 30 × pixelPitch) / (focal × crop).
      *  Pixel pitch is estimated from crop factor for typical modern ~24 MP sensors.
      *  Assumes f/2.8 as a common astro aperture. */
     private fun npfExposureS(focalLength: Int, cropFactor: Float): Double {
-        val pixelPitchUm = when {
-            cropFactor <= 1.1f -> 5.9   // Full frame ~24 MP
-            cropFactor <= 1.55f -> 3.9  // APS-C Nikon/Sony
-            cropFactor <= 1.65f -> 3.7  // APS-C Canon
-            else -> 3.3                 // Micro 4/3
-        }
+        val pixelPitchUm = estimatedPixelPitchUm(cropFactor)
         val aperture = 2.8
         return (35.0 * aperture + 30.0 * pixelPitchUm) / (focalLength * cropFactor)
     }
