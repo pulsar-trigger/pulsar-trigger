@@ -9,10 +9,6 @@
 #include "ble_server.h"
 #include "config.h"
 #include <Arduino.h>
-#include <cmath>
-#ifdef HAS_M5DISPLAY
-#include <M5Unified.h>
-#endif
 
 // ── State ────────────────────────────────────────────────────────────────────
 static Mode  _mode  = MODE_NONE;
@@ -27,11 +23,6 @@ static bool     _lock_active   = false;
 static uint32_t _debounce_until = 0;  // non-blocking debounce timestamp
 static uint32_t _last_remaining_ms = 0;  // cached for display getter
 
-// ── Tracker alignment state ──────────────────────────────────────────────────
-static float    _tracker_pitch     = 0.0f;  // low-pass filtered pitch in degrees
-static uint32_t _tracker_last_ms   = 0;     // last BLE notify timestamp
-static const float TRACKER_ALPHA   = 0.15f; // low-pass filter coefficient
-static const uint32_t TRACKER_INTERVAL_MS = 200; // BLE notify rate
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 static uint32_t clamp_u32(uint32_t value, uint32_t lower, uint32_t upper) {
@@ -113,9 +104,6 @@ void triggers_start() {
         _lock_active = true;
         camera_focus(true);
         camera_shutter_set(true);
-    } else if (_mode == MODE_TRACKER) {
-        _tracker_pitch = 0.0f;
-        _tracker_last_ms = 0;
     }
 
     _last_remaining_ms = 0;
@@ -144,7 +132,7 @@ State triggers_current_state() { return _state; }
 uint16_t triggers_shots_taken() { return _shots_taken; }
 const IntervalParams& triggers_interval_params() { return _interval; }
 uint32_t triggers_time_remaining_ms() { return _last_remaining_ms; }
-float triggers_tracker_pitch() { return _tracker_pitch; }
+float triggers_tracker_pitch() { return 0.0f; }
 
 // ── Tick (called from loop) ──────────────────────────────────────────────────
 void triggers_tick() {
@@ -216,29 +204,9 @@ void triggers_tick() {
         case MODE_PRESS_LOCK:
             break;
 
-        // ── Tracker alignment — read IMU, low-pass filter, BLE notify ────
-        case MODE_TRACKER: {
-#ifdef HAS_M5DISPLAY
-            if (now - _tracker_last_ms >= TRACKER_INTERVAL_MS) {
-                _tracker_last_ms = now;
-
-                auto data = M5.Imu.getImuData();
-                float ax = data.accel.x;
-                float ay = data.accel.y;
-                float az = data.accel.z;
-
-                // Pitch: 0° = horizontal, +90° = pointing up, −90° = pointing down
-                float raw = atan2f(-ax, sqrtf(ay * ay + az * az)) * (180.0f / M_PI);
-
-                // Low-pass filter
-                _tracker_pitch = TRACKER_ALPHA * raw + (1.0f - TRACKER_ALPHA) * _tracker_pitch;
-
-                // Send filtered pitch to BLE client
-                ble_notify_pitch(_tracker_pitch);
-            }
-#endif
+        // ── Tracker — alignment handled app-side, nothing to tick ────────
+        case MODE_TRACKER:
             break;
-        }
 
         default:
             break;

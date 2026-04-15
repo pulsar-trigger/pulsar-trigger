@@ -25,6 +25,7 @@ void setup() {
     // Disable peripherals we don't use to save power
     cfg.internal_spk = false;
     cfg.internal_mic = false;
+    cfg.internal_imu = false;
     cfg.led_brightness = 0;
     M5.begin(cfg);
 #ifdef BOARD_M5STICKS3
