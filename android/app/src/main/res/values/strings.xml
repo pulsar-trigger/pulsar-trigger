@@ -308,6 +308,8 @@
     <string name="flow_title">Custom Flow</string>
     <string name="flow_no_saved">No saved flows</string>
     <string name="flow_create_instruction">Create a flow to chain multiple shooting\nmodes, pauses, and presets.</string>
+    <string name="flow_section_presets">500 Rule Presets</string>
+    <string name="flow_section_custom">My Flows</string>
     <string name="btn_new_flow">New Flow</string>
     <string name="dialog_delete_flow">Delete Flow</string>
     <string name="dialog_delete_flow_msg">Delete \"%1$s\"? This cannot be undone.</string>
@@ -385,6 +387,8 @@
     <string name="event_delete_title">Delete event?</string>
     <string name="event_delete_msg">Delete \"%1$s\" and all its sessions?</string>
     <string name="event_share">Share</string>
+    <string name="event_share_pulsar">Share as Pulsar event</string>
+    <string name="event_share_calendar">Share as calendar</string>
     <string name="event_import">Import</string>
     <string name="event_import_title">Import event</string>
     <string name="event_import_hint">Paste shared event JSON</string>

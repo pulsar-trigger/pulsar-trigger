@@ -40,6 +40,7 @@ import androidx.core.content.ContextCompat
 import com.ehrocha.pulsar.R
 
 import com.ehrocha.pulsar.planner.*
+import org.json.JSONObject
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -48,6 +49,137 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
+
+// ── iCal export ─────────────────────────────────────────────────────────────
+
+/** Generate an iCalendar (.ics) file with the event and all its sessions. */
+private fun exportEventAsIcal(
+    event: PlannerEvent,
+    sessions: List<PlannerSession>,
+    plannerManager: PlannerManager,
+): String = buildString {
+    appendLine("BEGIN:VCALENDAR")
+    appendLine("VERSION:2.0")
+    appendLine("PRODID:-//Pulsar Trigger//Planner//EN")
+    appendLine("CALSCALE:GREGORIAN")
+
+    // Main event spanning the full date range
+    appendLine("BEGIN:VEVENT")
+    appendLine("UID:${event.id}@pulsar-trigger")
+    appendLine("DTSTART;VALUE=DATE:${event.startDate.format(DateTimeFormatter.BASIC_ISO_DATE)}")
+    // DTEND is exclusive for all-day events, so add one day
+    appendLine("DTEND;VALUE=DATE:${event.endDate.plusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE)}")
+    appendLine("SUMMARY:${escapeIcal(event.name)}")
+    if (sessions.isNotEmpty()) {
+        appendLine("DESCRIPTION:${escapeIcal("${sessions.size} sessions planned")}")
+    }
+    appendLine("END:VEVENT")
+
+    // Individual session entries
+    sessions.forEach { s ->
+        appendLine("BEGIN:VEVENT")
+        appendLine("UID:${s.id}@pulsar-trigger")
+        if (s.startTime != null && s.endTime != null) {
+            appendLine("DTSTART:${s.date.format(DateTimeFormatter.BASIC_ISO_DATE)}T${String.format(Locale.US, "%02d%02d00", s.startTime.hour, s.startTime.minute)}")
+            val endDate = if (s.endTime.isBefore(s.startTime)) s.date.plusDays(1) else s.date
+            appendLine("DTEND:${endDate.format(DateTimeFormatter.BASIC_ISO_DATE)}T${String.format(Locale.US, "%02d%02d00", s.endTime.hour, s.endTime.minute)}")
+        } else {
+            appendLine("DTSTART;VALUE=DATE:${s.date.format(DateTimeFormatter.BASIC_ISO_DATE)}")
+            appendLine("DTEND;VALUE=DATE:${s.date.plusDays(1).format(DateTimeFormatter.BASIC_ISO_DATE)}")
+        }
+        appendLine("SUMMARY:${escapeIcal(s.name)}")
+        appendLine("GEO:${s.latitude};${s.longitude}")
+        appendLine("DESCRIPTION:${escapeIcal(buildSessionDescription(s, plannerManager))}")
+        appendLine("END:VEVENT")
+    }
+
+    appendLine("END:VCALENDAR")
+}
+
+/** Build a rich text description for a session from its verdict + cached dashboard data. */
+private fun buildSessionDescription(session: PlannerSession, plannerManager: PlannerManager): String =
+    buildString {
+        append("Location: %.4f, %.4f".format(session.latitude, session.longitude))
+
+        if (session.summary.isNotBlank()) {
+            append("\\nConditions: ${session.verdict.name} - ${session.summary}")
+        }
+
+        val cached = plannerManager.getCachedDashboard(session.id)
+        if (cached != null) {
+            try {
+                val j = JSONObject(cached)
+
+                // Sun
+                j.optJSONObject("sun")?.let { s ->
+                    val rise = s.optString("rise", "").takeIf { it.isNotEmpty() }
+                    val set = s.optString("set", "").takeIf { it.isNotEmpty() }
+                    if (rise != null || set != null) {
+                        append("\\n\\nSun:")
+                        set?.let { append("  Sunset $it") }
+                        rise?.let { append("  Sunrise $it") }
+                    }
+                }
+
+                // Twilight
+                j.optJSONObject("tw")?.let { tw ->
+                    val ae = tw.optString("ae", "").takeIf { it.isNotEmpty() }
+                    val as_ = tw.optString("as", "").takeIf { it.isNotEmpty() }
+                    if (ae != null || as_ != null) {
+                        append("\\nDark sky:")
+                        ae?.let { append("  $it") }
+                        as_?.let { append(" - $it") }
+                    }
+                }
+
+                // Moon
+                j.optJSONObject("moon")?.let { m ->
+                    append("\\n\\nMoon: ${m.optString("phase", "?")}")
+                    append(" (%.0f%% illuminated)".format(m.optDouble("illum")))
+                    m.optString("rise", "").takeIf { it.isNotEmpty() }?.let { append("\\n  Rise $it") }
+                    m.optString("set", "").takeIf { it.isNotEmpty() }?.let { append("  Set $it") }
+                    if (m.optBoolean("good")) append("\\n  Good for astrophotography")
+                    else append("\\n  Bright moon - may wash out faint targets")
+                }
+
+                // Weather
+                j.optJSONObject("weather")?.let { w ->
+                    append("\\n\\nWeather: %.1f°C".format(w.optDouble("tempC")))
+                    append("  Cloud %d%%".format(w.optInt("cloud")))
+                    append("  Rain %.1f mm".format(w.optDouble("precip")))
+                    append("  Humidity %d%%".format(w.optInt("hum")))
+                    append("  Wind %.0f km/h".format(w.optDouble("wind")))
+                }
+
+                // Milky Way
+                j.optJSONObject("mw")?.let { mw ->
+                    append("\\n\\nMilky Way: ${if (mw.optBoolean("visible")) "Visible" else "Not visible"}")
+                    mw.optString("dark", "").takeIf { it.isNotEmpty() }?.let { append("  Dark window: $it") }
+                }
+
+                // Bortle
+                j.optJSONObject("bortle")?.let { b ->
+                    append("\\nLight pollution: Bortle %.0f".format(b.optDouble("bortle")))
+                    b.optString("cat", "").takeIf { it.isNotEmpty() }?.let { append(" ($it)") }
+                }
+
+                // Best photo windows
+                j.optJSONArray("windows")?.let { arr ->
+                    if (arr.length() > 0) {
+                        append("\\n\\nBest photo windows:")
+                        for (i in 0 until arr.length()) {
+                            val w = arr.getJSONObject(i)
+                            val rating = when (w.optInt("r")) { 3 -> "Excellent"; 2 -> "Good"; else -> "Fair" }
+                            append("\\n  ${w.optString("start")} - ${w.optString("end")} ($rating)")
+                        }
+                    }
+                }
+            } catch (_: Exception) { /* cached data malformed — skip */ }
+        }
+    }
+
+private fun escapeIcal(text: String): String =
+    text.replace("\\", "\\\\").replace(",", "\\,").replace(";", "\\;").replace("\n", "\\n")
 
 // ── Main screen ──────────────────────────────────────────────────────────────
 
@@ -216,6 +348,22 @@ fun PlannerScreen(
                                     }
                                     ctx.startActivity(Intent.createChooser(intent, null))
                                 }
+                            },
+                            onShareCalendar = { ctx ->
+                                val ical = exportEventAsIcal(event, sessions, plannerManager)
+                                val dir = File(ctx.cacheDir, "shared").apply { mkdirs() }
+                                val safeName = event.name.replace(Regex("[^\\w.-]"), "_")
+                                val file = File(dir, "$safeName.ics")
+                                file.writeText(ical)
+                                val uri = FileProvider.getUriForFile(
+                                    ctx, "${ctx.packageName}.fileprovider", file,
+                                )
+                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/calendar"
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                ctx.startActivity(Intent.createChooser(intent, null))
                             },
                             onDelete = { plannerManager.removeEvent(event.id) },
                         )
@@ -538,9 +686,11 @@ private fun EventCard(
     bestVerdict: PlannerVerdict,
     onClick: () -> Unit,
     onShare: (Context) -> Unit,
+    onShareCalendar: (Context) -> Unit,
     onDelete: () -> Unit,
 ) {
     var showConfirm by remember { mutableStateOf(false) }
+    var showShareMenu by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     if (showConfirm) {
@@ -621,12 +771,26 @@ private fun EventCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
             ) {
-                IconButton(onClick = { onShare(context) }) {
-                    Icon(
-                        Icons.Default.Share,
-                        contentDescription = stringResource(R.string.event_share),
-                        modifier = Modifier.size(20.dp),
-                    )
+                Box {
+                    IconButton(onClick = { showShareMenu = true }) {
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = stringResource(R.string.event_share),
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                    DropdownMenu(expanded = showShareMenu, onDismissRequest = { showShareMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.event_share_pulsar)) },
+                            onClick = { showShareMenu = false; onShare(context) },
+                            leadingIcon = { Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.event_share_calendar)) },
+                            onClick = { showShareMenu = false; onShareCalendar(context) },
+                            leadingIcon = { Icon(Icons.Default.Event, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                        )
+                    }
                 }
                 IconButton(onClick = { showConfirm = true }) {
                     Icon(

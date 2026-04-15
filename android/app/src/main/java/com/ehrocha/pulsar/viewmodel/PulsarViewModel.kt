@@ -23,6 +23,7 @@ import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.ble.*
 import com.ehrocha.pulsar.model.FlowStep
 import com.ehrocha.pulsar.model.FlowStepType
+import com.ehrocha.pulsar.model.FlowPresets
 import com.ehrocha.pulsar.model.SavedFlow
 import com.ehrocha.pulsar.service.PulsarNotificationService
 import kotlinx.coroutines.Job
@@ -148,7 +149,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val _flowSteps = MutableStateFlow<List<FlowStep>>(emptyList())
     val flowSteps: StateFlow<List<FlowStep>> = _flowSteps
     private val _savedFlows = MutableStateFlow<List<SavedFlow>>(emptyList())
-    val savedFlows: StateFlow<List<SavedFlow>> = _savedFlows
+    val savedFlows: StateFlow<List<SavedFlow>>
+        get() = _combinedFlows
+    private val _combinedFlows = MutableStateFlow<List<SavedFlow>>(FlowPresets.ALL)
     private val _flowRunning = MutableStateFlow(false)
     val flowRunning: StateFlow<Boolean> = _flowRunning
     private val _flowPaused = MutableStateFlow(false)
@@ -191,6 +194,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         _savedFlows.value = try {
             SavedFlow.deserializeList(prefs.getString(KEY_SAVED_FLOWS, "") ?: "")
         } catch (_: Exception) { emptyList() }
+        _combinedFlows.value = FlowPresets.ALL + _savedFlows.value
         // Apply defaults as initial working values
         _intervalMs.value = _defaultIntervalMs.value
         _exposureMs.value = _defaultExposureMs.value
@@ -388,17 +392,19 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         val flow = SavedFlow(name = name, steps = _flowSteps.value)
         val updated = _savedFlows.value.filter { it.name != name } + flow
         _savedFlows.value = updated
+        _combinedFlows.value = FlowPresets.ALL + updated
         prefs.edit().putString(KEY_SAVED_FLOWS, SavedFlow.serializeList(updated)).apply()
     }
 
     fun loadSavedFlow(name: String) {
-        val flow = _savedFlows.value.firstOrNull { it.name == name } ?: return
+        val flow = _combinedFlows.value.firstOrNull { it.name == name } ?: return
         saveFlowSteps(flow.steps)
     }
 
     fun deleteSavedFlow(name: String) {
         val updated = _savedFlows.value.filter { it.name != name }
         _savedFlows.value = updated
+        _combinedFlows.value = FlowPresets.ALL + updated
         prefs.edit().putString(KEY_SAVED_FLOWS, SavedFlow.serializeList(updated)).apply()
     }
 
@@ -575,6 +581,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         obj.optJSONArray("saved_flows")?.let { arr ->
             val flows = (0 until arr.length()).map { SavedFlow.fromJson(arr.getJSONObject(it)) }
             _savedFlows.value = flows
+            _combinedFlows.value = FlowPresets.ALL + flows
             prefs.edit().putString(KEY_SAVED_FLOWS, SavedFlow.serializeList(flows)).apply()
         }
     }

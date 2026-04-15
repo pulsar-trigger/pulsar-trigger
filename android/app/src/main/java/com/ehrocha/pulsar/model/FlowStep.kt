@@ -100,9 +100,40 @@ fun FlowStepType.displayName(context: Context): String = when (this) {
 
 // ── Saved Flow (named flow preset) ──────────────────────────────────────────
 
+/** Built-in 500-rule presets for common focal lengths. */
+object FlowPresets {
+    private fun preset(focalLengthMm: Int): SavedFlow {
+        val exposureS = 500.0 / focalLengthMm
+        val exposureMs = (exposureS * 1000).toLong()
+        return SavedFlow(
+            name = "500 Rule – ${focalLengthMm}mm",
+            steps = listOf(
+                FlowStep(
+                    type = FlowStepType.INTERVALOMETER,
+                    exposureMs = exposureMs,
+                    intervalMs = 4000L,
+                    delayMs = 0L,
+                    shotCount = 100,
+                ),
+            ),
+            builtIn = true,
+        )
+    }
+
+    val ALL: List<SavedFlow> = listOf(
+        preset(14),
+        preset(16),
+        preset(24),
+        preset(50),
+        preset(85),
+        preset(100),
+    )
+}
+
 data class SavedFlow(
     val name: String,
     val steps: List<FlowStep>,
+    val builtIn: Boolean = false,
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("name", name)

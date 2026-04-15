@@ -259,13 +259,42 @@ private fun FlowLibraryView(
                     }
                 }
 
-                saved.forEach { flow ->
-                    SavedFlowCard(
-                        flow = flow,
-                        onEdit = { onEditFlow(flow) },
-                        onDelete = { confirmDelete = flow.name },
-                        onRun = { onRunFlow(flow) },
+                val presets = saved.filter { it.builtIn }
+                val userFlows = saved.filter { !it.builtIn }
+
+                if (presets.isNotEmpty()) {
+                    Text(
+                        stringResource(R.string.flow_section_presets),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
                     )
+                    presets.forEach { flow ->
+                        SavedFlowCard(
+                            flow = flow,
+                            onEdit = { onEditFlow(flow) },
+                            onDelete = { },
+                            onRun = { onRunFlow(flow) },
+                        )
+                    }
+                }
+
+                if (userFlows.isNotEmpty()) {
+                    Text(
+                        stringResource(R.string.flow_section_custom),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = if (presets.isNotEmpty()) 12.dp else 0.dp),
+                    )
+                    userFlows.forEach { flow ->
+                        SavedFlowCard(
+                            flow = flow,
+                            onEdit = { onEditFlow(flow) },
+                            onDelete = { confirmDelete = flow.name },
+                            onRun = { onRunFlow(flow) },
+                        )
+                    }
                 }
             }
         }
@@ -335,15 +364,17 @@ private fun SavedFlowCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit), modifier = Modifier.size(20.dp))
-                }
-                IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
-                    Icon(
-                        Icons.Default.Delete, contentDescription = stringResource(R.string.delete),
-                        modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.error,
-                    )
+                if (!flow.builtIn) {
+                    IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+                        Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit), modifier = Modifier.size(20.dp))
+                    }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            Icons.Default.Delete, contentDescription = stringResource(R.string.delete),
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    }
                 }
                 IconButton(
                     onClick = onRun,
