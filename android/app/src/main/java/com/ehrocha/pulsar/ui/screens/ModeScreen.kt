@@ -174,11 +174,20 @@ fun ModeScreen(
                 TriggerMode.ASTRO -> {
                     if (onStartFlow != null && !isRunning) {
                         val connected = LocalDeviceConnected.current
+                        val focalLength by vm.astroFocalLength.collectAsState()
+                        val cropFactor by vm.astroCropFactor.collectAsState()
+                        val ruleDivisor by vm.astroRuleDivisor.collectAsState()
+                        val shotCount by vm.astroShotCount.collectAsState()
+                        val delayMs by vm.astroDelayMs.collectAsState()
+                        val gapMs by vm.astroGapMs.collectAsState()
+                        val expMs = AppConfig.astroExposureMs(focalLength, cropFactor, ruleDivisor)
+                        val totalMs = delayMs + shotCount.toLong() * (expMs + gapMs)
                         AstroActionsContent(
                             connected = connected,
                             isRunning = false,
                             onStart = onStartFlow,
                             onStop = { vm.stop() },
+                            estimatedDuration = formatDuration(totalMs),
                         )
                     } else {
                         AstroActions(vm, isRunning)
@@ -187,11 +196,17 @@ fun ModeScreen(
                 else -> {
                     if (onStartFlow != null && !isRunning) {
                         val connected = LocalDeviceConnected.current
+                        val intervalMs by vm.intervalMs.collectAsState()
+                        val exposureMs by vm.exposureMs.collectAsState()
+                        val shotCount by vm.shotCount.collectAsState()
+                        val delayMs by vm.delayMs.collectAsState()
+                        val totalMs = delayMs + shotCount.toLong() * (exposureMs + intervalMs)
                         DefaultActionsContent(
                             connected = connected,
                             isRunning = false,
                             onStart = onStartFlow,
                             onStop = { vm.stop() },
+                            estimatedDuration = formatDuration(totalMs),
                         )
                     } else {
                         DefaultActions(vm, isRunning)

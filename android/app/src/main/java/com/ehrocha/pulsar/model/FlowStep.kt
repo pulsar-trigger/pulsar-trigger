@@ -16,6 +16,8 @@ enum class FlowStepType {
     INTERVALOMETER,
     ASTRO,
     PAUSE,
+    DARK_FRAME,
+    RAMP,
 }
 
 data class FlowStep(
@@ -31,6 +33,15 @@ data class FlowStep(
     val cropFactor: Float = AppConfig.DEFAULT_CROP_FACTOR,
     val ruleDivisor: Int = AppConfig.DEFAULT_RULE_DIVISOR,
     val gapMs: Long = AppConfig.DEFAULT_ASTRO_GAP_MS,
+    // Dark Frame
+    val darkFrameCount: Int = 10,
+    val darkFrameExposureMs: Long = AppConfig.DEFAULT_EXPOSURE_MS,
+    val darkFrameGapMs: Long = AppConfig.DEFAULT_ASTRO_GAP_MS,
+    // Ramp (Holy Grail timelapse)
+    val rampStartExposureMs: Long = 500L,
+    val rampEndExposureMs: Long = 10000L,
+    val rampSteps: Int = 50,
+    val rampIntervalMs: Long = AppConfig.DEFAULT_INTERVAL_MS,
     // Pause
     val pauseLabel: String = "Adjust camera settings",
     /** When true, the screen wakes and vibrates when this pause step is reached. */
@@ -47,6 +58,13 @@ data class FlowStep(
         put("cropFactor", cropFactor.toDouble())
         put("ruleDivisor", ruleDivisor)
         put("gapMs", gapMs)
+        put("darkFrameCount", darkFrameCount)
+        put("darkFrameExposureMs", darkFrameExposureMs)
+        put("darkFrameGapMs", darkFrameGapMs)
+        put("rampStartExposureMs", rampStartExposureMs)
+        put("rampEndExposureMs", rampEndExposureMs)
+        put("rampSteps", rampSteps)
+        put("rampIntervalMs", rampIntervalMs)
         put("pauseLabel", pauseLabel)
         put("wakeOnPause", wakeOnPause)
     }
@@ -64,6 +82,13 @@ data class FlowStep(
             cropFactor = json.optDouble("cropFactor", AppConfig.DEFAULT_CROP_FACTOR.toDouble()).toFloat(),
             ruleDivisor = json.optInt("ruleDivisor", AppConfig.DEFAULT_RULE_DIVISOR),
             gapMs = json.optLong("gapMs", AppConfig.DEFAULT_ASTRO_GAP_MS),
+            darkFrameCount = json.optInt("darkFrameCount", 10),
+            darkFrameExposureMs = json.optLong("darkFrameExposureMs", AppConfig.DEFAULT_EXPOSURE_MS),
+            darkFrameGapMs = json.optLong("darkFrameGapMs", AppConfig.DEFAULT_ASTRO_GAP_MS),
+            rampStartExposureMs = json.optLong("rampStartExposureMs", 500L),
+            rampEndExposureMs = json.optLong("rampEndExposureMs", 10000L),
+            rampSteps = json.optInt("rampSteps", 50),
+            rampIntervalMs = json.optLong("rampIntervalMs", AppConfig.DEFAULT_INTERVAL_MS),
             pauseLabel = json.optString("pauseLabel", "Adjust camera settings"),
             wakeOnPause = json.optBoolean("wakeOnPause", true),
         )
@@ -90,12 +115,16 @@ fun FlowStep.summaryLabel(context: Context): String = when (type) {
         context.getString(R.string.step_summary_astro, shotCount, String.format("%.1f", expS), focalLength)
     }
     FlowStepType.PAUSE -> pauseLabel
+    FlowStepType.DARK_FRAME -> context.getString(R.string.step_summary_dark_frame, darkFrameCount, darkFrameExposureMs)
+    FlowStepType.RAMP -> context.getString(R.string.step_summary_ramp, rampSteps, rampStartExposureMs, rampEndExposureMs)
 }
 
 fun FlowStepType.displayName(context: Context): String = when (this) {
     FlowStepType.INTERVALOMETER -> context.getString(R.string.step_type_intervalometer)
     FlowStepType.ASTRO -> context.getString(R.string.step_type_astro)
     FlowStepType.PAUSE -> context.getString(R.string.step_type_pause)
+    FlowStepType.DARK_FRAME -> context.getString(R.string.step_type_dark_frame)
+    FlowStepType.RAMP -> context.getString(R.string.step_type_ramp)
 }
 
 // ── Saved Flow (named flow preset) ──────────────────────────────────────────

@@ -85,6 +85,11 @@ object AppConfig {
      *  exposures with less star trailing — preferred for high-resolution sensors. */
     const val TIGHT_RULE_DIVISOR = 400
 
+    /** Sentinel value indicating the NPF rule should be used instead of a
+     *  simple divisor. The NPF formula accounts for pixel pitch (estimated
+     *  from crop factor) and a typical f/2.8 aperture. */
+    const val NPF_RULE_DIVISOR = 0
+
     /** Countdown before the first astro exposure (ms). */
     const val DEFAULT_ASTRO_DELAY_MS = 5000L
 
@@ -308,13 +313,31 @@ object AppConfig {
     // ── Astro helpers ───────────────────────────────────────────────────
 
     /** Compute maximum astro exposure in milliseconds from optics params.
-     *  Applies the NPF / rule-of-N formula and clamps to [MIN_ASTRO_EXPOSURE_MS]. */
+     *  When [ruleDivisor] is [NPF_RULE_DIVISOR], uses the NPF formula instead. */
     fun astroExposureMs(focalLength: Int, cropFactor: Float, ruleDivisor: Int): Long {
-        val exposureS = ruleDivisor.toDouble() / (focalLength * cropFactor)
+        val exposureS = astroExposureS(focalLength, cropFactor, ruleDivisor)
         return (exposureS * 1000).toLong().coerceAtLeast(MIN_ASTRO_EXPOSURE_MS)
     }
 
     /** Same computation but returns seconds as a Double (for display). */
     fun astroExposureS(focalLength: Int, cropFactor: Float, ruleDivisor: Int): Double =
-        ruleDivisor.toDouble() / (focalLength * cropFactor)
+        if (ruleDivisor == NPF_RULE_DIVISOR) {
+            npfExposureS(focalLength, cropFactor)
+        } else {
+            ruleDivisor.toDouble() / (focalLength * cropFactor)
+        }
+
+    /** Simplified NPF rule: (35 × aperture + 30 × pixelPitch) / (focal × crop).
+     *  Pixel pitch is estimated from crop factor for typical modern ~24 MP sensors.
+     *  Assumes f/2.8 as a common astro aperture. */
+    private fun npfExposureS(focalLength: Int, cropFactor: Float): Double {
+        val pixelPitchUm = when {
+            cropFactor <= 1.1f -> 5.9   // Full frame ~24 MP
+            cropFactor <= 1.55f -> 3.9  // APS-C Nikon/Sony
+            cropFactor <= 1.65f -> 3.7  // APS-C Canon
+            else -> 3.3                 // Micro 4/3
+        }
+        val aperture = 2.8
+        return (35.0 * aperture + 30.0 * pixelPitchUm) / (focalLength * cropFactor)
+    }
 }

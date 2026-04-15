@@ -20,6 +20,10 @@
     <string name="mode_astro_desc">Star photography with calculated exposure times</string>
     <string name="mode_manual">Manual</string>
     <string name="mode_manual_desc">Direct shutter control — hold or lock mode</string>
+    <string name="mode_dark_frame">Dark Frames</string>
+    <string name="mode_dark_frame_desc">Capture calibration frames with the lens cap on</string>
+    <string name="mode_ramp">Exposure Ramp</string>
+    <string name="mode_ramp_desc">Smoothly transition exposure for holy grail timelapses</string>
     <string name="mode_custom_flow">Flows &amp; Presets</string>
     <string name="mode_custom_flow_desc">Build multi-step flows and save presets</string>
     <string name="mode_astro_dashboard">Astro Dashboard</string>
@@ -60,6 +64,7 @@
     <string name="btn_start">Start</string>
     <string name="status_sequence_running">Sequence running…</string>
     <string name="status_ready_start">Ready to start sequence</string>
+    <string name="status_estimated_duration">Estimated duration: %1$s</string>
 
     <!-- ManualActions -->
     <string name="chip_hold_mode">Hold Mode</string>
@@ -76,6 +81,7 @@
     <!-- AstroActions -->
     <string name="chip_500_rule">500 Rule</string>
     <string name="chip_400_rule">400 Rule</string>
+    <string name="chip_npf_rule">NPF</string>
     <string name="btn_stop_astro">Stop Astro</string>
     <string name="btn_start_astro">Start Astro</string>
     <string name="status_capturing_stars">Capturing stars…</string>
@@ -102,8 +108,10 @@
 
     <!-- AstroPanel -->
     <string name="panel_astro">Astro Mode</string>
-    <string name="panel_astro_help">Calculate the longest exposure that keeps stars as sharp points instead of trails.\n\n• Choose your sensor preset (crop factor) and lens focal length.\n• The 500 Rule is a classic formula; the 400 Rule is tighter and better for high-resolution sensors.\n• Formula: Rule ÷ (focal length × crop factor) = max seconds.\n• Gap is the pause between exposures for the camera to write to card.\n• Adjust shot count and delay just like in Intervalometer mode.</string>
+    <string name="panel_astro_help">Calculate the longest exposure that keeps stars as sharp points instead of trails.\n\n• Choose your sensor preset (crop factor) and lens focal length.\n• 500 Rule: classic formula, generous — some trailing on modern sensors.\n• 400 Rule: tighter, better for high-resolution sensors.\n• NPF Rule: most accurate — uses pixel pitch and f/2.8 aperture for sharp stars.\n• Formula: Rule ÷ (focal length × crop factor) = max seconds.\n• Gap is the pause between exposures for the camera to write to card.\n• Adjust shot count and delay just like in Intervalometer mode.</string>
     <string name="label_rule_readout">%1$d Rule Readout</string>
+    <string name="label_npf_readout">NPF Rule Readout</string>
+    <string name="label_npf_formula">NPF / (%1$d mm × %2$sx) = %3$ss</string>
     <string name="label_effective_focal">%1$smm Effective</string>
     <string name="label_max_exposure">Max Exposure</string>
     <string name="label_astro_formula">Formula: %1$d / (%2$d mm × %3$sx) = %4$ss</string>
@@ -226,7 +234,7 @@
     <!-- ModeSettingsScreen -->
     <string name="settings_intervalometer">Intervalometer Settings</string>
     <string name="settings_astro">Astro Settings</string>
-    <string name="settings_astro_help">Configure your default optics for astrophotography.\n\n• Sensor preset sets the crop factor for your camera body.\n• Focal length determines the maximum safe exposure time.\n• The 500/400 rule calculates: Rule ÷ (focal length × crop) = max seconds.\n• These defaults are also adjustable directly in the Astro mode screen.</string>
+    <string name="settings_astro_help">Configure your default optics for astrophotography.\n\n• Sensor preset sets the crop factor for your camera body.\n• Focal length determines the maximum safe exposure time.\n• 500/400 Rule: Rule ÷ (focal length × crop) = max seconds.\n• NPF Rule: accounts for pixel size — sharpest results.\n• These defaults are also adjustable directly in the Astro mode screen.</string>
 
     <!-- MainActivity update dialog -->
     <string name="dialog_updates_available">Updates Available</string>
@@ -345,8 +353,12 @@
     <string name="step_type_intervalometer">Intervalometer</string>
     <string name="step_type_astro">Astro</string>
     <string name="step_type_pause">Pause</string>
+    <string name="step_type_dark_frame">Dark Frame</string>
+    <string name="step_type_ramp">Exposure Ramp</string>
     <string name="step_summary_intervalometer">%1$d shots, %2$dms exp, %3$dms gap</string>
     <string name="step_summary_astro">%1$d shots, %2$ss exp (%3$dmm)</string>
+    <string name="step_summary_dark_frame">%1$d frames, %2$dms exposure</string>
+    <string name="step_summary_ramp">%1$d steps, %2$dms → %3$dms</string>
 
     <!-- LiveStatusPanel -->
     <string name="notif_update_available">Version %1$s is available — open to update</string>
@@ -481,4 +493,25 @@
     <string name="alignment_altitude">Altitude</string>
     <string name="alignment_azimuth_label">Azimuth → %1$s</string>
     <string name="alignment_roll_label">Roll</string>
+
+    <!-- Dark Frame editor -->
+    <string name="dark_frame_hint">Dark frames are taken with the lens cap on. They capture sensor noise at the same exposure and temperature as your light frames, enabling stacking software to subtract fixed-pattern noise.</string>
+    <string name="label_dark_frame_count">Number of Frames</string>
+
+    <!-- Ramp editor -->
+    <string name="ramp_hint">Exposure ramp (Holy Grail timelapse) smoothly transitions from a short to a long exposure over multiple steps. Ideal for day-to-night or night-to-day transitions.</string>
+    <string name="label_ramp_start_exposure">Start Exposure</string>
+    <string name="label_ramp_end_exposure">End Exposure</string>
+    <string name="label_ramp_steps">Number of Steps</string>
+
+    <!-- Astro settings update for NPF -->
+    <string name="settings_astro_help_npf">Configure your default optics for astrophotography.\n\n• Sensor preset sets the crop factor for your camera body.\n• Focal length determines the maximum safe exposure time.\n• 500 Rule: classic, generous — some trailing on modern sensors.\n• 400 Rule: tighter — better for high-resolution sensors.\n• NPF Rule: most accurate — accounts for pixel size and a typical f/2.8 aperture.\n• These defaults are also adjustable directly in the Astro mode screen.</string>
+
+    <!-- What's Up Tonight -->
+    <string name="mode_whats_up">What\'s Up Tonight</string>
+    <string name="mode_whats_up_desc">See which deep-sky objects are visible right now</string>
+    <string name="whats_up_title">What\'s Up Tonight</string>
+    <string name="whats_up_help">Shows deep-sky objects (nebulae, galaxies, clusters) that are currently above the horizon at your location.\n\n• Objects are sorted by altitude — higher = better positioned\n• Green icon: well-placed (above 30°), ideal for imaging\n• Grey icon: low in the sky (10–30°), possible but less ideal\n• Best results when used during astronomical darkness\n\nThis catalog includes ~27 popular astrophotography targets.</string>
+    <string name="whats_up_visible_count">%1$d targets above the horizon</string>
+    <string name="whats_up_none_visible">No catalog targets are currently visible above 10° from your location.</string>
 </resources>

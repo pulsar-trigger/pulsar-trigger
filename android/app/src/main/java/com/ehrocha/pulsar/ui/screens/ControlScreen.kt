@@ -107,11 +107,17 @@ internal fun PanelHelpHeader(title: String, helpText: String) {
 @Composable
 internal fun DefaultActions(vm: PulsarViewModel, isRunning: Boolean) {
     val connected = LocalDeviceConnected.current
+    val intervalMs by vm.intervalMs.collectAsState()
+    val exposureMs by vm.exposureMs.collectAsState()
+    val shotCount by vm.shotCount.collectAsState()
+    val delayMs by vm.delayMs.collectAsState()
+    val totalMs = delayMs + shotCount.toLong() * (exposureMs + intervalMs)
     DefaultActionsContent(
         connected = connected,
         isRunning = isRunning,
         onStart = { vm.start() },
         onStop = { vm.stop() },
+        estimatedDuration = formatDuration(totalMs),
     )
 }
 
@@ -121,6 +127,7 @@ internal fun DefaultActionsContent(
     isRunning: Boolean,
     onStart: () -> Unit,
     onStop: () -> Unit,
+    estimatedDuration: String? = null,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -145,11 +152,19 @@ internal fun DefaultActionsContent(
             )
         }
 
-        Text(
-            text = if (isRunning) stringResource(R.string.status_sequence_running) else stringResource(R.string.status_ready_start),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        if (!isRunning && estimatedDuration != null) {
+            Text(
+                text = stringResource(R.string.status_estimated_duration, estimatedDuration),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            Text(
+                text = if (isRunning) stringResource(R.string.status_sequence_running) else stringResource(R.string.status_ready_start),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
@@ -269,11 +284,20 @@ internal fun ManualActionsContent(
 @Composable
 internal fun AstroActions(vm: PulsarViewModel, isRunning: Boolean) {
     val connected = LocalDeviceConnected.current
+    val focalLength by vm.astroFocalLength.collectAsState()
+    val cropFactor by vm.astroCropFactor.collectAsState()
+    val ruleDivisor by vm.astroRuleDivisor.collectAsState()
+    val shotCount by vm.astroShotCount.collectAsState()
+    val delayMs by vm.astroDelayMs.collectAsState()
+    val gapMs by vm.astroGapMs.collectAsState()
+    val expMs = AppConfig.astroExposureMs(focalLength, cropFactor, ruleDivisor)
+    val totalMs = delayMs + shotCount.toLong() * (expMs + gapMs)
     AstroActionsContent(
         connected = connected,
         isRunning = isRunning,
         onStart = { vm.start() },
-        onStop = { vm.stop() }
+        onStop = { vm.stop() },
+        estimatedDuration = formatDuration(totalMs),
     )
 }
 
@@ -283,6 +307,7 @@ internal fun AstroActionsContent(
     isRunning: Boolean,
     onStart: () -> Unit,
     onStop: () -> Unit,
+    estimatedDuration: String? = null,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -307,11 +332,19 @@ internal fun AstroActionsContent(
             )
         }
 
-        Text(
-            text = stringResource(if (isRunning) R.string.status_capturing_stars else R.string.status_ready_astro),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        if (!isRunning && estimatedDuration != null) {
+            Text(
+                text = stringResource(R.string.status_estimated_duration, estimatedDuration),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            Text(
+                text = stringResource(if (isRunning) R.string.status_capturing_stars else R.string.status_ready_astro),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
@@ -544,8 +577,12 @@ internal fun AstroPanelContent(
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    val ruleLabel = if (ruleDivisor == AppConfig.NPF_RULE_DIVISOR)
+                        stringResource(R.string.label_npf_readout)
+                    else
+                        stringResource(R.string.label_rule_readout, ruleDivisor)
                     Text(
-                        stringResource(R.string.label_rule_readout, ruleDivisor),
+                        ruleLabel,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -582,8 +619,12 @@ internal fun AstroPanelContent(
                     strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
                 )
 
+                val formulaText = if (ruleDivisor == AppConfig.NPF_RULE_DIVISOR)
+                    stringResource(R.string.label_npf_formula, focalLength, "$cropFactor", "%.1f".format(maxExposureS))
+                else
+                    stringResource(R.string.label_astro_formula, ruleDivisor, focalLength, "$cropFactor", "%.1f".format(maxExposureS))
                 Text(
-                    stringResource(R.string.label_astro_formula, ruleDivisor, focalLength, "$cropFactor", "%.1f".format(maxExposureS)),
+                    formulaText,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -632,7 +673,7 @@ internal fun AstroPanelContent(
                         selected = ruleDivisor == AppConfig.DEFAULT_RULE_DIVISOR,
                         onClick = { onRuleChanged(AppConfig.DEFAULT_RULE_DIVISOR) },
                         enabled = enabled,
-                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
                     ) {
                         Text(stringResource(R.string.chip_500_rule))
                     }
@@ -640,9 +681,17 @@ internal fun AstroPanelContent(
                         selected = ruleDivisor == AppConfig.TIGHT_RULE_DIVISOR,
                         onClick = { onRuleChanged(AppConfig.TIGHT_RULE_DIVISOR) },
                         enabled = enabled,
-                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
                     ) {
                         Text(stringResource(R.string.chip_400_rule))
+                    }
+                    SegmentedButton(
+                        selected = ruleDivisor == AppConfig.NPF_RULE_DIVISOR,
+                        onClick = { onRuleChanged(AppConfig.NPF_RULE_DIVISOR) },
+                        enabled = enabled,
+                        shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
+                    ) {
+                        Text(stringResource(R.string.chip_npf_rule))
                     }
                 }
             }

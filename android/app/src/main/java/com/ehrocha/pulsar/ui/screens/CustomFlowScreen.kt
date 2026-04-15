@@ -18,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -665,6 +666,20 @@ private fun FlowEditorView(
                 Text(stringResource(R.string.btn_stop_flow), fontWeight = FontWeight.Bold)
             }
         } else {
+            // Duration estimate before starting
+            if (steps.isNotEmpty()) {
+                val totalMs = steps.sumOf { it.estimatedDurationMs() }
+                if (totalMs > 0) {
+                    Text(
+                        stringResource(R.string.status_estimated_duration, formatDuration(totalMs)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                }
+            }
             Button(
                 onClick = { vm.startFlow() },
                 enabled = connected && steps.isNotEmpty(),
@@ -843,7 +858,7 @@ private fun FlowStepCard(
             }
 
             // ── Live execution info ──────────────────────────────────
-            if (isCurrent && status != null && step.type != FlowStepType.PAUSE) {
+            if (isCurrent && status != null && step.type != FlowStepType.PAUSE && step.type != FlowStepType.RAMP) {
                 Spacer(Modifier.height(8.dp))
 
                 // ── Local countdown: tick down from firmware baseline ──
@@ -878,10 +893,12 @@ private fun FlowStepCard(
                 // ── Per-phase countdown ──
                 val exposureMs = when (step.type) {
                     FlowStepType.ASTRO -> AppConfig.astroExposureMs(step.focalLength, step.cropFactor, step.ruleDivisor)
+                    FlowStepType.DARK_FRAME -> step.darkFrameExposureMs
                     else -> step.exposureMs
                 }
                 val gapMs = when (step.type) {
                     FlowStepType.ASTRO -> step.gapMs
+                    FlowStepType.DARK_FRAME -> step.darkFrameGapMs
                     else -> step.intervalMs
                 }
                 val phaseDurationMs = when (status.state) {
@@ -1077,6 +1094,8 @@ private fun stepIcon(type: FlowStepType) = when (type) {
     FlowStepType.INTERVALOMETER -> Icons.Default.Timer
     FlowStepType.ASTRO -> Icons.Default.Stars
     FlowStepType.PAUSE -> Icons.Default.PauseCircle
+    FlowStepType.DARK_FRAME -> Icons.Default.LensBlur
+    FlowStepType.RAMP -> Icons.AutoMirrored.Filled.TrendingUp
 }
 
 // ─── Add step dialog ─────────────────────────────────────────────────────────
@@ -1189,6 +1208,8 @@ private fun EditStepDialog(
                 FlowStepType.INTERVALOMETER -> IntervalometerStepEditor(current) { current = it }
                 FlowStepType.ASTRO -> AstroStepEditor(current) { current = it }
                 FlowStepType.PAUSE -> PauseStepEditor(current) { current = it }
+                FlowStepType.DARK_FRAME -> DarkFrameStepEditor(current) { current = it }
+                FlowStepType.RAMP -> RampStepEditor(current) { current = it }
             }
 
             Spacer(Modifier.height(16.dp))
@@ -1263,6 +1284,91 @@ private fun PauseStepEditor(step: FlowStep, onChange: (FlowStep) -> Unit) {
     }
 }
 
+@Composable
+private fun DarkFrameStepEditor(step: FlowStep, onChange: (FlowStep) -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                stringResource(R.string.dark_frame_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+    Spacer(Modifier.height(8.dp))
+    IntStepperField(
+        label = stringResource(R.string.label_dark_frame_count),
+        value = step.darkFrameCount,
+        onValueChange = { onChange(step.copy(darkFrameCount = it.coerceAtLeast(1))) },
+        min = 1,
+        max = 999,
+        enabled = true,
+        presets = emptyList(),
+    )
+    TimePicker(
+        totalMs = step.darkFrameExposureMs,
+        onChanged = { onChange(step.copy(darkFrameExposureMs = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS))) },
+        label = stringResource(R.string.label_exposure) + " (hh:mm:ss)",
+        enabled = true,
+    )
+    TimePicker(
+        totalMs = step.darkFrameGapMs,
+        onChanged = { onChange(step.copy(darkFrameGapMs = it.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS))) },
+        label = stringResource(R.string.label_interval) + " (hh:mm:ss)",
+        enabled = true,
+    )
+}
+
+@Composable
+private fun RampStepEditor(step: FlowStep, onChange: (FlowStep) -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                stringResource(R.string.ramp_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+    Spacer(Modifier.height(8.dp))
+    TimePicker(
+        totalMs = step.rampStartExposureMs,
+        onChanged = { onChange(step.copy(rampStartExposureMs = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS))) },
+        label = stringResource(R.string.label_ramp_start_exposure) + " (hh:mm:ss)",
+        enabled = true,
+    )
+    TimePicker(
+        totalMs = step.rampEndExposureMs,
+        onChanged = { onChange(step.copy(rampEndExposureMs = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS))) },
+        label = stringResource(R.string.label_ramp_end_exposure) + " (hh:mm:ss)",
+        enabled = true,
+    )
+    IntStepperField(
+        label = stringResource(R.string.label_ramp_steps),
+        value = step.rampSteps,
+        onValueChange = { onChange(step.copy(rampSteps = it.coerceAtLeast(2))) },
+        min = 2,
+        max = 999,
+        enabled = true,
+        presets = listOf(20, 50, 100, 200),
+        presetLabel = { "$it" },
+    )
+    TimePicker(
+        totalMs = step.rampIntervalMs,
+        onChanged = { onChange(step.copy(rampIntervalMs = it.coerceAtLeast(AppConfig.MIN_INTERVAL_MS))) },
+        label = stringResource(R.string.label_interval) + " (hh:mm:ss)",
+        enabled = true,
+    )
+}
+
 // ─── Save Flow dialog ────────────────────────────────────────────────────────
 
 @Composable
@@ -1322,6 +1428,11 @@ private fun FlowStep.estimatedDurationMs(): Long = when (type) {
     FlowStepType.ASTRO -> {
         val expMs = AppConfig.astroExposureMs(focalLength, cropFactor, ruleDivisor)
         delayMs + shotCount * (expMs + gapMs)
+    }
+    FlowStepType.DARK_FRAME -> darkFrameCount.toLong() * (darkFrameExposureMs + darkFrameGapMs)
+    FlowStepType.RAMP -> {
+        val avgExpMs = (rampStartExposureMs + rampEndExposureMs) / 2
+        rampSteps.toLong() * (avgExpMs + rampIntervalMs)
     }
     else -> delayMs + shotCount * (exposureMs + intervalMs)
 }

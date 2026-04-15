@@ -63,6 +63,7 @@ import com.ehrocha.pulsar.ui.screens.SettingsScreen
 import com.ehrocha.pulsar.ui.screens.SettingsSection
 import com.ehrocha.pulsar.ui.screens.CustomFlowScreen
 import com.ehrocha.pulsar.ui.screens.AlignmentScreen
+import com.ehrocha.pulsar.ui.screens.WhatsUpScreen
 import com.ehrocha.pulsar.ui.screens.DashboardScreen
 import com.ehrocha.pulsar.ui.screens.PlannerScreen
 import com.ehrocha.pulsar.ui.screens.EventSessionsScreen
@@ -295,18 +296,22 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
             AppScreen.Menu -> MainMenuScreen(
                 vm = vm,
                 onQuickFlow = { type ->
-                    val mode = when (type) {
-                        FlowStepType.INTERVALOMETER -> TriggerMode.INTERVALOMETER
-                        FlowStepType.ASTRO -> TriggerMode.ASTRO
+                    when (type) {
+                        FlowStepType.INTERVALOMETER -> currentScreen = AppScreen.Mode(TriggerMode.INTERVALOMETER)
+                        FlowStepType.ASTRO -> currentScreen = AppScreen.Mode(TriggerMode.ASTRO)
+                        FlowStepType.DARK_FRAME, FlowStepType.RAMP -> {
+                            vm.loadQuickMode(type)
+                            currentScreen = AppScreen.CustomFlow()
+                        }
                         else -> return@MainMenuScreen
                     }
-                    currentScreen = AppScreen.Mode(mode)
                 },
                 onManualSelected = { currentScreen = AppScreen.Mode(TriggerMode.PRESS_HOLD) },
                 onCustomFlowSelected = { currentScreen = AppScreen.CustomFlow() },
                 onDashboardSelected = { currentScreen = AppScreen.Dashboard },
                 onPlannerSelected = { currentScreen = AppScreen.Planner },
                 onAlignmentSelected = { currentScreen = AppScreen.Alignment },
+                onWhatsUpSelected = { currentScreen = AppScreen.WhatsUp },
                 onSettingsSelected = { currentScreen = AppScreen.Settings(SettingsSection.UPDATES) },
             )
             is AppScreen.Mode -> {
@@ -403,6 +408,12 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     onBack = { currentScreen = AppScreen.Menu },
                 )
             }
+            AppScreen.WhatsUp -> {
+                BackHandler { currentScreen = AppScreen.Menu }
+                WhatsUpScreen(
+                    onBack = { currentScreen = AppScreen.Menu },
+                )
+            }
         }
     }
     }
@@ -421,4 +432,5 @@ private sealed class AppScreen {
     data class EventSessions(val event: PlannerEvent, val mapResult: MapPickerResult? = null) : AppScreen()
     data class SessionDetail(val session: PlannerSession, val event: PlannerEvent) : AppScreen()
     data object Alignment : AppScreen()
+    data object WhatsUp : AppScreen()
 }

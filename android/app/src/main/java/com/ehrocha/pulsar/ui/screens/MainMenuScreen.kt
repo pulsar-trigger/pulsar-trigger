@@ -8,7 +8,9 @@ package com.ehrocha.pulsar.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Settings
@@ -20,6 +22,9 @@ import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.LensBlur
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -43,6 +48,7 @@ fun MainMenuScreen(
     onDashboardSelected: () -> Unit = {},
     onPlannerSelected: () -> Unit = {},
     onAlignmentSelected: () -> Unit = {},
+    onWhatsUpSelected: () -> Unit = {},
     onSettingsSelected: () -> Unit = {},
 ) {
     val fwState by vm.firmwareManager.state.collectAsState()
@@ -147,7 +153,9 @@ fun MainMenuScreen(
             modifier = Modifier.weight(1f),
         ) { page ->
             Column(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 when (page) {
@@ -163,6 +171,18 @@ fun MainMenuScreen(
                             description = stringResource(R.string.mode_astro_desc),
                             icon = Icons.Default.Stars,
                             onClick = { onQuickFlow(FlowStepType.ASTRO) },
+                        )
+                        MenuCard(
+                            title = stringResource(R.string.mode_dark_frame),
+                            description = stringResource(R.string.mode_dark_frame_desc),
+                            icon = Icons.Default.LensBlur,
+                            onClick = { onQuickFlow(FlowStepType.DARK_FRAME) },
+                        )
+                        MenuCard(
+                            title = stringResource(R.string.mode_ramp),
+                            description = stringResource(R.string.mode_ramp_desc),
+                            icon = Icons.AutoMirrored.Filled.TrendingUp,
+                            onClick = { onQuickFlow(FlowStepType.RAMP) },
                         )
                         MenuCard(
                             title = stringResource(R.string.mode_manual),
@@ -195,6 +215,12 @@ fun MainMenuScreen(
                             description = stringResource(R.string.mode_alignment_desc),
                             icon = Icons.Default.Explore,
                             onClick = onAlignmentSelected,
+                        )
+                        MenuCard(
+                            title = stringResource(R.string.mode_whats_up),
+                            description = stringResource(R.string.mode_whats_up_desc),
+                            icon = Icons.Default.Visibility,
+                            onClick = onWhatsUpSelected,
                         )
                     }
                 }

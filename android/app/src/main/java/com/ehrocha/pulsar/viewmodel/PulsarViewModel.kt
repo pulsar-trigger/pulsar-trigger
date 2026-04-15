@@ -379,6 +379,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 delayMs = _astroDelayMs.value,
             )
             FlowStepType.PAUSE -> FlowStep(type = FlowStepType.PAUSE)
+            FlowStepType.DARK_FRAME -> FlowStep(
+                type = FlowStepType.DARK_FRAME,
+                darkFrameExposureMs = _exposureMs.value,
+            )
+            FlowStepType.RAMP -> FlowStep(type = FlowStepType.RAMP)
         }
         saveFlowSteps(listOf(step))
     }
@@ -485,6 +490,35 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         CommandBuilder.setAstro(step.gapMs, expMs, step.shotCount, step.delayMs)
                     )
                     waitForCompletion(step.shotCount)
+                }
+            }
+            FlowStepType.DARK_FRAME -> {
+                if (_simulatorActive.value) {
+                    simulateShots(step.darkFrameCount, step.darkFrameExposureMs, step.darkFrameGapMs, 0L)
+                } else {
+                    sendModeCommand(
+                        CommandBuilder.setIntervalometer(
+                            step.darkFrameGapMs, step.darkFrameExposureMs, step.darkFrameCount, 0L,
+                        )
+                    )
+                    waitForCompletion(step.darkFrameCount)
+                }
+            }
+            FlowStepType.RAMP -> {
+                val steps = step.rampSteps.coerceAtLeast(2)
+                for (i in 0 until steps) {
+                    coroutineContext.ensureActive()
+                    val fraction = i.toDouble() / (steps - 1)
+                    val expMs = (step.rampStartExposureMs +
+                        fraction * (step.rampEndExposureMs - step.rampStartExposureMs)).toLong()
+                    if (_simulatorActive.value) {
+                        simulateShots(1, expMs, step.rampIntervalMs, 0L)
+                    } else {
+                        sendModeCommand(
+                            CommandBuilder.setIntervalometer(step.rampIntervalMs, expMs, 1, 0L)
+                        )
+                        waitForCompletion(1)
+                    }
                 }
             }
         }
