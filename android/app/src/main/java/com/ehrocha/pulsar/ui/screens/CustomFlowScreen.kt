@@ -10,6 +10,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -51,6 +53,7 @@ import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 import java.text.DateFormat
 import java.util.Date
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private enum class FlowScreenState { LIBRARY, EDITOR }
 
@@ -207,7 +210,8 @@ private fun FlowLibraryView(
         stringResource(R.string.flow_tab_my_flows),
         stringResource(R.string.flow_tab_recommended),
     )
-    var selectedTab by remember { mutableIntStateOf(0) }
+    val pagerState = rememberPagerState(initialPage = 0) { tabs.size }
+    val coroutineScope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -228,15 +232,15 @@ private fun FlowLibraryView(
 
         Spacer(Modifier.height(8.dp))
 
-        // ── Tab row ──────────────────────────────────────────────────────
+        // ── Tab row (synced with pager) ─────────────────────────────────
         TabRow(
-            selectedTabIndex = selectedTab,
+            selectedTabIndex = pagerState.currentPage,
             containerColor = MaterialTheme.colorScheme.surface,
         ) {
             tabs.forEachIndexed { index, title ->
                 Tab(
-                    selected = selectedTab == index,
-                    onClick = { selectedTab = index },
+                    selected = pagerState.currentPage == index,
+                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
                     text = { Text(title) },
                 )
             }
@@ -244,45 +248,50 @@ private fun FlowLibraryView(
 
         Spacer(Modifier.height(12.dp))
 
-        // ── Tab content ─────────────────────────────────────────────────
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            tonalElevation = 1.dp,
+        // ── Swipeable tab content ───────────────────────────────────────
+        HorizontalPager(
+            state = pagerState,
             modifier = Modifier.weight(1f),
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) { page ->
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                tonalElevation = 1.dp,
+                modifier = Modifier.fillMaxSize(),
             ) {
-                when (selectedTab) {
-                    0 -> { // My Flows (user-created)
-                        if (userFlows.isEmpty()) {
-                            FlowEmptyState()
-                        } else {
-                            userFlows.forEach { flow ->
-                                SavedFlowCard(
-                                    flow = flow,
-                                    onEdit = { onEditFlow(flow) },
-                                    onDelete = { confirmDelete = flow.name },
-                                    onRun = { onRunFlow(flow) },
-                                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    when (page) {
+                        0 -> { // My Flows (user-created)
+                            if (userFlows.isEmpty()) {
+                                FlowEmptyState()
+                            } else {
+                                userFlows.forEach { flow ->
+                                    SavedFlowCard(
+                                        flow = flow,
+                                        onEdit = { onEditFlow(flow) },
+                                        onDelete = { confirmDelete = flow.name },
+                                        onRun = { onRunFlow(flow) },
+                                    )
+                                }
                             }
                         }
-                    }
-                    1 -> { // Out of box (built-in presets)
-                        if (presets.isEmpty()) {
-                            FlowEmptyState()
-                        } else {
-                            presets.forEach { flow ->
-                                SavedFlowCard(
-                                    flow = flow,
-                                    onEdit = { onEditFlow(flow) },
-                                    onDelete = { },
-                                    onRun = { onRunFlow(flow) },
-                                )
+                        1 -> { // Out of box (built-in presets)
+                            if (presets.isEmpty()) {
+                                FlowEmptyState()
+                            } else {
+                                presets.forEach { flow ->
+                                    SavedFlowCard(
+                                        flow = flow,
+                                        onEdit = { onEditFlow(flow) },
+                                        onDelete = { },
+                                        onRun = { onRunFlow(flow) },
+                                    )
+                                }
                             }
                         }
                     }
@@ -877,7 +886,7 @@ private fun FlowStepCard(
             }
 
             // ── Live execution info ──────────────────────────────────
-            if (isCurrent && status != null && step.type != FlowStepType.PAUSE && step.type != FlowStepType.RAMP) {
+            if (isCurrent && status != null && step.type != FlowStepType.PAUSE) {
                 Spacer(Modifier.height(8.dp))
 
                 // ── Local countdown: tick down from firmware baseline ──
@@ -913,11 +922,13 @@ private fun FlowStepCard(
                 val exposureMs = when (step.type) {
                     FlowStepType.ASTRO -> AppConfig.astroExposureMs(step.focalLength, step.cropFactor, step.ruleDivisor)
                     FlowStepType.DARK_FRAME -> step.darkFrameExposureMs
+                    FlowStepType.RAMP -> (step.rampStartExposureMs + step.rampEndExposureMs) / 2
                     else -> step.exposureMs
                 }
                 val gapMs = when (step.type) {
                     FlowStepType.ASTRO -> step.gapMs
                     FlowStepType.DARK_FRAME -> step.darkFrameGapMs
+                    FlowStepType.RAMP -> step.rampIntervalMs
                     else -> step.intervalMs
                 }
                 val phaseDurationMs = when (status.state) {
@@ -982,8 +993,13 @@ private fun FlowStepCard(
                     Spacer(Modifier.weight(1f))
 
                     // Shot counter (starts at 1)
+                    val totalForDisplay = when (step.type) {
+                        FlowStepType.DARK_FRAME -> step.darkFrameCount
+                        FlowStepType.RAMP -> step.rampSteps
+                        else -> step.shotCount
+                    }
                     Text(
-                        stringResource(R.string.flow_shot_count, displayShots, step.shotCount),
+                        stringResource(R.string.flow_shot_count, displayShots, totalForDisplay),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -1474,11 +1490,16 @@ private fun FlowTimelineBar(
     val withinStepFraction = if (
         currentStep in steps.indices &&
         status != null &&
-        steps[currentStep].type != FlowStepType.PAUSE
+        steps[currentStep].type != FlowStepType.PAUSE &&
+        steps[currentStep].type != FlowStepType.RAMP
     ) {
         val step = steps[currentStep]
+        val total = when (step.type) {
+            FlowStepType.DARK_FRAME -> step.darkFrameCount
+            else -> step.shotCount
+        }
         val taken = status.shotsTaken.coerceAtLeast(0)
-        (taken.toFloat() / step.shotCount.coerceAtLeast(1)).coerceIn(0f, 1f)
+        (taken.toFloat() / total.coerceAtLeast(1)).coerceIn(0f, 1f)
     } else 0f
 
     val animatedFraction by animateFloatAsState(

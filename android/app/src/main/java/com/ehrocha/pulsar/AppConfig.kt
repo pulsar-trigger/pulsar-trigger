@@ -128,10 +128,10 @@ object AppConfig {
     const val DEFAULT_PIN_FOCUS = 26
 
     /** Factory GPIO for the shutter signal (ESP32-S3 / M5StickS3). */
-    const val DEFAULT_PIN_SHUTTER_S3 = 5
+    const val DEFAULT_PIN_SHUTTER_S3 = 0
 
     /** Factory GPIO for the focus signal (ESP32-S3 / M5StickS3). */
-    const val DEFAULT_PIN_FOCUS_S3 = 6
+    const val DEFAULT_PIN_FOCUS_S3 = 1
 
     /** Allowlist of ESP32 GPIOs that are safe to use as outputs. Excludes
      *  strapping pins, input-only pins, and pins reserved by SPI flash. */

@@ -23,9 +23,10 @@ void setup() {
 #ifdef HAS_M5DISPLAY
     auto cfg = M5.config();
     // Disable peripherals we don't use to save power
+    // Note: IMU left enabled — disabling it on M5StickC Plus2 can
+    // disrupt the shared I2C bus and prevent PMIC init.
     cfg.internal_spk = false;
     cfg.internal_mic = false;
-    cfg.internal_imu = false;
     cfg.led_brightness = 0;
     M5.begin(cfg);
 #ifdef BOARD_M5STICKS3

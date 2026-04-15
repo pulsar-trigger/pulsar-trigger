@@ -241,7 +241,9 @@ void ble_init() {
         Serial.printf("[BLE] Loaded pins: shutter=%u focus=%u\n", shutter, focus);
     }
 
+    Serial.printf("[BLE] Initializing as '%s' ...\n", _deviceName);
     BLEDevice::init(_deviceName);
+    Serial.println("[BLE] Stack initialized");
 
     // Enable BLE security — bonding with encryption (Just Works, no MITM)
     BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT);
