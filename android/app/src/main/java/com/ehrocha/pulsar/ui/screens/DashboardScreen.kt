@@ -100,12 +100,11 @@ fun DashboardScreen(
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
             }
-            Text(
-                stringResource(R.string.dashboard_title),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f),
+            PanelHelpHeader(
+                title = stringResource(R.string.dashboard_title),
+                helpText = stringResource(R.string.dashboard_help),
             )
+            Spacer(Modifier.weight(1f))
             IconButton(onClick = { scope.launch { dashboardManager.refresh(state.selectedDate) } }) {
                 Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.refresh))
             }

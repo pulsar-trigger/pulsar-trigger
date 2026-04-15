@@ -236,6 +236,7 @@
 
     <!-- DashboardScreen -->
     <string name="dashboard_title">Astro Dashboard</string>
+    <string name="dashboard_help">Real-time sky conditions for your location.\n\n• Weather, cloud cover, and precipitation\n• Moon phase, illumination, and rise/set times\n• Twilight timeline and dark sky windows\n• Bortle scale light pollution estimate\n• Visible planets and Milky Way status\n\nPull down to refresh. Data is fetched from Open-Meteo and calculated locally.</string>
     <string name="status_fetching_data">Fetching location &amp; data…</string>
     <string name="card_summary">Summary</string>
     <string name="location_north">N</string>
@@ -305,7 +306,8 @@
     <string name="window_no_clear">No clear windows found for this night</string>
 
     <!-- CustomFlowScreen -->
-    <string name="flow_title">Custom Flow</string>
+    <string name="flow_title">Flows &amp; Presets</string>
+    <string name="flow_help">Create multi-step shooting sequences that chain different modes together.\n\n• Combine intervalometer, astro, and pause steps\n• Save flows for reuse across sessions\n• Built-in 500 Rule presets for common focal lengths\n• Add pause steps with wake alerts between sequences\n\nTap + to create a new flow, or select a preset to run immediately.</string>
     <string name="flow_no_saved">No saved flows</string>
     <string name="flow_create_instruction">Create a flow to chain multiple shooting\nmodes, pauses, and presets.</string>
     <string name="flow_section_presets">500 Rule Presets</string>
@@ -353,6 +355,7 @@
     <string name="mode_planner">Session Planner</string>
     <string name="mode_planner_desc">Save locations &amp; schedule sessions with condition alerts</string>
     <string name="planner_title">Session Planner</string>
+    <string name="planner_help">Plan and track astrophotography sessions across multiple locations and dates.\n\n• Create events with date ranges (e.g. a star party weekend)\n• Add sessions with GPS coordinates, dates, and time windows\n• Automatic weather and sky condition checks per session\n• Share events as .pulsar files or calendar entries (.ics)\n• Import shared events from other Pulsar users\n\nLong-press a session to enter bulk selection mode.</string>
     <string name="planner_add">Add</string>
     <string name="planner_no_sessions">No planned sessions yet</string>
     <string name="planner_no_upcoming">No upcoming events</string>
@@ -469,6 +472,7 @@
     <string name="mode_alignment">Tracker Alignment</string>
     <string name="mode_alignment_desc">Polar-align your star tracker using phone sensors</string>
     <string name="alignment_title">Tracker Alignment</string>
+    <string name="alignment_help">Use your phone\'s sensors to polar-align a star tracker mount.\n\n• Shows real-time azimuth and altitude readings\n• Target Polaris (Northern hemisphere) or Sigma Octantis (Southern)\n• Calibrate by placing the phone flat and pressing calibrate\n• Fine-tune with the altitude and azimuth adjustment knobs on your mount\n\nFor best accuracy, keep the phone away from magnetic interference.</string>
     <string name="alignment_no_location">Waiting for GPS location…</string>
     <string name="alignment_location_info">Lat %1$s°  Declination %2$s°</string>
     <string name="alignment_refresh">Refresh</string>

@@ -210,7 +210,10 @@ private fun FlowLibraryView(
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
             }
             Spacer(Modifier.width(4.dp))
-            Text(stringResource(R.string.flow_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            PanelHelpHeader(
+                title = stringResource(R.string.flow_title),
+                helpText = stringResource(R.string.flow_help),
+            )
         }
 
         Spacer(Modifier.height(12.dp))

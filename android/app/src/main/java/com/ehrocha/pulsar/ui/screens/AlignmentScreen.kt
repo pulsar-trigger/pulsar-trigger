@@ -100,12 +100,11 @@ fun AlignmentScreen(
                     contentDescription = stringResource(R.string.back),
                 )
             }
-            Text(
-                stringResource(R.string.alignment_title),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f),
+            PanelHelpHeader(
+                title = stringResource(R.string.alignment_title),
+                helpText = stringResource(R.string.alignment_help),
             )
+            Spacer(Modifier.weight(1f))
         }
 
         // ── Location row ─────────────────────────────────────────────

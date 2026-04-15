@@ -233,12 +233,11 @@ fun PlannerScreen(
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
             }
-            Text(
-                stringResource(R.string.planner_title),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f),
+            PanelHelpHeader(
+                title = stringResource(R.string.planner_title),
+                helpText = stringResource(R.string.planner_help),
             )
+            Spacer(Modifier.weight(1f))
             IconButton(onClick = { showImportDialog = true }) {
                 Icon(Icons.Default.Download, contentDescription = stringResource(R.string.event_import))
             }

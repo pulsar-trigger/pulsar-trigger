@@ -109,6 +109,11 @@ object FlowPresets {
             name = "500 Rule – ${focalLengthMm}mm",
             steps = listOf(
                 FlowStep(
+                    type = FlowStepType.PAUSE,
+                    pauseLabel = "Confirm focus and adjust camera settings",
+                    wakeOnPause = true,
+                ),
+                FlowStep(
                     type = FlowStepType.INTERVALOMETER,
                     exposureMs = exposureMs,
                     intervalMs = 4000L,

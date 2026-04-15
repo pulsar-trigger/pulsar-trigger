@@ -65,7 +65,7 @@ import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PanelHelpHeader(title: String, helpText: String) {
+internal fun PanelHelpHeader(title: String, helpText: String) {
     val tooltipState = rememberTooltipState(isPersistent = true)
     val scope = rememberCoroutineScope()
 
