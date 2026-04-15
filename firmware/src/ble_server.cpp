@@ -334,19 +334,23 @@ bool ble_connected() {
 
 void ble_handle_reinit() {
     if (!_pendingReinit) return;
-    Serial.printf("[BLE] Renaming to %s ...\n", _deviceName);
+    _pendingReinit = false;
 
-    // Update GAP device name in the BLE stack (no deinit needed)
-    esp_ble_gap_set_device_name(_deviceName);
+    Serial.printf("[BLE] Reinit for rename → %s\n", _deviceName);
 
-    // Restart advertising so scan response carries the new name
-    BLEAdvertising* adv = BLEDevice::getAdvertising();
-    adv->stop();
-    delay(50);
-    adv->setScanResponse(true);
-    adv->setMinPreferred(0x06);
-    BLEDevice::startAdvertising();
+    // Full deinit/reinit — the only reliable way to update the advertised
+    // name across all ESP32 variants.  deinit(false) releases BLE resources
+    // but keeps the Bluetooth controller active so reinit is fast.
+    BLEDevice::deinit(false);
+    _connected = false;
+    _advConfigured = false;
+    _cmdChar = nullptr;
+    _statusChar = nullptr;
+    _pitchChar = nullptr;
+    _otaCtrlChar = nullptr;
+    _otaDataChar = nullptr;
+    delay(100);
+    ble_init();
 
     Serial.printf("[BLE] Now advertising as %s\n", _deviceName);
-    _pendingReinit = false;
 }
