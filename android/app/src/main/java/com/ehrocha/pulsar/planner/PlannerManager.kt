@@ -29,6 +29,8 @@ class PlannerManager(context: Context) {
         private const val KEY_EVENTS = "events"
         private const val KEY_SESSIONS = "sessions"
         private const val KEY_CACHE_INTERVAL = "cache_interval_hours"
+        private const val KEY_CLOUD_THRESHOLD = "cloud_clear_threshold"
+        private const val TAG = "PlannerManager"
     }
 
     private val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -42,6 +44,11 @@ class PlannerManager(context: Context) {
     var cacheIntervalHours: Long
         get() = cachePrefs.getLong(KEY_CACHE_INTERVAL, AppConfig.PLANNER_DASHBOARD_CACHE_HOURS_DEFAULT)
         set(value) { cachePrefs.edit().putLong(KEY_CACHE_INTERVAL, value).apply() }
+
+    /** User-configurable cloud cover threshold (%) for "clear" verdict. */
+    var cloudClearThreshold: Int
+        get() = prefs.getInt(KEY_CLOUD_THRESHOLD, AppConfig.CLOUD_COVER_CLEAR_THRESHOLD)
+        set(value) { prefs.edit().putInt(KEY_CLOUD_THRESHOLD, value.coerceIn(5, 80)).apply() }
 
     init { load() }
 
@@ -137,38 +144,83 @@ class PlannerManager(context: Context) {
 
     internal fun fetchConditions(session: PlannerSession): Pair<PlannerVerdict, String> {
         val dateStr = session.date.format(DateTimeFormatter.ISO_LOCAL_DATE)
+        // Fetch next day too so we can cover the full night (sunset today → sunrise tomorrow)
+        val nextDateStr = session.date.plusDays(1).format(DateTimeFormatter.ISO_LOCAL_DATE)
         val url = URL(
             "https://api.open-meteo.com/v1/forecast" +
                 "?latitude=${session.latitude}&longitude=${session.longitude}" +
                 "&hourly=cloud_cover,precipitation" +
-                "&start_date=$dateStr&end_date=$dateStr" +
+                "&daily=sunset,sunrise" +
+                "&start_date=$dateStr&end_date=$nextDateStr" +
                 "&timezone=auto"
         )
         val conn = url.openConnection() as HttpURLConnection
         conn.connectTimeout = AppConfig.API_CONNECT_TIMEOUT_MS
         conn.readTimeout = AppConfig.API_READ_TIMEOUT_MS
         try {
+            val responseCode = conn.responseCode
+            if (responseCode != 200) {
+                android.util.Log.w(TAG, "Weather API returned $responseCode for ${session.name}")
+                return PlannerVerdict.UNKNOWN to "Weather data unavailable (HTTP $responseCode)"
+            }
             val json = JSONObject(conn.inputStream.bufferedReader().readText())
             val hourly = json.getJSONObject("hourly")
             val clouds = hourly.getJSONArray("cloud_cover")
             val precip = hourly.getJSONArray("precipitation")
-            val nightIndices = (18..23) + (0..5)
+            val times = hourly.getJSONArray("time")
+
+            // Determine night window from actual sunset/sunrise
+            val daily = json.getJSONObject("daily")
+            val sunsetStr = daily.getJSONArray("sunset").getString(0)    // today's sunset
+            val sunriseStr = daily.getJSONArray("sunrise").getString(1)  // tomorrow's sunrise
+            val sunsetHour = LocalTime.parse(sunsetStr.substring(11)).hour
+            val sunriseHour = LocalTime.parse(sunriseStr.substring(11)).hour + 24 // next day offset
+
+            // Build night indices: from sunset hour today to sunrise hour tomorrow
+            // Hours are indexed 0-23 for day 1 and 24-47 for day 2
+            val nightStart = sunsetHour
+            val nightEnd = sunriseHour.coerceAtMost(times.length())
+            val threshold = cloudClearThreshold
+
             var clearHours = 0
             var totalRain = 0.0
-            for (i in nightIndices) {
-                if (i < clouds.length()) {
-                    if (clouds.getInt(i) <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD) clearHours++
-                    totalRain += precip.getDouble(i)
+            var firstClearHour = -1
+            var lastClearHour = -1
+            val nightHourCount = (nightEnd - nightStart).coerceAtLeast(0)
+
+            for (h in nightStart until nightEnd) {
+                if (h < clouds.length()) {
+                    if (clouds.getInt(h) <= threshold) {
+                        clearHours++
+                        if (firstClearHour == -1) firstClearHour = h
+                        lastClearHour = h
+                    }
+                    totalRain += precip.getDouble(h)
                 }
             }
+
             val verdict = when {
                 totalRain > 1.0 -> PlannerVerdict.POOR
-                clearHours >= 8 -> PlannerVerdict.EXCELLENT
-                clearHours >= 5 -> PlannerVerdict.GOOD
+                nightHourCount > 0 && clearHours >= nightHourCount * 3 / 4 -> PlannerVerdict.EXCELLENT
+                nightHourCount > 0 && clearHours >= nightHourCount / 2 -> PlannerVerdict.GOOD
                 clearHours >= 3 -> PlannerVerdict.FAIR
                 else -> PlannerVerdict.POOR
             }
-            return verdict to "$clearHours clear hours, ${String.format("%.1f", totalRain)} mm rain"
+
+            // Build descriptive summary with time ranges
+            val summary = buildString {
+                append("$clearHours clear of $nightHourCount night hours")
+                if (firstClearHour >= 0 && clearHours > 0) {
+                    val startH = firstClearHour % 24
+                    val endH = (lastClearHour + 1) % 24
+                    append(" (%02d:00–%02d:00)".format(startH, endH))
+                }
+                append(", %.1f mm rain".format(totalRain))
+            }
+            return verdict to summary
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Failed to fetch conditions for ${session.name}", e)
+            return PlannerVerdict.UNKNOWN to "Error: ${e.message ?: "network failure"}"
         } finally {
             conn.disconnect()
         }

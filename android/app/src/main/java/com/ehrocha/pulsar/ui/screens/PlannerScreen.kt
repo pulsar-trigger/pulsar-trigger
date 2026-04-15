@@ -5,13 +5,17 @@
 
 package com.ehrocha.pulsar.ui.screens
 
-import android.annotation.SuppressLint
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.location.Geocoder
 import android.location.LocationManager
 import android.content.Context
+import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -30,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.ehrocha.pulsar.R
 
 import com.ehrocha.pulsar.planner.*
@@ -72,8 +77,11 @@ fun PlannerScreen(
         ImportEventDialog(
             onDismiss = { showImportDialog = false },
             onImport = { json ->
-                plannerManager.importEvent(json)
-                showImportDialog = false
+                val imported = plannerManager.importEvent(json)
+                if (imported != null) {
+                    showImportDialog = false
+                }
+                imported != null
             },
         )
     }
@@ -210,6 +218,8 @@ fun PlannerScreen(
 
 // ── Event sessions screen (shown when clicking an event) ─────────────────────
 
+private enum class SessionSortMode { DATE, VERDICT, NAME }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EventSessionsScreen(
@@ -221,11 +231,45 @@ fun EventSessionsScreen(
     mapResult: MapPickerResult? = null,
 ) {
     val state by plannerManager.state.collectAsState()
+    var sortMode by remember { mutableStateOf(SessionSortMode.DATE) }
     val sessions = state.sessions
         .filter { it.eventId == event.id }
-        .sortedWith(compareBy({ it.date }, { it.startTime }))
+        .let { list ->
+            when (sortMode) {
+                SessionSortMode.DATE -> list.sortedWith(compareBy({ it.date }, { it.startTime }))
+                SessionSortMode.VERDICT -> list.sortedByDescending { it.verdict.ordinal }
+                SessionSortMode.NAME -> list.sortedBy { it.name.lowercase() }
+            }
+        }
     var showAddSession by remember { mutableStateOf(mapResult != null) }
+    var editingSession by remember { mutableStateOf<PlannerSession?>(null) }
     val scope = rememberCoroutineScope()
+
+    // Bulk delete state
+    var selectionMode by remember { mutableStateOf(false) }
+    var selectedIds by remember { mutableStateOf(setOf<String>()) }
+    var showBulkDeleteConfirm by remember { mutableStateOf(false) }
+
+    if (showBulkDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showBulkDeleteConfirm = false },
+            title = { Text(stringResource(R.string.event_delete_title)) },
+            text = { Text(stringResource(R.string.planner_bulk_delete_confirm, selectedIds.size)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    selectedIds.forEach { plannerManager.removeSession(it) }
+                    selectedIds = emptySet()
+                    selectionMode = false
+                    showBulkDeleteConfirm = false
+                }) { Text(stringResource(R.string.delete)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBulkDeleteConfirm = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
 
     if (showAddSession) {
         AddSessionDialog(
@@ -250,6 +294,37 @@ fun EventSessionsScreen(
         )
     }
 
+    if (editingSession != null) {
+        val s = editingSession!!
+        AddSessionDialog(
+            event = event,
+            onDismiss = { editingSession = null },
+            onConfirm = { name, lat, lon, date, startTime, endTime ->
+                val updated = s.copy(
+                    name = name,
+                    latitude = lat,
+                    longitude = lon,
+                    date = date,
+                    startTime = startTime,
+                    endTime = endTime,
+                )
+                plannerManager.updateSession(updated)
+                editingSession = null
+                scope.launch {
+                    try { plannerManager.checkSessionConditions(updated) } catch (_: Exception) {}
+                }
+            },
+            onPickOnMap = { _, _ -> /* map picking not supported during edit */ },
+            initialName = s.name,
+            initialLat = String.format(Locale.US, "%.5f", s.latitude),
+            initialLon = String.format(Locale.US, "%.5f", s.longitude),
+            editMode = true,
+            initialDate = s.date,
+            initialStartTime = s.startTime,
+            initialEndTime = s.endTime,
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -260,29 +335,90 @@ fun EventSessionsScreen(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(vertical = 8.dp),
         ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+            IconButton(onClick = {
+                if (selectionMode) {
+                    selectionMode = false
+                    selectedIds = emptySet()
+                } else {
+                    onBack()
+                }
+            }) {
+                Icon(
+                    if (selectionMode) Icons.Default.Close
+                    else Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.back),
+                )
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    event.name,
+                    if (selectionMode) "${selectedIds.size} selected"
+                    else event.name,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                 )
-                Text(
-                    buildString {
-                        append(event.startDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)))
-                        if (event.startDate != event.endDate) {
-                            append(" – ")
-                            append(event.endDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)))
-                        }
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                if (!selectionMode) {
+                    Text(
+                        buildString {
+                            append(event.startDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)))
+                            if (event.startDate != event.endDate) {
+                                append(" – ")
+                                append(event.endDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)))
+                            }
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
-            IconButton(onClick = { showAddSession = true }) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.session_add))
+            if (selectionMode) {
+                IconButton(
+                    onClick = {
+                        selectedIds = if (selectedIds.size == sessions.size)
+                            emptySet() else sessions.map { it.id }.toSet()
+                    },
+                ) {
+                    Icon(Icons.Default.SelectAll, contentDescription = stringResource(R.string.planner_select_all))
+                }
+                IconButton(
+                    onClick = { showBulkDeleteConfirm = true },
+                    enabled = selectedIds.isNotEmpty(),
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = stringResource(R.string.planner_bulk_delete),
+                        tint = if (selectedIds.isNotEmpty()) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                // Sort dropdown
+                var showSortMenu by remember { mutableStateOf(false) }
+                Box {
+                    IconButton(onClick = { showSortMenu = true }) {
+                        @Suppress("DEPRECATION")
+                        Icon(Icons.Default.Sort, contentDescription = "Sort")
+                    }
+                    DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.planner_sort_date)) },
+                            onClick = { sortMode = SessionSortMode.DATE; showSortMenu = false },
+                            leadingIcon = { if (sortMode == SessionSortMode.DATE) Icon(Icons.Default.Check, contentDescription = null) },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.planner_sort_verdict)) },
+                            onClick = { sortMode = SessionSortMode.VERDICT; showSortMenu = false },
+                            leadingIcon = { if (sortMode == SessionSortMode.VERDICT) Icon(Icons.Default.Check, contentDescription = null) },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.planner_sort_name)) },
+                            onClick = { sortMode = SessionSortMode.NAME; showSortMenu = false },
+                            leadingIcon = { if (sortMode == SessionSortMode.NAME) Icon(Icons.Default.Check, contentDescription = null) },
+                        )
+                    }
+                }
+                IconButton(onClick = { showAddSession = true }) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.session_add))
+                }
             }
         }
 
@@ -311,27 +447,70 @@ fun EventSessionsScreen(
                 }
             }
         } else {
-            // Group by date for agenda view
-            val byDate = sessions.groupBy { it.date }
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                byDate.forEach { (date, daySessions) ->
-                    item(key = "header_$date") {
-                        Text(
-                            date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
-                        )
+            // Group by date for agenda view (or flat list if sorting by non-date)
+            if (sortMode == SessionSortMode.DATE) {
+                val byDate = sessions.groupBy { it.date }
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    byDate.forEach { (date, daySessions) ->
+                        item(key = "header_$date") {
+                            Text(
+                                date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                            )
+                        }
+                        items(daySessions, key = { it.id }) { session ->
+                            SessionCard(
+                                session = session,
+                                onClick = {
+                                    if (selectionMode) {
+                                        selectedIds = if (session.id in selectedIds)
+                                            selectedIds - session.id else selectedIds + session.id
+                                    } else {
+                                        onSessionDetail(session, event)
+                                    }
+                                },
+                                onDelete = { plannerManager.removeSession(session.id) },
+                                onEdit = { editingSession = session },
+                                selected = session.id in selectedIds,
+                                selectionMode = selectionMode,
+                                onLongClick = {
+                                    selectionMode = true
+                                    selectedIds = setOf(session.id)
+                                },
+                            )
+                        }
                     }
-                    items(daySessions, key = { it.id }) { session ->
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    items(sessions, key = { it.id }) { session ->
                         SessionCard(
                             session = session,
-                            onClick = { onSessionDetail(session, event) },
+                            onClick = {
+                                if (selectionMode) {
+                                    selectedIds = if (session.id in selectedIds)
+                                        selectedIds - session.id else selectedIds + session.id
+                                } else {
+                                    onSessionDetail(session, event)
+                                }
+                            },
                             onDelete = { plannerManager.removeSession(session.id) },
+                            onEdit = { editingSession = session },
+                            selected = session.id in selectedIds,
+                            selectionMode = selectionMode,
+                            onLongClick = {
+                                selectionMode = true
+                                selectedIds = setOf(session.id)
+                            },
                         )
                     }
                 }
@@ -454,22 +633,41 @@ private fun EventCard(
 
 // ── Session card ─────────────────────────────────────────────────────────────
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SessionCard(
     session: PlannerSession,
     onClick: () -> Unit,
     onDelete: () -> Unit,
+    onEdit: () -> Unit = {},
+    selected: Boolean = false,
+    selectionMode: Boolean = false,
+    onLongClick: () -> Unit = {},
 ) {
     val isPast = session.date.isBefore(LocalDate.now())
 
     Surface(
-        onClick = onClick,
         shape = RoundedCornerShape(12.dp),
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth(),
+        tonalElevation = if (selected) 6.dp else 2.dp,
+        color = if (selected) MaterialTheme.colorScheme.primaryContainer
+                else MaterialTheme.colorScheme.surface,
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick,
+            ),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (selectionMode) {
+                    Checkbox(
+                        checked = selected,
+                        onCheckedChange = { onClick() },
+                        modifier = Modifier.size(24.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         session.name,
@@ -480,14 +678,13 @@ private fun SessionCard(
                     )
                     // Location
                     Text(
-                        String.format(Locale.US, "📍 %.4f, %.4f", session.latitude, session.longitude),
+                        String.format(Locale.US, "%.4f, %.4f", session.latitude, session.longitude),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     // Time window
                     if (session.startTime != null || session.endTime != null) {
                         val timeStr = buildString {
-                            append("🕐 ")
                             session.startTime?.let { append(String.format(Locale.US, "%02d:%02d", it.hour, it.minute)) }
                                 ?: append("--:--")
                             append(" – ")
@@ -502,13 +699,22 @@ private fun SessionCard(
                     }
                 }
                 VerdictChip(session.verdict)
-                Spacer(Modifier.width(4.dp))
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = stringResource(R.string.delete),
-                        modifier = Modifier.size(20.dp),
-                    )
+                if (!selectionMode) {
+                    Spacer(Modifier.width(4.dp))
+                    IconButton(onClick = onEdit) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = stringResource(R.string.session_edit_title),
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = stringResource(R.string.delete),
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 }
             }
 
@@ -650,7 +856,6 @@ private fun AddEventDialog(
 
 // ── Add session dialog (location + date + time window) ───────────────────────
 
-@SuppressLint("MissingPermission")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AddSessionDialog(
@@ -661,6 +866,10 @@ private fun AddSessionDialog(
     initialName: String = "",
     initialLat: String = "",
     initialLon: String = "",
+    editMode: Boolean = false,
+    initialDate: LocalDate? = null,
+    initialStartTime: LocalTime? = null,
+    initialEndTime: LocalTime? = null,
 ) {
     var name by remember { mutableStateOf(initialName) }
     var latStr by remember { mutableStateOf(initialLat) }
@@ -675,13 +884,13 @@ private fun AddSessionDialog(
 
     // Date (within event range)
     var showDatePicker by remember { mutableStateOf(false) }
-    var date by remember { mutableStateOf(event.startDate) }
+    var date by remember { mutableStateOf(initialDate ?: event.startDate) }
 
     // Time window (optional – only set when user explicitly picks)
     var showStartTimePicker by remember { mutableStateOf(false) }
     var showEndTimePicker by remember { mutableStateOf(false) }
-    var startTime by remember { mutableStateOf<LocalTime?>(null) }
-    var endTime by remember { mutableStateOf<LocalTime?>(null) }
+    var startTime by remember { mutableStateOf(initialStartTime) }
+    var endTime by remember { mutableStateOf(initialEndTime) }
 
     // Debounced city search
     var searchJob by remember { mutableStateOf<Job?>(null) }
@@ -777,7 +986,7 @@ private fun AddSessionDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.session_add_title)) },
+        title = { Text(stringResource(if (editMode) R.string.session_edit_title else R.string.session_add_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 // ── Name ─────────────────────────────────────────────
@@ -843,8 +1052,16 @@ private fun AddSessionDialog(
                 }
 
                 // ── GPS button ───────────────────────────────────────
+                val gpsUnavailableMsg = stringResource(R.string.planner_gps_unavailable)
                 OutlinedButton(
                     onClick = {
+                        val hasPermission = ContextCompat.checkSelfPermission(
+                            context, Manifest.permission.ACCESS_FINE_LOCATION
+                        ) == PackageManager.PERMISSION_GRANTED
+                        if (!hasPermission) {
+                            Toast.makeText(context, gpsUnavailableMsg, Toast.LENGTH_LONG).show()
+                            return@OutlinedButton
+                        }
                         gpsLoading = true
                         scope.launch {
                             try {
@@ -867,6 +1084,8 @@ private fun AddSessionDialog(
                                     } catch (_: Exception) {
                                         if (name.isBlank()) name = myLocationStr
                                     }
+                                } else {
+                                    Toast.makeText(context, gpsUnavailableMsg, Toast.LENGTH_LONG).show()
                                 }
                             } finally {
                                 gpsLoading = false
@@ -989,26 +1208,41 @@ private fun AddSessionDialog(
 @Composable
 private fun ImportEventDialog(
     onDismiss: () -> Unit,
-    onImport: (String) -> Unit,
+    onImport: (String) -> Boolean,
 ) {
     var json by remember { mutableStateOf("") }
+    var showError by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.event_import_title)) },
         text = {
-            OutlinedTextField(
-                value = json,
-                onValueChange = { json = it },
-                label = { Text(stringResource(R.string.event_import_hint)) },
-                minLines = 4,
-                maxLines = 8,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = json,
+                    onValueChange = { json = it; showError = false },
+                    label = { Text(stringResource(R.string.event_import_hint)) },
+                    isError = showError,
+                    minLines = 4,
+                    maxLines = 8,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (showError) {
+                    Text(
+                        stringResource(R.string.planner_import_failed),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
         },
         confirmButton = {
             TextButton(
-                onClick = { onImport(json.trim()) },
+                onClick = {
+                    if (!onImport(json.trim())) {
+                        showError = true
+                    }
+                },
                 enabled = json.isNotBlank(),
             ) { Text(stringResource(R.string.event_import)) }
         },

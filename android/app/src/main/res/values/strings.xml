@@ -374,6 +374,9 @@
     <string name="planner_cache_help">Control how often weather and sky-condition data is refreshed.\n\n• Dashboard data (weather, moon phase, cloud cover) is cached locally.\n• A shorter interval gives fresher data but uses more API calls.\n• 24 h is a good balance for most sessions planned a day ahead.</string>
     <string name="planner_cache_interval">Refresh interval</string>
     <string name="planner_cache_hours">%1$d h</string>
+    <string name="planner_cloud_threshold">Cloud cover threshold</string>
+    <string name="planner_cloud_threshold_help">Maximum cloud cover (%) considered \"clear\" when evaluating session conditions. Lower = stricter.</string>
+    <string name="planner_cloud_threshold_value">%1$d%%</string>
 
     <!-- Events v0.23 -->
     <string name="event_no_events">No events yet</string>
@@ -389,7 +392,16 @@
     <string name="event_name">Event name</string>
     <string name="session_add">Add session</string>
     <string name="session_add_title">New session</string>
+    <string name="session_edit_title">Edit session</string>
     <string name="session_name">Session name (e.g. Waterfall shoot)</string>
+    <string name="planner_gps_unavailable">Could not determine location — enable GPS and try again</string>
+    <string name="planner_import_failed">Invalid event JSON — check the format and try again</string>
+    <string name="planner_sort_date">Sort by date</string>
+    <string name="planner_sort_verdict">Sort by verdict</string>
+    <string name="planner_sort_name">Sort by name</string>
+    <string name="planner_bulk_delete">Delete selected</string>
+    <string name="planner_select_all">Select all</string>
+    <string name="planner_bulk_delete_confirm">Delete %1$d selected sessions?</string>
 
     <!-- Planner verdicts -->
     <string name="verdict_excellent">Excellent</string>

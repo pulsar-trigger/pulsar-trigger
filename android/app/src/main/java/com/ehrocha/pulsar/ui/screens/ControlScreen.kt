@@ -1574,6 +1574,8 @@ internal fun PlannerSettingsSectionContent(vm: PulsarViewModel) {
     val cacheOptions = listOf(6L, 12L, 24L, 48L, 72L)
     var currentInterval by remember { mutableLongStateOf(vm.plannerManager.cacheIntervalHours) }
 
+    var currentThreshold by remember { mutableIntStateOf(vm.plannerManager.cloudClearThreshold) }
+
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         PanelHelpHeader(
             title = stringResource(R.string.section_planner),
@@ -1600,6 +1602,39 @@ internal fun PlannerSettingsSectionContent(vm: PulsarViewModel) {
                     Text(stringResource(R.string.planner_cache_hours, hours))
                 }
             }
+        }
+
+        HorizontalDivider()
+
+        // Cloud cover threshold slider
+        Text(
+            stringResource(R.string.planner_cloud_threshold),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Medium,
+        )
+        Text(
+            stringResource(R.string.planner_cloud_threshold_help),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Slider(
+                value = currentThreshold.toFloat(),
+                onValueChange = { currentThreshold = it.toInt() },
+                onValueChangeFinished = { vm.plannerManager.cloudClearThreshold = currentThreshold },
+                valueRange = 5f..80f,
+                steps = 14,
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                stringResource(R.string.planner_cloud_threshold_value, currentThreshold),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
         }
     }
 }
