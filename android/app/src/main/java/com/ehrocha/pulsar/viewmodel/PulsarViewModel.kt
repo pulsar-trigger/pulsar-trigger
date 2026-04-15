@@ -154,6 +154,16 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val _darkFrameGapMs = MutableStateFlow(AppConfig.DEFAULT_ASTRO_GAP_MS)
     val darkFrameGapMs: StateFlow<Long> = _darkFrameGapMs
 
+    // ── Exposure Ramp state ─────────────────────────────────────────────
+    private val _rampStartExposureMs = MutableStateFlow(500L)
+    val rampStartExposureMs: StateFlow<Long> = _rampStartExposureMs
+    private val _rampEndExposureMs = MutableStateFlow(10000L)
+    val rampEndExposureMs: StateFlow<Long> = _rampEndExposureMs
+    private val _rampSteps = MutableStateFlow(50)
+    val rampSteps: StateFlow<Int> = _rampSteps
+    private val _rampIntervalMs = MutableStateFlow(AppConfig.DEFAULT_INTERVAL_MS)
+    val rampIntervalMs: StateFlow<Long> = _rampIntervalMs
+
     // ── GPIO pin config ──────────────────────────────────────────────────
     private val _pinShutter = MutableStateFlow(DEFAULT_PIN_SHUTTER)
     val pinShutter: StateFlow<Int> = _pinShutter
@@ -334,6 +344,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     fun setDarkFrameExposureMs(v: Long) { _darkFrameExposureMs.value = v.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS) }
     fun setDarkFrameGapMs(v: Long) { _darkFrameGapMs.value = v.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS) }
 
+    fun setRampStartExposureMs(v: Long) { _rampStartExposureMs.value = v.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS) }
+    fun setRampEndExposureMs(v: Long) { _rampEndExposureMs.value = v.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS) }
+    fun setRampSteps(v: Int) { _rampSteps.value = v.coerceAtLeast(2) }
+    fun setRampIntervalMs(v: Long) { _rampIntervalMs.value = v.coerceAtLeast(AppConfig.MIN_INTERVAL_MS) }
+
     // ── Commands ─────────────────────────────────────────────────────────
     fun selectMode(mode: TriggerMode) {
         _currentMode.value = mode
@@ -415,7 +430,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 darkFrameExposureMs = _darkFrameExposureMs.value,
                 darkFrameGapMs = _darkFrameGapMs.value,
             )
-            FlowStepType.RAMP -> FlowStep(type = FlowStepType.RAMP)
+            FlowStepType.RAMP -> FlowStep(
+                type = FlowStepType.RAMP,
+                rampStartExposureMs = _rampStartExposureMs.value,
+                rampEndExposureMs = _rampEndExposureMs.value,
+                rampSteps = _rampSteps.value,
+                rampIntervalMs = _rampIntervalMs.value,
+            )
         }
         saveFlowSteps(listOf(step))
     }
@@ -670,6 +691,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             )
             TriggerMode.PRESS_HOLD -> CommandBuilder.setPressHold()
             TriggerMode.PRESS_LOCK -> CommandBuilder.setPressLock()
+            TriggerMode.RAMP -> return          // app-orchestrated ramp, no single command
             TriggerMode.CUSTOM_FLOW -> return  // app-orchestrated, no single command
             TriggerMode.TRACKER -> return      // IMU streaming, no config needed
         }

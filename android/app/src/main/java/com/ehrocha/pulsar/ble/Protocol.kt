@@ -40,6 +40,7 @@ enum class TriggerMode(val id: Byte) {
     TRACKER(0x02),
     PRESS_HOLD(0x06),
     DARK_FRAME(0x01),     // uses intervalometer on firmware (app-side distinction)
+    RAMP(0x01),           // app-orchestrated ramp, uses intervalometer steps on firmware
     PRESS_LOCK(0x07),
     CUSTOM_FLOW(0x7F.toByte()),  // app-orchestrated, never sent to firmware
 }

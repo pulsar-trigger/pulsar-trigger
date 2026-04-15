@@ -89,6 +89,7 @@ fun ModeScreen(
                 TriggerMode.INTERVALOMETER -> stringResource(R.string.mode_intervalometer)
                 TriggerMode.ASTRO -> stringResource(R.string.mode_astro)
                 TriggerMode.DARK_FRAME -> stringResource(R.string.mode_dark_frame)
+                TriggerMode.RAMP -> stringResource(R.string.mode_ramp)
                 TriggerMode.PRESS_HOLD, TriggerMode.PRESS_LOCK -> stringResource(R.string.mode_manual)
                 else -> targetMode.name.replace('_', ' ')
             }
@@ -123,6 +124,7 @@ fun ModeScreen(
                     TriggerMode.INTERVALOMETER -> vm.shotCount.collectAsState().value
                     TriggerMode.ASTRO -> vm.astroShotCount.collectAsState().value
                     TriggerMode.DARK_FRAME -> vm.darkFrameCount.collectAsState().value
+                    TriggerMode.RAMP -> vm.rampSteps.collectAsState().value
                     else -> 0
                 }
                 val exposureMs: Long
@@ -142,6 +144,12 @@ fun ModeScreen(
                     TriggerMode.DARK_FRAME -> {
                         exposureMs = vm.darkFrameExposureMs.collectAsState().value
                         gapMs = vm.darkFrameGapMs.collectAsState().value
+                    }
+                    TriggerMode.RAMP -> {
+                        val startExp = vm.rampStartExposureMs.collectAsState().value
+                        val endExp = vm.rampEndExposureMs.collectAsState().value
+                        exposureMs = (startExp + endExp) / 2  // average for display
+                        gapMs = vm.rampIntervalMs.collectAsState().value
                     }
                     else -> {
                         exposureMs = 1L
@@ -164,6 +172,7 @@ fun ModeScreen(
                         TriggerMode.INTERVALOMETER -> IntervalometerPanel(vm, enabled = !isRunning)
                         TriggerMode.ASTRO -> AstroPanel(vm, enabled = !isRunning)
                         TriggerMode.DARK_FRAME -> DarkFramePanel(vm, enabled = !isRunning)
+                        TriggerMode.RAMP -> RampPanel(vm, enabled = !isRunning)
                         TriggerMode.PRESS_HOLD -> ManualPanel(vm)
                         else -> {}
                     }
@@ -207,6 +216,26 @@ fun ModeScreen(
                         val dfExposureMs by vm.darkFrameExposureMs.collectAsState()
                         val dfGapMs by vm.darkFrameGapMs.collectAsState()
                         val totalMs = dfCount.toLong() * (dfExposureMs + dfGapMs)
+                        DefaultActionsContent(
+                            connected = connected,
+                            isRunning = false,
+                            onStart = onStartFlow,
+                            onStop = { vm.stop() },
+                            estimatedDuration = formatDuration(totalMs),
+                        )
+                    } else {
+                        DefaultActions(vm, isRunning)
+                    }
+                }
+                TriggerMode.RAMP -> {
+                    if (onStartFlow != null && !isRunning) {
+                        val connected = LocalDeviceConnected.current
+                        val rSteps by vm.rampSteps.collectAsState()
+                        val rStartExp by vm.rampStartExposureMs.collectAsState()
+                        val rEndExp by vm.rampEndExposureMs.collectAsState()
+                        val rInterval by vm.rampIntervalMs.collectAsState()
+                        val avgExp = (rStartExp + rEndExp) / 2
+                        val totalMs = rSteps.toLong() * (avgExp + rInterval)
                         DefaultActionsContent(
                             connected = connected,
                             isRunning = false,

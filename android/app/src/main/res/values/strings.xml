@@ -323,7 +323,7 @@
     <string name="flow_create_instruction">Create a flow to chain multiple shooting\nmodes, pauses, and presets.</string>
     <string name="flow_section_presets">NPF Rule Presets</string>
     <string name="flow_section_custom">My Flows</string>
-    <string name="flow_tab_recommended">Recommended</string>
+    <string name="flow_tab_recommended">Out of Box</string>
     <string name="flow_tab_my_flows">My Flows</string>
     <string name="btn_new_flow">New Flow</string>
     <string name="dialog_delete_flow">Delete Flow</string>

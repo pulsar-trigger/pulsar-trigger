@@ -204,8 +204,8 @@ private fun FlowLibraryView(
     val userFlows = saved.filter { !it.builtIn }
 
     val tabs = listOf(
-        stringResource(R.string.flow_tab_recommended),
         stringResource(R.string.flow_tab_my_flows),
+        stringResource(R.string.flow_tab_recommended),
     )
     var selectedTab by remember { mutableIntStateOf(0) }
 
@@ -258,21 +258,7 @@ private fun FlowLibraryView(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 when (selectedTab) {
-                    0 -> { // Recommended (built-in presets)
-                        if (presets.isEmpty()) {
-                            FlowEmptyState()
-                        } else {
-                            presets.forEach { flow ->
-                                SavedFlowCard(
-                                    flow = flow,
-                                    onEdit = { onEditFlow(flow) },
-                                    onDelete = { },
-                                    onRun = { onRunFlow(flow) },
-                                )
-                            }
-                        }
-                    }
-                    1 -> { // My Flows (user-created)
+                    0 -> { // My Flows (user-created)
                         if (userFlows.isEmpty()) {
                             FlowEmptyState()
                         } else {
@@ -281,6 +267,20 @@ private fun FlowLibraryView(
                                     flow = flow,
                                     onEdit = { onEditFlow(flow) },
                                     onDelete = { confirmDelete = flow.name },
+                                    onRun = { onRunFlow(flow) },
+                                )
+                            }
+                        }
+                    }
+                    1 -> { // Out of box (built-in presets)
+                        if (presets.isEmpty()) {
+                            FlowEmptyState()
+                        } else {
+                            presets.forEach { flow ->
+                                SavedFlowCard(
+                                    flow = flow,
+                                    onEdit = { onEditFlow(flow) },
+                                    onDelete = { },
                                     onRun = { onRunFlow(flow) },
                                 )
                             }

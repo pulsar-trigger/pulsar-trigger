@@ -823,17 +823,6 @@ internal fun DarkFramePanelContent(
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            IntStepperField(
-                label = stringResource(R.string.label_dark_frame_count),
-                value = count,
-                onValueChange = { onCountChanged(it.coerceAtLeast(1)) },
-                min = 1,
-                max = 999,
-                enabled = enabled,
-                presets = listOf(10, 20, 30, 50),
-                presetLabel = { "$it" },
-            )
-
             TimePicker(
                 totalMs = exposureMs,
                 onChanged = { onExposureMsChanged(it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS)) },
@@ -846,6 +835,116 @@ internal fun DarkFramePanelContent(
                 onChanged = { onGapMsChanged(it.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS)) },
                 label = stringResource(R.string.label_interval) + " (hh:mm:ss)",
                 enabled = enabled,
+            )
+
+            IntStepperField(
+                label = stringResource(R.string.label_dark_frame_count),
+                value = count,
+                onValueChange = { onCountChanged(it.coerceAtLeast(1)) },
+                min = 1,
+                max = 999,
+                enabled = enabled,
+                presets = listOf(10, 20, 30, 50),
+                presetLabel = { "$it" },
+            )
+}
+    }
+}
+
+@Composable
+internal fun RampPanel(vm: PulsarViewModel, enabled: Boolean = true) {
+    val startExp by vm.rampStartExposureMs.collectAsState()
+    val endExp by vm.rampEndExposureMs.collectAsState()
+    val steps by vm.rampSteps.collectAsState()
+    val intervalMs by vm.rampIntervalMs.collectAsState()
+
+    RampPanelContent(
+        startExposureMs = startExp,
+        endExposureMs = endExp,
+        steps = steps,
+        intervalMs = intervalMs,
+        onStartExposureChanged = { vm.setRampStartExposureMs(it) },
+        onEndExposureChanged = { vm.setRampEndExposureMs(it) },
+        onIntervalChanged = { vm.setRampIntervalMs(it) },
+        onStepsChanged = { vm.setRampSteps(it) },
+        enabled = enabled,
+    )
+}
+
+@Composable
+internal fun RampPanelContent(
+    modifier: Modifier = Modifier,
+    startExposureMs: Long,
+    endExposureMs: Long,
+    steps: Int,
+    intervalMs: Long,
+    onStartExposureChanged: (Long) -> Unit,
+    onEndExposureChanged: (Long) -> Unit,
+    onIntervalChanged: (Long) -> Unit,
+    onStepsChanged: (Int) -> Unit,
+    enabled: Boolean = true,
+) {
+    val avgExpMs = (startExposureMs + endExposureMs) / 2
+    val totalTimeMs = steps.toLong() * (avgExpMs + intervalMs)
+
+    Column(verticalArrangement = Arrangement.spacedBy(24.dp), modifier = modifier) {
+        PanelHelpHeader(
+            title = stringResource(R.string.mode_ramp),
+            helpText = stringResource(R.string.ramp_hint),
+        )
+
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            tonalElevation = 4.dp,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.label_shots), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("$steps", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.label_total_duration), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(formatDuration(totalTimeMs), style = MaterialTheme.typography.headlineLarge)
+                    }
+                }
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text(stringResource(R.string.label_capture_sequence), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+
+            TimePicker(
+                totalMs = startExposureMs,
+                onChanged = { onStartExposureChanged(it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS)) },
+                label = stringResource(R.string.label_ramp_start_exposure) + " (hh:mm:ss)",
+                enabled = enabled,
+            )
+
+            TimePicker(
+                totalMs = endExposureMs,
+                onChanged = { onEndExposureChanged(it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS)) },
+                label = stringResource(R.string.label_ramp_end_exposure) + " (hh:mm:ss)",
+                enabled = enabled,
+            )
+
+            TimePicker(
+                totalMs = intervalMs,
+                onChanged = { onIntervalChanged(it.coerceAtLeast(AppConfig.MIN_INTERVAL_MS)) },
+                label = stringResource(R.string.label_interval) + " (hh:mm:ss)",
+                enabled = enabled,
+            )
+
+            IntStepperField(
+                label = stringResource(R.string.label_ramp_steps),
+                value = steps,
+                onValueChange = { onStepsChanged(it.coerceAtLeast(2)) },
+                min = 2,
+                max = 999,
+                enabled = enabled,
+                presets = listOf(20, 50, 100, 200),
+                presetLabel = { "$it" },
             )
         }
     }
