@@ -4,6 +4,7 @@
  */
 
 #include <Arduino.h>
+#include <esp_ota_ops.h>
 #include "config.h"
 #include "camera.h"
 #include "ble_server.h"
@@ -16,8 +17,15 @@
 #endif
 
 void setup() {
+    // Mark this firmware as valid so the bootloader won't roll back after OTA
+    esp_ota_mark_app_valid_cancel_rollback();
+
 #ifdef HAS_M5DISPLAY
     auto cfg = M5.config();
+    // Disable peripherals we don't use to save power
+    cfg.internal_spk = false;
+    cfg.internal_mic = false;
+    cfg.led_brightness = 0;
     M5.begin(cfg);
 #ifdef BOARD_M5STICKS3
     // Enable 5V output on Grove / Hat2 bus (needed for optocoupler power)
