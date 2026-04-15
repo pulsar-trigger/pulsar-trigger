@@ -12,6 +12,8 @@ import android.location.Geocoder
 import android.location.LocationManager
 import android.content.Context
 import android.widget.Toast
+import androidx.core.content.FileProvider
+import java.io.File
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -198,13 +200,21 @@ fun PlannerScreen(
                             bestVerdict = sessions.maxByOrNull { it.verdict.ordinal }?.verdict
                                 ?: PlannerVerdict.UNKNOWN,
                             onClick = { onEventSessions(event) },
-                            onShare = {
+                            onShare = { ctx ->
                                 plannerManager.exportEvent(event.id)?.let { json ->
+                                    val dir = File(ctx.cacheDir, "shared").apply { mkdirs() }
+                                    val safeName = event.name.replace(Regex("[^\\w.-]"), "_")
+                                    val file = File(dir, "$safeName.pulsar")
+                                    file.writeText(json)
+                                    val uri = FileProvider.getUriForFile(
+                                        ctx, "${ctx.packageName}.fileprovider", file,
+                                    )
                                     val intent = Intent(Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(Intent.EXTRA_TEXT, json)
+                                        type = "application/pulsar-event"
+                                        putExtra(Intent.EXTRA_STREAM, uri)
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                     }
-                                    it.startActivity(Intent.createChooser(intent, null))
+                                    ctx.startActivity(Intent.createChooser(intent, null))
                                 }
                             },
                             onDelete = { plannerManager.removeEvent(event.id) },

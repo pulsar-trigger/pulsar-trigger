@@ -395,7 +395,8 @@
     <string name="session_edit_title">Edit session</string>
     <string name="session_name">Session name (e.g. Waterfall shoot)</string>
     <string name="planner_gps_unavailable">Could not determine location — enable GPS and try again</string>
-    <string name="planner_import_failed">Invalid event JSON — check the format and try again</string>
+    <string name="planner_import_failed">Invalid event data — check the format and try again</string>
+    <string name="planner_import_success">Imported event \"%1$s\"</string>
     <string name="planner_sort_date">Sort by date</string>
     <string name="planner_sort_verdict">Sort by verdict</string>
     <string name="planner_sort_name">Sort by name</string>

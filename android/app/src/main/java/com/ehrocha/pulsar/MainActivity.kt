@@ -5,6 +5,7 @@
 
 package com.ehrocha.pulsar
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
@@ -86,9 +87,29 @@ import kotlinx.coroutines.flow.first
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
 class MainActivity : AppCompatActivity() {
+
+    /** Read event JSON from an incoming VIEW/SEND intent (.pulsar file). */
+    private fun readImportIntent(): String? {
+        val intent = intent ?: return null
+        return try {
+            val uri = when (intent.action) {
+                Intent.ACTION_VIEW -> intent.data
+                Intent.ACTION_SEND -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableExtra(Intent.EXTRA_STREAM, android.net.Uri::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra(Intent.EXTRA_STREAM)
+                }
+                else -> null
+            }
+            uri?.let { contentResolver.openInputStream(it)?.bufferedReader()?.readText() }
+        } catch (_: Exception) { null }
+    }
+
     @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val pendingImportJson = readImportIntent()
         enableEdgeToEdge()
         setContent {
             val nightMode = remember { mutableStateOf(ThemeMode.Dark) }
@@ -128,7 +149,7 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     if (permissions.allPermissionsGranted) {
-                        PulsarNavHost()
+                        PulsarNavHost(importJson = pendingImportJson)
                     }
                 }
             }
@@ -138,7 +159,7 @@ class MainActivity : AppCompatActivity() {
 }
 
 @Composable
-fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
+fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null) {
     var currentScreen by remember { mutableStateOf<AppScreen>(AppScreen.Scan) }
     val connected by vm.connected.collectAsState()
 
@@ -168,9 +189,11 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
         // Non-blocking: handled by the banner in MainMenuScreen and badge on Settings gear
     }
 
-    // Go back to scan if disconnected
+    // Go back to scan if disconnected (but not if we arrived via file import)
+    var importHandled by remember { mutableStateOf(importJson != null) }
     LaunchedEffect(connected) {
-        if (!connected) currentScreen = AppScreen.Scan
+        if (!connected && !importHandled) currentScreen = AppScreen.Scan
+        if (connected) importHandled = false // once connected, normal disconnect-reset resumes
     }
 
     // Auto-navigate to running mode when connecting to a busy device.
@@ -189,6 +212,28 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel()) {
                         else -> currentScreen = AppScreen.CustomFlow()
                     }
                 }
+            }
+        }
+    }
+
+    // ── Auto-import from .pulsar file intent ──────────────────────
+    val context = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(importJson) {
+        if (importJson != null) {
+            val event = vm.plannerManager.importEvent(importJson)
+            if (event != null) {
+                android.widget.Toast.makeText(
+                    context,
+                    context.getString(R.string.planner_import_success, event.name),
+                    android.widget.Toast.LENGTH_LONG,
+                ).show()
+                currentScreen = AppScreen.EventSessions(event)
+            } else {
+                android.widget.Toast.makeText(
+                    context,
+                    context.getString(R.string.planner_import_failed),
+                    android.widget.Toast.LENGTH_LONG,
+                ).show()
             }
         }
     }
