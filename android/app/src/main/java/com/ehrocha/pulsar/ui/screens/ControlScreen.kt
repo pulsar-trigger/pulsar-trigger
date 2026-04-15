@@ -59,7 +59,6 @@ import com.ehrocha.pulsar.ui.components.IntStepperField
 import com.ehrocha.pulsar.ui.components.TimePicker
 import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
-import com.ehrocha.pulsar.viewmodel.PulsarViewModel.Companion.SAFE_OUTPUT_PINS
 import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 
@@ -1115,6 +1114,7 @@ internal fun GpioPinsSectionContent(vm: PulsarViewModel) {
     val hwConnected = connected && !simulatorActive
     val shutterPin by vm.pinShutter.collectAsState()
     val focusPin by vm.pinFocus.collectAsState()
+    val safePins by vm.safeOutputPins.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         PanelHelpHeader(
@@ -1128,6 +1128,7 @@ internal fun GpioPinsSectionContent(vm: PulsarViewModel) {
             disabledPin = focusPin,
             onPinSelected = { vm.savePins(it, focusPin) },
             enabled = hwConnected,
+            pins = safePins,
         )
 
         GpioPinSelector(
@@ -1136,6 +1137,7 @@ internal fun GpioPinsSectionContent(vm: PulsarViewModel) {
             disabledPin = shutterPin,
             onPinSelected = { vm.savePins(shutterPin, it) },
             enabled = hwConnected,
+            pins = safePins,
         )
 
         if (simulatorActive) {
@@ -1661,6 +1663,7 @@ private fun GpioPinSelector(
     disabledPin: Int,
     onPinSelected: (Int) -> Unit,
     enabled: Boolean,
+    pins: List<Int>,
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -1685,7 +1688,7 @@ private fun GpioPinSelector(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
             ) {
-                SAFE_OUTPUT_PINS.forEach { pin ->
+                pins.forEach { pin ->
                     val isDisabled = pin == disabledPin
                     DropdownMenuItem(
                         text = {

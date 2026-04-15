@@ -121,15 +121,43 @@ object AppConfig {
     // ESP32 GPIO numbers used by the Pulsar hardware to drive the
     // optocoupler outputs connected to the camera's remote-release port.
 
-    /** Factory GPIO for the shutter signal. */
+    /** Factory GPIO for the shutter signal (ESP32). */
     const val DEFAULT_PIN_SHUTTER = 25
 
-    /** Factory GPIO for the half-press / focus signal. */
+    /** Factory GPIO for the half-press / focus signal (ESP32). */
     const val DEFAULT_PIN_FOCUS = 26
+
+    /** Factory GPIO for the shutter signal (ESP32-S3 / M5StickS3). */
+    const val DEFAULT_PIN_SHUTTER_S3 = 5
+
+    /** Factory GPIO for the focus signal (ESP32-S3 / M5StickS3). */
+    const val DEFAULT_PIN_FOCUS_S3 = 6
 
     /** Allowlist of ESP32 GPIOs that are safe to use as outputs. Excludes
      *  strapping pins, input-only pins, and pins reserved by SPI flash. */
     val SAFE_OUTPUT_PINS = listOf(4, 13, 14, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27)
+
+    /** Allowlist of ESP32-S3 (M5StickS3) GPIOs safe for user-wired outputs.
+     *  Excludes Grove port defaults (G9/G10) and internal-only pins. */
+    val SAFE_OUTPUT_PINS_S3 = listOf(0, 1, 2, 3, 4, 5, 6, 7, 8, 43, 44)
+
+    /** Return the correct safe-pin list for the given chip model string. */
+    fun safeOutputPinsForChip(chipModel: String?): List<Int> = when (chipModel) {
+        "ESP32-S3" -> SAFE_OUTPUT_PINS_S3
+        else -> SAFE_OUTPUT_PINS
+    }
+
+    /** Default shutter pin for the given chip model. */
+    fun defaultShutterPinForChip(chipModel: String?): Int = when (chipModel) {
+        "ESP32-S3" -> DEFAULT_PIN_SHUTTER_S3
+        else -> DEFAULT_PIN_SHUTTER
+    }
+
+    /** Default focus pin for the given chip model. */
+    fun defaultFocusPinForChip(chipModel: String?): Int = when (chipModel) {
+        "ESP32-S3" -> DEFAULT_PIN_FOCUS_S3
+        else -> DEFAULT_PIN_FOCUS
+    }
 
     // ── BLE ─────────────────────────────────────────────────────────────
     // Bluetooth Low Energy constants for communication with the Pulsar

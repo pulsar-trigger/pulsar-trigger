@@ -8,9 +8,9 @@
 
 // ── GPIO pins ────────────────────────────────────────────────────────────────
 #ifdef BOARD_M5STICKS3
-  // M5StickS3: Grove HY2.0-4P port (G9, G10) for optocoupler
-  #define DEFAULT_PIN_SHUTTER  9
-  #define DEFAULT_PIN_FOCUS    10
+  // M5StickS3: user-wired optocoupler on Hat2-Bus (G5, G6)
+  #define DEFAULT_PIN_SHUTTER  5
+  #define DEFAULT_PIN_FOCUS    6
   // No dedicated status LED GPIO — use M5Unified display
   #define PIN_LED       GPIO_NUM_NC
   // Battery via M5PM1 I2C PMIC — no ADC pin
@@ -36,9 +36,9 @@
 
 // ── Safe digital-output pins for shutter / focus ─────────────────────────────
 #ifdef BOARD_M5STICKS3
-  // Hat2-Bus exposes: G1-G8, G43, G44;  Grove: G9, G10
+  // Hat2-Bus exposes: G0-G8, G43, G44
   static const uint8_t SAFE_OUTPUT_PINS[] = {
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 43, 44
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 43, 44
   };
 #elif defined(BOARD_M5CORE2)
   // Core2 M5-Bus: most GPIOs accessible

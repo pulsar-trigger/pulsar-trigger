@@ -30,9 +30,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.coroutines.coroutineContext
 
@@ -87,6 +90,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val status: StateFlow<StatusFrame?> = _status
 
     val deviceInfo: StateFlow<DeviceInfo?> = bleManager.deviceInfo
+
+    val safeOutputPins: StateFlow<List<Int>> = bleManager.deviceInfo
+        .map { AppConfig.safeOutputPinsForChip(it?.chipModel) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, AppConfig.SAFE_OUTPUT_PINS)
 
     val rssi: StateFlow<Int?> = bleManager.rssi
 
@@ -228,6 +235,18 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                             firmwareManager.checkForUpdate(frame.fwVersion)
                         }
                     }
+                }
+            }
+        }
+
+        // When device info arrives, ensure saved pins are valid for the chip
+        viewModelScope.launch {
+            deviceInfo.filterNotNull().collect { info ->
+                val validPins = AppConfig.safeOutputPinsForChip(info.chipModel)
+                if (_pinShutter.value !in validPins || _pinFocus.value !in validPins) {
+                    val defShutter = AppConfig.defaultShutterPinForChip(info.chipModel)
+                    val defFocus = AppConfig.defaultFocusPinForChip(info.chipModel)
+                    savePins(defShutter, defFocus)
                 }
             }
         }
@@ -616,7 +635,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         )
         val shutter = obj.optInt("pin_shutter", DEFAULT_PIN_SHUTTER)
         val focus = obj.optInt("pin_focus", DEFAULT_PIN_FOCUS)
-        if (shutter in SAFE_OUTPUT_PINS && focus in SAFE_OUTPUT_PINS && shutter != focus) {
+        val validPins = safeOutputPins.value
+        if (shutter in validPins && focus in validPins && shutter != focus) {
             savePins(shutter, focus)
         }
         // Import custom flow steps
