@@ -135,7 +135,7 @@ jobs:
                 "parts": [
                   { "path": "bootloader-m5sticks3.bin",  "offset": 0 },
                   { "path": "partitions-m5sticks3.bin",  "offset": 32768 },
-                  { "path": "boot_app0-m5sticks3.bin",   "offset": 53248 },
+                  { "path": "boot_app0-m5sticks3.bin",   "offset": 57344 },
                   { "path": "firmware-m5sticks3.bin",     "offset": 65536 }
                 ]
               }

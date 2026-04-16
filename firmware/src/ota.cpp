@@ -10,7 +10,10 @@
 #include <esp_ota_ops.h>
 #include <esp_partition.h>
 #include <esp_chip_info.h>
+#include <esp_log.h>
 #include <Arduino.h>
+
+static const char* TAG = "OTA";
 
 // Forward declaration — implemented in ble_server.cpp
 extern void ble_ota_notify(const uint8_t* data, size_t len);
@@ -73,23 +76,43 @@ void ota_handle_control(const uint8_t* data, size_t len) {
             _ota_total_size = data[1] | (data[2] << 8) | (data[3] << 16) | (data[4] << 24);
             _ota_written = 0;
 
+            // Diagnostic: show current boot partition and OTA state
+            const esp_partition_t* running = esp_ota_get_running_partition();
+            if (running) {
+                ESP_LOGI(TAG, "Running from partition '%s' @ 0x%06X (%u bytes)",
+                         running->label, running->address, running->size);
+            }
+            esp_ota_img_states_t ota_state;
+            if (running && esp_ota_get_state_partition(running, &ota_state) == ESP_OK) {
+                ESP_LOGI(TAG, "Current partition state: %d", (int)ota_state);
+            }
+
             _ota_partition = esp_ota_get_next_update_partition(NULL);
             if (_ota_partition == nullptr) {
-                Serial.println("[OTA] No OTA partition available");
+                ESP_LOGE(TAG, "No OTA partition available");
                 send_ota_status(OTA_ERR_BEGIN);
+                return;
+            }
+
+            ESP_LOGI(TAG, "Target partition '%s' @ 0x%06X (%u bytes)",
+                     _ota_partition->label, _ota_partition->address, _ota_partition->size);
+
+            if (_ota_total_size > _ota_partition->size) {
+                ESP_LOGE(TAG, "Firmware too large: %u > %u", _ota_total_size, _ota_partition->size);
+                send_ota_status(OTA_ERR_SIZE);
                 return;
             }
 
             esp_err_t err = esp_ota_begin(_ota_partition, _ota_total_size, &_ota_handle);
             if (err != ESP_OK) {
-                Serial.printf("[OTA] esp_ota_begin failed: %s\n", esp_err_to_name(err));
+                ESP_LOGE(TAG, "esp_ota_begin failed: %s", esp_err_to_name(err));
                 send_ota_status(OTA_ERR_BEGIN);
                 return;
             }
 
             _ota_active = true;
-            Serial.printf("[OTA] BEGIN — %u bytes → partition '%s'\n",
-                          _ota_total_size, _ota_partition->label);
+            ESP_LOGI(TAG, "BEGIN — %u bytes → partition '%s'",
+                     _ota_total_size, _ota_partition->label);
             send_ota_ready();
             break;
         }
@@ -97,9 +120,16 @@ void ota_handle_control(const uint8_t* data, size_t len) {
         case OTA_END: {
             if (!_ota_active) return;
 
+            ESP_LOGI(TAG, "END — received %u of %u bytes", _ota_written, _ota_total_size);
+
+            if (_ota_written != _ota_total_size) {
+                ESP_LOGW(TAG, "Size mismatch! Expected %u, got %u",
+                         _ota_total_size, _ota_written);
+            }
+
             esp_err_t err = esp_ota_end(_ota_handle);
             if (err != ESP_OK) {
-                Serial.printf("[OTA] esp_ota_end failed: %s\n", esp_err_to_name(err));
+                ESP_LOGE(TAG, "esp_ota_end failed: %s", esp_err_to_name(err));
                 _ota_active = false;
                 send_ota_status(OTA_ERR_VALIDATE);
                 return;
@@ -107,13 +137,14 @@ void ota_handle_control(const uint8_t* data, size_t len) {
 
             err = esp_ota_set_boot_partition(_ota_partition);
             if (err != ESP_OK) {
-                Serial.printf("[OTA] set_boot_partition failed: %s\n", esp_err_to_name(err));
+                ESP_LOGE(TAG, "set_boot_partition failed: %s", esp_err_to_name(err));
                 _ota_active = false;
                 send_ota_status(OTA_ERR_VALIDATE);
                 return;
             }
 
-            Serial.printf("[OTA] COMPLETE — %u bytes written, rebooting...\n", _ota_written);
+            ESP_LOGI(TAG, "COMPLETE — %u bytes written to '%s', rebooting...",
+                     _ota_written, _ota_partition->label);
             send_ota_status(OTA_COMPLETE);
             delay(500);
             esp_restart();
@@ -125,14 +156,14 @@ void ota_handle_control(const uint8_t* data, size_t len) {
                 esp_ota_abort(_ota_handle);
                 _ota_active = false;
                 _ota_written = 0;
-                Serial.println("[OTA] ABORTED");
+                ESP_LOGI(TAG, "ABORTED");
             }
             send_ota_status(OTA_OK);
             break;
         }
 
         default:
-            Serial.printf("[OTA] Unknown control cmd %02X\n", data[0]);
+            ESP_LOGW(TAG, "Unknown control cmd %02X", data[0]);
             break;
     }
 }
@@ -142,7 +173,7 @@ void ota_handle_data(const uint8_t* data, size_t len) {
 
     esp_err_t err = esp_ota_write(_ota_handle, data, len);
     if (err != ESP_OK) {
-        Serial.printf("[OTA] Write error at offset %u: %s\n", _ota_written, esp_err_to_name(err));
+        ESP_LOGE(TAG, "Write error at offset %u: %s", _ota_written, esp_err_to_name(err));
         esp_ota_abort(_ota_handle);
         _ota_active = false;
         send_ota_status(OTA_ERR_WRITE);
@@ -150,4 +181,13 @@ void ota_handle_data(const uint8_t* data, size_t len) {
     }
 
     _ota_written += len;
+
+    // Log progress every ~10%
+    if (_ota_total_size > 0) {
+        uint32_t pct = (_ota_written * 100) / _ota_total_size;
+        uint32_t prev_pct = ((_ota_written - len) * 100) / _ota_total_size;
+        if (pct / 10 != prev_pct / 10) {
+            ESP_LOGI(TAG, "Progress: %u/%u bytes (%u%%)", _ota_written, _ota_total_size, pct);
+        }
+    }
 }

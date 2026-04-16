@@ -5,6 +5,7 @@
 
 #include <Arduino.h>
 #include <esp_ota_ops.h>
+#include <esp_partition.h>
 #include "config.h"
 #include "camera.h"
 #include "ble_server.h"
@@ -40,6 +41,30 @@ void setup() {
     pinMode(PIN_LED, OUTPUT);
     digitalWrite(PIN_LED, LOW);
 #endif
+
+    // Boot partition diagnostics — helps debug OTA issues
+    const esp_partition_t* running = esp_ota_get_running_partition();
+    if (running) {
+        log_i("[BOOT] Running from '%s' @ 0x%06X", running->label, running->address);
+    }
+    const esp_partition_t* next = esp_ota_get_next_update_partition(NULL);
+    if (next) {
+        log_i("[BOOT] Next OTA target: '%s' @ 0x%06X", next->label, next->address);
+    }
+    esp_ota_img_states_t img_state;
+    if (running && esp_ota_get_state_partition(running, &img_state) == ESP_OK) {
+        const char* state_str = "UNKNOWN";
+        switch (img_state) {
+            case ESP_OTA_IMG_NEW:              state_str = "NEW"; break;
+            case ESP_OTA_IMG_PENDING_VERIFY:   state_str = "PENDING_VERIFY"; break;
+            case ESP_OTA_IMG_VALID:            state_str = "VALID"; break;
+            case ESP_OTA_IMG_INVALID:          state_str = "INVALID"; break;
+            case ESP_OTA_IMG_ABORTED:          state_str = "ABORTED"; break;
+            case ESP_OTA_IMG_UNDEFINED:        state_str = "UNDEFINED"; break;
+            default: break;
+        }
+        log_i("[BOOT] Partition state: %s (%d)", state_str, (int)img_state);
+    }
 
     camera_init();
     triggers_init();
