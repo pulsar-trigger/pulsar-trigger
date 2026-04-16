@@ -238,8 +238,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     appUpdateManager.checkForUpdate(
                         com.ehrocha.pulsar.BuildConfig.VERSION_NAME
                     )
-                    // For real device, check firmware update once status arrives
+                    // For real device, wait for device info + status before
+                    // checking firmware updates so chip model is known
                     if (!_simulatorActive.value) {
+                        deviceInfo.filterNotNull().first()
                         val frame = _status.filterNotNull().first()
                         if (frame.fwVersion.isNotEmpty()) {
                             firmwareManager.checkForUpdate(frame.fwVersion)
