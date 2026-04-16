@@ -50,7 +50,7 @@ class FirmwareUpdateManager(
         private fun assetSuffixForChip(chipModel: String?): String = when (chipModel) {
             "ESP32" -> "-esp32.bin"
             "ESP32-S3" -> "-esp32s3.bin"
-            else -> ".bin"
+            else -> "-unknown.bin"  // won't match any real asset
         }
 
         /** Map chip model string from DeviceInfo → expected chip ID byte. */
@@ -212,6 +212,10 @@ class FirmwareUpdateManager(
 
     private fun fetchLatestRelease(): FirmwareRelease? {
         val chipModel = bleManager.deviceInfo.value?.chipModel
+        if (chipModel == null) {
+            Log.w(TAG, "Device info not available — cannot determine chip model for firmware asset")
+            return null
+        }
         val suffix = assetSuffixForChip(chipModel)
         Log.i(TAG, "Looking for firmware asset with suffix '$suffix' (chip=$chipModel)")
         val asset = fetchGitHubRelease(tagPrefix = "firmware-v", assetSuffix = suffix, perPage = 5)

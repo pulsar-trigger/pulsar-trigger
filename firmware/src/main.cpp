@@ -11,6 +11,7 @@
 #include "ble_server.h"
 #include "triggers.h"
 #include "status.h"
+#include "ota.h"
 
 #ifdef HAS_M5DISPLAY
 #include <M5Unified.h>
@@ -103,6 +104,9 @@ void loop() {
 
     // Handle deferred BLE reinit (e.g. after name change)
     ble_handle_reinit();
+
+    // Finalize OTA if pending (deferred from BLE callback to avoid stack overflow)
+    ota_poll();
 
     // Run active trigger mode
     triggers_tick();

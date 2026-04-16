@@ -11,3 +11,4 @@ void ota_init();
 void ota_handle_control(const uint8_t* data, size_t len);
 void ota_handle_data(const uint8_t* data, size_t len);
 bool ota_in_progress();
+void ota_poll();

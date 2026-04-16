@@ -23,6 +23,7 @@ static const esp_partition_t* _ota_partition = nullptr;
 static uint32_t _ota_total_size = 0;
 static uint32_t _ota_written = 0;
 static bool _ota_active = false;
+static volatile bool _ota_finalize_pending = false;
 
 void ota_init() {
     _ota_active = false;
@@ -30,6 +31,7 @@ void ota_init() {
     _ota_partition = nullptr;
     _ota_total_size = 0;
     _ota_written = 0;
+    _ota_finalize_pending = false;
 }
 
 bool ota_in_progress() {
@@ -127,27 +129,11 @@ void ota_handle_control(const uint8_t* data, size_t len) {
                          _ota_total_size, _ota_written);
             }
 
-            esp_err_t err = esp_ota_end(_ota_handle);
-            if (err != ESP_OK) {
-                ESP_LOGE(TAG, "esp_ota_end failed: %s", esp_err_to_name(err));
-                _ota_active = false;
-                send_ota_status(OTA_ERR_VALIDATE);
-                return;
-            }
-
-            err = esp_ota_set_boot_partition(_ota_partition);
-            if (err != ESP_OK) {
-                ESP_LOGE(TAG, "set_boot_partition failed: %s", esp_err_to_name(err));
-                _ota_active = false;
-                send_ota_status(OTA_ERR_VALIDATE);
-                return;
-            }
-
-            ESP_LOGI(TAG, "COMPLETE — %u bytes written to '%s', rebooting...",
-                     _ota_written, _ota_partition->label);
-            send_ota_status(OTA_COMPLETE);
-            delay(500);
-            esp_restart();
+            // Defer finalization to main loop — esp_ota_end() validates the
+            // entire partition image (hash check) which requires more stack
+            // than the BLE callback task (BTC_TASK) provides on ESP32-S3.
+            _ota_finalize_pending = true;
+            ESP_LOGI(TAG, "Finalization deferred to main loop");
             break;
         }
 
@@ -190,4 +176,33 @@ void ota_handle_data(const uint8_t* data, size_t len) {
             ESP_LOGI(TAG, "Progress: %u/%u bytes (%u%%)", _ota_written, _ota_total_size, pct);
         }
     }
+}
+
+void ota_poll() {
+    if (!_ota_finalize_pending) return;
+    _ota_finalize_pending = false;
+
+    ESP_LOGI(TAG, "Finalizing OTA on main task...");
+
+    esp_err_t err = esp_ota_end(_ota_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_ota_end failed: %s", esp_err_to_name(err));
+        _ota_active = false;
+        send_ota_status(OTA_ERR_VALIDATE);
+        return;
+    }
+
+    err = esp_ota_set_boot_partition(_ota_partition);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "set_boot_partition failed: %s", esp_err_to_name(err));
+        _ota_active = false;
+        send_ota_status(OTA_ERR_VALIDATE);
+        return;
+    }
+
+    ESP_LOGI(TAG, "COMPLETE — %u bytes written to '%s', rebooting...",
+             _ota_written, _ota_partition->label);
+    send_ota_status(OTA_COMPLETE);
+    delay(500);
+    esp_restart();
 }
