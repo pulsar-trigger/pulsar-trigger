@@ -9,6 +9,7 @@ import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import java.io.BufferedInputStream
 import java.net.HttpURLConnection
@@ -210,8 +211,15 @@ class FirmwareUpdateManager(
         _latestRelease.value = null
     }
 
-    private fun fetchLatestRelease(): FirmwareRelease? {
-        val chipModel = bleManager.deviceInfo.value?.chipModel
+    private suspend fun fetchLatestRelease(): FirmwareRelease? {
+        var chipModel = bleManager.deviceInfo.value?.chipModel
+        if (chipModel == null) {
+            // Device info may not have arrived yet — request and wait briefly
+            bleManager.sendCommand(CommandBuilder.deviceInfoRequest())
+            chipModel = withTimeoutOrNull(3000) {
+                bleManager.deviceInfo.filterNotNull().first()
+            }?.chipModel
+        }
         if (chipModel == null) {
             Log.w(TAG, "Device info not available — cannot determine chip model for firmware asset")
             return null
