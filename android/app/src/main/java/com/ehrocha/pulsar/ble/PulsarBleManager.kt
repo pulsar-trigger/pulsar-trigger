@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.data.Data
+import no.nordicsemi.android.ble.ktx.suspend
 import com.ehrocha.pulsar.AppConfig
 
 class PulsarBleManager(context: Context) : BleManager(context) {
@@ -150,12 +151,19 @@ class PulsarBleManager(context: Context) : BleManager(context) {
         } ?: Log.w(TAG, "OTA control characteristic not available")
     }
 
-    /** Write a firmware chunk to OTA data characteristic (write-no-response for speed). */
-    fun writeOtaData(chunk: ByteArray): Boolean {
+    /** Write a firmware chunk to OTA data characteristic.
+     *  Suspends until the BLE stack confirms the write, providing flow control
+     *  that prevents buffer overflows on ESP32-S3. */
+    suspend fun writeOtaData(chunk: ByteArray): Boolean {
         val char = otaDataChar ?: return false
-        writeCharacteristic(char, chunk, BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE)
-            .enqueue()
-        return true
+        return try {
+            writeCharacteristic(char, chunk, BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE)
+                .suspend()
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "OTA data write failed", e)
+            false
+        }
     }
 
     fun hasOtaSupport(): Boolean = otaCtrlChar != null && otaDataChar != null

@@ -42,6 +42,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainMenuScreen(
     vm: PulsarViewModel,
+    initialTab: Int = 0,
+    onTabChanged: (Int) -> Unit = {},
     onQuickFlow: (FlowStepType) -> Unit,
     onManualSelected: () -> Unit,
     onCustomFlowSelected: () -> Unit = {},
@@ -63,8 +65,12 @@ fun MainMenuScreen(
         stringResource(R.string.tab_trigger),
         stringResource(R.string.tab_tools),
     )
-    val pagerState = rememberPagerState(pageCount = { tabs.size })
+    val pagerState = rememberPagerState(initialPage = initialTab, pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(pagerState.currentPage) {
+        onTabChanged(pagerState.currentPage)
+    }
 
     Column(
         modifier = Modifier

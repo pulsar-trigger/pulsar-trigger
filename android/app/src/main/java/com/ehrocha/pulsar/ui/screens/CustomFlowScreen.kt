@@ -72,10 +72,19 @@ fun CustomFlowScreen(
     var screenState by remember { mutableStateOf(FlowScreenState.LIBRARY) }
     var editingFlowName by remember { mutableStateOf<String?>(null) }
     var savedSnapshot by remember { mutableStateOf<List<FlowStep>>(emptyList()) }
+    // Remember which library tab the user was on so back navigation restores it
+    var lastLibraryTab by remember { mutableIntStateOf(0) }
 
     // When a flow is running, always show the editor
+    // When quick-launched flow finishes, return to previous screen
+    var wasRunning by remember { mutableStateOf(false) }
     LaunchedEffect(running) {
-        if (running) screenState = FlowScreenState.EDITOR
+        if (running) {
+            screenState = FlowScreenState.EDITOR
+            wasRunning = true
+        } else if (wasRunning && quickLaunch) {
+            onBack()
+        }
     }
 
     var showExitDialog by remember { mutableStateOf(false) }
@@ -97,6 +106,8 @@ fun CustomFlowScreen(
     when (screenState) {
         FlowScreenState.LIBRARY -> FlowLibraryView(
             saved = saved,
+            initialTab = lastLibraryTab,
+            onTabChanged = { lastLibraryTab = it },
             onBack = onBack,
             onNewFlow = {
                 vm.saveFlowSteps(emptyList())
@@ -194,6 +205,8 @@ fun CustomFlowScreen(
 @Composable
 private fun FlowLibraryView(
     saved: List<SavedFlow>,
+    initialTab: Int = 0,
+    onTabChanged: (Int) -> Unit = {},
     onBack: () -> Unit,
     onNewFlow: () -> Unit,
     onEditFlow: (SavedFlow) -> Unit,
@@ -210,8 +223,13 @@ private fun FlowLibraryView(
         stringResource(R.string.flow_tab_my_flows),
         stringResource(R.string.flow_tab_recommended),
     )
-    val pagerState = rememberPagerState(initialPage = 0) { tabs.size }
+    val pagerState = rememberPagerState(initialPage = initialTab) { tabs.size }
     val coroutineScope = rememberCoroutineScope()
+
+    // Notify parent when the settled page changes so it survives LIBRARY↔EDITOR transitions
+    LaunchedEffect(pagerState.currentPage) {
+        onTabChanged(pagerState.currentPage)
+    }
 
     Column(
         modifier = Modifier

@@ -162,6 +162,7 @@ class MainActivity : AppCompatActivity() {
 @Composable
 fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null) {
     var currentScreen by remember { mutableStateOf<AppScreen>(AppScreen.Scan) }
+    var menuTab by remember { mutableIntStateOf(0) }
     val connected by vm.connected.collectAsState()
 
     // ── Update-available dialog ──────────────────────────────────────
@@ -295,6 +296,8 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
             AppScreen.Scan -> ScanScreen(vm) { currentScreen = AppScreen.Menu }
             AppScreen.Menu -> MainMenuScreen(
                 vm = vm,
+                initialTab = menuTab,
+                onTabChanged = { menuTab = it },
                 onQuickFlow = { type ->
                     when (type) {
                         FlowStepType.INTERVALOMETER -> currentScreen = AppScreen.Mode(TriggerMode.INTERVALOMETER)
