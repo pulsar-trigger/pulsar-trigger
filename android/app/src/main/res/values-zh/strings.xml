@@ -430,4 +430,7 @@
     <string name="permissions_required_body">Pulsar Trigger 需要蓝牙和位置权限来发现和连接您的 Pulsar 设备。\n\n如果您之前拒绝了权限，请点击"打开设置"并手动启用。</string>
     <string name="permissions_grant_button">授予权限</string>
     <string name="permissions_open_settings">打开设置</string>
+
+    <!-- Scan screen -->
+    <string name="scan_pull_hint">下拉搜索设备</string>
 </resources>

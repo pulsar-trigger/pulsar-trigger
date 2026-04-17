@@ -7,7 +7,6 @@ package com.ehrocha.pulsar.ui.screens
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
-import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,14 +15,19 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PhoneAndroid
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.style.TextAlign
+import com.ehrocha.pulsar.AppConfig
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("MissingPermission")
 @Composable
 fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
@@ -47,6 +52,13 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
         LaunchedEffect(Unit) { onConnected() }
     }
 
+    // Auto-start scanning when the screen appears
+    LaunchedEffect(Unit) {
+        if (!scanning) vm.startScan()
+    }
+
+    var showLanguageDialog by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -54,7 +66,7 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
             .padding(horizontal = 24.dp)
     ) {
         Spacer(Modifier.height(64.dp))
-        
+
         // Brand Header
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -71,7 +83,7 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
                 Icon(Icons.Default.Bluetooth, contentDescription = null, tint = Color.White)
             }
             Spacer(Modifier.width(16.dp))
-            Column {
+            Column(Modifier.weight(1f)) {
                 Text(
                     stringResource(R.string.app_name),
                     style = MaterialTheme.typography.headlineMedium,
@@ -84,6 +96,13 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                     letterSpacing = 1.sp
+                )
+            }
+            IconButton(onClick = { showLanguageDialog = true }) {
+                Icon(
+                    Icons.Default.Language,
+                    contentDescription = stringResource(R.string.section_language),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -100,56 +119,28 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-
-        Spacer(Modifier.height(24.dp))
-
-        // Scan Action
-        Surface(
-            onClick = { if (scanning) vm.stopScan() else vm.startScan() },
-            shape = RoundedCornerShape(16.dp),
-            color = if (scanning) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    if (scanning) Icons.Default.Refresh else Icons.Default.Search,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    if (scanning) stringResource(R.string.stop_scanning) else stringResource(R.string.search_for_devices),
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-        AnimatedVisibility(visible = scanning) {
-            LinearProgressIndicator(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(2.dp)
-                    .clip(CircleShape),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = Color.Transparent
-            )
-        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            stringResource(R.string.scan_pull_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+        )
 
         Spacer(Modifier.height(16.dp))
 
-        LazyColumn(
-            contentPadding = PaddingValues(vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.weight(1f)
+        PullToRefreshBox(
+            isRefreshing = scanning,
+            onRefresh = { vm.stopScan(); vm.startScan() },
+            modifier = Modifier.weight(1f),
         ) {
-            items(devices) { device ->
-                DeviceCard(device) { vm.connectTo(device) }
+            LazyColumn(
+                contentPadding = PaddingValues(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(devices) { device ->
+                    DeviceCard(device) { vm.connectTo(device) }
+                }
             }
         }
 
@@ -193,6 +184,89 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
         
         Spacer(Modifier.height(24.dp))
     }
+
+    if (showLanguageDialog) {
+        LanguagePickerDialog(onDismiss = { showLanguageDialog = false })
+    }
+}
+
+@Composable
+private fun LanguagePickerDialog(onDismiss: () -> Unit) {
+    val currentLocale = androidx.appcompat.app.AppCompatDelegate.getApplicationLocales()
+    val currentTag = if (currentLocale.isEmpty) "" else currentLocale.toLanguageTags()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.section_language)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                // System default
+                val isSystemDefault = currentTag.isEmpty()
+                Surface(
+                    onClick = {
+                        androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
+                            androidx.core.os.LocaleListCompat.getEmptyLocaleList()
+                        )
+                        onDismiss()
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    tonalElevation = if (isSystemDefault) 4.dp else 0.dp,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                    ) {
+                        RadioButton(selected = isSystemDefault, onClick = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            stringResource(R.string.lang_system_default),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                }
+
+                AppConfig.SUPPORTED_LOCALES.forEach { (tag, label) ->
+                    val selected = currentTag.startsWith(tag)
+                    Surface(
+                        onClick = {
+                            androidx.appcompat.app.AppCompatDelegate.setApplicationLocales(
+                                androidx.core.os.LocaleListCompat.forLanguageTags(tag)
+                            )
+                            onDismiss()
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        tonalElevation = if (selected) 4.dp else 0.dp,
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                        ) {
+                            RadioButton(selected = selected, onClick = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(label, style = MaterialTheme.typography.bodyLarge)
+                            if (tag != "en") {
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    "(${java.util.Locale(tag).getDisplayLanguage(java.util.Locale.ENGLISH)})",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+    )
 }
 
 @SuppressLint("MissingPermission")

@@ -430,4 +430,7 @@
     <string name="permissions_required_body">Pulsar Trigger benötigt Bluetooth- und Standortberechtigungen, um Ihr Pulsar-Gerät zu finden und sich damit zu verbinden.\n\nWenn Sie zuvor eine Berechtigung abgelehnt haben, tippen Sie auf „Einstellungen Öffnen" und aktivieren Sie sie manuell.</string>
     <string name="permissions_grant_button">Berechtigungen Erteilen</string>
     <string name="permissions_open_settings">Einstellungen Öffnen</string>
+
+    <!-- Scan screen -->
+    <string name="scan_pull_hint">Nach unten ziehen, um nach Geräten zu suchen</string>
 </resources>

@@ -430,4 +430,7 @@
     <string name="permissions_required_body">Pulsar TriggerはPulsarデバイスを検出・接続するために、Bluetoothと位置情報の権限が必要です。\n\n以前に権限を拒否した場合は、「設定を開く」をタップして手動で有効にしてください。</string>
     <string name="permissions_grant_button">権限を許可</string>
     <string name="permissions_open_settings">設定を開く</string>
+
+    <!-- Scan screen -->
+    <string name="scan_pull_hint">下に引いてデバイスを検索</string>
 </resources>

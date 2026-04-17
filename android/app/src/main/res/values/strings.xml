@@ -561,4 +561,7 @@
     <string name="permissions_required_body">Pulsar Trigger needs Bluetooth and Location permissions to discover and connect to your Pulsar device.\n\nIf you previously denied a permission, tap "Open Settings" and enable them manually.</string>
     <string name="permissions_grant_button">Grant Permissions</string>
     <string name="permissions_open_settings">Open Settings</string>
+
+    <!-- Scan screen -->
+    <string name="scan_pull_hint">Pull down to scan for devices</string>
 </resources>
