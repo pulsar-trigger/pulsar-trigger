@@ -360,4 +360,41 @@
 
     <!-- Flow timeline -->
     <string name="flow_timeline_progress">步骤 %1$d / %2$d</string>
+
+    <!-- Unsaved changes -->
+    <string name="dialog_unsaved_title">未保存的更改</string>
+    <string name="dialog_unsaved_msg">此流程有未保存的更改。您想怎么做？</string>
+    <string name="btn_save_and_exit">保存</string>
+    <string name="btn_discard">放弃</string>
+
+    <!-- Flow library tabs & filters -->
+    <string name="flow_tab_recommended">预置</string>
+    <string name="flow_tab_my_flows">我的流程</string>
+    <string name="flow_section_presets">NPF 预设</string>
+    <string name="flow_section_custom">我的流程</string>
+    <string name="flow_help">通过串联不同模式创建多步骤拍摄序列。\n\n• 组合间隔计时器、天文、暗帧和暂停步骤\n• 保存流程以便跨会话复用\n• 内置常见焦距的 NPF 预设\n• 在序列间添加带唤醒提醒的暂停\n\n点击 + 创建新流程，或选择预设立即运行。</string>
+    <string name="flow_total_time">总计：%1$s</string>
+    <string name="flow_filter_all">全部</string>
+    <string name="flow_filter_favorites">收藏</string>
+    <string name="flow_section_favorites">收藏</string>
+    <string name="label_tags">标签</string>
+    <string name="label_add_tag">添加标签</string>
+    <string name="label_new_tag">新标签…</string>
+
+    <!-- Auto shutdown -->
+    <string name="label_auto_off">自动关机</string>
+    <string name="auto_off_disabled">已禁用</string>
+    <string name="auto_off_minutes">%d 分钟</string>
+
+    <!-- Dark Frame & Ramp modes -->
+    <string name="mode_dark_frame">暗帧</string>
+    <string name="mode_dark_frame_desc">盖上镜头盖拍摄校准帧</string>
+    <string name="mode_ramp">曝光渐变</string>
+    <string name="mode_ramp_desc">为圣杯延时摄影平滑过渡曝光</string>
+    <string name="step_type_dark_frame">暗帧</string>
+    <string name="step_type_ramp">曝光渐变</string>
+    <string name="step_summary_dark_frame">%1$d 帧，%2$dms 曝光</string>
+    <string name="step_summary_ramp">%1$d 步，%2$dms → %3$dms</string>
+    <string name="label_wake_on_pause">暂停时唤醒屏幕</string>
+    <string name="status_estimated_duration">预计时长：%1$s</string>
 </resources>

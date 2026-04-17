@@ -306,7 +306,14 @@ private fun FlowLibraryView(
                 if (hasFavorites) {
                     FilterChip(
                         selected = showFavoritesOnly,
-                        onClick = { showFavoritesOnly = !showFavoritesOnly },
+                        onClick = {
+                            if (showFavoritesOnly) {
+                                showFavoritesOnly = false
+                            } else {
+                                showFavoritesOnly = true
+                                activeTagFilter = null
+                            }
+                        },
                         label = { Text(stringResource(R.string.flow_filter_favorites)) },
                         leadingIcon = {
                             Icon(
@@ -322,7 +329,12 @@ private fun FlowLibraryView(
                     FilterChip(
                         selected = activeTagFilter == tag,
                         onClick = {
-                            activeTagFilter = if (activeTagFilter == tag) null else tag
+                            if (activeTagFilter == tag) {
+                                activeTagFilter = null
+                            } else {
+                                activeTagFilter = tag
+                                showFavoritesOnly = false
+                            }
                         },
                         label = { Text(tag) },
                         modifier = Modifier.height(32.dp),

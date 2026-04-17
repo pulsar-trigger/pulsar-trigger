@@ -358,4 +358,41 @@
 
     <!-- Flow timeline -->
     <string name="flow_timeline_progress">Paso %1$d de %2$d</string>
+
+    <!-- Unsaved changes -->
+    <string name="dialog_unsaved_title">Cambios Sin Guardar</string>
+    <string name="dialog_unsaved_msg">Tienes cambios sin guardar en este flujo. ¿Qué deseas hacer?</string>
+    <string name="btn_save_and_exit">Guardar</string>
+    <string name="btn_discard">Descartar</string>
+
+    <!-- Flow library tabs & filters -->
+    <string name="flow_tab_recommended">Predeterminados</string>
+    <string name="flow_tab_my_flows">Mis Flujos</string>
+    <string name="flow_section_presets">Presets NPF</string>
+    <string name="flow_section_custom">Mis Flujos</string>
+    <string name="flow_help">Crea secuencias de disparo multi-paso encadenando diferentes modos.\n\n• Combina intervalómetro, astro, dark frames y pausas\n• Guarda flujos para reutilizar entre sesiones\n• Presets NPF integrados para distancias focales comunes\n• Añade pausas con alertas entre secuencias\n\nToca + para crear un nuevo flujo, o selecciona un preset para ejecutar.</string>
+    <string name="flow_total_time">Total: %1$s</string>
+    <string name="flow_filter_all">Todos</string>
+    <string name="flow_filter_favorites">Favoritos</string>
+    <string name="flow_section_favorites">Favoritos</string>
+    <string name="label_tags">Etiquetas</string>
+    <string name="label_add_tag">Añadir etiqueta</string>
+    <string name="label_new_tag">Nueva etiqueta…</string>
+
+    <!-- Auto shutdown -->
+    <string name="label_auto_off">Apagado Automático</string>
+    <string name="auto_off_disabled">Desactivado</string>
+    <string name="auto_off_minutes">%d min</string>
+
+    <!-- Dark Frame & Ramp modes -->
+    <string name="mode_dark_frame">Dark Frames</string>
+    <string name="mode_dark_frame_desc">Captura frames de calibración con la tapa puesta</string>
+    <string name="mode_ramp">Rampa de Exposición</string>
+    <string name="mode_ramp_desc">Transición suave de exposición para timelapses holy grail</string>
+    <string name="step_type_dark_frame">Dark Frame</string>
+    <string name="step_type_ramp">Rampa de Exposición</string>
+    <string name="step_summary_dark_frame">%1$d frames, %2$dms exposición</string>
+    <string name="step_summary_ramp">%1$d pasos, %2$dms → %3$dms</string>
+    <string name="label_wake_on_pause">Activar pantalla en pausa</string>
+    <string name="status_estimated_duration">Duración estimada: %1$s</string>
 </resources>

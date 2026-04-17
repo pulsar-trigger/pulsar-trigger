@@ -360,4 +360,41 @@
 
     <!-- Flow timeline -->
     <string name="flow_timeline_progress">Passo %1$d de %2$d</string>
+
+    <!-- Unsaved changes -->
+    <string name="dialog_unsaved_title">Alterações Não Salvas</string>
+    <string name="dialog_unsaved_msg">Você tem alterações não salvas neste fluxo. O que deseja fazer?</string>
+    <string name="btn_save_and_exit">Salvar</string>
+    <string name="btn_discard">Descartar</string>
+
+    <!-- Flow library tabs & filters -->
+    <string name="flow_tab_recommended">Prontos</string>
+    <string name="flow_tab_my_flows">Meus Fluxos</string>
+    <string name="flow_section_presets">Presets NPF</string>
+    <string name="flow_section_custom">Meus Fluxos</string>
+    <string name="flow_help">Crie sequências de disparo multi-etapas encadeando diferentes modos.\n\n• Combine intervalômetro, astro, dark frames e pausas\n• Salve fluxos para reutilizar entre sessões\n• Presets NPF integrados para distâncias focais comuns\n• Adicione pausas com alertas entre sequências\n\nToque + para criar um novo fluxo, ou selecione um preset para executar.</string>
+    <string name="flow_total_time">Total: %1$s</string>
+    <string name="flow_filter_all">Todos</string>
+    <string name="flow_filter_favorites">Favoritos</string>
+    <string name="flow_section_favorites">Favoritos</string>
+    <string name="label_tags">Tags</string>
+    <string name="label_add_tag">Adicionar tag</string>
+    <string name="label_new_tag">Nova tag…</string>
+
+    <!-- Auto shutdown -->
+    <string name="label_auto_off">Desligamento Automático</string>
+    <string name="auto_off_disabled">Desativado</string>
+    <string name="auto_off_minutes">%d min</string>
+
+    <!-- Dark Frame & Ramp modes -->
+    <string name="mode_dark_frame">Dark Frames</string>
+    <string name="mode_dark_frame_desc">Capture frames de calibração com a tampa na lente</string>
+    <string name="mode_ramp">Rampa de Exposição</string>
+    <string name="mode_ramp_desc">Transição suave de exposição para timelapses holy grail</string>
+    <string name="step_type_dark_frame">Dark Frame</string>
+    <string name="step_type_ramp">Rampa de Exposição</string>
+    <string name="step_summary_dark_frame">%1$d frames, %2$dms exposição</string>
+    <string name="step_summary_ramp">%1$d passos, %2$dms → %3$dms</string>
+    <string name="label_wake_on_pause">Acordar tela na pausa</string>
+    <string name="status_estimated_duration">Duração estimada: %1$s</string>
 </resources>

@@ -360,4 +360,41 @@
 
     <!-- Flow timeline -->
     <string name="flow_timeline_progress">Schritt %1$d von %2$d</string>
+
+    <!-- Unsaved changes -->
+    <string name="dialog_unsaved_title">Ungespeicherte Änderungen</string>
+    <string name="dialog_unsaved_msg">Du hast ungespeicherte Änderungen an diesem Ablauf. Was möchtest du tun?</string>
+    <string name="btn_save_and_exit">Speichern</string>
+    <string name="btn_discard">Verwerfen</string>
+
+    <!-- Flow library tabs & filters -->
+    <string name="flow_tab_recommended">Vorinstalliert</string>
+    <string name="flow_tab_my_flows">Meine Abläufe</string>
+    <string name="flow_section_presets">NPF-Voreinstellungen</string>
+    <string name="flow_section_custom">Meine Abläufe</string>
+    <string name="flow_help">Erstelle mehrstufige Aufnahmesequenzen, die verschiedene Modi verketten.\n\n• Kombiniere Intervalltimer, Astro, Dark Frames und Pausen\n• Speichere Abläufe zur Wiederverwendung\n• Integrierte NPF-Voreinstellungen für gängige Brennweiten\n• Füge Pausen mit Weckalarmen zwischen Sequenzen hinzu\n\nTippe auf +, um einen neuen Ablauf zu erstellen, oder wähle eine Vorlage.</string>
+    <string name="flow_total_time">Gesamt: %1$s</string>
+    <string name="flow_filter_all">Alle</string>
+    <string name="flow_filter_favorites">Favoriten</string>
+    <string name="flow_section_favorites">Favoriten</string>
+    <string name="label_tags">Tags</string>
+    <string name="label_add_tag">Tag hinzufügen</string>
+    <string name="label_new_tag">Neues Tag…</string>
+
+    <!-- Auto shutdown -->
+    <string name="label_auto_off">Automatische Abschaltung</string>
+    <string name="auto_off_disabled">Deaktiviert</string>
+    <string name="auto_off_minutes">%d Min</string>
+
+    <!-- Dark Frame & Ramp modes -->
+    <string name="mode_dark_frame">Dark Frames</string>
+    <string name="mode_dark_frame_desc">Kalibrierungsbilder mit Objektivdeckel aufnehmen</string>
+    <string name="mode_ramp">Belichtungsrampe</string>
+    <string name="mode_ramp_desc">Sanfter Belichtungsübergang für Holy-Grail-Zeitraffer</string>
+    <string name="step_type_dark_frame">Dark Frame</string>
+    <string name="step_type_ramp">Belichtungsrampe</string>
+    <string name="step_summary_dark_frame">%1$d Bilder, %2$dms Belichtung</string>
+    <string name="step_summary_ramp">%1$d Schritte, %2$dms → %3$dms</string>
+    <string name="label_wake_on_pause">Bildschirm bei Pause aktivieren</string>
+    <string name="status_estimated_duration">Geschätzte Dauer: %1$s</string>
 </resources>

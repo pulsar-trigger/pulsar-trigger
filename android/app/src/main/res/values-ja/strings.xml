@@ -360,4 +360,41 @@
 
     <!-- Flow timeline -->
     <string name="flow_timeline_progress">ステップ %1$d / %2$d</string>
+
+    <!-- Unsaved changes -->
+    <string name="dialog_unsaved_title">未保存の変更</string>
+    <string name="dialog_unsaved_msg">このフローに未保存の変更があります。どうしますか？</string>
+    <string name="btn_save_and_exit">保存</string>
+    <string name="btn_discard">破棄</string>
+
+    <!-- Flow library tabs & filters -->
+    <string name="flow_tab_recommended">プリセット</string>
+    <string name="flow_tab_my_flows">マイフロー</string>
+    <string name="flow_section_presets">NPF プリセット</string>
+    <string name="flow_section_custom">マイフロー</string>
+    <string name="flow_help">異なるモードを連結してマルチステップ撮影シーケンスを作成します。\n\n• インターバロメーター、天体、ダークフレーム、一時停止を組み合わせ\n• フローを保存して再利用\n• 一般的な焦点距離用の NPF プリセット内蔵\n• シーケンス間にウェイクアラート付き一時停止を追加\n\n+ をタップして新規フローを作成するか、プリセットを選択して実行。</string>
+    <string name="flow_total_time">合計: %1$s</string>
+    <string name="flow_filter_all">すべて</string>
+    <string name="flow_filter_favorites">お気に入り</string>
+    <string name="flow_section_favorites">お気に入り</string>
+    <string name="label_tags">タグ</string>
+    <string name="label_add_tag">タグを追加</string>
+    <string name="label_new_tag">新しいタグ…</string>
+
+    <!-- Auto shutdown -->
+    <string name="label_auto_off">自動シャットダウン</string>
+    <string name="auto_off_disabled">無効</string>
+    <string name="auto_off_minutes">%d 分</string>
+
+    <!-- Dark Frame & Ramp modes -->
+    <string name="mode_dark_frame">ダークフレーム</string>
+    <string name="mode_dark_frame_desc">レンズキャップを付けてキャリブレーションフレームを撮影</string>
+    <string name="mode_ramp">露出ランプ</string>
+    <string name="mode_ramp_desc">ホーリーグレイルタイムラプス用の滑らかな露出遷移</string>
+    <string name="step_type_dark_frame">ダークフレーム</string>
+    <string name="step_type_ramp">露出ランプ</string>
+    <string name="step_summary_dark_frame">%1$d フレーム、%2$dms 露出</string>
+    <string name="step_summary_ramp">%1$d ステップ、%2$dms → %3$dms</string>
+    <string name="label_wake_on_pause">一時停止時に画面を起動</string>
+    <string name="status_estimated_duration">推定時間: %1$s</string>
 </resources>
