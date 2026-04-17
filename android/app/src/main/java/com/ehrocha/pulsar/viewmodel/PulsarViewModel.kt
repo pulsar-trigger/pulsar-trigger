@@ -460,8 +460,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         prefs.edit().putString(KEY_FLOW_STEPS, FlowStep.serializeList(steps)).apply()
     }
 
-    fun saveFlowAs(name: String) {
-        val flow = SavedFlow(name = name, steps = _flowSteps.value)
+    fun saveFlowAs(name: String, tags: List<String> = emptyList()) {
+        val existing = _savedFlows.value.firstOrNull { it.name == name }
+        val flow = SavedFlow(
+            name = name,
+            steps = _flowSteps.value,
+            favorite = existing?.favorite ?: false,
+            tags = tags.ifEmpty { existing?.tags ?: emptyList() },
+        )
         val updated = _savedFlows.value.filter { it.name != name } + flow
         _savedFlows.value = updated
         _combinedFlows.value = FlowPresets.ALL + updated
@@ -479,6 +485,29 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         _combinedFlows.value = FlowPresets.ALL + updated
         prefs.edit().putString(KEY_SAVED_FLOWS, SavedFlow.serializeList(updated)).apply()
     }
+
+    fun toggleFavorite(name: String) {
+        val updated = _savedFlows.value.map {
+            if (it.name == name) it.copy(favorite = !it.favorite) else it
+        }
+        _savedFlows.value = updated
+        _combinedFlows.value = FlowPresets.ALL + updated
+        prefs.edit().putString(KEY_SAVED_FLOWS, SavedFlow.serializeList(updated)).apply()
+    }
+
+    fun updateFlowTags(name: String, tags: List<String>) {
+        val updated = _savedFlows.value.map {
+            if (it.name == name) it.copy(tags = tags) else it
+        }
+        _savedFlows.value = updated
+        _combinedFlows.value = FlowPresets.ALL + updated
+        prefs.edit().putString(KEY_SAVED_FLOWS, SavedFlow.serializeList(updated)).apply()
+    }
+
+    /** All unique tags across built-in and user flows. */
+    val allTags: StateFlow<List<String>> = _combinedFlows
+        .map { flows -> flows.flatMap { it.tags }.distinct().sorted() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     fun startFlow() {
         val steps = _flowSteps.value

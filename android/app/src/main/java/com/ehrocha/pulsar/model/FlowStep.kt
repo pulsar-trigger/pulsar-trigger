@@ -156,6 +156,7 @@ object FlowPresets {
                 ),
             ),
             builtIn = true,
+            tags = listOf("Astro"),
         )
     }
 
@@ -176,6 +177,7 @@ object FlowPresets {
                 ),
             ),
             builtIn = true,
+            tags = listOf("Dark Frames"),
         )
     }
 
@@ -199,11 +201,17 @@ data class SavedFlow(
     val name: String,
     val steps: List<FlowStep>,
     val builtIn: Boolean = false,
+    val favorite: Boolean = false,
+    val tags: List<String> = emptyList(),
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("name", name)
         put("steps", JSONArray().also { arr ->
             steps.forEach { arr.put(it.toJson()) }
+        })
+        put("favorite", favorite)
+        put("tags", JSONArray().also { arr ->
+            tags.forEach { arr.put(it) }
         })
     }
 
@@ -212,6 +220,10 @@ data class SavedFlow(
             name = json.getString("name"),
             steps = json.optJSONArray("steps")?.let { arr ->
                 (0 until arr.length()).map { FlowStep.fromJson(arr.getJSONObject(it)) }
+            } ?: emptyList(),
+            favorite = json.optBoolean("favorite", false),
+            tags = json.optJSONArray("tags")?.let { arr ->
+                (0 until arr.length()).map { arr.getString(it) }
             } ?: emptyList(),
         )
 

@@ -12,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -105,6 +106,7 @@ fun CustomFlowScreen(
 
     when (screenState) {
         FlowScreenState.LIBRARY -> FlowLibraryView(
+            vm = vm,
             saved = saved,
             initialTab = lastLibraryTab,
             onTabChanged = { lastLibraryTab = it },
@@ -204,6 +206,7 @@ fun CustomFlowScreen(
 
 @Composable
 private fun FlowLibraryView(
+    vm: PulsarViewModel,
     saved: List<SavedFlow>,
     initialTab: Int = 0,
     onTabChanged: (Int) -> Unit = {},
@@ -215,9 +218,26 @@ private fun FlowLibraryView(
 ) {
     val connected = LocalDeviceConnected.current
     var confirmDelete by remember { mutableStateOf<String?>(null) }
+    val allTags by vm.allTags.collectAsState()
+    var activeTagFilter by remember { mutableStateOf<String?>(null) }
 
     val presets = saved.filter { it.builtIn }
     val userFlows = saved.filter { !it.builtIn }
+
+    // Sort: favorites first, then alphabetical
+    val sortedUserFlows = remember(userFlows) {
+        userFlows.sortedWith(compareByDescending<SavedFlow> { it.favorite }.thenBy { it.name })
+    }
+
+    // Apply tag filter
+    val filteredUserFlows = remember(sortedUserFlows, activeTagFilter) {
+        if (activeTagFilter == null) sortedUserFlows
+        else sortedUserFlows.filter { activeTagFilter in it.tags }
+    }
+    val filteredPresets = remember(presets, activeTagFilter) {
+        if (activeTagFilter == null) presets
+        else presets.filter { activeTagFilter in it.tags }
+    }
 
     val tabs = listOf(
         stringResource(R.string.flow_tab_my_flows),
@@ -264,6 +284,32 @@ private fun FlowLibraryView(
             }
         }
 
+        // ── Tag filter chips ────────────────────────────────────────────
+        if (allTags.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                FilterChip(
+                    selected = activeTagFilter == null,
+                    onClick = { activeTagFilter = null },
+                    label = { Text(stringResource(R.string.flow_filter_all)) },
+                    modifier = Modifier.height(32.dp),
+                )
+                allTags.forEach { tag ->
+                    FilterChip(
+                        selected = activeTagFilter == tag,
+                        onClick = { activeTagFilter = if (activeTagFilter == tag) null else tag },
+                        label = { Text(tag) },
+                        modifier = Modifier.height(32.dp),
+                    )
+                }
+            }
+        }
+
         Spacer(Modifier.height(12.dp))
 
         // ── Swipeable tab content ───────────────────────────────────────
@@ -285,24 +331,25 @@ private fun FlowLibraryView(
                 ) {
                     when (page) {
                         0 -> { // My Flows (user-created)
-                            if (userFlows.isEmpty()) {
+                            if (filteredUserFlows.isEmpty()) {
                                 FlowEmptyState()
                             } else {
-                                userFlows.forEach { flow ->
+                                filteredUserFlows.forEach { flow ->
                                     SavedFlowCard(
                                         flow = flow,
                                         onEdit = { onEditFlow(flow) },
                                         onDelete = { confirmDelete = flow.name },
                                         onRun = { onRunFlow(flow) },
+                                        onToggleFavorite = { vm.toggleFavorite(flow.name) },
                                     )
                                 }
                             }
                         }
                         1 -> { // Out of box (built-in presets)
-                            if (presets.isEmpty()) {
+                            if (filteredPresets.isEmpty()) {
                                 FlowEmptyState()
                             } else {
-                                presets.forEach { flow ->
+                                filteredPresets.forEach { flow ->
                                     SavedFlowCard(
                                         flow = flow,
                                         onEdit = { onEditFlow(flow) },
@@ -392,6 +439,7 @@ private fun SavedFlowCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onRun: () -> Unit,
+    onToggleFavorite: (() -> Unit)? = null,
 ) {
     val connected = LocalDeviceConnected.current
     Surface(
@@ -401,18 +449,39 @@ private fun SavedFlowCard(
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // Favorite star (only for user flows)
+                if (onToggleFavorite != null) {
+                    IconButton(onClick = onToggleFavorite, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            if (flow.favorite) Icons.Default.Star else Icons.Default.StarBorder,
+                            contentDescription = stringResource(R.string.flow_filter_favorites),
+                            modifier = Modifier.size(20.dp),
+                            tint = if (flow.favorite) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         flow.name,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )
-                    Text(
-                        if (flow.steps.size != 1) stringResource(R.string.flow_step_count_plural, flow.steps.size)
-                        else stringResource(R.string.flow_step_count, flow.steps.size),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            if (flow.steps.size != 1) stringResource(R.string.flow_step_count_plural, flow.steps.size)
+                            else stringResource(R.string.flow_step_count, flow.steps.size),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        if (flow.tags.isNotEmpty()) {
+                            Text(
+                                " · ${flow.tags.joinToString(", ")}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            )
+                        }
+                    }
                 }
                 if (!flow.builtIn) {
                     IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
@@ -766,11 +835,13 @@ private fun FlowEditorView(
     }
 
     if (showSaveDialog) {
+        val allTags by vm.allTags.collectAsState()
         SaveFlowDialog(
             existingNames = saved.map { it.name },
+            allTags = allTags,
             onDismiss = { showSaveDialog = false },
-            onSave = { name ->
-                vm.saveFlowAs(name)
+            onSave = { name, tags ->
+                vm.saveFlowAs(name, tags)
                 onFlowNameChanged(name)
                 showSaveDialog = false
             },
@@ -1427,10 +1498,15 @@ private fun RampStepEditor(step: FlowStep, onChange: (FlowStep) -> Unit) {
 @Composable
 private fun SaveFlowDialog(
     existingNames: List<String>,
+    allTags: List<String>,
+    initialTags: List<String> = emptyList(),
     onDismiss: () -> Unit,
-    onSave: (String) -> Unit,
+    onSave: (name: String, tags: List<String>) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
+    var selectedTags by remember { mutableStateOf(initialTags.toSet()) }
+    var showNewTagField by remember { mutableStateOf(false) }
+    var newTag by remember { mutableStateOf("") }
     val nameExists = existingNames.any { it.equals(name.trim(), ignoreCase = true) }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -1456,6 +1532,71 @@ private fun SaveFlowDialog(
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
+
+                // ── Tag selector ────────────────────────────────────────
+                Spacer(Modifier.height(12.dp))
+                Text(stringResource(R.string.label_tags), style = MaterialTheme.typography.labelMedium)
+                Spacer(Modifier.height(6.dp))
+                FlowLayout(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalSpacing = 6.dp,
+                    verticalSpacing = 6.dp,
+                ) {
+                    allTags.forEach { tag ->
+                        FilterChip(
+                            selected = tag in selectedTags,
+                            onClick = {
+                                selectedTags = if (tag in selectedTags) selectedTags - tag
+                                               else selectedTags + tag
+                            },
+                            label = { Text(tag, style = MaterialTheme.typography.labelSmall) },
+                            modifier = Modifier.height(32.dp),
+                        )
+                    }
+                    // "New tag…" chip
+                    if (!showNewTagField) {
+                        FilterChip(
+                            selected = false,
+                            onClick = { showNewTagField = true },
+                            label = { Text(stringResource(R.string.label_new_tag), style = MaterialTheme.typography.labelSmall) },
+                            leadingIcon = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp)) },
+                            modifier = Modifier.height(32.dp),
+                        )
+                    }
+                }
+                if (showNewTagField) {
+                    Spacer(Modifier.height(6.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = newTag,
+                            onValueChange = { newTag = it },
+                            label = { Text(stringResource(R.string.label_add_tag)) },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = {
+                                val trimmed = newTag.trim()
+                                if (trimmed.isNotBlank()) {
+                                    selectedTags = selectedTags + trimmed
+                                    newTag = ""
+                                    showNewTagField = false
+                                }
+                            }),
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        IconButton(onClick = {
+                            val trimmed = newTag.trim()
+                            if (trimmed.isNotBlank()) {
+                                selectedTags = selectedTags + trimmed
+                                newTag = ""
+                            }
+                            showNewTagField = false
+                        }) {
+                            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                }
+
                 Spacer(Modifier.height(16.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1464,10 +1605,48 @@ private fun SaveFlowDialog(
                     TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
                     Spacer(Modifier.width(8.dp))
                     Button(
-                        onClick = { onSave(name.trim()) },
+                        onClick = { onSave(name.trim(), selectedTags.toList()) },
                         enabled = name.isNotBlank(),
                     ) { Text(if (nameExists) stringResource(R.string.replace) else stringResource(R.string.save)) }
                 }
+            }
+        }
+    }
+}
+
+/** Simple flow layout for wrapping chips. */
+@Composable
+private fun FlowLayout(
+    modifier: Modifier = Modifier,
+    horizontalSpacing: androidx.compose.ui.unit.Dp = 0.dp,
+    verticalSpacing: androidx.compose.ui.unit.Dp = 0.dp,
+    content: @Composable () -> Unit,
+) {
+    androidx.compose.ui.layout.Layout(
+        content = content,
+        modifier = modifier,
+    ) { measurables, constraints ->
+        val hSpacingPx = horizontalSpacing.roundToPx()
+        val vSpacingPx = verticalSpacing.roundToPx()
+        val placeables = measurables.map { it.measure(constraints.copy(minWidth = 0)) }
+        var x = 0
+        var y = 0
+        var rowHeight = 0
+        val positions = placeables.map { placeable ->
+            if (x + placeable.width > constraints.maxWidth && x > 0) {
+                x = 0
+                y += rowHeight + vSpacingPx
+                rowHeight = 0
+            }
+            val pos = Pair(x, y)
+            x += placeable.width + hSpacingPx
+            rowHeight = maxOf(rowHeight, placeable.height)
+            pos
+        }
+        val totalHeight = if (placeables.isEmpty()) 0 else y + rowHeight
+        layout(constraints.maxWidth, totalHeight) {
+            placeables.forEachIndexed { i, placeable ->
+                placeable.placeRelative(positions[i].first, positions[i].second)
             }
         }
     }

@@ -356,6 +356,12 @@
     <string name="dialog_save_flow">Save Flow</string>
     <string name="label_flow_name">Flow name</string>
     <string name="flow_name_exists">A flow with this name already exists and will be replaced.</string>
+    <string name="flow_filter_all">All</string>
+    <string name="flow_filter_favorites">Favorites</string>
+    <string name="flow_section_favorites">Favorites</string>
+    <string name="label_tags">Tags</string>
+    <string name="label_add_tag">Add tag</string>
+    <string name="label_new_tag">New tag…</string>
 
     <!-- FlowStep model (used via context) -->
     <string name="step_type_intervalometer">Intervalometer</string>
