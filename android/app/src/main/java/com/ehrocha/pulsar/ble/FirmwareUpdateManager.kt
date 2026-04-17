@@ -18,6 +18,7 @@ import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.update.GitHubAsset
 import com.ehrocha.pulsar.update.fetchGitHubRelease
 import com.ehrocha.pulsar.update.fetchExpectedChecksum
+import com.ehrocha.pulsar.update.isNewerVersion
 import com.ehrocha.pulsar.update.sha256Hex
 
 data class FirmwareRelease(
@@ -86,7 +87,7 @@ class FirmwareUpdateManager(
             try {
                 val release = fetchLatestRelease()
                 _latestRelease.value = release
-                if (release != null && release.version != currentVersion) {
+                if (release != null && isNewerVersion(release.version, currentVersion)) {
                     _state.value = OtaState.AVAILABLE
                 } else {
                     _state.value = OtaState.IDLE

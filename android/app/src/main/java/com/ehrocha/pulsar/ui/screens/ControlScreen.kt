@@ -1545,9 +1545,13 @@ private fun UpdatesSection(vm: PulsarViewModel) {
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                     )
-                    if (release.body.isNotBlank()) {
+                    val releaseNotes = release.body
+                        .lines()
+                        .takeWhile { !it.startsWith("**Included") && !it.startsWith("Flash via") }
+                        .joinToString("\n").trim()
+                    if (releaseNotes.isNotBlank()) {
                         Text(
-                            release.body.take(200),
+                            releaseNotes.take(200),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
