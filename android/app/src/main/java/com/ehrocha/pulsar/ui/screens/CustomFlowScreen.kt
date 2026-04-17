@@ -218,21 +218,25 @@ private fun FlowLibraryView(
 ) {
     val connected = LocalDeviceConnected.current
     var confirmDelete by remember { mutableStateOf<String?>(null) }
+    var editTagsFlow by remember { mutableStateOf<SavedFlow?>(null) }
     val allTags by vm.allTags.collectAsState()
     var activeTagFilter by remember { mutableStateOf<String?>(null) }
+    var showFavoritesOnly by remember { mutableStateOf(false) }
 
     val presets = saved.filter { it.builtIn }
     val userFlows = saved.filter { !it.builtIn }
+    val hasFavorites = remember(userFlows) { userFlows.any { it.favorite } }
 
     // Sort: favorites first, then alphabetical
     val sortedUserFlows = remember(userFlows) {
         userFlows.sortedWith(compareByDescending<SavedFlow> { it.favorite }.thenBy { it.name })
     }
 
-    // Apply tag filter
-    val filteredUserFlows = remember(sortedUserFlows, activeTagFilter) {
-        if (activeTagFilter == null) sortedUserFlows
-        else sortedUserFlows.filter { activeTagFilter in it.tags }
+    // Apply tag + favorites filter
+    val filteredUserFlows = remember(sortedUserFlows, activeTagFilter, showFavoritesOnly) {
+        sortedUserFlows
+            .let { list -> if (showFavoritesOnly) list.filter { it.favorite } else list }
+            .let { list -> if (activeTagFilter != null) list.filter { activeTagFilter in it.tags } else list }
     }
     val filteredPresets = remember(presets, activeTagFilter) {
         if (activeTagFilter == null) presets
@@ -284,8 +288,8 @@ private fun FlowLibraryView(
             }
         }
 
-        // ── Tag filter chips ────────────────────────────────────────────
-        if (allTags.isNotEmpty()) {
+        // ── Filter chips (favorites + tags) ─────────────────────────────
+        if (allTags.isNotEmpty() || hasFavorites) {
             Spacer(Modifier.height(8.dp))
             Row(
                 modifier = Modifier
@@ -294,15 +298,32 @@ private fun FlowLibraryView(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 FilterChip(
-                    selected = activeTagFilter == null,
-                    onClick = { activeTagFilter = null },
+                    selected = activeTagFilter == null && !showFavoritesOnly,
+                    onClick = { activeTagFilter = null; showFavoritesOnly = false },
                     label = { Text(stringResource(R.string.flow_filter_all)) },
                     modifier = Modifier.height(32.dp),
                 )
+                if (hasFavorites) {
+                    FilterChip(
+                        selected = showFavoritesOnly,
+                        onClick = { showFavoritesOnly = !showFavoritesOnly },
+                        label = { Text(stringResource(R.string.flow_filter_favorites)) },
+                        leadingIcon = {
+                            Icon(
+                                if (showFavoritesOnly) Icons.Default.Star else Icons.Default.StarBorder,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        },
+                        modifier = Modifier.height(32.dp),
+                    )
+                }
                 allTags.forEach { tag ->
                     FilterChip(
                         selected = activeTagFilter == tag,
-                        onClick = { activeTagFilter = if (activeTagFilter == tag) null else tag },
+                        onClick = {
+                            activeTagFilter = if (activeTagFilter == tag) null else tag
+                        },
                         label = { Text(tag) },
                         modifier = Modifier.height(32.dp),
                     )
@@ -341,6 +362,7 @@ private fun FlowLibraryView(
                                         onDelete = { confirmDelete = flow.name },
                                         onRun = { onRunFlow(flow) },
                                         onToggleFavorite = { vm.toggleFavorite(flow.name) },
+                                        onEditTags = { editTagsFlow = flow },
                                     )
                                 }
                             }
@@ -380,6 +402,20 @@ private fun FlowLibraryView(
         Spacer(Modifier.height(8.dp))
     }
 
+    // ── Edit tags dialog ────────────────────────────────────────────────
+    if (editTagsFlow != null) {
+        EditTagsDialog(
+            flowName = editTagsFlow!!.name,
+            currentTags = editTagsFlow!!.tags,
+            allTags = allTags,
+            onDismiss = { editTagsFlow = null },
+            onSave = { tags ->
+                vm.updateFlowTags(editTagsFlow!!.name, tags)
+                editTagsFlow = null
+            },
+        )
+    }
+
     // ── Delete confirmation dialog ───────────────────────────────────────
     if (confirmDelete != null) {
         AlertDialog(
@@ -398,6 +434,110 @@ private fun FlowLibraryView(
                 TextButton(onClick = { confirmDelete = null }) { Text(stringResource(R.string.cancel)) }
             },
         )
+    }
+}
+
+@Composable
+private fun EditTagsDialog(
+    flowName: String,
+    currentTags: List<String>,
+    allTags: List<String>,
+    onDismiss: () -> Unit,
+    onSave: (List<String>) -> Unit,
+) {
+    var selectedTags by remember { mutableStateOf(currentTags.toSet()) }
+    var showNewTagField by remember { mutableStateOf(false) }
+    var newTag by remember { mutableStateOf("") }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            tonalElevation = 6.dp,
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(
+                    stringResource(R.string.label_tags),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    flowName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(16.dp))
+                FlowLayout(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalSpacing = 6.dp,
+                    verticalSpacing = 6.dp,
+                ) {
+                    allTags.forEach { tag ->
+                        FilterChip(
+                            selected = tag in selectedTags,
+                            onClick = {
+                                selectedTags = if (tag in selectedTags) selectedTags - tag
+                                               else selectedTags + tag
+                            },
+                            label = { Text(tag, style = MaterialTheme.typography.labelSmall) },
+                            modifier = Modifier.height(32.dp),
+                        )
+                    }
+                    if (!showNewTagField) {
+                        FilterChip(
+                            selected = false,
+                            onClick = { showNewTagField = true },
+                            label = { Text(stringResource(R.string.label_new_tag), style = MaterialTheme.typography.labelSmall) },
+                            leadingIcon = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp)) },
+                            modifier = Modifier.height(32.dp),
+                        )
+                    }
+                }
+                if (showNewTagField) {
+                    Spacer(Modifier.height(6.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = newTag,
+                            onValueChange = { newTag = it },
+                            label = { Text(stringResource(R.string.label_add_tag)) },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = {
+                                val trimmed = newTag.trim()
+                                if (trimmed.isNotBlank()) {
+                                    selectedTags = selectedTags + trimmed
+                                    newTag = ""
+                                    showNewTagField = false
+                                }
+                            }),
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        IconButton(onClick = {
+                            val trimmed = newTag.trim()
+                            if (trimmed.isNotBlank()) {
+                                selectedTags = selectedTags + trimmed
+                                newTag = ""
+                            }
+                            showNewTagField = false
+                        }) {
+                            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(20.dp))
+                        }
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+                    Spacer(Modifier.width(8.dp))
+                    Button(onClick = { onSave(selectedTags.toList()) }) {
+                        Text(stringResource(R.string.save))
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -440,6 +580,7 @@ private fun SavedFlowCard(
     onDelete: () -> Unit,
     onRun: () -> Unit,
     onToggleFavorite: (() -> Unit)? = null,
+    onEditTags: (() -> Unit)? = null,
 ) {
     val connected = LocalDeviceConnected.current
     Surface(
@@ -484,6 +625,11 @@ private fun SavedFlowCard(
                     }
                 }
                 if (!flow.builtIn) {
+                    if (onEditTags != null) {
+                        IconButton(onClick = onEditTags, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Default.Label, contentDescription = stringResource(R.string.label_tags), modifier = Modifier.size(20.dp))
+                        }
+                    }
                     IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
                         Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit), modifier = Modifier.size(20.dp))
                     }
