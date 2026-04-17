@@ -528,4 +528,37 @@
     <string name="whats_up_help">Shows deep-sky objects (nebulae, galaxies, clusters) that are currently above the horizon at your location.\n\n• Objects are sorted by altitude — higher = better positioned\n• Green icon: well-placed (above 30°), ideal for imaging\n• Grey icon: low in the sky (10–30°), possible but less ideal\n• Best results when used during astronomical darkness\n\nThis catalog includes ~27 popular astrophotography targets.</string>
     <string name="whats_up_visible_count">%1$d targets above the horizon</string>
     <string name="whats_up_none_visible">No catalog targets are currently visible above 10° from your location.</string>
+
+    <!-- User Guide -->
+    <string name="section_user_guide">User Guide</string>
+    <string name="guide_overview_title">Overview</string>
+    <string name="guide_overview_body">Pulsar Trigger turns your phone into a powerful camera controller via Bluetooth Low Energy (BLE). It connects to the Pulsar hardware module attached to your camera\'s shutter port, giving you precise control over exposures, intervals, and complex shooting sequences — all wirelessly.</string>
+    <string name="guide_getting_started_title">Getting Started</string>
+    <string name="guide_getting_started_body">1. Attach the Pulsar module to your camera\'s shutter port.\n2. Power it on — the LED blinks while advertising.\n3. Open the app and tap Connect on the main screen.\n4. Once connected, choose a shooting mode from the menu.\n\nTip: enable Bluetooth and Location before connecting. The app will prompt you if permissions are missing.</string>
+    <string name="guide_intervalometer_title">Intervalometer</string>
+    <string name="guide_intervalometer_body">Captures a series of photos at fixed intervals — ideal for time-lapses.\n\n• Exposure: how long the shutter stays open each shot.\n• Interval (gap): the pause between the end of one exposure and the start of the next.\n• Shots: total number of photos to take (0 = unlimited).\n\nThe total cycle time per frame = exposure + interval.</string>
+    <string name="guide_astro_title">Astro Mode</string>
+    <string name="guide_astro_body">Optimised for astrophotography. Uses the same intervalometer engine but adds sky-aware helpers.\n\n• Maximum exposure is calculated from your focal length and sensor using the 500, 400, or NPF rule.\n• Dashboard shows moon phase, twilight times, and Bortle-class estimation.\n• Pair with the Session Planner for multi-target night planning.</string>
+    <string name="guide_manual_title">Manual Mode</string>
+    <string name="guide_manual_body">Gives you a simple shutter button on screen.\n\n• Tap to trigger a single shot with the configured exposure time.\n• Hold for bulb — the shutter stays open as long as you hold.\n• Great for testing your setup or one-off long exposures.</string>
+    <string name="guide_dark_frames_title">Dark Frames</string>
+    <string name="guide_dark_frames_body">Captures calibration frames with the lens cap on, matching your light-frame exposure time.\n\n• Dark frames record sensor noise so stacking software can subtract it.\n• Set the same exposure as your light frames and cover the lens.\n• Choose how many darks to capture — 20–30 is a common starting point.\n• Built-in presets are provided based on common exposure lengths.</string>
+    <string name="guide_ramp_title">Exposure Ramp</string>
+    <string name="guide_ramp_body">Gradually changes exposure time across a sequence — perfect for sunset-to-night holy-grail time-lapses.\n\n• Set a start and end exposure plus the number of frames.\n• The app smoothly ramps between the two values.\n• Preview the ramp curve before starting.\n• Combine with the Flows feature for multi-phase sequences.</string>
+    <string name="guide_flows_title">Flows &amp; Presets</string>
+    <string name="guide_flows_body">Flows let you chain multiple shooting steps into a single automated sequence.\n\n• Each step can be an Intervalometer, Astro, Dark Frames, Ramp, or Pause.\n• Steps run in order — great for "shoot 100 lights, then 30 darks" workflows.\n• Save your flows to the library and tag them for easy retrieval.\n• Mark favourites so your most-used flows appear first.\n• Built-in presets give you a quick starting point for common scenarios.</string>
+    <string name="guide_dashboard_title">Astro Dashboard</string>
+    <string name="guide_dashboard_body">A live sky-conditions panel for astrophotographers.\n\n• Moon phase and illumination percentage.\n• Sunset, twilight (civil / nautical / astronomical), and sunrise times.\n• Bortle-class estimate based on your GPS location.\n• What\'s Up Tonight: a catalog of deep-sky objects currently above the horizon, sorted by altitude.</string>
+    <string name="guide_planner_title">Session Planner</string>
+    <string name="guide_planner_body">Plan a full night of imaging before you head out.\n\n• Add multiple targets with individual exposure, interval, and frame-count settings.\n• Reorder targets by dragging.\n• See total session time and per-target estimates.\n• Export the plan or load it directly into the Flows engine.\n• Adjust default optics in Settings → Planner.</string>
+    <string name="guide_settings_title">Settings</string>
+    <string name="guide_settings_body">Fine-tune your Pulsar experience.\n\n• Language: switch the app between English, Portuguese, Spanish, French, German, Japanese, and Chinese.\n• Device: rename the Pulsar module, configure auto-off timer.\n• GPIO Pins: remap shutter and focus pins if your cable wiring differs.\n• Planner: set default sensor and focal-length presets for the session planner.\n• Backup / Restore: export or import your saved flows and settings.\n• Updates: check for new firmware OTA or app updates.\n• Device Info: view hardware revision, firmware version, and BLE address.</string>
+    <string name="guide_tips_title">Tips &amp; Tricks</string>
+    <string name="guide_tips_body">• Keep Bluetooth on and the phone nearby — BLE range is typically 10–15 m in open air.\n• Use a fully charged camera battery for long sessions; mirror-lockup and electronic shutter save power.\n• For astrophotography, arrive early and polar-align while twilight is fading.\n• Save your favourite workflows as Flows so you can start a session with one tap.\n• Dark frames can be shot at the end of a session — the sensor temperature should be similar to your lights.\n• Check the Dashboard before leaving home: if the moon is bright, plan for narrowband or widefield targets.</string>
+
+    <!-- Permissions screen -->
+    <string name="permissions_required_title">Permissions Required</string>
+    <string name="permissions_required_body">Pulsar Trigger needs Bluetooth and Location permissions to discover and connect to your Pulsar device.\n\nIf you previously denied a permission, tap "Open Settings" and enable them manually.</string>
+    <string name="permissions_grant_button">Grant Permissions</string>
+    <string name="permissions_open_settings">Open Settings</string>
 </resources>

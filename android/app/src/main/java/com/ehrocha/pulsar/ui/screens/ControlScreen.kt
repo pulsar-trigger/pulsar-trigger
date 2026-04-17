@@ -50,6 +50,7 @@ import com.ehrocha.pulsar.BuildConfig
 import com.ehrocha.pulsar.R
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.DeveloperBoard
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.PhoneAndroid
@@ -1021,6 +1022,7 @@ private fun CollapsibleSection(
 // ── Settings section enum & menu ─────────────────────────────────────────────
 
 enum class SettingsSection(val icon: ImageVector, @StringRes val titleRes: Int) {
+    USER_GUIDE(Icons.AutoMirrored.Filled.MenuBook, R.string.section_user_guide),
     LANGUAGE(Icons.Default.Language, R.string.section_language),
     DEVICE(Icons.Default.PhoneAndroid, R.string.section_device),
     GPIO_PINS(Icons.Default.Memory, R.string.section_gpio_pins),
@@ -1396,6 +1398,101 @@ internal fun DeviceInfoSectionContent(vm: PulsarViewModel) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+@Composable
+internal fun UserGuideSectionContent() {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        // ── Overview ────────────────────────────────────────────────────
+        GuideSection(
+            title = stringResource(R.string.guide_overview_title),
+            body = stringResource(R.string.guide_overview_body),
+        )
+
+        // ── Getting Started ─────────────────────────────────────────────
+        GuideSection(
+            title = stringResource(R.string.guide_getting_started_title),
+            body = stringResource(R.string.guide_getting_started_body),
+        )
+
+        // ── Intervalometer ──────────────────────────────────────────────
+        GuideSection(
+            title = stringResource(R.string.guide_intervalometer_title),
+            body = stringResource(R.string.guide_intervalometer_body),
+        )
+
+        // ── Astro Mode ──────────────────────────────────────────────────
+        GuideSection(
+            title = stringResource(R.string.guide_astro_title),
+            body = stringResource(R.string.guide_astro_body),
+        )
+
+        // ── Manual Mode ─────────────────────────────────────────────────
+        GuideSection(
+            title = stringResource(R.string.guide_manual_title),
+            body = stringResource(R.string.guide_manual_body),
+        )
+
+        // ── Dark Frames ─────────────────────────────────────────────────
+        GuideSection(
+            title = stringResource(R.string.guide_dark_frames_title),
+            body = stringResource(R.string.guide_dark_frames_body),
+        )
+
+        // ── Exposure Ramp ───────────────────────────────────────────────
+        GuideSection(
+            title = stringResource(R.string.guide_ramp_title),
+            body = stringResource(R.string.guide_ramp_body),
+        )
+
+        // ── Flows & Presets ─────────────────────────────────────────────
+        GuideSection(
+            title = stringResource(R.string.guide_flows_title),
+            body = stringResource(R.string.guide_flows_body),
+        )
+
+        // ── Astro Dashboard ─────────────────────────────────────────────
+        GuideSection(
+            title = stringResource(R.string.guide_dashboard_title),
+            body = stringResource(R.string.guide_dashboard_body),
+        )
+
+        // ── Session Planner ─────────────────────────────────────────────
+        GuideSection(
+            title = stringResource(R.string.guide_planner_title),
+            body = stringResource(R.string.guide_planner_body),
+        )
+
+        // ── Settings ────────────────────────────────────────────────────
+        GuideSection(
+            title = stringResource(R.string.guide_settings_title),
+            body = stringResource(R.string.guide_settings_body),
+        )
+
+        // ── Tips ────────────────────────────────────────────────────────
+        GuideSection(
+            title = stringResource(R.string.guide_tips_title),
+            body = stringResource(R.string.guide_tips_body),
+        )
+    }
+}
+
+@Composable
+private fun GuideSection(title: String, body: String) {
+    Column {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
+            body,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
     }
 }
 

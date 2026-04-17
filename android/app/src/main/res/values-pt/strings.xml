@@ -397,4 +397,37 @@
     <string name="step_summary_ramp">%1$d passos, %2$dms → %3$dms</string>
     <string name="label_wake_on_pause">Acordar tela na pausa</string>
     <string name="status_estimated_duration">Duração estimada: %1$s</string>
+
+    <!-- User Guide -->
+    <string name="section_user_guide">Guia do Usuário</string>
+    <string name="guide_overview_title">Visão Geral</string>
+    <string name="guide_overview_body">O Pulsar Trigger transforma seu celular em um poderoso controlador de câmera via Bluetooth Low Energy (BLE). Ele se conecta ao módulo Pulsar ligado à porta de disparo da sua câmera, dando controle preciso sobre exposições, intervalos e sequências complexas — tudo sem fio.</string>
+    <string name="guide_getting_started_title">Primeiros Passos</string>
+    <string name="guide_getting_started_body">1. Conecte o módulo Pulsar à porta de disparo da câmera.\n2. Ligue-o — o LED pisca enquanto anuncia.\n3. Abra o app e toque em Conectar na tela principal.\n4. Após conectar, escolha um modo de disparo no menu.\n\nDica: ative Bluetooth e Localização antes de conectar. O app solicitará as permissões necessárias.</string>
+    <string name="guide_intervalometer_title">Intervalômetro</string>
+    <string name="guide_intervalometer_body">Captura uma série de fotos em intervalos fixos — ideal para time-lapses.\n\n• Exposição: tempo que o obturador fica aberto em cada disparo.\n• Intervalo (pausa): a pausa entre o fim de uma exposição e o início da próxima.\n• Disparos: número total de fotos (0 = ilimitado).\n\nO tempo total por quadro = exposição + intervalo.</string>
+    <string name="guide_astro_title">Modo Astro</string>
+    <string name="guide_astro_body">Otimizado para astrofotografia. Usa o mesmo motor do intervalômetro com ajudas astronômicas.\n\n• A exposição máxima é calculada a partir da distância focal e sensor usando a regra dos 500, 400 ou NPF.\n• O painel mostra fase da lua, horários de crepúsculo e estimativa da classe Bortle.\n• Combine com o Planejador de Sessão para planejar noites com múltiplos alvos.</string>
+    <string name="guide_manual_title">Modo Manual</string>
+    <string name="guide_manual_body">Oferece um botão de disparo simples na tela.\n\n• Toque para disparar uma foto com o tempo de exposição configurado.\n• Segure para bulb — o obturador fica aberto enquanto você segurar.\n• Ótimo para testar seu setup ou exposições longas avulsas.</string>
+    <string name="guide_dark_frames_title">Dark Frames</string>
+    <string name="guide_dark_frames_body">Captura quadros de calibração com a tampa da lente, usando o mesmo tempo de exposição dos lights.\n\n• Dark frames registram o ruído do sensor para que softwares de empilhamento possam subtraí-lo.\n• Use o mesmo tempo de exposição dos seus light frames e cubra a lente.\n• Escolha quantos darks capturar — 20 a 30 é um bom ponto de partida.\n• Presets integrados são fornecidos com base em tempos de exposição comuns.</string>
+    <string name="guide_ramp_title">Rampa de Exposição</string>
+    <string name="guide_ramp_body">Altera gradualmente o tempo de exposição ao longo da sequência — perfeito para time-lapses holy-grail do pôr do sol à noite.\n\n• Defina exposição inicial e final mais o número de quadros.\n• O app faz a transição suave entre os dois valores.\n• Visualize a curva de rampa antes de iniciar.\n• Combine com Fluxos para sequências com múltiplas fases.</string>
+    <string name="guide_flows_title">Fluxos e Presets</string>
+    <string name="guide_flows_body">Fluxos permitem encadear múltiplas etapas de disparo em uma sequência automatizada.\n\n• Cada etapa pode ser Intervalômetro, Astro, Dark Frames, Rampa ou Pausa.\n• As etapas são executadas em ordem — ótimo para "disparar 100 lights, depois 30 darks".\n• Salve seus fluxos na biblioteca e marque com tags para fácil localização.\n• Marque favoritos para que seus fluxos mais usados apareçam primeiro.\n• Presets integrados oferecem pontos de partida rápidos para cenários comuns.</string>
+    <string name="guide_dashboard_title">Painel Astro</string>
+    <string name="guide_dashboard_body">Um painel de condições do céu em tempo real para astrofotógrafos.\n\n• Fase e porcentagem de iluminação da lua.\n• Horários de pôr do sol, crepúsculo (civil / náutico / astronômico) e nascer do sol.\n• Estimativa da classe Bortle com base na sua localização GPS.\n• O Que Há Esta Noite: catálogo de objetos de céu profundo acima do horizonte, ordenados por altitude.</string>
+    <string name="guide_planner_title">Planejador de Sessão</string>
+    <string name="guide_planner_body">Planeje uma noite inteira de captura antes de sair.\n\n• Adicione múltiplos alvos com configurações individuais de exposição, intervalo e número de quadros.\n• Reordene alvos arrastando.\n• Veja o tempo total da sessão e estimativas por alvo.\n• Exporte o plano ou carregue diretamente no motor de Fluxos.\n• Ajuste ópticas padrão em Configurações → Planejador.</string>
+    <string name="guide_settings_title">Configurações</string>
+    <string name="guide_settings_body">Ajuste sua experiência Pulsar.\n\n• Idioma: alterne entre inglês, português, espanhol, francês, alemão, japonês e chinês.\n• Dispositivo: renomeie o módulo Pulsar, configure o timer de desligamento automático.\n• Pinos GPIO: remapeie os pinos de disparo e foco se a fiação do seu cabo for diferente.\n• Planejador: defina presets padrão de sensor e distância focal.\n• Backup / Restauração: exporte ou importe seus fluxos e configurações salvos.\n• Atualizações: verifique novas versões de firmware OTA ou atualizações do app.\n• Info do Dispositivo: veja revisão de hardware, versão de firmware e endereço BLE.</string>
+    <string name="guide_tips_title">Dicas e Truques</string>
+    <string name="guide_tips_body">• Mantenha o Bluetooth ligado e o celular por perto — o alcance BLE é tipicamente 10–15 m ao ar livre.\n• Use bateria totalmente carregada para sessões longas; bloqueio de espelho e obturador eletrônico economizam energia.\n• Para astrofotografia, chegue cedo e alinhe a polar enquanto o crepúsculo está diminuindo.\n• Salve seus fluxos de trabalho favoritos como Fluxos para iniciar uma sessão com um toque.\n• Dark frames podem ser feitos ao final da sessão — a temperatura do sensor deve ser similar à dos lights.\n• Verifique o Painel antes de sair: se a lua estiver brilhante, planeje alvos de banda estreita ou campo amplo.</string>
+
+    <!-- Permissions screen -->
+    <string name="permissions_required_title">Permissões Necessárias</string>
+    <string name="permissions_required_body">O Pulsar Trigger precisa de permissões de Bluetooth e Localização para descobrir e conectar ao seu dispositivo Pulsar.\n\nSe você negou uma permissão anteriormente, toque em "Abrir Configurações" e ative-as manualmente.</string>
+    <string name="permissions_grant_button">Conceder Permissões</string>
+    <string name="permissions_open_settings">Abrir Configurações</string>
 </resources>

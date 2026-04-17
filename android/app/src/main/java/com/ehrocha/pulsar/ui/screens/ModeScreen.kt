@@ -400,6 +400,7 @@ fun SettingsScreen(
             ) {
                 when (currentSection) {
                     null -> SettingsMenu(onSectionSelected = { currentSection = it })
+                    SettingsSection.USER_GUIDE -> UserGuideSectionContent()
                     SettingsSection.LANGUAGE -> LanguageSectionContent()
                     SettingsSection.DEVICE -> DeviceSectionContent(vm, deviceName)
                     SettingsSection.GPIO_PINS -> GpioPinsSectionContent(vm)

@@ -397,4 +397,37 @@
     <string name="step_summary_ramp">%1$d ステップ、%2$dms → %3$dms</string>
     <string name="label_wake_on_pause">一時停止時に画面を起動</string>
     <string name="status_estimated_duration">推定時間: %1$s</string>
+
+    <!-- User Guide -->
+    <string name="section_user_guide">ユーザーガイド</string>
+    <string name="guide_overview_title">概要</string>
+    <string name="guide_overview_body">Pulsar TriggerはBluetooth Low Energy（BLE）を介してスマートフォンを強力なカメラコントローラーに変えます。カメラのシャッターポートに接続されたPulsarモジュールと通信し、露出、インターバル、複雑な撮影シーケンスを正確にワイヤレスで制御できます。</string>
+    <string name="guide_getting_started_title">はじめに</string>
+    <string name="guide_getting_started_body">1. Pulsarモジュールをカメラのシャッターポートに接続します。\n2. 電源を入れます — LEDがアドバタイズ中に点滅します。\n3. アプリを開き、メイン画面で「接続」をタップします。\n4. 接続後、メニューから撮影モードを選択します。\n\nヒント：接続前にBluetoothと位置情報を有効にしてください。アプリが必要な権限を求めます。</string>
+    <string name="guide_intervalometer_title">インターバロメーター</string>
+    <string name="guide_intervalometer_body">一定間隔で連続撮影します — タイムラプスに最適です。\n\n• 露出：各ショットでシャッターが開いている時間。\n• インターバル（間隔）：前の露出終了から次の露出開始までの待機時間。\n• ショット数：撮影する総枚数（0 = 無制限）。\n\n1フレームあたりの合計サイクル時間 = 露出 + インターバル。</string>
+    <string name="guide_astro_title">天体モード</string>
+    <string name="guide_astro_body">天体写真に最適化されています。インターバロメーターと同じエンジンに天体観測ヘルパーを追加。\n\n• 最大露出時間は焦点距離とセンサーから500ルール、400ルール、またはNPFルールで計算されます。\n• ダッシュボードに月相、薄明時刻、ボートルクラス推定を表示。\n• セッションプランナーと組み合わせて複数ターゲットの夜間計画を立てましょう。</string>
+    <string name="guide_manual_title">マニュアルモード</string>
+    <string name="guide_manual_body">画面上にシンプルなシャッターボタンを提供します。\n\n• タップで設定した露出時間で1枚撮影。\n• 長押しでバルブ — 押している間シャッターが開いたままになります。\n• セットアップのテストや単発の長時間露出に最適です。</string>
+    <string name="guide_dark_frames_title">ダークフレーム</string>
+    <string name="guide_dark_frames_body">レンズキャップを付けた状態で、同じ露出時間でキャリブレーションフレームを撮影します。\n\n• ダークフレームはセンサーノイズを記録し、スタッキングソフトウェアで差し引くことができます。\n• ライトフレームと同じ露出時間を設定し、レンズを覆います。\n• 撮影枚数を選択 — 20〜30枚が一般的な出発点です。\n• 一般的な露出時間に基づくプリセットが用意されています。</string>
+    <string name="guide_ramp_title">露出ランプ</string>
+    <string name="guide_ramp_body">シーケンス全体で露出時間を段階的に変更します — 日没から夜へのホーリーグレイルタイムラプスに最適。\n\n• 開始と終了の露出時間およびフレーム数を設定。\n• アプリが2つの値の間を滑らかに遷移します。\n• 開始前にランプカーブをプレビュー。\n• フロー機能と組み合わせてマルチフェーズシーケンスを作成。</string>
+    <string name="guide_flows_title">フローとプリセット</string>
+    <string name="guide_flows_body">フローは複数の撮影ステップを1つの自動化されたシーケンスにチェーンできます。\n\n• 各ステップはインターバロメーター、天体、ダークフレーム、ランプ、または一時停止にできます。\n• ステップは順番に実行 — 「100枚ライト撮影後、30枚ダーク」のようなワークフローに最適。\n• フローをライブラリに保存し、タグ付けで簡単に検索。\n• お気に入りに登録して最もよく使うフローを先頭に表示。\n• 内蔵プリセットで一般的なシナリオをすぐに開始できます。</string>
+    <string name="guide_dashboard_title">天体ダッシュボード</string>
+    <string name="guide_dashboard_body">天体写真家のためのリアルタイム空況パネル。\n\n• 月相と照明パーセンテージ。\n• 日没、薄明（市民 / 航海 / 天文）、日の出の時刻。\n• GPS位置情報に基づくボートルクラス推定。\n• 今夜の空：地平線上のディープスカイオブジェクトカタログ、高度順にソート。</string>
+    <string name="guide_planner_title">セッションプランナー</string>
+    <string name="guide_planner_body">出発前に一晩分の撮影計画を立てましょう。\n\n• 個別の露出、インターバル、フレーム数設定で複数ターゲットを追加。\n• ドラッグでターゲットを並べ替え。\n• 合計セッション時間とターゲットごとの見積もりを表示。\n• プランをエクスポートまたはフローエンジンに直接ロード。\n• 設定 → プランナーでデフォルトの光学系を調整。</string>
+    <string name="guide_settings_title">設定</string>
+    <string name="guide_settings_body">Pulsar体験をカスタマイズ。\n\n• 言語：英語、ポルトガル語、スペイン語、フランス語、ドイツ語、日本語、中国語を切り替え。\n• デバイス：Pulsarモジュールの名前変更、自動オフタイマーの設定。\n• GPIOピン：ケーブル配線が異なる場合、シャッターとフォーカスピンを再マッピング。\n• プランナー：デフォルトのセンサーと焦点距離プリセットを設定。\n• バックアップ / 復元：保存されたフローと設定をエクスポートまたはインポート。\n• アップデート：新しいファームウェアOTAやアプリの更新を確認。\n• デバイス情報：ハードウェアリビジョン、ファームウェアバージョン、BLEアドレスを表示。</string>
+    <string name="guide_tips_title">ヒントとコツ</string>
+    <string name="guide_tips_body">• Bluetoothをオンにしてスマートフォンを近くに置いてください — BLEの範囲は屋外で通常10〜15mです。\n• 長時間セッションにはフル充電のバッテリーを使用。ミラーアップと電子シャッターは電力を節約します。\n• 天体写真では早めに到着し、薄明が消える間に極軸合わせを行いましょう。\n• お気に入りのワークフローをフローとして保存し、ワンタップでセッションを開始。\n• ダークフレームはセッション終了時に撮影可能 — センサー温度がライトフレームと近い状態で。\n• 出発前にダッシュボードを確認：月が明るい場合はナローバンドや広角ターゲットを計画しましょう。</string>
+
+    <!-- Permissions screen -->
+    <string name="permissions_required_title">権限が必要です</string>
+    <string name="permissions_required_body">Pulsar TriggerはPulsarデバイスを検出・接続するために、Bluetoothと位置情報の権限が必要です。\n\n以前に権限を拒否した場合は、「設定を開く」をタップして手動で有効にしてください。</string>
+    <string name="permissions_grant_button">権限を許可</string>
+    <string name="permissions_open_settings">設定を開く</string>
 </resources>

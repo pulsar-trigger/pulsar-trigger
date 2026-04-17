@@ -397,4 +397,37 @@
     <string name="step_summary_ramp">%1$d Schritte, %2$dms → %3$dms</string>
     <string name="label_wake_on_pause">Bildschirm bei Pause aktivieren</string>
     <string name="status_estimated_duration">Geschätzte Dauer: %1$s</string>
+
+    <!-- User Guide -->
+    <string name="section_user_guide">Benutzerhandbuch</string>
+    <string name="guide_overview_title">Überblick</string>
+    <string name="guide_overview_body">Pulsar Trigger verwandelt Ihr Telefon in einen leistungsstarken Kamera-Controller über Bluetooth Low Energy (BLE). Es verbindet sich mit dem Pulsar-Modul am Auslöseranschluss Ihrer Kamera und bietet präzise Kontrolle über Belichtungen, Intervalle und komplexe Aufnahmesequenzen — alles kabellos.</string>
+    <string name="guide_getting_started_title">Erste Schritte</string>
+    <string name="guide_getting_started_body">1. Schließen Sie das Pulsar-Modul an den Auslöseranschluss der Kamera an.\n2. Schalten Sie es ein — die LED blinkt während der Ankündigung.\n3. Öffnen Sie die App und tippen Sie auf Verbinden auf dem Hauptbildschirm.\n4. Nach dem Verbinden wählen Sie einen Aufnahmemodus im Menü.\n\nTipp: Aktivieren Sie Bluetooth und Standort vor dem Verbinden. Die App fordert fehlende Berechtigungen an.</string>
+    <string name="guide_intervalometer_title">Intervallometer</string>
+    <string name="guide_intervalometer_body">Nimmt eine Serie von Fotos in festen Intervallen auf — ideal für Zeitraffer.\n\n• Belichtung: wie lange der Verschluss bei jeder Aufnahme geöffnet bleibt.\n• Intervall (Pause): die Pause zwischen dem Ende einer Belichtung und dem Beginn der nächsten.\n• Aufnahmen: Gesamtzahl der Fotos (0 = unbegrenzt).\n\nDie Gesamtzykluszeit pro Bild = Belichtung + Intervall.</string>
+    <string name="guide_astro_title">Astro-Modus</string>
+    <string name="guide_astro_body">Optimiert für Astrofotografie. Nutzt den gleichen Intervallometer-Motor mit astronomischen Hilfen.\n\n• Die maximale Belichtung wird aus Brennweite und Sensor nach der 500er-, 400er- oder NPF-Regel berechnet.\n• Das Dashboard zeigt Mondphase, Dämmerungszeiten und Bortle-Klasse-Schätzung.\n• Kombinieren Sie mit dem Sitzungsplaner für Nächte mit mehreren Zielen.</string>
+    <string name="guide_manual_title">Manueller Modus</string>
+    <string name="guide_manual_body">Bietet einen einfachen Auslöseknopf auf dem Bildschirm.\n\n• Tippen zum Auslösen eines Fotos mit der eingestellten Belichtungszeit.\n• Halten für Bulb — der Verschluss bleibt offen, solange Sie halten.\n• Ideal zum Testen Ihres Setups oder für einzelne Langzeitbelichtungen.</string>
+    <string name="guide_dark_frames_title">Dark Frames</string>
+    <string name="guide_dark_frames_body">Nimmt Kalibrierungsbilder mit aufgesetztem Objektivdeckel auf, mit der gleichen Belichtungszeit.\n\n• Dark Frames zeichnen Sensorrauschen auf, damit Stacking-Software es abziehen kann.\n• Verwenden Sie die gleiche Belichtungszeit wie Ihre Light Frames und decken Sie das Objektiv ab.\n• Wählen Sie die Anzahl der Darks — 20 bis 30 ist ein guter Ausgangspunkt.\n• Integrierte Presets basierend auf gängigen Belichtungszeiten sind vorhanden.</string>
+    <string name="guide_ramp_title">Belichtungsrampe</string>
+    <string name="guide_ramp_body">Ändert die Belichtungszeit über die Sequenz hinweg schrittweise — perfekt für Holy-Grail-Zeitraffer vom Sonnenuntergang zur Nacht.\n\n• Legen Sie Start- und Endbelichtung sowie die Bildanzahl fest.\n• Die App wechselt sanft zwischen den beiden Werten.\n• Vorschau der Rampenkurve vor dem Start.\n• Kombinieren Sie mit Abläufen für Sequenzen mit mehreren Phasen.</string>
+    <string name="guide_flows_title">Abläufe und Presets</string>
+    <string name="guide_flows_body">Abläufe ermöglichen das Verketten mehrerer Aufnahmeschritte zu einer automatisierten Sequenz.\n\n• Jeder Schritt kann Intervallometer, Astro, Dark Frames, Rampe oder Pause sein.\n• Schritte werden der Reihe nach ausgeführt — ideal für „100 Lights aufnehmen, dann 30 Darks".\n• Speichern Sie Ihre Abläufe in der Bibliothek und markieren Sie sie mit Tags.\n• Markieren Sie Favoriten, damit Ihre meistgenutzten Abläufe zuerst erscheinen.\n• Integrierte Presets bieten schnelle Ausgangspunkte für gängige Szenarien.</string>
+    <string name="guide_dashboard_title">Astro-Dashboard</string>
+    <string name="guide_dashboard_body">Ein Echtzeit-Panel für Himmelsbedingungen für Astrofotografen.\n\n• Mondphase und Beleuchtungsprozentsatz.\n• Sonnenuntergang, Dämmerung (bürgerlich / nautisch / astronomisch) und Sonnenaufgang.\n• Bortle-Klasse-Schätzung basierend auf Ihrem GPS-Standort.\n• Was Gibt\'s Heute Nacht: Katalog von Deep-Sky-Objekten über dem Horizont, sortiert nach Höhe.</string>
+    <string name="guide_planner_title">Sitzungsplaner</string>
+    <string name="guide_planner_body">Planen Sie eine ganze Nacht vor dem Aufbruch.\n\n• Fügen Sie mehrere Ziele mit individuellen Belichtungs-, Intervall- und Bildanzahl-Einstellungen hinzu.\n• Ordnen Sie Ziele per Drag &amp; Drop neu.\n• Sehen Sie die Gesamtsitzungszeit und Schätzungen pro Ziel.\n• Exportieren Sie den Plan oder laden Sie ihn direkt in die Ablauf-Engine.\n• Passen Sie die Standardoptik in Einstellungen → Planer an.</string>
+    <string name="guide_settings_title">Einstellungen</string>
+    <string name="guide_settings_body">Passen Sie Ihr Pulsar-Erlebnis an.\n\n• Sprache: Wechseln Sie zwischen Englisch, Portugiesisch, Spanisch, Französisch, Deutsch, Japanisch und Chinesisch.\n• Gerät: Benennen Sie das Pulsar-Modul um, konfigurieren Sie den Auto-Aus-Timer.\n• GPIO-Pins: Ordnen Sie Auslöser- und Fokuspins neu zu, wenn die Verkabelung abweicht.\n• Planer: Legen Sie Standard-Sensor- und Brennweiten-Presets fest.\n• Sicherung / Wiederherstellung: Exportieren oder importieren Sie Ihre gespeicherten Abläufe und Einstellungen.\n• Updates: Prüfen Sie auf neue Firmware-OTA oder App-Updates.\n• Geräteinfo: Sehen Sie Hardware-Revision, Firmware-Version und BLE-Adresse.</string>
+    <string name="guide_tips_title">Tipps und Tricks</string>
+    <string name="guide_tips_body">• Lassen Sie Bluetooth eingeschaltet und das Telefon in der Nähe — die BLE-Reichweite beträgt typisch 10–15 m im Freien.\n• Verwenden Sie einen voll geladenen Akku für lange Sitzungen; Spiegelverriegelung und elektronischer Verschluss sparen Energie.\n• Für Astrofotografie kommen Sie früh und richten Sie die Polachse ein, während die Dämmerung nachlässt.\n• Speichern Sie Ihre bevorzugten Workflows als Abläufe, um eine Sitzung mit einem Tippen zu starten.\n• Dark Frames können am Ende der Sitzung aufgenommen werden — die Sensortemperatur sollte ähnlich wie bei den Lights sein.\n• Prüfen Sie das Dashboard vor dem Aufbruch: Wenn der Mond hell ist, planen Sie Schmalband- oder Weitfeldziele.</string>
+
+    <!-- Permissions screen -->
+    <string name="permissions_required_title">Berechtigungen Erforderlich</string>
+    <string name="permissions_required_body">Pulsar Trigger benötigt Bluetooth- und Standortberechtigungen, um Ihr Pulsar-Gerät zu finden und sich damit zu verbinden.\n\nWenn Sie zuvor eine Berechtigung abgelehnt haben, tippen Sie auf „Einstellungen Öffnen" und aktivieren Sie sie manuell.</string>
+    <string name="permissions_grant_button">Berechtigungen Erteilen</string>
+    <string name="permissions_open_settings">Einstellungen Öffnen</string>
 </resources>

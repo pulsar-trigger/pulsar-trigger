@@ -397,4 +397,37 @@
     <string name="step_summary_ramp">%1$d 步，%2$dms → %3$dms</string>
     <string name="label_wake_on_pause">暂停时唤醒屏幕</string>
     <string name="status_estimated_duration">预计时长：%1$s</string>
+
+    <!-- User Guide -->
+    <string name="section_user_guide">用户指南</string>
+    <string name="guide_overview_title">概述</string>
+    <string name="guide_overview_body">Pulsar Trigger 通过蓝牙低功耗（BLE）将您的手机变成强大的相机控制器。它连接到相机快门端口上的 Pulsar 模块，让您精确控制曝光、间隔和复杂的拍摄序列——全部无线操作。</string>
+    <string name="guide_getting_started_title">快速入门</string>
+    <string name="guide_getting_started_body">1. 将 Pulsar 模块连接到相机的快门端口。\n2. 开机——LED 在广播时闪烁。\n3. 打开应用，在主屏幕上点击"连接"。\n4. 连接后，从菜单中选择拍摄模式。\n\n提示：连接前请开启蓝牙和定位。应用会提示您授予所需权限。</string>
+    <string name="guide_intervalometer_title">间隔计</string>
+    <string name="guide_intervalometer_body">以固定间隔拍摄一系列照片——非常适合延时摄影。\n\n• 曝光：每次拍摄时快门打开的时间。\n• 间隔（间隙）：一次曝光结束到下一次开始之间的暂停时间。\n• 张数：要拍摄的总照片数（0 = 无限制）。\n\n每帧总周期时间 = 曝光 + 间隔。</string>
+    <string name="guide_astro_title">天文模式</string>
+    <string name="guide_astro_body">为天文摄影优化。使用相同的间隔计引擎并添加天文辅助功能。\n\n• 最大曝光时间根据焦距和传感器使用 500 法则、400 法则或 NPF 法则计算。\n• 仪表板显示月相、暮光时间和 Bortle 等级估算。\n• 与会话规划器配合使用，规划多目标夜间拍摄。</string>
+    <string name="guide_manual_title">手动模式</string>
+    <string name="guide_manual_body">在屏幕上提供一个简单的快门按钮。\n\n• 点击以配置的曝光时间拍摄一张照片。\n• 长按进入 B 门——按住期间快门保持打开。\n• 非常适合测试设置或单次长曝光。</string>
+    <string name="guide_dark_frames_title">暗场</string>
+    <string name="guide_dark_frames_body">盖上镜头盖，使用相同的曝光时间拍摄校准帧。\n\n• 暗场记录传感器噪声，以便堆叠软件可以将其减去。\n• 使用与亮场相同的曝光时间并盖上镜头。\n• 选择要拍摄多少张暗场——20 到 30 张是常见的起点。\n• 提供基于常见曝光时间的内置预设。</string>
+    <string name="guide_ramp_title">曝光渐变</string>
+    <string name="guide_ramp_body">在整个序列中逐渐改变曝光时间——非常适合从日落到夜晚的圣杯延时摄影。\n\n• 设置起始和结束曝光时间以及帧数。\n• 应用在两个值之间平滑过渡。\n• 开始前预览渐变曲线。\n• 与工作流功能结合创建多阶段序列。</string>
+    <string name="guide_flows_title">工作流与预设</string>
+    <string name="guide_flows_body">工作流允许您将多个拍摄步骤串联成一个自动化序列。\n\n• 每个步骤可以是间隔计、天文、暗场、渐变或暂停。\n• 步骤按顺序执行——非常适合"拍摄 100 张亮场，然后 30 张暗场"的工作流。\n• 将工作流保存到库中并添加标签以便检索。\n• 收藏常用工作流使其显示在最前面。\n• 内置预设为常见场景提供快速起点。</string>
+    <string name="guide_dashboard_title">天文仪表板</string>
+    <string name="guide_dashboard_body">天文摄影师的实时天况面板。\n\n• 月相和照明百分比。\n• 日落、暮光（民用/航海/天文）和日出时间。\n• 基于 GPS 位置的 Bortle 等级估算。\n• 今晚星空：地平线以上的深空天体目录，按高度排序。</string>
+    <string name="guide_planner_title">会话规划器</string>
+    <string name="guide_planner_body">出发前规划一整晚的拍摄。\n\n• 添加多个目标，各自有独立的曝光、间隔和帧数设置。\n• 拖动重新排列目标。\n• 查看总会话时间和每个目标的估算。\n• 导出计划或直接加载到工作流引擎。\n• 在设置 → 规划器中调整默认光学参数。</string>
+    <string name="guide_settings_title">设置</string>
+    <string name="guide_settings_body">自定义您的 Pulsar 体验。\n\n• 语言：在英语、葡萄牙语、西班牙语、法语、德语、日语和中文之间切换。\n• 设备：重命名 Pulsar 模块，配置自动关机计时器。\n• GPIO 引脚：如果线缆接线不同，重新映射快门和对焦引脚。\n• 规划器：设置默认传感器和焦距预设。\n• 备份/恢复：导出或导入已保存的工作流和设置。\n• 更新：检查新的固件 OTA 或应用更新。\n• 设备信息：查看硬件版本、固件版本和 BLE 地址。</string>
+    <string name="guide_tips_title">提示与技巧</string>
+    <string name="guide_tips_body">• 保持蓝牙开启并将手机放在附近——BLE 范围在室外通常为 10-15 米。\n• 长时间会话使用充满电的电池；反光镜锁定和电子快门可节省电量。\n• 天文摄影请提前到达，在暮光消退时进行极轴对齐。\n• 将常用工作流保存为流程，一键启动会话。\n• 暗场可以在会话结束时拍摄——传感器温度应与亮场相似。\n• 出发前查看仪表板：如果月亮很亮，请计划窄带或广角目标。</string>
+
+    <!-- Permissions screen -->
+    <string name="permissions_required_title">需要权限</string>
+    <string name="permissions_required_body">Pulsar Trigger 需要蓝牙和位置权限来发现和连接您的 Pulsar 设备。\n\n如果您之前拒绝了权限，请点击"打开设置"并手动启用。</string>
+    <string name="permissions_grant_button">授予权限</string>
+    <string name="permissions_open_settings">打开设置</string>
 </resources>
