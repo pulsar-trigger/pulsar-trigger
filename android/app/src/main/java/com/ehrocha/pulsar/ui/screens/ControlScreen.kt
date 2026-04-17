@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
@@ -1170,6 +1171,9 @@ internal fun DeviceSectionContent(
     val simulatorActive by vm.simulatorActive.collectAsState()
     val hwConnected = connected && !simulatorActive
 
+    val autoOff by vm.autoOffMinutes.collectAsState()
+    val autoOffOptions = listOf(0, 5, 15, 30, 60, 120)
+
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -1191,6 +1195,34 @@ internal fun DeviceSectionContent(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+        }
+
+        // Auto-shutdown selector
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(
+                Icons.Default.PowerSettingsNew,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.label_auto_off), style = MaterialTheme.typography.titleSmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    autoOffOptions.forEach { minutes ->
+                        val label = if (minutes == 0) stringResource(R.string.auto_off_disabled)
+                                    else stringResource(R.string.auto_off_minutes, minutes)
+                        FilterChip(
+                            selected = autoOff == minutes,
+                            onClick = { vm.setAutoOff(minutes) },
+                            label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                        )
+                    }
+                }
             }
         }
     }

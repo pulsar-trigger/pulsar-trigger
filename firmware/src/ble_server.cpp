@@ -35,6 +35,7 @@ static BLECharacteristic* _otaDataChar = nullptr;
 static bool _connected = false;
 static volatile bool _pendingReinit = false;
 static bool _advConfigured = false;
+static uint16_t _auto_off_minutes = 5;  // default: 5 min (0 = disabled)
 
 // ── Connection callbacks ─────────────────────────────────────────────────────
 class PulsarServerCB : public BLEServerCallbacks {
@@ -214,6 +215,16 @@ class CmdCharCB : public BLECharacteristicCallbacks {
                 ESP_LOGI(TAG, "DEVICE_INFO sent");
                 break;
             }
+            case CMD_SET_AUTO_OFF: {
+                if (len < 3) return;
+                uint16_t minutes = data[1] | (data[2] << 8);
+                _auto_off_minutes = minutes;
+                _prefs.begin("pulsar", false);
+                _prefs.putUShort("auto_off", minutes);
+                _prefs.end();
+                ESP_LOGI(TAG, "SET_AUTO_OFF %u min", minutes);
+                break;
+            }
             default:
                 ESP_LOGW(TAG, "Unknown CMD %02X", cmd);
                 break;
@@ -247,11 +258,13 @@ void ble_init() {
     load_device_name();
     ota_init();
 
-    // Load saved GPIO pins and apply them
+    // Load saved settings from NVS
     _prefs.begin("pulsar", true);
     uint8_t shutter = _prefs.getUChar("pin_shutter", DEFAULT_PIN_SHUTTER);
     uint8_t focus   = _prefs.getUChar("pin_focus",   DEFAULT_PIN_FOCUS);
+    _auto_off_minutes = _prefs.getUShort("auto_off", 5);
     _prefs.end();
+    ESP_LOGI(TAG, "Auto-off: %u min", _auto_off_minutes);
     if (is_safe_output_pin(shutter) && is_safe_output_pin(focus) && shutter != focus) {
         camera_init_pins(shutter, focus);
         ESP_LOGI(TAG, "Loaded pins: shutter=%u focus=%u", shutter, focus);
@@ -375,4 +388,8 @@ void ble_handle_reinit() {
     ble_init();
 
     ESP_LOGI(TAG, "Now advertising as '%s'", _deviceName);
+}
+
+uint16_t ble_auto_off_minutes() {
+    return _auto_off_minutes;
 }

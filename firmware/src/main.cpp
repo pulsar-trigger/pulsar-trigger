@@ -150,6 +150,32 @@ void loop() {
     display_update();
 #endif
 
+    // ── Auto-shutdown: power off after idle timeout ─────────────────────
+    {
+        static uint32_t last_active_ms = 0;
+        bool busy = (triggers_current_state() == STATE_RUNNING ||
+                     triggers_current_state() == STATE_WAITING ||
+                     ble_connected() || ota_in_progress());
+        if (busy) {
+            last_active_ms = millis();
+        } else {
+            uint16_t timeout = ble_auto_off_minutes();
+            if (timeout > 0) {
+                uint32_t idle_ms = millis() - last_active_ms;
+                if (idle_ms > (uint32_t)timeout * 60000UL) {
+                    log_i("[PM] Auto-shutdown after %u min idle", timeout);
+#ifdef HAS_M5DISPLAY
+                    M5.Display.sleep();
+                    delay(100);
+                    M5.Power.powerOff();
+#else
+                    esp_deep_sleep_start();
+#endif
+                }
+            }
+        }
+    }
+
     // Yield to FreeRTOS — longer sleep when idle to save power
     bool active = (triggers_current_state() == STATE_RUNNING ||
                    triggers_current_state() == STATE_WAITING);

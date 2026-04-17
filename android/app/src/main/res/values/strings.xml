@@ -132,6 +132,9 @@
     <string name="lang_system_default">System default</string>
     <string name="section_device">Device</string>
     <string name="label_device_name">Device Name</string>
+    <string name="label_auto_off">Auto Shutdown</string>
+    <string name="auto_off_disabled">Disabled</string>
+    <string name="auto_off_minutes">%d min</string>
     <string name="section_gpio_pins">GPIO Pins</string>
     <string name="gpio_pins_help">Configure the ESP32 GPIO pins connected to your shutter and focus optocouplers.\n\n• Only safe output-capable pins are listed.\n• Changes are sent to the device immediately and persisted in flash.\n• The shutter and focus pins must be different.\n• Not available in simulator mode.</string>
     <string name="label_shutter_pin">Shutter Pin</string>

@@ -31,6 +31,7 @@ object Cmd {
     const val SET_NAME: Byte   = 0x08
     const val SET_PINS: Byte   = 0x09
     const val DEVICE_INFO: Byte = 0x0A
+    const val SET_AUTO_OFF: Byte = 0x0B
 }
 
 /** Trigger modes */

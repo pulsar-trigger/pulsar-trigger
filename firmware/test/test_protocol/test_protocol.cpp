@@ -18,6 +18,7 @@ void test_cmd_enum_values(void) {
     TEST_ASSERT_EQUAL_UINT8(0x08, CMD_SET_NAME);
     TEST_ASSERT_EQUAL_UINT8(0x09, CMD_SET_PINS);
     TEST_ASSERT_EQUAL_UINT8(0x0A, CMD_DEVICE_INFO);
+    TEST_ASSERT_EQUAL_UINT8(0x0B, CMD_SET_AUTO_OFF);
 }
 
 void test_mode_enum_values(void) {

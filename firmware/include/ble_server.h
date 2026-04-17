@@ -21,3 +21,6 @@ bool ble_connected();
 
 /// Call from loop() — performs deferred BLE reinit after a name change.
 void ble_handle_reinit();
+
+/// Auto-shutdown timeout in minutes (0 = disabled). Persisted in NVS.
+uint16_t ble_auto_off_minutes();

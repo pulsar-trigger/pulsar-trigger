@@ -53,6 +53,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         private const val KEY_PIN_FOCUS = "pin_focus"
         private const val KEY_FLOW_STEPS = "flow_steps"
         private const val KEY_SAVED_FLOWS = "saved_flows"
+        private const val KEY_AUTO_OFF = "auto_off_minutes"
         private const val NOTIFICATION_THROTTLE_MS = 5_000L
         const val DEFAULT_PIN_SHUTTER = AppConfig.DEFAULT_PIN_SHUTTER
         const val DEFAULT_PIN_FOCUS = AppConfig.DEFAULT_PIN_FOCUS
@@ -169,6 +170,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val pinShutter: StateFlow<Int> = _pinShutter
     private val _pinFocus = MutableStateFlow(DEFAULT_PIN_FOCUS)
     val pinFocus: StateFlow<Int> = _pinFocus
+    private val _autoOffMinutes = MutableStateFlow(5)
+    val autoOffMinutes: StateFlow<Int> = _autoOffMinutes
 
     // ── Custom Flow ──────────────────────────────────────────────────────
     private val _flowSteps = MutableStateFlow<List<FlowStep>>(emptyList())
@@ -196,7 +199,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             bleManager.connectionState.collect {
                 _connected.value = it
-                if (it) sendPins()
+                if (it) {
+                    sendPins()
+                    sendAutoOff()
+                }
             }
         }
         viewModelScope.launch {
@@ -211,6 +217,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         _maxShotCount.value = prefs.getInt(KEY_INTV_MAX_SHOTS, AppConfig.DEFAULT_MAX_SHOTS)
         _pinShutter.value = prefs.getInt(KEY_PIN_SHUTTER, DEFAULT_PIN_SHUTTER)
         _pinFocus.value = prefs.getInt(KEY_PIN_FOCUS, DEFAULT_PIN_FOCUS)
+        _autoOffMinutes.value = prefs.getInt(KEY_AUTO_OFF, 5)
         // Load custom flow steps
         _flowSteps.value = try {
             FlowStep.deserializeList(prefs.getString(KEY_FLOW_STEPS, "") ?: "")
@@ -402,6 +409,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     fun sendPins() {
         if (_simulatorActive.value) return
         bleManager.sendCommand(CommandBuilder.setPins(_pinShutter.value, _pinFocus.value))
+    }
+
+    private fun sendAutoOff() {
+        if (_simulatorActive.value) return
+        bleManager.sendCommand(CommandBuilder.setAutoOff(_autoOffMinutes.value))
     }
 
     // ── Custom Flow management ───────────────────────────────────────────
@@ -719,9 +731,19 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun renameDevice(suffix: String) {
         if (!_simulatorActive.value) {
+            // Request GATT cache clear so the new name is picked up on reconnect
+            bleManager.requestCacheRefresh()
             bleManager.sendCommand(CommandBuilder.setName(suffix))
         }
         _deviceName.value = if (suffix.isNotEmpty()) "Pulsar-$suffix" else "Pulsar"
+    }
+
+    fun setAutoOff(minutes: Int) {
+        _autoOffMinutes.value = minutes
+        prefs.edit().putInt(KEY_AUTO_OFF, minutes).apply()
+        if (!_simulatorActive.value) {
+            bleManager.sendCommand(CommandBuilder.setAutoOff(minutes))
+        }
     }
 
     /** Press & Hold: shutter open on down */

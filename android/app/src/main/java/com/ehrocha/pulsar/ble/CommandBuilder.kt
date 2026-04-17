@@ -72,6 +72,12 @@ object CommandBuilder {
         delayMs: Long = 0,
     ): ByteArray = setIntervalometer(intervalMs, exposureMs, count, delayMs)
 
+    fun setAutoOff(minutes: Int): ByteArray {
+        val payload = ByteBuffer.allocate(2).order(ByteOrder.LITTLE_ENDIAN)
+            .putShort(minutes.toShort()).array()
+        return frame(Cmd.SET_AUTO_OFF, payload)
+    }
+
     fun setPins(shutterPin: Int, focusPin: Int): ByteArray {
         val payload = byteArrayOf(shutterPin.toByte(), focusPin.toByte())
         return frame(Cmd.SET_PINS, payload)

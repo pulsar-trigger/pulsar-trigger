@@ -18,6 +18,7 @@ enum Cmd : uint8_t {
     CMD_SET_NAME  = 0x08,
     CMD_SET_PINS  = 0x09,
     CMD_DEVICE_INFO = 0x0A,
+    CMD_SET_AUTO_OFF = 0x0B,  // payload: u16LE minutes (0 = disabled)
 };
 
 // ── Trigger Modes (byte 1) ──────────────────────────────────────────────────
