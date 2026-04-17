@@ -4,8 +4,10 @@
  */
 
 #include <Arduino.h>
+#include <WiFi.h>
 #include <esp_ota_ops.h>
 #include <esp_partition.h>
+#include <esp_pm.h>
 #include "config.h"
 #include "camera.h"
 #include "ble_server.h"
@@ -41,6 +43,38 @@ void setup() {
     Serial.println("\n=== Pulsar Intervalometer ===");
     pinMode(PIN_LED, OUTPUT);
     digitalWrite(PIN_LED, LOW);
+#endif
+
+    // ── Power management ───────────────────────────────────────────────
+    // Explicitly shut down WiFi radio — we only use BLE
+    WiFi.mode(WIFI_OFF);
+
+    // Reduce CPU clock
+#if CONFIG_PM_ENABLE
+#ifdef ESP32S3
+    esp_pm_config_esp32s3_t pm_config = {
+        .max_freq_mhz = 80,
+        .min_freq_mhz = 10,
+        .light_sleep_enable = true,
+    };
+#else
+    esp_pm_config_esp32_t pm_config = {
+        .max_freq_mhz = 80,
+        .min_freq_mhz = 10,
+        .light_sleep_enable = true,
+    };
+#endif
+    esp_err_t pm_err = esp_pm_configure(&pm_config);
+    if (pm_err == ESP_OK) {
+        log_i("[PM] CPU max 80 MHz, light sleep enabled");
+    } else {
+        log_w("[PM] esp_pm_configure failed: %s (running at %d MHz)",
+              esp_err_to_name(pm_err), getCpuFrequencyMhz());
+    }
+#else
+    // CONFIG_PM_ENABLE not set — just lower CPU frequency directly
+    setCpuFrequencyMhz(80);
+    log_i("[PM] CPU set to 80 MHz");
 #endif
 
     // Boot partition diagnostics — helps debug OTA issues
@@ -116,6 +150,8 @@ void loop() {
     display_update();
 #endif
 
-    // Small yield to avoid watchdog
-    delay(1);
+    // Yield to FreeRTOS — longer sleep when idle to save power
+    bool active = (triggers_current_state() == STATE_RUNNING ||
+                   triggers_current_state() == STATE_WAITING);
+    delay(active ? 1 : 20);
 }

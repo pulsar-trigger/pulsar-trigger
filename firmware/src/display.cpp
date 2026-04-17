@@ -25,8 +25,8 @@ static uint8_t  _brightness       = 80;   // current brightness (0-255)
 static bool     _display_asleep   = false;
 static const uint32_t DIM_AFTER_MS   = 15000;  // dim after 15 s idle
 static const uint32_t SLEEP_AFTER_MS = 60000;  // sleep after 60 s idle
-static const uint8_t  BRIGHT_FULL    = 80;
-static const uint8_t  BRIGHT_DIM     = 20;
+static const uint8_t  BRIGHT_FULL    = 30;
+static const uint8_t  BRIGHT_DIM     = 8;
 
 // ── Refresh throttle ─────────────────────────────────────────────────────────
 static uint32_t _last_draw_ms = 0;
@@ -316,17 +316,29 @@ void display_init() {
     _sprite.setSwapBytes(true);
 
     M5.Display.setRotation(0);
-    M5.Display.setBrightness(BRIGHT_FULL);
-    _brightness = BRIGHT_FULL;
-    _last_activity_ms = millis();
+    M5.Display.setBrightness(0);
+    M5.Display.sleep();
+    _brightness = 0;
+    _display_asleep = true;
 }
 
 void display_update() {
     uint32_t now = millis();
 
-    // ── Button: front button toggles brightness ──────────────────────────
+    // ── Buttons ──────────────────────────────────────────────────────────
+    // Front button (BtnA): wake display on any tap
     if (M5.BtnA.wasClicked()) {
         activity_ping();
+    }
+    // Top button (BtnB): toggle display on/off
+    if (M5.BtnB.wasClicked()) {
+        if (_display_asleep) {
+            activity_ping();
+        } else {
+            M5.Display.sleep();
+            _display_asleep = true;
+            return;
+        }
     }
 
     // ── Activity detection: BLE connect/disconnect or state change ────────

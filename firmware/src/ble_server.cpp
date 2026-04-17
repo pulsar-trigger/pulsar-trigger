@@ -21,6 +21,9 @@
 #include <esp_chip_info.h>
 #include <esp_system.h>
 #include <esp_spi_flash.h>
+#include <esp_log.h>
+
+static const char* TAG = "BLE";
 
 static Preferences _prefs;
 static char _deviceName[7 + BLE_NAME_SUFFIX_MAX + 1]; // "Pulsar-" + suffix + NUL
@@ -37,12 +40,12 @@ static bool _advConfigured = false;
 class PulsarServerCB : public BLEServerCallbacks {
     void onConnect(BLEServer* s) override {
         _connected = true;
-        Serial.printf("[BLE] Client connected (state=%d, mode=%d)\n",
-                      triggers_current_state(), triggers_current_mode());
+        ESP_LOGI(TAG, "Client connected (state=%d, mode=%d)",
+                 triggers_current_state(), triggers_current_mode());
     }
     void onDisconnect(BLEServer* s) override {
         _connected = false;
-        Serial.println("[BLE] Client disconnected — job continues");
+        ESP_LOGI(TAG, "Client disconnected — job continues");
         // Skip re-advertising if a reinit is pending (deinit is tearing down the stack)
         if (!_pendingReinit) {
             BLEDevice::startAdvertising();
@@ -67,12 +70,25 @@ static void load_device_name() {
     } else {
         strncpy(_deviceName, BLE_DEVICE_NAME, sizeof(_deviceName));
     }
+    ESP_LOGI(TAG, "Loaded device name: '%s'", _deviceName);
 }
 
-static void save_device_name(const char* suffix) {
+static bool save_device_name(const char* suffix) {
     _prefs.begin("pulsar", false);  // read-write
-    _prefs.putString("name", suffix);
+    size_t written = _prefs.putString("name", suffix);
     _prefs.end();
+
+    // Verify: read back and compare
+    _prefs.begin("pulsar", true);
+    String verify = _prefs.getString("name", "");
+    _prefs.end();
+    bool ok = (verify == suffix);
+    if (!ok) {
+        ESP_LOGE(TAG, "NVS verify failed: wrote '%s', read back '%s'", suffix, verify.c_str());
+    } else {
+        ESP_LOGI(TAG, "NVS saved name suffix: '%s' (%u bytes)", suffix, written);
+    }
+    return ok;
 }
 
 // ── Command characteristic callback ─────────────────────────────────────────
@@ -89,20 +105,20 @@ class CmdCharCB : public BLECharacteristicCallbacks {
                 if (len < 2) return;
                 Mode mode = static_cast<Mode>(data[1]);
                 triggers_set_mode(mode, data + 2, len - 2);
-                Serial.printf("[BLE] SET_MODE %02X\n", mode);
+                ESP_LOGI(TAG, "SET_MODE %02X", mode);
                 break;
             }
             case CMD_START:
                 triggers_start();
-                Serial.println("[BLE] START");
+                ESP_LOGI(TAG, "START");
                 break;
             case CMD_STOP:
                 triggers_stop();
-                Serial.println("[BLE] STOP");
+                ESP_LOGI(TAG, "STOP");
                 break;
             case CMD_SHUTTER:
                 triggers_single_shot();
-                Serial.println("[BLE] SHUTTER");
+                ESP_LOGI(TAG, "SHUTTER");
                 break;
             case CMD_STATUS_REQ:
                 status_send(triggers_current_state(), triggers_current_mode(), 0, 0);
@@ -111,7 +127,7 @@ class CmdCharCB : public BLECharacteristicCallbacks {
                 if (len >= 3) {
                     uint16_t ms = data[1] | (data[2] << 8);
                     triggers_set_focus(ms);
-                    Serial.printf("[BLE] SET_FOCUS %u ms\n", ms);
+                    ESP_LOGI(TAG, "SET_FOCUS %u ms", ms);
                 }
                 break;
             }
@@ -120,11 +136,11 @@ class CmdCharCB : public BLECharacteristicCallbacks {
                 uint8_t shutter = data[1];
                 uint8_t focus   = data[2];
                 if (!is_safe_output_pin(shutter) || !is_safe_output_pin(focus)) {
-                    Serial.printf("[BLE] SET_PINS rejected: shutter=%u focus=%u\n", shutter, focus);
+                    ESP_LOGW(TAG, "SET_PINS rejected: shutter=%u focus=%u", shutter, focus);
                     return;
                 }
                 if (shutter == focus) {
-                    Serial.println("[BLE] SET_PINS rejected: shutter == focus");
+                    ESP_LOGW(TAG, "SET_PINS rejected: shutter == focus");
                     return;
                 }
                 _prefs.begin("pulsar", false);
@@ -132,7 +148,7 @@ class CmdCharCB : public BLECharacteristicCallbacks {
                 _prefs.putUChar("pin_focus", focus);
                 _prefs.end();
                 camera_init_pins(shutter, focus);
-                Serial.printf("[BLE] SET_PINS shutter=%u focus=%u\n", shutter, focus);
+                ESP_LOGI(TAG, "SET_PINS shutter=%u focus=%u", shutter, focus);
                 break;
             }
             case CMD_SET_NAME: {
@@ -165,7 +181,7 @@ class CmdCharCB : public BLECharacteristicCallbacks {
 
                 // Defer BLE reinit to main loop (unsafe from callback context)
                 _pendingReinit = true;
-                Serial.printf("[BLE] SET_NAME → %s (reinit pending)\n", _deviceName);
+                ESP_LOGI(TAG, "SET_NAME → '%s' (reinit pending)", _deviceName);
                 break;
             }
             case CMD_DEVICE_INFO: {
@@ -195,11 +211,11 @@ class CmdCharCB : public BLECharacteristicCallbacks {
                 info.uptime_minutes = (uint16_t)(millis() / 60000UL);
 
                 ble_notify(reinterpret_cast<const uint8_t*>(&info), sizeof(info));
-                Serial.println("[BLE] DEVICE_INFO sent");
+                ESP_LOGI(TAG, "DEVICE_INFO sent");
                 break;
             }
             default:
-                Serial.printf("[BLE] Unknown CMD %02X\n", cmd);
+                ESP_LOGW(TAG, "Unknown CMD %02X", cmd);
                 break;
         }
     }
@@ -238,12 +254,12 @@ void ble_init() {
     _prefs.end();
     if (is_safe_output_pin(shutter) && is_safe_output_pin(focus) && shutter != focus) {
         camera_init_pins(shutter, focus);
-        Serial.printf("[BLE] Loaded pins: shutter=%u focus=%u\n", shutter, focus);
+        ESP_LOGI(TAG, "Loaded pins: shutter=%u focus=%u", shutter, focus);
     }
 
-    Serial.printf("[BLE] Initializing as '%s' ...\n", _deviceName);
+    ESP_LOGI(TAG, "Initializing as '%s' ...", _deviceName);
     BLEDevice::init(_deviceName);
-    Serial.println("[BLE] Stack initialized");
+    ESP_LOGI(TAG, "Stack initialized");
 
     // Enable BLE security — bonding with encryption (Just Works, no MITM)
     BLEDevice::setEncryptionLevel(ESP_BLE_SEC_ENCRYPT);
@@ -310,10 +326,14 @@ void ble_init() {
         _advConfigured = true;
     }
     adv->setScanResponse(true);
+    // Advertising interval: 152.5ms–318.75ms (power-friendly while still
+    // discoverable within a few seconds).  Units are 0.625ms.
+    adv->setMinInterval(0x00F4);  // 152.5 ms
+    adv->setMaxInterval(0x01FE);  // 318.75 ms
     adv->setMinPreferred(0x06);
     BLEDevice::startAdvertising();
 
-    Serial.printf("[BLE] Advertising as %s\n", _deviceName);
+    ESP_LOGI(TAG, "Advertising as '%s'", _deviceName);
 }
 
 void ble_notify(const uint8_t* data, size_t len) {
@@ -338,12 +358,12 @@ void ble_handle_reinit() {
     if (!_pendingReinit) return;
     _pendingReinit = false;
 
-    Serial.printf("[BLE] Reinit for rename → %s\n", _deviceName);
+    ESP_LOGI(TAG, "Reinit for rename → '%s'", _deviceName);
 
     // Full deinit/reinit — the only reliable way to update the advertised
-    // name across all ESP32 variants.  deinit(false) releases BLE resources
-    // but keeps the Bluetooth controller active so reinit is fast.
-    BLEDevice::deinit(false);
+    // name across all ESP32 variants.  deinit(true) fully resets the BT
+    // controller which is needed on ESP32-S3 to clear the cached GAP name.
+    BLEDevice::deinit(true);
     _connected = false;
     _advConfigured = false;
     _cmdChar = nullptr;
@@ -351,8 +371,8 @@ void ble_handle_reinit() {
     _pitchChar = nullptr;
     _otaCtrlChar = nullptr;
     _otaDataChar = nullptr;
-    delay(100);
+    delay(300);
     ble_init();
 
-    Serial.printf("[BLE] Now advertising as %s\n", _deviceName);
+    ESP_LOGI(TAG, "Now advertising as '%s'", _deviceName);
 }
