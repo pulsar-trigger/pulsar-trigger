@@ -200,8 +200,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             bleManager.connectionState.collect {
                 _connected.value = it
                 if (it) {
-                    sendPins()
                     sendAutoOff()
+                    // Pins are sent after device info arrives (see below)
+                    // to ensure the correct defaults for the chip model.
                 }
             }
         }
@@ -258,14 +259,17 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
 
-        // When device info arrives, ensure saved pins are valid for the chip
+        // When device info arrives, ensure saved pins are valid for the chip,
+        // then send them. This avoids sending wrong defaults before we know the chip model.
         viewModelScope.launch {
             deviceInfo.filterNotNull().collect { info ->
                 val validPins = AppConfig.safeOutputPinsForChip(info.chipModel)
                 if (_pinShutter.value !in validPins || _pinFocus.value !in validPins) {
                     val defShutter = AppConfig.defaultShutterPinForChip(info.chipModel)
                     val defFocus = AppConfig.defaultFocusPinForChip(info.chipModel)
-                    savePins(defShutter, defFocus)
+                    savePins(defShutter, defFocus) // saves + sends
+                } else {
+                    sendPins()
                 }
             }
         }
