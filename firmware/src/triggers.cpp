@@ -16,12 +16,12 @@ static volatile State _state = STATE_IDLE;
 
 static IntervalParams  _interval = {};
 
-static uint16_t _shots_taken   = 0;
-static uint32_t _next_fire_ms  = 0;
-static uint32_t _focus_ms      = DEFAULT_FOCUS_MS;
-static bool     _lock_active   = false;
-static uint32_t _debounce_until = 0;  // non-blocking debounce timestamp
-static uint32_t _last_remaining_ms = 0;  // cached for display getter
+static volatile uint16_t _shots_taken   = 0;
+static volatile uint32_t _next_fire_ms  = 0;
+static volatile uint32_t _focus_ms      = DEFAULT_FOCUS_MS;
+static volatile bool     _lock_active   = false;
+static volatile uint32_t _debounce_until = 0;  // non-blocking debounce timestamp
+static volatile uint32_t _last_remaining_ms = 0;  // cached for display getter
 
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -46,6 +46,19 @@ static uint32_t read_u32_le(const uint8_t* data) {
 
 static uint16_t read_u16_le(const uint8_t* data) {
     return (uint16_t)data[0] | ((uint16_t)data[1] << 8);
+}
+
+/// Compute remaining time for an intervalometer job.
+/// @param shots_left  number of shots still to fire (including current if pre-fire)
+/// @param include_gap whether to include the trailing gap (false = pre-fire, true = post-fire)
+static uint32_t calc_remaining_ms(uint16_t shots_left, bool include_gap) {
+    if (_interval.count > 0 && shots_left > 0) {
+        uint64_t cycle = (uint64_t)_interval.exposure_ms + _interval.interval_ms;
+        uint64_t total = (uint64_t)shots_left * cycle;
+        if (!include_gap) total -= _interval.interval_ms;
+        return (total > UINT32_MAX) ? UINT32_MAX : (uint32_t)total;
+    }
+    return include_gap ? _interval.interval_ms : _interval.exposure_ms;
 }
 
 static void fire_and_count(uint32_t exposure_ms) {
@@ -88,8 +101,6 @@ bool triggers_set_mode(Mode mode, const uint8_t* payload, size_t len) {
         default:
             return false;
     }
-
-    return false;
 }
 
 void triggers_start() {
@@ -124,7 +135,7 @@ void triggers_stop() {
 }
 
 void triggers_single_shot() {
-    camera_shutter(200, _focus_ms);  // 200 ms default single shot
+    camera_shutter(SINGLE_SHOT_MS, _focus_ms);
 }
 
 Mode  triggers_current_mode()  { return _mode; }
@@ -153,15 +164,8 @@ void triggers_tick() {
 
                 // Notify app BEFORE the blocking exposure so it can show EXPOSING state
                 {
-                    uint32_t pre_remaining;
-                    if (_interval.count > 0) {
-                        uint16_t shots_left = _interval.count - _shots_taken;
-                        uint64_t cycle = (uint64_t)_interval.exposure_ms + _interval.interval_ms;
-                        uint64_t total = (uint64_t)shots_left * cycle - _interval.interval_ms;
-                        pre_remaining = (total > UINT32_MAX) ? UINT32_MAX : (uint32_t)total;
-                    } else {
-                        pre_remaining = _interval.exposure_ms;
-                    }
+                    uint16_t shots_left = (_interval.count > 0) ? _interval.count - _shots_taken : 0;
+                    uint32_t pre_remaining = calc_remaining_ms(shots_left, false);
                     status_send(_state, _mode, _shots_taken, pre_remaining);
                 }
 
@@ -182,17 +186,8 @@ void triggers_tick() {
                 _state = STATE_WAITING;
 
                 // Compute total remaining time for the job
-                uint32_t remaining;
-                if (_interval.count > 0) {
-                    uint16_t shots_left = _interval.count - _shots_taken;
-                    // remaining = gap + (shots_left-1) * (exposure + gap) + exposure
-                    //           = shots_left * (exposure + gap)
-                    uint64_t cycle = (uint64_t)_interval.exposure_ms + _interval.interval_ms;
-                    uint64_t total = (uint64_t)shots_left * cycle;
-                    remaining = (total > UINT32_MAX) ? UINT32_MAX : (uint32_t)total;
-                } else {
-                    remaining = _interval.interval_ms;  // infinite: gap countdown
-                }
+                uint16_t shots_left = (_interval.count > 0) ? _interval.count - _shots_taken : 0;
+                uint32_t remaining = calc_remaining_ms(shots_left, true);
                 _last_remaining_ms = remaining;
                 status_send(_state, _mode, _shots_taken, remaining);
             }

@@ -195,4 +195,9 @@ class PulsarBleManager(context: Context) : BleManager(context) {
     fun disconnectDevice() {
         disconnect().enqueue()
     }
+
+    override fun close() {
+        rssiScope.cancel()
+        super.close()
+    }
 }

@@ -20,9 +20,9 @@ extern void ble_ota_notify(const uint8_t* data, size_t len);
 
 static esp_ota_handle_t _ota_handle = 0;
 static const esp_partition_t* _ota_partition = nullptr;
-static uint32_t _ota_total_size = 0;
-static uint32_t _ota_written = 0;
-static bool _ota_active = false;
+static volatile uint32_t _ota_total_size = 0;
+static volatile uint32_t _ota_written = 0;
+static volatile bool _ota_active = false;
 static volatile bool _ota_finalize_pending = false;
 
 void ota_init() {

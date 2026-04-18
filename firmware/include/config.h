@@ -55,6 +55,7 @@
 
 // ── Timing defaults ──────────────────────────────────────────────────────────
 #define DEFAULT_FOCUS_MS      200   // pre-focus hold before shutter
+#define SINGLE_SHOT_MS        200   // single-shot exposure duration
 #define DEBOUNCE_MS           50
 
 // ── Parameter ranges ─────────────────────────────────────────────────────────

@@ -32,10 +32,10 @@ static BLECharacteristic* _statusChar  = nullptr;
 static BLECharacteristic* _pitchChar   = nullptr;
 static BLECharacteristic* _otaCtrlChar = nullptr;
 static BLECharacteristic* _otaDataChar = nullptr;
-static bool _connected = false;
+static volatile bool _connected = false;
 static volatile bool _pendingReinit = false;
 static bool _advConfigured = false;
-static uint16_t _auto_off_minutes = 5;  // default: 5 min (0 = disabled)
+static volatile uint16_t _auto_off_minutes = 5;  // default: 5 min (0 = disabled)
 
 // ── Connection callbacks ─────────────────────────────────────────────────────
 class PulsarServerCB : public BLEServerCallbacks {
