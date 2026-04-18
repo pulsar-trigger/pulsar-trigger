@@ -52,11 +52,6 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
         LaunchedEffect(Unit) { onConnected() }
     }
 
-    // Auto-start scanning when the screen appears
-    LaunchedEffect(Unit) {
-        if (!scanning) vm.startScan()
-    }
-
     var showLanguageDialog by remember { mutableStateOf(false) }
 
     Column(
@@ -123,7 +118,7 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
         Text(
             stringResource(R.string.scan_pull_hint),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
         )
 
         Spacer(Modifier.height(16.dp))
