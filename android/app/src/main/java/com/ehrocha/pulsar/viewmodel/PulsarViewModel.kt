@@ -201,8 +201,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 _connected.value = it
                 if (it) {
                     sendAutoOff()
-                    // Pins are sent after device info arrives (see below)
-                    // to ensure the correct defaults for the chip model.
+                    // Request device info so we know the chip model before
+                    // sending pins — pins are sent after info arrives (see below).
+                    requestDeviceInfo()
                 }
             }
         }
