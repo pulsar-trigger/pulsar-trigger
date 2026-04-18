@@ -163,11 +163,13 @@ static void draw_center_intervalometer() {
     _sprite.setTextSize(1);
     _sprite.drawString("INTERVALOMETER", cx, CENTER_Y + 2);
 
-    // Shot counter — large
+    // Shot counter — large (1-based: show current/next shot number)
     uint16_t shots = triggers_shots_taken();
+    State st = triggers_current_state();
+    uint16_t display_shots = (st == STATE_RUNNING || st == STATE_WAITING) ? shots + 1 : shots;
     const IntervalParams& p = triggers_interval_params();
     char shot_str[12];
-    snprintf(shot_str, sizeof(shot_str), "%u", shots);
+    snprintf(shot_str, sizeof(shot_str), "%u", display_shots);
 
     _sprite.setTextDatum(middle_center);
     _sprite.setTextColor(COL_TEXT);
