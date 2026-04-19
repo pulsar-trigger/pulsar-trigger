@@ -201,9 +201,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 _connected.value = it
                 if (it) {
                     sendAutoOff()
-                    // Request device info so we know the chip model before
-                    // sending pins — pins are sent after info arrives (see below).
-                    requestDeviceInfo()
+                    // Device info is requested by BleManager.initialize()
+                    // after notifications are active — no need to request here.
                 }
             }
         }
@@ -239,10 +238,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _connected.collect { isConnected ->
                 if (isConnected) {
-                    // Request device hardware info from real device
-                    if (!_simulatorActive.value) {
-                        bleManager.sendCommand(CommandBuilder.deviceInfoRequest())
-                    }
                     // Always check app update
                     appUpdateManager.checkForUpdate(
                         com.ehrocha.pulsar.BuildConfig.VERSION_NAME

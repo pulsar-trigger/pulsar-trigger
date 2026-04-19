@@ -112,7 +112,8 @@ class PulsarBleManager(context: Context) : BleManager(context) {
         }.enqueue()
 
         sendCommand(CommandBuilder.statusRequest())
-        Log.i(TAG, "Initialized — notifications enabled, status requested")
+        sendCommand(CommandBuilder.deviceInfoRequest())
+        Log.i(TAG, "Initialized — notifications enabled, status + device info requested")
 
         // Start periodic RSSI polling
         rssiJob?.cancel()
