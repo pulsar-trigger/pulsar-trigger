@@ -18,7 +18,6 @@
 
 #ifdef HAS_M5DISPLAY
 #include <M5Unified.h>
-#include "display.h"
 #endif
 
 void setup() {
@@ -107,7 +106,9 @@ void setup() {
     ble_init();
 
 #ifdef HAS_M5DISPLAY
-    display_init();
+    // Keep LCD off at all times — saves power and avoids unwanted wake-ups
+    M5.Display.setBrightness(0);
+    M5.Display.sleep();
 #endif
 }
 
@@ -116,7 +117,7 @@ void loop() {
     M5.update();
 #endif
 
-    // LED status indicator (generic ESP32 only — M5 boards use display)
+    // LED status indicator (generic ESP32 only)
 #ifndef HAS_M5DISPLAY
     static uint32_t led_timer = 0;
     bool running = (triggers_current_state() == STATE_RUNNING ||
@@ -146,11 +147,6 @@ void loop() {
     // Run active trigger mode
     triggers_tick();
 
-#ifdef HAS_M5DISPLAY
-    // Update LCD display
-    display_update();
-#endif
-
     // ── Auto-shutdown: power off after idle timeout ─────────────────────
     {
         static uint32_t last_active_ms = 0;
@@ -168,7 +164,6 @@ void loop() {
 #ifdef HAS_M5DISPLAY
                     camera_release_pins();
                     BLEDevice::deinit(true);
-                    M5.Display.sleep();
 #ifdef BOARD_M5STICKS3
                     M5.Power.setExtOutput(false);  // cut 5V to Hat2 bus / optocoupler
 #endif

@@ -21,7 +21,7 @@ static volatile uint32_t _next_fire_ms  = 0;
 static volatile uint32_t _focus_ms      = DEFAULT_FOCUS_MS;
 static volatile bool     _lock_active   = false;
 static volatile uint32_t _debounce_until = 0;  // non-blocking debounce timestamp
-static volatile uint32_t _last_remaining_ms = 0;  // cached for display getter
+static volatile uint32_t _last_remaining_ms = 0;  // cached for status getter
 
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -170,6 +170,9 @@ void triggers_tick() {
                 }
 
                 fire_and_count(_interval.exposure_ms);
+
+                // Stop requested during exposure — bail out immediately
+                if (_state == STATE_IDLE) return;
 
                 if (_interval.count > 0 && _shots_taken >= _interval.count) {
                     _state = STATE_IDLE;

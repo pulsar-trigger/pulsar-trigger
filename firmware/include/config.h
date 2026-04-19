@@ -11,7 +11,7 @@
   // M5StickS3: user-wired optocoupler on Hat2-Bus (G0, G1)
   #define DEFAULT_PIN_SHUTTER  0
   #define DEFAULT_PIN_FOCUS    1
-  // No dedicated status LED GPIO — use M5Unified display
+  // No dedicated status LED GPIO — M5 board
   #define PIN_LED       GPIO_NUM_NC
   // Battery via M5PM1 I2C PMIC — no ADC pin
   #define PIN_BATTERY   GPIO_NUM_NC
