@@ -51,6 +51,9 @@ import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 
 import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
+import com.ehrocha.pulsar.ui.theme.StatusGreen
+import com.ehrocha.pulsar.ui.theme.StatusOrange
+import com.ehrocha.pulsar.ui.theme.StatusRed
 import java.text.DateFormat
 import java.util.Date
 import kotlinx.coroutines.delay
@@ -932,7 +935,7 @@ private fun FlowEditorView(
                 onClick = { vm.stopFlow() },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF1744)),
+                colors = ButtonDefaults.buttonColors(containerColor = StatusRed),
             ) {
                 Icon(Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
@@ -1194,10 +1197,10 @@ private fun FlowStepCard(
                     DeviceState.ERROR -> stringResource(R.string.flow_state_error)
                 }
                 val stateColor = when (status.state) {
-                    DeviceState.RUNNING -> Color(0xFF4CAF50)
-                    DeviceState.WAITING -> Color(0xFFFFA726)
+                    DeviceState.RUNNING -> StatusGreen
+                    DeviceState.WAITING -> StatusOrange
                     DeviceState.IDLE -> MaterialTheme.colorScheme.onSurfaceVariant
-                    DeviceState.ERROR -> Color(0xFFFF1744)
+                    DeviceState.ERROR -> StatusRed
                 }
 
                 // Shot display: always +1 while active so count starts at 1
@@ -1281,7 +1284,7 @@ private fun FlowStepCard(
                     Text(
                         stringResource(R.string.flow_state_exposing),
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFF4CAF50),
+                        color = StatusGreen,
                         modifier = Modifier.width(60.dp),
                     )
                     LinearProgressIndicator(
@@ -1289,7 +1292,7 @@ private fun FlowStepCard(
                         modifier = Modifier
                             .weight(1f)
                             .height(4.dp),
-                        color = Color(0xFF4CAF50),
+                        color = StatusGreen,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     )
                 }
@@ -1301,7 +1304,7 @@ private fun FlowStepCard(
                     Text(
                         stringResource(R.string.flow_state_waiting),
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFFFFA726),
+                        color = StatusOrange,
                         modifier = Modifier.width(60.dp),
                     )
                     LinearProgressIndicator(
@@ -1309,7 +1312,7 @@ private fun FlowStepCard(
                         modifier = Modifier
                             .weight(1f)
                             .height(4.dp),
-                        color = Color(0xFFFFA726),
+                        color = StatusOrange,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     )
                 }
@@ -1346,14 +1349,14 @@ private fun FlowStepCard(
                 // Pause step gets a "Waiting for user" badge
                 Surface(
                     shape = RoundedCornerShape(6.dp),
-                    color = Color(0xFFFFA726).copy(alpha = 0.15f),
+                    color = StatusOrange.copy(alpha = 0.15f),
                     modifier = Modifier.padding(bottom = 8.dp),
                 ) {
                     Text(
                         stringResource(R.string.flow_waiting_for_user),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFFFA726),
+                        color = StatusOrange,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                     )
                 }

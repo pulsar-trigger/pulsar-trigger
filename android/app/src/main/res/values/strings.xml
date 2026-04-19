@@ -564,4 +564,21 @@
 
     <!-- Scan screen -->
     <string name="scan_pull_hint">Pull down to scan for devices</string>
+
+    <!-- OTA notification strings -->
+    <string name="ota_notif_downloading">Downloading firmware…</string>
+    <string name="ota_notif_uploading">Uploading to device…</string>
+    <string name="ota_notif_validating">Validating firmware…</string>
+    <string name="ota_notif_validating_detail">Device is verifying and rebooting</string>
+    <string name="ota_notif_complete">Firmware updated</string>
+    <string name="ota_notif_complete_detail">Update complete</string>
+    <string name="ota_notif_failed">Firmware update failed</string>
+
+    <!-- Accessibility: content descriptions -->
+    <string name="cd_arrow_up">Increase</string>
+    <string name="cd_arrow_down">Decrease</string>
+    <string name="cd_backspace">Backspace</string>
+    <string name="cd_confirm">Confirm</string>
+    <string name="cd_bluetooth">Bluetooth</string>
+    <string name="cd_simulator">Simulator</string>
 </resources>

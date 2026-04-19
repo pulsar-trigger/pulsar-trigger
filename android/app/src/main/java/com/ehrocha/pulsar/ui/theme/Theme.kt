@@ -74,6 +74,20 @@ val LocalNightMode = compositionLocalOf { mutableStateOf(ThemeMode.Dark) }
 /** When true, night mode cannot be changed by a single tap — long-press to unlock. */
 val LocalNightModeLocked = compositionLocalOf { mutableStateOf(false) }
 
+// ── Status / semantic colors (shared across all themes) ────────────────────
+val StatusGreen = Color(0xFF4CAF50)
+val StatusOrange = Color(0xFFFFA726)
+val StatusRed = Color(0xFFFF1744)
+val StatusOff = Color(0xFF3A3A3A)
+val ExposureGreen = Color(0xFF00E676)
+val WaitingYellow = Color(0xFFFFD600)
+
+// Planner verdict colors
+val VerdictExcellent = Color(0xFF2E7D32)
+val VerdictGood = Color(0xFF558B2F)
+val VerdictFair = Color(0xFFF9A825)
+val VerdictPoor = Color(0xFFE65100)
+
 /** Global device status — available to every composable without parameter threading. */
 val LocalDeviceStatus = compositionLocalOf<StatusFrame?> { null }
 

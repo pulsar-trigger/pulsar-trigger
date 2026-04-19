@@ -16,8 +16,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.ehrocha.pulsar.R
 
 /**
  * Tap-to-step number picker with ▲/▼ buttons instead of scroll wheels.
@@ -63,11 +65,11 @@ fun ScrollPicker(
         FilledTonalIconButton(
             onClick = { step(1) },
             enabled = enabled && value < range.last,
-            modifier = Modifier.size(36.dp),
+            modifier = Modifier.size(48.dp),
         ) {
             Icon(
                 Icons.Default.KeyboardArrowUp,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.cd_arrow_up),
                 modifier = Modifier.size(20.dp),
             )
         }
@@ -100,11 +102,11 @@ fun ScrollPicker(
         FilledTonalIconButton(
             onClick = { step(-1) },
             enabled = enabled && value > range.first,
-            modifier = Modifier.size(36.dp),
+            modifier = Modifier.size(48.dp),
         ) {
             Icon(
                 Icons.Default.KeyboardArrowDown,
-                contentDescription = null,
+                contentDescription = stringResource(R.string.cd_arrow_down),
                 modifier = Modifier.size(20.dp),
             )
         }

@@ -75,7 +75,7 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Bluetooth, contentDescription = null, tint = Color.White)
+                Icon(Icons.Default.Bluetooth, contentDescription = stringResource(R.string.cd_bluetooth), tint = Color.White)
             }
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
@@ -147,7 +147,7 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
 
         Surface(
             onClick = { vm.connectSimulator() },
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surfaceVariant,
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -157,7 +157,7 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
             ) {
                 Icon(
                     Icons.Default.PhoneAndroid,
-                    contentDescription = null,
+                    contentDescription = stringResource(R.string.cd_simulator),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(24.dp),
                 )

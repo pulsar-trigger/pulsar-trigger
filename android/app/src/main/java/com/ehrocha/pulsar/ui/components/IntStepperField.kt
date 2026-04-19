@@ -70,7 +70,7 @@ fun IntStepperField(
             FilledTonalIconButton(
                 onClick = { onValueChange((value - step).coerceIn(min, max)) },
                 enabled = enabled && value > min,
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier.size(48.dp),
             ) {
                 Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.cd_decrease))
             }
@@ -101,7 +101,7 @@ fun IntStepperField(
             FilledTonalIconButton(
                 onClick = { onValueChange((value + step).coerceIn(min, max)) },
                 enabled = enabled && value < max,
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier.size(48.dp),
             ) {
                 Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_increase))
             }

@@ -339,6 +339,19 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             disconnectSimulator()
             return
         }
+        // Stop any running job on the device before disconnecting so the
+        // firmware doesn't keep firing after the BLE link drops.
+        val running = _status.value?.state.let {
+            it == DeviceState.RUNNING || it == DeviceState.WAITING
+        }
+        if (running || _flowRunning.value) {
+            flowJob?.cancel()
+            flowJob = null
+            _flowRunning.value = false
+            _flowPaused.value = false
+            _flowCurrentStep.value = -1
+            bleManager.sendCommand(CommandBuilder.stop())
+        }
         bleManager.disconnectDevice()
     }
 
@@ -933,7 +946,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         super.onCleared()
         stopScan()
         simulatorJob?.cancel()
-        flowJob?.cancel()
+        // Send stop before tearing down so firmware doesn't keep firing
+        if (flowJob != null || _status.value?.state.let {
+                it == DeviceState.RUNNING || it == DeviceState.WAITING
+            }) {
+            flowJob?.cancel()
+            bleManager.sendCommand(CommandBuilder.stop())
+        }
         bleManager.disconnectDevice()
     }
 }

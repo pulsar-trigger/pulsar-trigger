@@ -25,11 +25,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ui.theme.StatusGreen
 import com.ehrocha.pulsar.viewmodel.AlignmentViewModel
 import kotlin.math.abs
 import kotlin.math.min
-
-private val GoodGreen = Color(0xFF4CAF50)
 
 @Composable
 fun AlignmentScreen(
@@ -221,8 +220,8 @@ private fun BullseyeReticle(
     val errorColor = MaterialTheme.colorScheme.error
 
     // Colors switch to green when fully aligned
-    val reticleColor = if (allAligned) GoodGreen else outline
-    val bubbleColor = if (allAligned) GoodGreen else primary
+    val reticleColor = if (allAligned) StatusGreen else outline
+    val bubbleColor = if (allAligned) StatusGreen else primary
 
     // Clamp errors to ±30° for display; full range = 60°
     val maxAngle = 30f
@@ -299,8 +298,8 @@ private fun BullseyeReticle(
         val rollDy = (rollBarHalf * Math.sin(rollRad)).toFloat()
 
         val rollColor = when {
-            allAligned -> GoodGreen
-            abs(roll) < 1f -> GoodGreen
+            allAligned -> StatusGreen
+            abs(roll) < 1f -> StatusGreen
             abs(roll) < 5f -> primary
             else -> errorColor
         }
@@ -383,9 +382,9 @@ private fun ReadoutRow(
     allAligned: Boolean,
 ) {
     val errColor = when {
-        allAligned -> GoodGreen
+        allAligned -> StatusGreen
         !active -> MaterialTheme.colorScheme.onSurfaceVariant
-        abs(errorValue) < 0.5f -> GoodGreen
+        abs(errorValue) < 0.5f -> StatusGreen
         abs(errorValue) < 5f -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.error
     }

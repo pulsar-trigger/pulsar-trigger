@@ -433,4 +433,18 @@
 
     <!-- Scan screen -->
     <string name="scan_pull_hint">下に引いてデバイスを検索</string>
+
+    <string name="ota_notif_downloading">ファームウェアをダウンロード中…</string>
+    <string name="ota_notif_uploading">デバイスにアップロード中…</string>
+    <string name="ota_notif_validating">ファームウェアを検証中…</string>
+    <string name="ota_notif_validating_detail">デバイスが検証して再起動しています</string>
+    <string name="ota_notif_complete">ファームウェアが更新されました</string>
+    <string name="ota_notif_complete_detail">アップデート完了</string>
+    <string name="ota_notif_failed">ファームウェアの更新に失敗しました</string>
+    <string name="cd_arrow_up">増加</string>
+    <string name="cd_arrow_down">減少</string>
+    <string name="cd_backspace">削除</string>
+    <string name="cd_confirm">確認</string>
+    <string name="cd_bluetooth">Bluetooth</string>
+    <string name="cd_simulator">シミュレーター</string>
 </resources>

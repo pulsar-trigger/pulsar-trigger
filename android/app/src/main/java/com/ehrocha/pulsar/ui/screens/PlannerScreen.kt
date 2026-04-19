@@ -38,6 +38,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ui.theme.VerdictExcellent
+import com.ehrocha.pulsar.ui.theme.VerdictFair
+import com.ehrocha.pulsar.ui.theme.VerdictGood
+import com.ehrocha.pulsar.ui.theme.VerdictPoor
 
 import com.ehrocha.pulsar.planner.*
 import org.json.JSONObject
@@ -917,10 +921,10 @@ private fun SessionCard(
 @Composable
 private fun VerdictChip(verdict: PlannerVerdict) {
     val (color, label) = when (verdict) {
-        PlannerVerdict.EXCELLENT -> Color(0xFF2E7D32) to stringResource(R.string.verdict_excellent)
-        PlannerVerdict.GOOD -> Color(0xFF558B2F) to stringResource(R.string.verdict_good)
-        PlannerVerdict.FAIR -> Color(0xFFF9A825) to stringResource(R.string.verdict_fair)
-        PlannerVerdict.POOR -> Color(0xFFE65100) to stringResource(R.string.verdict_poor)
+        PlannerVerdict.EXCELLENT -> VerdictExcellent to stringResource(R.string.verdict_excellent)
+        PlannerVerdict.GOOD -> VerdictGood to stringResource(R.string.verdict_good)
+        PlannerVerdict.FAIR -> VerdictFair to stringResource(R.string.verdict_fair)
+        PlannerVerdict.POOR -> VerdictPoor to stringResource(R.string.verdict_poor)
         PlannerVerdict.UNKNOWN -> MaterialTheme.colorScheme.onSurfaceVariant to stringResource(R.string.verdict_unknown)
     }
     val animatedColor by animateColorAsState(color, label = "verdict")

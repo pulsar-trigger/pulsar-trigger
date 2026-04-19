@@ -40,13 +40,17 @@ import com.ehrocha.pulsar.ui.theme.LocalDeviceRssi
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 import com.ehrocha.pulsar.ui.theme.LocalNightMode
 import com.ehrocha.pulsar.ui.theme.LocalNightModeLocked
+import com.ehrocha.pulsar.ui.theme.StatusGreen
+import com.ehrocha.pulsar.ui.theme.StatusOrange
+import com.ehrocha.pulsar.ui.theme.StatusOff
+import com.ehrocha.pulsar.ui.theme.StatusRed
 import com.ehrocha.pulsar.ui.theme.ThemeMode
 
-private val LedIdle = Color(0xFF4CAF50)
-private val LedRunning = Color(0xFFFF1744)
-private val LedWaiting = Color(0xFFFFA726)
-private val LedError = Color(0xFFFF1744)
-private val LedOff = Color(0xFF3A3A3A)
+private val LedIdle = StatusGreen
+private val LedRunning = StatusRed
+private val LedWaiting = StatusOrange
+private val LedError = StatusRed
+private val LedOff = StatusOff
 
 @Composable
 private fun StateLed(label: String, color: Color, active: Boolean) {
@@ -92,7 +96,7 @@ fun BatteryIndicator() {
                 fontWeight = FontWeight.Bold,
                 color = when {
                     status == null -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
-                    status.batteryPct < 20 -> Color(0xFFFF1744)
+                    status.batteryPct < 20 -> StatusRed
                     else -> MaterialTheme.colorScheme.onSurface
                 },
             )
@@ -173,10 +177,10 @@ fun NightModeToggle() {
 
 // ── Signal Strength Indicator ─────────────────────────────────────────────
 
-private val SignalGood = Color(0xFF4CAF50)
-private val SignalMedium = Color(0xFFFFA726)
-private val SignalWeak = Color(0xFFFF1744)
-private val SignalOff = Color(0xFF3A3A3A)
+private val SignalGood = StatusGreen
+private val SignalMedium = StatusOrange
+private val SignalWeak = StatusRed
+private val SignalOff = StatusOff
 
 /**
  * Compact BLE signal strength indicator showing 3 bars sized S/M/L.

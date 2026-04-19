@@ -44,6 +44,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import java.text.DateFormat
 import java.util.Date
 import com.ehrocha.pulsar.ui.theme.DarkColorScheme
+import com.ehrocha.pulsar.ui.theme.ExposureGreen
+import com.ehrocha.pulsar.ui.theme.StatusRed
+import com.ehrocha.pulsar.ui.theme.WaitingYellow
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
@@ -115,7 +118,7 @@ fun ModeScreen(
         Spacer(Modifier.height(12.dp))
 
         Surface(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(20.dp),
             tonalElevation = 1.dp,
             modifier = Modifier.weight(1f),
         ) {
@@ -333,29 +336,30 @@ fun SettingsScreen(
     }
 
     // Post OTA notifications on state changes
+    val context = LocalContext.current
     LaunchedEffect(otaState, otaProgress) {
         when (otaState) {
             OtaState.DOWNLOADING -> vm.updateOtaNotification(
-                "Downloading firmware…",
+                context.getString(R.string.ota_notif_downloading),
                 "${(otaProgress * 100).toInt()}%",
                 (otaProgress * 100).toInt(),
             )
             OtaState.UPLOADING -> vm.updateOtaNotification(
-                "Uploading to device…",
+                context.getString(R.string.ota_notif_uploading),
                 "${(otaProgress * 100).toInt()}%",
                 (otaProgress * 100).toInt(),
             )
             OtaState.VALIDATING -> vm.updateOtaNotification(
-                "Validating firmware…",
-                "Device is verifying and rebooting",
+                context.getString(R.string.ota_notif_validating),
+                context.getString(R.string.ota_notif_validating_detail),
             )
             OtaState.COMPLETE -> vm.updateOtaNotification(
-                "Firmware updated",
-                "Update complete",
+                context.getString(R.string.ota_notif_complete),
+                context.getString(R.string.ota_notif_complete_detail),
                 done = true,
             )
             OtaState.ERROR -> vm.updateOtaNotification(
-                "Firmware update failed",
+                context.getString(R.string.ota_notif_failed),
                 otaError ?: "Unknown error",
                 done = true,
             )
@@ -388,7 +392,7 @@ fun SettingsScreen(
         Spacer(Modifier.height(12.dp))
 
         Surface(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(20.dp),
             tonalElevation = 1.dp,
             modifier = Modifier.weight(1f),
         ) {
@@ -502,7 +506,7 @@ private fun SwipeToUnlockBar(onUnlocked: () -> Unit) {
     val unlockThreshold = 200f
 
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
         modifier = Modifier
             .fillMaxWidth()
@@ -574,7 +578,7 @@ private fun RunningStatusContent(
     }
 
     // Tick every 100 ms to update the countdown locally
-    LaunchedEffect(lastUpdateTime) {
+    LaunchedEffect(Unit) {
         while (true) {
             delay(100L)
             val elapsed = System.currentTimeMillis() - lastUpdateTime
@@ -619,9 +623,9 @@ private fun RunningStatusContent(
 
     val stateColor by animateColorAsState(
         targetValue = when (status.state) {
-            DeviceState.RUNNING -> Color(0xFF00E676)
-            DeviceState.WAITING -> Color(0xFFFFD600)
-            DeviceState.ERROR -> Color(0xFFFF1744)
+            DeviceState.RUNNING -> ExposureGreen
+            DeviceState.WAITING -> WaitingYellow
+            DeviceState.ERROR -> StatusRed
             else -> MaterialTheme.colorScheme.primary
         },
         label = "stateColor",
@@ -694,7 +698,7 @@ private fun RunningStatusContent(
             Text(
                 text = stringResource(R.string.state_exposing),
                 style = MaterialTheme.typography.labelSmall,
-                color = Color(0xFF00E676),
+                color = ExposureGreen,
                 modifier = Modifier.width(72.dp),
             )
             LinearProgressIndicator(
@@ -702,7 +706,7 @@ private fun RunningStatusContent(
                 modifier = Modifier
                     .weight(1f)
                     .height(8.dp),
-                color = Color(0xFF00E676),
+                color = ExposureGreen,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
             )
@@ -715,7 +719,7 @@ private fun RunningStatusContent(
             Text(
                 text = stringResource(R.string.state_waiting),
                 style = MaterialTheme.typography.labelSmall,
-                color = Color(0xFFFFD600),
+                color = WaitingYellow,
                 modifier = Modifier.width(72.dp),
             )
             LinearProgressIndicator(
@@ -723,7 +727,7 @@ private fun RunningStatusContent(
                 modifier = Modifier
                     .weight(1f)
                     .height(8.dp),
-                color = Color(0xFFFFD600),
+                color = WaitingYellow,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
             )
@@ -781,7 +785,7 @@ private fun RunningStatusPreview() {
     MaterialTheme(colorScheme = DarkColorScheme) {
         CompositionLocalProvider(LocalDeviceStatus provides mockStatus) {
             Surface(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(20.dp),
                 tonalElevation = 1.dp,
                 modifier = Modifier.fillMaxSize(),
             ) {

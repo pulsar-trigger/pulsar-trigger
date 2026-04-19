@@ -433,4 +433,18 @@
 
     <!-- Scan screen -->
     <string name="scan_pull_hint">Puxe para baixo para buscar dispositivos</string>
+
+    <string name="ota_notif_downloading">Baixando firmware…</string>
+    <string name="ota_notif_uploading">Enviando para o dispositivo…</string>
+    <string name="ota_notif_validating">Validando firmware…</string>
+    <string name="ota_notif_validating_detail">Dispositivo verificando e reiniciando</string>
+    <string name="ota_notif_complete">Firmware atualizado</string>
+    <string name="ota_notif_complete_detail">Atualização concluída</string>
+    <string name="ota_notif_failed">Falha na atualização do firmware</string>
+    <string name="cd_arrow_up">Aumentar</string>
+    <string name="cd_arrow_down">Diminuir</string>
+    <string name="cd_backspace">Apagar</string>
+    <string name="cd_confirm">Confirmar</string>
+    <string name="cd_bluetooth">Bluetooth</string>
+    <string name="cd_simulator">Simulador</string>
 </resources>

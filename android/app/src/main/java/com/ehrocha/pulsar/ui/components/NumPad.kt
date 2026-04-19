@@ -15,9 +15,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.ehrocha.pulsar.R
 
 /**
  * In-app numeric keypad that inherits the current MaterialTheme (including
@@ -100,7 +102,7 @@ fun NumPadDialog(
                     ) {
                         Icon(
                             Icons.AutoMirrored.Filled.Backspace,
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.cd_backspace),
                             modifier = Modifier.size(22.dp),
                         )
                     }
@@ -124,7 +126,7 @@ fun NumPadDialog(
                     ) {
                         Icon(
                             Icons.Default.Check,
-                            contentDescription = null,
+                            contentDescription = stringResource(R.string.cd_confirm),
                             modifier = Modifier.size(22.dp),
                         )
                     }

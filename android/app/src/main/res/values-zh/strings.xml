@@ -433,4 +433,18 @@
 
     <!-- Scan screen -->
     <string name="scan_pull_hint">下拉搜索设备</string>
+
+    <string name="ota_notif_downloading">正在下载固件…</string>
+    <string name="ota_notif_uploading">正在上传到设备…</string>
+    <string name="ota_notif_validating">正在验证固件…</string>
+    <string name="ota_notif_validating_detail">设备正在验证并重启</string>
+    <string name="ota_notif_complete">固件已更新</string>
+    <string name="ota_notif_complete_detail">更新完成</string>
+    <string name="ota_notif_failed">固件更新失败</string>
+    <string name="cd_arrow_up">增加</string>
+    <string name="cd_arrow_down">减少</string>
+    <string name="cd_backspace">退格</string>
+    <string name="cd_confirm">确认</string>
+    <string name="cd_bluetooth">蓝牙</string>
+    <string name="cd_simulator">模拟器</string>
 </resources>
