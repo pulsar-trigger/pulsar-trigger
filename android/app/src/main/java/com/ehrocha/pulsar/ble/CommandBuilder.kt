@@ -36,14 +36,15 @@ object CommandBuilder {
         return frame(Cmd.SET_FOCUS, payload)
     }
 
-    fun setIntervalometer(
+    private fun setIntervalMode(
+        mode: TriggerMode,
         intervalMs: Long,
         exposureMs: Long,
         count: Int = 0,
         delayMs: Long = 0,
     ): ByteArray {
         val payload = ByteBuffer.allocate(15).order(ByteOrder.LITTLE_ENDIAN)
-            .put(TriggerMode.INTERVALOMETER.id)
+            .put(mode.id)
             .putInt(intervalMs.toInt())
             .putInt(exposureMs.toInt())
             .putShort(count.toShort())
@@ -51,6 +52,22 @@ object CommandBuilder {
             .array()
         return frame(Cmd.SET_MODE, payload)
     }
+
+    fun setIntervalometer(
+        intervalMs: Long, exposureMs: Long, count: Int = 0, delayMs: Long = 0,
+    ): ByteArray = setIntervalMode(TriggerMode.INTERVALOMETER, intervalMs, exposureMs, count, delayMs)
+
+    fun setAstro(
+        intervalMs: Long, exposureMs: Long, count: Int = 0, delayMs: Long = 0,
+    ): ByteArray = setIntervalMode(TriggerMode.ASTRO, intervalMs, exposureMs, count, delayMs)
+
+    fun setDarkFrame(
+        intervalMs: Long, exposureMs: Long, count: Int = 0, delayMs: Long = 0,
+    ): ByteArray = setIntervalMode(TriggerMode.DARK_FRAME, intervalMs, exposureMs, count, delayMs)
+
+    fun setRamp(
+        intervalMs: Long, exposureMs: Long, count: Int = 0, delayMs: Long = 0,
+    ): ByteArray = setIntervalMode(TriggerMode.RAMP, intervalMs, exposureMs, count, delayMs)
 
     fun setPressHold(): ByteArray {
         return frame(Cmd.SET_MODE, byteArrayOf(TriggerMode.PRESS_HOLD.id))
@@ -63,14 +80,6 @@ object CommandBuilder {
     fun setTracker(): ByteArray {
         return frame(Cmd.SET_MODE, byteArrayOf(TriggerMode.TRACKER.id))
     }
-
-    /** Astro mode reuses intervalometer on firmware side. */
-    fun setAstro(
-        intervalMs: Long,
-        exposureMs: Long,
-        count: Int = 0,
-        delayMs: Long = 0,
-    ): ByteArray = setIntervalometer(intervalMs, exposureMs, count, delayMs)
 
     fun setAutoOff(minutes: Int): ByteArray {
         val payload = ByteBuffer.allocate(2).order(ByteOrder.LITTLE_ENDIAN)

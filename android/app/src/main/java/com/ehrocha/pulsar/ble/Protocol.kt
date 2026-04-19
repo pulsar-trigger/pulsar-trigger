@@ -37,13 +37,18 @@ object Cmd {
 /** Trigger modes */
 enum class TriggerMode(val id: Byte) {
     INTERVALOMETER(0x01),
-    ASTRO(0x01),          // uses intervalometer on firmware
+    ASTRO(0x03),
     TRACKER(0x02),
     PRESS_HOLD(0x06),
-    DARK_FRAME(0x01),     // uses intervalometer on firmware (app-side distinction)
-    RAMP(0x01),           // app-orchestrated ramp, uses intervalometer steps on firmware
+    DARK_FRAME(0x04),
+    RAMP(0x05),
     PRESS_LOCK(0x07),
     CUSTOM_FLOW(0x7F.toByte()),  // app-orchestrated, never sent to firmware
+    ;
+
+    companion object {
+        fun fromByte(b: Byte) = entries.firstOrNull { it.id == b }
+    }
 }
 
 /** Device state reported in the status frame */

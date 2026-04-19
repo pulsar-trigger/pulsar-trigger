@@ -33,10 +33,6 @@ void setup() {
     cfg.internal_mic = false;
     cfg.led_brightness = 0;
     M5.begin(cfg);
-#ifdef BOARD_M5STICKS3
-    // Enable 5V output on Grove / Hat2 bus (needed for optocoupler power)
-    M5.Power.setExtOutput(true);
-#endif
     Serial.println("\n=== Pulsar Intervalometer (M5) ===");
 #else
     Serial.begin(115200);
@@ -164,9 +160,6 @@ void loop() {
 #ifdef HAS_M5DISPLAY
                     camera_release_pins();
                     BLEDevice::deinit(true);
-#ifdef BOARD_M5STICKS3
-                    M5.Power.setExtOutput(false);  // cut 5V to Hat2 bus / optocoupler
-#endif
                     delay(100);
                     M5.Power.powerOff();
 #else

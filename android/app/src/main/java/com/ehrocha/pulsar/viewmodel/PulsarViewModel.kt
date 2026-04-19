@@ -606,7 +606,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     simulateShots(step.darkFrameCount, step.darkFrameExposureMs, step.darkFrameGapMs, 0L)
                 } else {
                     sendModeCommand(
-                        CommandBuilder.setIntervalometer(
+                        CommandBuilder.setDarkFrame(
                             step.darkFrameGapMs, step.darkFrameExposureMs, step.darkFrameCount, 0L,
                         )
                     )
@@ -624,7 +624,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         simulateShots(1, expMs, step.rampIntervalMs, 0L)
                     } else {
                         sendModeCommand(
-                            CommandBuilder.setIntervalometer(step.rampIntervalMs, expMs, 1, 0L)
+                            CommandBuilder.setRamp(step.rampIntervalMs, expMs, 1, 0L)
                         )
                         waitForCompletion(1)
                     }
@@ -742,7 +742,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     _astroGapMs.value, exposureMs, _astroShotCount.value, _astroDelayMs.value
                 )
             }
-            TriggerMode.DARK_FRAME -> CommandBuilder.setIntervalometer(
+            TriggerMode.DARK_FRAME -> CommandBuilder.setDarkFrame(
                 _darkFrameGapMs.value, _darkFrameExposureMs.value, _darkFrameCount.value, 0L
             )
             TriggerMode.PRESS_HOLD -> CommandBuilder.setPressHold()

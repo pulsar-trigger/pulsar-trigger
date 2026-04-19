@@ -79,7 +79,10 @@ bool triggers_set_focus(uint16_t ms) {
 
 bool triggers_set_mode(Mode mode, const uint8_t* payload, size_t len) {
     switch (mode) {
-        case MODE_INTERVALOMETER: {
+        case MODE_INTERVALOMETER:
+        case MODE_ASTRO:
+        case MODE_DARK_FRAME:
+        case MODE_RAMP: {
             if (len < sizeof(IntervalParams)) return false;
             _interval.interval_ms = clamp_u32(read_u32_le(payload), MIN_INTERVAL_MS, MAX_INTERVAL_MS);
             _interval.exposure_ms = clamp_u32(read_u32_le(payload + 4), MIN_EXPOSURE_MS, MAX_EXPOSURE_MS);
@@ -108,7 +111,8 @@ void triggers_start() {
     _debounce_until = 0;
     _state = STATE_RUNNING;
 
-    if (_mode == MODE_INTERVALOMETER) {
+    if (_mode == MODE_INTERVALOMETER || _mode == MODE_ASTRO ||
+        _mode == MODE_DARK_FRAME    || _mode == MODE_RAMP) {
         _next_fire_ms = millis() + _interval.delay_ms;
         _state = STATE_WAITING;
     } else if (_mode == MODE_PRESS_HOLD || _mode == MODE_PRESS_LOCK) {
@@ -156,8 +160,11 @@ void triggers_tick() {
     _debounce_until = 0;
 
     switch (_mode) {
-        // ── Intervalometer ───────────────────────────────────────────────
-        case MODE_INTERVALOMETER: {
+        // ── Intervalometer / Astro / Dark Frame / Ramp ──────────────────
+        case MODE_INTERVALOMETER:
+        case MODE_ASTRO:
+        case MODE_DARK_FRAME:
+        case MODE_RAMP: {
             if ((now - _next_fire_ms) < 0x80000000UL) {  // wraparound-safe: now >= _next_fire_ms
                 _state = STATE_RUNNING;
                 Serial.printf("[INTV] shot %u firing at %lu ms\n", _shots_taken + 1, millis());

@@ -86,10 +86,13 @@ class CommandBuilderTest {
     }
 
     @Test
-    fun `setAstro delegates to setIntervalometer`() {
+    fun `setAstro sends distinct mode byte with same payload layout`() {
         val astro = CommandBuilder.setAstro(3000L, 1000L, 50, 500L)
+        assertEquals(Cmd.SET_MODE, astro[0])
+        assertEquals(TriggerMode.ASTRO.id, astro[1])
         val intv = CommandBuilder.setIntervalometer(3000L, 1000L, 50, 500L)
-        assertArrayEquals(intv, astro)
+        assertEquals(intv.size, astro.size)
+        assertArrayEquals(intv.copyOfRange(2, intv.size), astro.copyOfRange(2, astro.size))
     }
 
     @Test
