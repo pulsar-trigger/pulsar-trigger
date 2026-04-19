@@ -773,6 +773,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             stopSimulatorRun()
             return
         }
+        // If a flow is active, cancel the entire flow (which also sends stop)
+        if (_flowRunning.value) {
+            stopFlow()
+            return
+        }
         bleManager.sendCommand(CommandBuilder.stop())
     }
 
