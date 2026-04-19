@@ -14,6 +14,7 @@
 #include "triggers.h"
 #include "status.h"
 #include "ota.h"
+#include <BLEDevice.h>
 
 #ifdef HAS_M5DISPLAY
 #include <M5Unified.h>
@@ -165,7 +166,11 @@ void loop() {
                 if (idle_ms > (uint32_t)timeout * 60000UL) {
                     log_i("[PM] Auto-shutdown after %u min idle", timeout);
 #ifdef HAS_M5DISPLAY
+                    BLEDevice::deinit(true);
                     M5.Display.sleep();
+#ifdef BOARD_M5STICKS3
+                    M5.Power.setExtOutput(false);  // cut 5V to Hat2 bus / optocoupler
+#endif
                     delay(100);
                     M5.Power.powerOff();
 #else
