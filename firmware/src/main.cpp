@@ -166,6 +166,7 @@ void loop() {
                 if (idle_ms > (uint32_t)timeout * 60000UL) {
                     log_i("[PM] Auto-shutdown after %u min idle", timeout);
 #ifdef HAS_M5DISPLAY
+                    camera_release_pins();
                     BLEDevice::deinit(true);
                     M5.Display.sleep();
 #ifdef BOARD_M5STICKS3
@@ -174,6 +175,8 @@ void loop() {
                     delay(100);
                     M5.Power.powerOff();
 #else
+                    camera_release_pins();
+                    BLEDevice::deinit(true);
                     esp_deep_sleep_start();
 #endif
                 }

@@ -20,6 +20,13 @@ void camera_init() {
     setup_pins();
 }
 
+void camera_release_pins() {
+    digitalWrite(_pin_shutter, LOW);
+    digitalWrite(_pin_focus, LOW);
+    pinMode(_pin_shutter, INPUT);
+    pinMode(_pin_focus, INPUT);
+}
+
 void camera_init_pins(uint8_t shutter_pin, uint8_t focus_pin) {
     // Release old pins
     digitalWrite(_pin_shutter, LOW);
