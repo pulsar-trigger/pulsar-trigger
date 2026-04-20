@@ -5,8 +5,14 @@
 
 package com.ehrocha.pulsar.ui.screens
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -42,7 +48,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ble.DeviceState
+import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.model.FlowStepType
+import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
+import com.ehrocha.pulsar.ui.theme.StatusRed
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import kotlinx.coroutines.launch
 
@@ -168,19 +178,19 @@ fun MainMenuScreen(
             when (page) {
                 0 -> {
                     val triggerItems = listOf(
-                        LauncherItem(R.string.mode_intervalometer, Icons.Default.Timer) {
+                        LauncherItem(R.string.mode_intervalometer, Icons.Default.Timer, TriggerMode.INTERVALOMETER) {
                             onQuickFlow(FlowStepType.INTERVALOMETER)
                         },
-                        LauncherItem(R.string.mode_astro, Icons.Default.Stars) {
+                        LauncherItem(R.string.mode_astro, Icons.Default.Stars, TriggerMode.ASTRO) {
                             onQuickFlow(FlowStepType.ASTRO)
                         },
-                        LauncherItem(R.string.mode_dark_frame, Icons.Default.LensBlur) {
+                        LauncherItem(R.string.mode_dark_frame, Icons.Default.LensBlur, TriggerMode.DARK_FRAME) {
                             onQuickFlow(FlowStepType.DARK_FRAME)
                         },
-                        LauncherItem(R.string.mode_ramp, Icons.AutoMirrored.Filled.TrendingUp) {
+                        LauncherItem(R.string.mode_ramp, Icons.AutoMirrored.Filled.TrendingUp, TriggerMode.RAMP) {
                             onQuickFlow(FlowStepType.RAMP)
                         },
-                        LauncherItem(R.string.mode_manual, Icons.Default.TouchApp) {
+                        LauncherItem(R.string.mode_manual, Icons.Default.TouchApp, TriggerMode.PRESS_HOLD) {
                             onManualSelected()
                         },
                         LauncherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList) {
@@ -219,11 +229,16 @@ fun MainMenuScreen(
 private data class LauncherItem(
     val labelRes: Int,
     val icon: ImageVector,
+    val mode: TriggerMode? = null,
     val onClick: () -> Unit,
 )
 
 @Composable
 private fun LauncherGrid(items: List<LauncherItem>) {
+    val status = LocalDeviceStatus.current
+    val isActive = status?.state == DeviceState.RUNNING || status?.state == DeviceState.WAITING
+    val activeMode = if (isActive) TriggerMode.fromByte(status!!.mode) else null
+
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         contentPadding = PaddingValues(4.dp),
@@ -235,6 +250,7 @@ private fun LauncherGrid(items: List<LauncherItem>) {
             LauncherTile(
                 label = stringResource(item.labelRes),
                 icon = item.icon,
+                active = item.mode != null && item.mode == activeMode,
                 onClick = item.onClick,
             )
         }
@@ -245,6 +261,7 @@ private fun LauncherGrid(items: List<LauncherItem>) {
 private fun LauncherTile(
     label: String,
     icon: ImageVector,
+    active: Boolean = false,
     onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -266,26 +283,54 @@ private fun LauncherTile(
             .aspectRatio(0.9f)
             .scale(scale),
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(8.dp),
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp),
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+        Box {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp),
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (active) {
+                PulsingDot(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(6.dp),
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun PulsingDot(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "pulse")
+    val alpha by transition.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "pulseAlpha",
+    )
+    Canvas(modifier = modifier.size(8.dp)) {
+        drawCircle(color = StatusRed.copy(alpha = alpha))
     }
 }
