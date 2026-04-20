@@ -163,22 +163,22 @@ fun MainMenuScreen(
             when (page) {
                 0 -> {
                     val triggerItems = listOf(
-                        LauncherItem(R.string.mode_intervalometer, Icons.Default.Timer) {
+                        LauncherItem(R.string.mode_intervalometer, Icons.Default.Timer, R.string.mode_intervalometer_desc) {
                             onQuickFlow(FlowStepType.INTERVALOMETER)
                         },
-                        LauncherItem(R.string.mode_astro, Icons.Default.Stars) {
+                        LauncherItem(R.string.mode_astro, Icons.Default.Stars, R.string.mode_astro_desc) {
                             onQuickFlow(FlowStepType.ASTRO)
                         },
-                        LauncherItem(R.string.mode_dark_frame, Icons.Default.LensBlur) {
+                        LauncherItem(R.string.mode_dark_frame, Icons.Default.LensBlur, R.string.mode_dark_frame_desc) {
                             onQuickFlow(FlowStepType.DARK_FRAME)
                         },
-                        LauncherItem(R.string.mode_ramp, Icons.AutoMirrored.Filled.TrendingUp) {
+                        LauncherItem(R.string.mode_ramp, Icons.AutoMirrored.Filled.TrendingUp, R.string.mode_ramp_desc) {
                             onQuickFlow(FlowStepType.RAMP)
                         },
-                        LauncherItem(R.string.mode_manual, Icons.Default.TouchApp) {
+                        LauncherItem(R.string.mode_manual, Icons.Default.TouchApp, R.string.mode_manual_desc) {
                             onManualSelected()
                         },
-                        LauncherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList) {
+                        LauncherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList, R.string.mode_custom_flow_desc) {
                             onCustomFlowSelected()
                         },
                     )
@@ -186,16 +186,16 @@ fun MainMenuScreen(
                 }
                 1 -> {
                     val toolItems = listOf(
-                        LauncherItem(R.string.mode_astro_dashboard, Icons.Default.NightsStay) {
+                        LauncherItem(R.string.mode_astro_dashboard, Icons.Default.NightsStay, R.string.mode_astro_dashboard_desc) {
                             onDashboardSelected()
                         },
-                        LauncherItem(R.string.mode_planner, Icons.Default.DateRange) {
+                        LauncherItem(R.string.mode_planner, Icons.Default.DateRange, R.string.mode_planner_desc) {
                             onPlannerSelected()
                         },
-                        LauncherItem(R.string.mode_alignment, Icons.Default.Explore) {
+                        LauncherItem(R.string.mode_alignment, Icons.Default.Explore, R.string.mode_alignment_desc) {
                             onAlignmentSelected()
                         },
-                        LauncherItem(R.string.mode_whats_up, Icons.Default.Visibility) {
+                        LauncherItem(R.string.mode_whats_up, Icons.Default.Visibility, R.string.mode_whats_up_desc) {
                             onWhatsUpSelected()
                         },
                     )
@@ -214,6 +214,7 @@ fun MainMenuScreen(
 private data class LauncherItem(
     val labelRes: Int,
     val icon: ImageVector,
+    val subtitleRes: Int = 0,
     val onClick: () -> Unit,
 )
 
@@ -229,6 +230,7 @@ private fun LauncherGrid(items: List<LauncherItem>) {
         items(items, key = { it.labelRes }) { item ->
             LauncherTile(
                 label = stringResource(item.labelRes),
+                subtitle = if (item.subtitleRes != 0) stringResource(item.subtitleRes) else null,
                 icon = item.icon,
                 onClick = item.onClick,
             )
@@ -239,6 +241,7 @@ private fun LauncherGrid(items: List<LauncherItem>) {
 @Composable
 private fun LauncherTile(
     label: String,
+    subtitle: String?,
     icon: ImageVector,
     onClick: () -> Unit,
 ) {
@@ -249,7 +252,7 @@ private fun LauncherTile(
         tonalElevation = 2.dp,
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(0.9f),
+            .aspectRatio(0.85f),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -268,9 +271,19 @@ private fun LauncherTile(
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
