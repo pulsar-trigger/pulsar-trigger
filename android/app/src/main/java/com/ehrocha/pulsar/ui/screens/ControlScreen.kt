@@ -1665,6 +1665,19 @@ private fun UpdatesSection(vm: PulsarViewModel) {
                 }
             }
 
+            OtaState.UP_TO_DATE -> {
+                Text(
+                    stringResource(R.string.status_up_to_date),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                OutlinedButton(
+                    onClick = { fwManager.reset() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                ) { Text(stringResource(R.string.ok)) }
+            }
+
             OtaState.AVAILABLE -> {
                 fwRelease?.let { release ->
                     Text(

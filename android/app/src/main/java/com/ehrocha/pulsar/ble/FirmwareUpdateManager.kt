@@ -32,6 +32,7 @@ data class FirmwareRelease(
 enum class OtaState {
     IDLE,
     CHECKING,
+    UP_TO_DATE,
     AVAILABLE,
     DOWNLOADING,
     UPLOADING,
@@ -90,7 +91,7 @@ class FirmwareUpdateManager(
                 if (release != null && isNewerVersion(release.version, currentVersion)) {
                     _state.value = OtaState.AVAILABLE
                 } else {
-                    _state.value = OtaState.IDLE
+                    _state.value = OtaState.UP_TO_DATE
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Check failed", e)
