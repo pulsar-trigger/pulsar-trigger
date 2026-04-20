@@ -6,23 +6,23 @@
 package com.ehrocha.pulsar.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.LensBlur
+import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.NightsStay
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.TouchApp
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material.icons.filled.LensBlur
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.automirrored.filled.ViewList
@@ -33,6 +33,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.model.FlowStepType
@@ -158,77 +160,46 @@ fun MainMenuScreen(
             state = pagerState,
             modifier = Modifier.weight(1f),
         ) { page ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                when (page) {
-                    0 -> { // Trigger
-                        MenuCard(
-                            title = stringResource(R.string.mode_intervalometer),
-                            description = stringResource(R.string.mode_intervalometer_desc),
-                            icon = Icons.Default.Timer,
-                            onClick = { onQuickFlow(FlowStepType.INTERVALOMETER) },
-                        )
-                        MenuCard(
-                            title = stringResource(R.string.mode_astro),
-                            description = stringResource(R.string.mode_astro_desc),
-                            icon = Icons.Default.Stars,
-                            onClick = { onQuickFlow(FlowStepType.ASTRO) },
-                        )
-                        MenuCard(
-                            title = stringResource(R.string.mode_dark_frame),
-                            description = stringResource(R.string.mode_dark_frame_desc),
-                            icon = Icons.Default.LensBlur,
-                            onClick = { onQuickFlow(FlowStepType.DARK_FRAME) },
-                        )
-                        MenuCard(
-                            title = stringResource(R.string.mode_ramp),
-                            description = stringResource(R.string.mode_ramp_desc),
-                            icon = Icons.AutoMirrored.Filled.TrendingUp,
-                            onClick = { onQuickFlow(FlowStepType.RAMP) },
-                        )
-                        MenuCard(
-                            title = stringResource(R.string.mode_manual),
-                            description = stringResource(R.string.mode_manual_desc),
-                            icon = Icons.Default.TouchApp,
-                            onClick = onManualSelected,
-                        )
-                        MenuCard(
-                            title = stringResource(R.string.mode_custom_flow),
-                            description = stringResource(R.string.mode_custom_flow_desc),
-                            icon = Icons.AutoMirrored.Filled.ViewList,
-                            onClick = onCustomFlowSelected,
-                        )
-                    }
-                    1 -> { // Tools
-                        MenuCard(
-                            title = stringResource(R.string.mode_astro_dashboard),
-                            description = stringResource(R.string.mode_astro_dashboard_desc),
-                            icon = Icons.Default.NightsStay,
-                            onClick = onDashboardSelected,
-                        )
-                        MenuCard(
-                            title = stringResource(R.string.mode_planner),
-                            description = stringResource(R.string.mode_planner_desc),
-                            icon = Icons.Default.DateRange,
-                            onClick = onPlannerSelected,
-                        )
-                        MenuCard(
-                            title = stringResource(R.string.mode_alignment),
-                            description = stringResource(R.string.mode_alignment_desc),
-                            icon = Icons.Default.Explore,
-                            onClick = onAlignmentSelected,
-                        )
-                        MenuCard(
-                            title = stringResource(R.string.mode_whats_up),
-                            description = stringResource(R.string.mode_whats_up_desc),
-                            icon = Icons.Default.Visibility,
-                            onClick = onWhatsUpSelected,
-                        )
-                    }
+            when (page) {
+                0 -> {
+                    val triggerItems = listOf(
+                        LauncherItem(R.string.mode_intervalometer, Icons.Default.Timer) {
+                            onQuickFlow(FlowStepType.INTERVALOMETER)
+                        },
+                        LauncherItem(R.string.mode_astro, Icons.Default.Stars) {
+                            onQuickFlow(FlowStepType.ASTRO)
+                        },
+                        LauncherItem(R.string.mode_dark_frame, Icons.Default.LensBlur) {
+                            onQuickFlow(FlowStepType.DARK_FRAME)
+                        },
+                        LauncherItem(R.string.mode_ramp, Icons.AutoMirrored.Filled.TrendingUp) {
+                            onQuickFlow(FlowStepType.RAMP)
+                        },
+                        LauncherItem(R.string.mode_manual, Icons.Default.TouchApp) {
+                            onManualSelected()
+                        },
+                        LauncherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList) {
+                            onCustomFlowSelected()
+                        },
+                    )
+                    LauncherGrid(triggerItems)
+                }
+                1 -> {
+                    val toolItems = listOf(
+                        LauncherItem(R.string.mode_astro_dashboard, Icons.Default.NightsStay) {
+                            onDashboardSelected()
+                        },
+                        LauncherItem(R.string.mode_planner, Icons.Default.DateRange) {
+                            onPlannerSelected()
+                        },
+                        LauncherItem(R.string.mode_alignment, Icons.Default.Explore) {
+                            onAlignmentSelected()
+                        },
+                        LauncherItem(R.string.mode_whats_up, Icons.Default.Visibility) {
+                            onWhatsUpSelected()
+                        },
+                    )
+                    LauncherGrid(toolItems)
                 }
             }
         }
@@ -240,49 +211,65 @@ fun MainMenuScreen(
     }
 }
 
+private data class LauncherItem(
+    val labelRes: Int,
+    val icon: ImageVector,
+    val onClick: () -> Unit,
+)
+
 @Composable
-private fun MenuCard(
-    title: String,
-    description: String,
+private fun LauncherGrid(items: List<LauncherItem>) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        contentPadding = PaddingValues(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        items(items, key = { it.labelRes }) { item ->
+            LauncherTile(
+                label = stringResource(item.labelRes),
+                icon = item.icon,
+                onClick = item.onClick,
+            )
+        }
+    }
+}
+
+@Composable
+private fun LauncherTile(
+    label: String,
     icon: ImageVector,
     onClick: () -> Unit,
 ) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f),
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(20.dp),
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(12.dp),
         ) {
             Icon(
                 icon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(28.dp),
+                modifier = Modifier.size(36.dp),
             )
-            Spacer(Modifier.width(16.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Spacer(Modifier.width(8.dp))
-            Icon(
-                Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Medium,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
