@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BluetoothSearching
+import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Badge
@@ -320,31 +321,12 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     BatteryIndicator()
                     SignalStrengthIndicator()
                     NightModeToggle()
-                    Spacer(Modifier.width(4.dp))
-                    val hasAnyUpdate = hasFwUpdate || hasAppUpdate
-                    IconButton(onClick = { currentScreen = AppScreen.Settings() }) {
-                        BadgedBox(
-                            badge = {
-                                if (hasAnyUpdate) {
-                                    Badge(
-                                        containerColor = MaterialTheme.colorScheme.error,
-                                    )
-                                }
-                            }
-                        ) {
-                            Icon(
-                                Icons.Default.Settings,
-                                contentDescription = stringResource(R.string.menu_settings),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
                 }
             }
             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
         }
         // ── Screen content ───────────────────────────────────────────
-        Box(Modifier.fillMaxSize()) {
+        Box(Modifier.weight(1f)) {
         when (val screen = currentScreen) {
             AppScreen.Scan -> ScanScreen(vm) { currentScreen = AppScreen.Menu }
             AppScreen.Menu -> MainMenuScreen(
@@ -472,6 +454,45 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
             }
         }
     }
+        // ── Bottom bar (Menu screen only) ────────────────────────────
+        if (currentScreen is AppScreen.Menu) {
+            val hasAnyUpdate = hasFwUpdate || hasAppUpdate
+            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+            Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                ) {
+                    TextButton(onClick = { vm.disconnect() }) {
+                        Icon(
+                            Icons.Default.LinkOff,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.disconnect))
+                    }
+                    IconButton(onClick = { currentScreen = AppScreen.Settings() }) {
+                        BadgedBox(
+                            badge = {
+                                if (hasAnyUpdate) {
+                                    Badge(containerColor = MaterialTheme.colorScheme.error)
+                                }
+                            }
+                        ) {
+                            Icon(
+                                Icons.Default.Settings,
+                                contentDescription = stringResource(R.string.menu_settings),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
     }
 }

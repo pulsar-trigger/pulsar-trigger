@@ -208,10 +208,6 @@ fun MainMenuScreen(
             }
         }
 
-        TextButton(
-            onClick = { vm.disconnect() },
-            modifier = Modifier.fillMaxWidth(),
-        ) { Text(stringResource(R.string.disconnect)) }
     }
 }
 
