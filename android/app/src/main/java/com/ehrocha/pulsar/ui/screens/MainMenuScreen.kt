@@ -5,11 +5,15 @@
 
 package com.ehrocha.pulsar.ui.screens
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,6 +34,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -163,22 +168,22 @@ fun MainMenuScreen(
             when (page) {
                 0 -> {
                     val triggerItems = listOf(
-                        LauncherItem(R.string.mode_intervalometer, Icons.Default.Timer, R.string.mode_intervalometer_desc) {
+                        LauncherItem(R.string.mode_intervalometer, Icons.Default.Timer) {
                             onQuickFlow(FlowStepType.INTERVALOMETER)
                         },
-                        LauncherItem(R.string.mode_astro, Icons.Default.Stars, R.string.mode_astro_desc) {
+                        LauncherItem(R.string.mode_astro, Icons.Default.Stars) {
                             onQuickFlow(FlowStepType.ASTRO)
                         },
-                        LauncherItem(R.string.mode_dark_frame, Icons.Default.LensBlur, R.string.mode_dark_frame_desc) {
+                        LauncherItem(R.string.mode_dark_frame, Icons.Default.LensBlur) {
                             onQuickFlow(FlowStepType.DARK_FRAME)
                         },
-                        LauncherItem(R.string.mode_ramp, Icons.AutoMirrored.Filled.TrendingUp, R.string.mode_ramp_desc) {
+                        LauncherItem(R.string.mode_ramp, Icons.AutoMirrored.Filled.TrendingUp) {
                             onQuickFlow(FlowStepType.RAMP)
                         },
-                        LauncherItem(R.string.mode_manual, Icons.Default.TouchApp, R.string.mode_manual_desc) {
+                        LauncherItem(R.string.mode_manual, Icons.Default.TouchApp) {
                             onManualSelected()
                         },
-                        LauncherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList, R.string.mode_custom_flow_desc) {
+                        LauncherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList) {
                             onCustomFlowSelected()
                         },
                     )
@@ -186,16 +191,16 @@ fun MainMenuScreen(
                 }
                 1 -> {
                     val toolItems = listOf(
-                        LauncherItem(R.string.mode_astro_dashboard, Icons.Default.NightsStay, R.string.mode_astro_dashboard_desc) {
+                        LauncherItem(R.string.mode_astro_dashboard, Icons.Default.NightsStay) {
                             onDashboardSelected()
                         },
-                        LauncherItem(R.string.mode_planner, Icons.Default.DateRange, R.string.mode_planner_desc) {
+                        LauncherItem(R.string.mode_planner, Icons.Default.DateRange) {
                             onPlannerSelected()
                         },
-                        LauncherItem(R.string.mode_alignment, Icons.Default.Explore, R.string.mode_alignment_desc) {
+                        LauncherItem(R.string.mode_alignment, Icons.Default.Explore) {
                             onAlignmentSelected()
                         },
-                        LauncherItem(R.string.mode_whats_up, Icons.Default.Visibility, R.string.mode_whats_up_desc) {
+                        LauncherItem(R.string.mode_whats_up, Icons.Default.Visibility) {
                             onWhatsUpSelected()
                         },
                     )
@@ -214,7 +219,6 @@ fun MainMenuScreen(
 private data class LauncherItem(
     val labelRes: Int,
     val icon: ImageVector,
-    val subtitleRes: Int = 0,
     val onClick: () -> Unit,
 )
 
@@ -230,7 +234,6 @@ private fun LauncherGrid(items: List<LauncherItem>) {
         items(items, key = { it.labelRes }) { item ->
             LauncherTile(
                 label = stringResource(item.labelRes),
-                subtitle = if (item.subtitleRes != 0) stringResource(item.subtitleRes) else null,
                 icon = item.icon,
                 onClick = item.onClick,
             )
@@ -241,18 +244,27 @@ private fun LauncherGrid(items: List<LauncherItem>) {
 @Composable
 private fun LauncherTile(
     label: String,
-    subtitle: String?,
     icon: ImageVector,
     onClick: () -> Unit,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.92f else 1f,
+        animationSpec = spring(stiffness = 500f),
+        label = "tileScale",
+    )
+
     Surface(
         onClick = onClick,
+        interactionSource = interactionSource,
         shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(0.85f),
+            .aspectRatio(0.9f)
+            .scale(scale),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -271,19 +283,9 @@ private fun LauncherTile(
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (subtitle != null) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
         }
     }
 }
