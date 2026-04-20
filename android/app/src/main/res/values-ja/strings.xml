@@ -447,4 +447,5 @@
     <string name="cd_confirm">確認</string>
     <string name="cd_bluetooth">Bluetooth</string>
     <string name="cd_simulator">シミュレーター</string>
+    <string name="btn_navigate">ナビ</string>
 </resources>

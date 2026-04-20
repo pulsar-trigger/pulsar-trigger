@@ -489,6 +489,7 @@
     <!-- SessionDetailScreen: Last Updated & Offline Fallback -->
     <string name="last_updated">Last updated: %1$s</string>
     <string name="pull_latest_data">Pull Latest Data</string>
+    <string name="btn_navigate">Navigate</string>
     <string name="data_stale">Data may be stale</string>
     <string name="assessment_unavailable">Assessment unavailable</string>
 

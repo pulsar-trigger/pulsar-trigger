@@ -447,4 +447,5 @@
     <string name="cd_confirm">确认</string>
     <string name="cd_bluetooth">蓝牙</string>
     <string name="cd_simulator">模拟器</string>
+    <string name="btn_navigate">导航</string>
 </resources>

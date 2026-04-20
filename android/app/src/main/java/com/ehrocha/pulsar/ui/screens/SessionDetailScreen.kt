@@ -5,6 +5,8 @@
 
 package com.ehrocha.pulsar.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -99,6 +101,15 @@ fun SessionDetailScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            IconButton(onClick = {
+                val geoUri = Uri.parse(
+                    "geo:${session.latitude},${session.longitude}?q=${session.latitude},${session.longitude}(${Uri.encode(session.name)})"
+                )
+                val intent = Intent(Intent.ACTION_VIEW, geoUri)
+                context.startActivity(intent)
+            }) {
+                Icon(Icons.Default.Navigation, contentDescription = stringResource(R.string.btn_navigate))
             }
             IconButton(onClick = {
                 scope.launch { doRefresh() }

@@ -320,7 +320,6 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     )
                     BatteryIndicator()
                     SignalStrengthIndicator()
-                    NightModeToggle()
                 }
             }
             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
@@ -475,6 +474,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                         Spacer(Modifier.width(6.dp))
                         Text(stringResource(R.string.disconnect))
                     }
+                    NightModeToggle()
                     IconButton(onClick = { currentScreen = AppScreen.Settings() }) {
                         BadgedBox(
                             badge = {
