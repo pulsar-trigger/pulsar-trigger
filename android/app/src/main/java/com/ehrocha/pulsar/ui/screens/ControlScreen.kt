@@ -1025,11 +1025,9 @@ enum class SettingsSection(val icon: ImageVector, @StringRes val titleRes: Int) 
     USER_GUIDE(Icons.AutoMirrored.Filled.MenuBook, R.string.section_user_guide),
     LANGUAGE(Icons.Default.Language, R.string.section_language),
     DEVICE(Icons.Default.PhoneAndroid, R.string.section_device),
-    GPIO_PINS(Icons.Default.Memory, R.string.section_gpio_pins),
     PLANNER(Icons.Default.CalendarMonth, R.string.section_planner),
     BACKUP_RESTORE(Icons.Default.SaveAlt, R.string.section_backup_restore),
     UPDATES(Icons.Default.SystemUpdate, R.string.section_updates),
-    DEVICE_INFO(Icons.Default.DeveloperBoard, R.string.section_device_hardware),
     ABOUT(Icons.Outlined.Info, R.string.section_about),
 }
 

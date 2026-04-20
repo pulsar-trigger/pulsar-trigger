@@ -406,13 +406,23 @@ fun SettingsScreen(
                     null -> SettingsMenu(onSectionSelected = { currentSection = it })
                     SettingsSection.USER_GUIDE -> UserGuideSectionContent()
                     SettingsSection.LANGUAGE -> LanguageSectionContent()
-                    SettingsSection.DEVICE -> DeviceSectionContent(vm, deviceName)
-                    SettingsSection.GPIO_PINS -> GpioPinsSectionContent(vm)
+                    SettingsSection.DEVICE -> {
+                        DeviceSectionContent(vm, deviceName)
+                        Spacer(Modifier.height(16.dp))
+                        HorizontalDivider()
+                        Spacer(Modifier.height(16.dp))
+                        GpioPinsSectionContent(vm)
+                    }
                     SettingsSection.PLANNER -> PlannerSettingsSectionContent(vm)
                     SettingsSection.BACKUP_RESTORE -> BackupRestoreSectionContent(vm)
                     SettingsSection.UPDATES -> UpdatesSectionContent(vm)
-                    SettingsSection.DEVICE_INFO -> DeviceInfoSectionContent(vm)
-                    SettingsSection.ABOUT -> AboutSectionContent()
+                    SettingsSection.ABOUT -> {
+                        AboutSectionContent()
+                        Spacer(Modifier.height(16.dp))
+                        HorizontalDivider()
+                        Spacer(Modifier.height(16.dp))
+                        DeviceInfoSectionContent(vm)
+                    }
                 }
             }
         }
