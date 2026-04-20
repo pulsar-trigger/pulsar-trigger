@@ -460,19 +460,17 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
             Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.SpaceEvenly,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                        .padding(vertical = 4.dp),
                 ) {
-                    TextButton(onClick = { vm.disconnect() }) {
+                    IconButton(onClick = { vm.disconnect() }) {
                         Icon(
                             Icons.Default.LinkOff,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
+                            contentDescription = stringResource(R.string.disconnect),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.disconnect))
                     }
                     NightModeToggle()
                     IconButton(onClick = { currentScreen = AppScreen.Settings() }) {
