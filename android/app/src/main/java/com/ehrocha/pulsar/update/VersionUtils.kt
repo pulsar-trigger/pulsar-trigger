@@ -53,6 +53,7 @@ fun fetchGitHubRelease(
         }
         val body = conn.inputStream.bufferedReader().use { it.readText() }
         val releases = JSONArray(body)
+        var best: GitHubAsset? = null
         for (i in 0 until releases.length()) {
             val rel = releases.getJSONObject(i)
             val tagName = rel.getString("tag_name")
@@ -73,17 +74,21 @@ fun fetchGitHubRelease(
                             break
                         }
                     }
-                    return GitHubAsset(
+                    val candidate = GitHubAsset(
                         version = version,
                         downloadUrl = asset.getString("browser_download_url"),
                         checksumUrl = checksumUrl,
                         publishedAt = rel.getString("published_at"),
                         body = rel.optString("body", ""),
                     )
+                    if (best == null || isNewerVersion(version, best.version)) {
+                        best = candidate
+                    }
+                    break
                 }
             }
         }
-        return null
+        return best
     } finally {
         conn.disconnect()
     }
