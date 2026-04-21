@@ -446,4 +446,8 @@
     <string name="cd_bluetooth">Bluetooth</string>
     <string name="cd_simulator">Simulador</string>
     <string name="btn_navigate">Navegar</string>
+    <string name="mode_camera">Cámara del Teléfono</string>
+    <string name="camera_title">Cámara</string>
+    <string name="camera_permission_needed">Se necesita permiso de cámara para usar esta función.</string>
+    <string name="camera_grant_permission">Conceder Permiso</string>
 </resources>

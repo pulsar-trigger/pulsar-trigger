@@ -20,8 +20,8 @@ android {
         applicationId = "com.ehrocha.pulsar"
         minSdk = 26
         targetSdk = 35
-        versionCode = 115
-        versionName = "0.104.0"
+        versionCode = 116
+        versionName = "0.105.0"
     }
 
     signingConfigs {
@@ -87,6 +87,13 @@ dependencies {
 
     // WorkManager — periodic background update checks
     implementation("androidx.work:work-runtime-ktx:2.9.1")
+
+    // CameraX
+    val cameraXVersion = "1.4.1"
+    implementation("androidx.camera:camera-core:$cameraXVersion")
+    implementation("androidx.camera:camera-camera2:$cameraXVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraXVersion")
+    implementation("androidx.camera:camera-view:$cameraXVersion")
 
     // MapLibre — map-based location picker
     implementation("org.maplibre.gl:android-sdk:11.8.0")

@@ -65,6 +65,7 @@ import com.ehrocha.pulsar.ui.screens.SettingsScreen
 import com.ehrocha.pulsar.ui.screens.SettingsSection
 import com.ehrocha.pulsar.ui.screens.CustomFlowScreen
 import com.ehrocha.pulsar.ui.screens.AlignmentScreen
+import com.ehrocha.pulsar.ui.screens.CameraScreen
 import com.ehrocha.pulsar.ui.screens.WhatsUpScreen
 import com.ehrocha.pulsar.ui.screens.DashboardScreen
 import com.ehrocha.pulsar.ui.screens.PlannerScreen
@@ -348,6 +349,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                 onAlignmentSelected = { currentScreen = AppScreen.Alignment },
                 onWhatsUpSelected = { currentScreen = AppScreen.WhatsUp },
                 onSettingsSelected = { currentScreen = AppScreen.Settings(SettingsSection.UPDATES) },
+                onCameraSelected = { currentScreen = AppScreen.Camera },
             )
             is AppScreen.Mode -> {
                 BackHandler { currentScreen = AppScreen.Menu }
@@ -451,6 +453,12 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     onBack = { currentScreen = AppScreen.Menu },
                 )
             }
+            AppScreen.Camera -> {
+                BackHandler { currentScreen = AppScreen.Menu }
+                CameraScreen(
+                    onBack = { currentScreen = AppScreen.Menu },
+                )
+            }
         }
     }
         // ── Bottom bar (Menu screen only) ────────────────────────────
@@ -508,4 +516,5 @@ private sealed class AppScreen {
     data class SessionDetail(val session: PlannerSession, val event: PlannerEvent) : AppScreen()
     data object Alignment : AppScreen()
     data object WhatsUp : AppScreen()
+    data object Camera : AppScreen()
 }

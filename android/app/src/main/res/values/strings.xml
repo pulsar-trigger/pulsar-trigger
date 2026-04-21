@@ -582,4 +582,10 @@
     <string name="cd_confirm">Confirm</string>
     <string name="cd_bluetooth">Bluetooth</string>
     <string name="cd_simulator">Simulator</string>
+
+    <!-- Phone Camera -->
+    <string name="mode_camera">Phone Camera</string>
+    <string name="camera_title">Camera</string>
+    <string name="camera_permission_needed">Camera permission is required to use this feature.</string>
+    <string name="camera_grant_permission">Grant Permission</string>
 </resources>

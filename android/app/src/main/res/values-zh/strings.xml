@@ -448,4 +448,8 @@
     <string name="cd_bluetooth">蓝牙</string>
     <string name="cd_simulator">模拟器</string>
     <string name="btn_navigate">导航</string>
+    <string name="mode_camera">手机相机</string>
+    <string name="camera_title">相机</string>
+    <string name="camera_permission_needed">使用此功能需要相机权限。</string>
+    <string name="camera_grant_permission">授予权限</string>
 </resources>

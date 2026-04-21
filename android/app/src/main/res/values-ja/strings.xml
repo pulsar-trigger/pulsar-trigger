@@ -448,4 +448,8 @@
     <string name="cd_bluetooth">Bluetooth</string>
     <string name="cd_simulator">シミュレーター</string>
     <string name="btn_navigate">ナビ</string>
+    <string name="mode_camera">スマホカメラ</string>
+    <string name="camera_title">カメラ</string>
+    <string name="camera_permission_needed">この機能を使用するにはカメラの許可が必要です。</string>
+    <string name="camera_grant_permission">許可する</string>
 </resources>
