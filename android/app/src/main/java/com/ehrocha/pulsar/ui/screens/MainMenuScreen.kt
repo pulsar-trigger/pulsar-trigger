@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TouchApp
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.automirrored.filled.ViewList
@@ -59,7 +58,6 @@ fun MainMenuScreen(
     onAlignmentSelected: () -> Unit = {},
     onWhatsUpSelected: () -> Unit = {},
     onSettingsSelected: () -> Unit = {},
-    onCameraSelected: () -> Unit = {},
 ) {
     val fwState by vm.firmwareManager.state.collectAsState()
     val appState by vm.appUpdateManager.state.collectAsState()
@@ -203,9 +201,6 @@ fun MainMenuScreen(
                         },
                         LauncherItem(R.string.mode_whats_up, Icons.Default.Visibility) {
                             onWhatsUpSelected()
-                        },
-                        LauncherItem(R.string.mode_camera, Icons.Default.CameraAlt) {
-                            onCameraSelected()
                         },
                     )
                     LauncherGrid(toolItems)

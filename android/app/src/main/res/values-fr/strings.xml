@@ -7,6 +7,8 @@
     <string name="search_for_devices">Rechercher des appareils</string>
     <string name="use_simulator">Utiliser le simulateur</string>
     <string name="simulator_description">Explorez l\'application sans appareil réel</string>
+    <string name="use_phone_camera">Utiliser la caméra du téléphone</string>
+    <string name="phone_camera_description">Utilisez votre téléphone comme appareil de capture</string>
     <string name="unknown_device">Appareil inconnu</string>
     <string name="mode_intervalometer">Intervallomètre</string>
     <string name="mode_intervalometer_desc">Automatisez des séquences timelapse avec un minutage précis</string>

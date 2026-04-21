@@ -9,6 +9,8 @@
     <string name="search_for_devices">Search for Devices</string>
     <string name="use_simulator">Use Simulator</string>
     <string name="simulator_description">Explore the app without a real device</string>
+    <string name="use_phone_camera">Use Phone Camera</string>
+    <string name="phone_camera_description">Use your phone as a capture device</string>
     <string name="unknown_device">Unknown Device</string>
 
     <!-- MainMenuScreen -->

@@ -7,6 +7,8 @@
     <string name="search_for_devices">搜索设备</string>
     <string name="use_simulator">使用模拟器</string>
     <string name="simulator_description">无需真实设备即可体验应用</string>
+    <string name="use_phone_camera">使用手机相机</string>
+    <string name="phone_camera_description">将手机用作拍摄设备</string>
     <string name="unknown_device">未知设备</string>
     <string name="tab_trigger">触发</string>
     <string name="tab_tools">工具</string>

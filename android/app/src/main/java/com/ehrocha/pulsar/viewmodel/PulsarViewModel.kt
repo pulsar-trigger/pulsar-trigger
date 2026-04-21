@@ -103,6 +103,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val simulatorActive: StateFlow<Boolean> = _simulatorActive
     private var simulatorJob: Job? = null
 
+    // ── Phone Camera ─────────────────────────────────────────────────────
+    private val _phoneCameraActive = MutableStateFlow(false)
+    val phoneCameraActive: StateFlow<Boolean> = _phoneCameraActive
+    val phoneCameraManager = com.ehrocha.pulsar.camera.PhoneCameraManager(app)
+
     private val _deviceName = MutableStateFlow("Pulsar")
     val deviceName: StateFlow<String> = _deviceName
 
@@ -281,7 +286,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun requestDeviceInfo() {
-        if (!_simulatorActive.value) {
+        if (!_simulatorActive.value && !_phoneCameraActive.value) {
             bleManager.sendCommand(CommandBuilder.deviceInfoRequest())
         }
     }
@@ -332,6 +337,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     fun disconnect() {
         if (_simulatorActive.value) {
             disconnectSimulator()
+            return
+        }
+        if (_phoneCameraActive.value) {
+            disconnectPhoneCamera()
             return
         }
         // Stop any running job on the device before disconnecting so the
@@ -420,12 +429,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun sendPins() {
-        if (_simulatorActive.value) return
+        if (_simulatorActive.value || _phoneCameraActive.value) return
         bleManager.sendCommand(CommandBuilder.setPins(_pinShutter.value, _pinFocus.value))
     }
 
     private fun sendAutoOff() {
-        if (_simulatorActive.value) return
+        if (_simulatorActive.value || _phoneCameraActive.value) return
         bleManager.sendCommand(CommandBuilder.setAutoOff(_autoOffMinutes.value))
     }
 
@@ -552,7 +561,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         flowJob?.cancel()
         flowJob = null
         // Stop the device if it's running
-        if (!_simulatorActive.value) {
+        if (!_simulatorActive.value && !_phoneCameraActive.value) {
             bleManager.sendCommand(CommandBuilder.stop())
         }
         // Reset status to IDLE immediately so UI doesn't show stale progress
@@ -581,6 +590,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 val shots = step.shotCount
                 if (_simulatorActive.value) {
                     simulateShots(shots, expMs, gapMs, step.delayMs)
+                } else if (_phoneCameraActive.value) {
+                    phoneCameraShots(shots, expMs, gapMs, step.delayMs)
                 } else {
                     sendModeCommand(
                         CommandBuilder.setIntervalometer(
@@ -594,6 +605,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 val expMs = AppConfig.astroExposureMs(step.focalLength, step.cropFactor, step.ruleDivisor)
                 if (_simulatorActive.value) {
                     simulateShots(step.shotCount, expMs, step.gapMs, step.delayMs)
+                } else if (_phoneCameraActive.value) {
+                    phoneCameraShots(step.shotCount, expMs, step.gapMs, step.delayMs)
                 } else {
                     sendModeCommand(
                         CommandBuilder.setAstro(step.gapMs, expMs, step.shotCount, step.delayMs)
@@ -604,6 +617,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             FlowStepType.DARK_FRAME -> {
                 if (_simulatorActive.value) {
                     simulateShots(step.darkFrameCount, step.darkFrameExposureMs, step.darkFrameGapMs, 0L)
+                } else if (_phoneCameraActive.value) {
+                    phoneCameraShots(step.darkFrameCount, step.darkFrameExposureMs, step.darkFrameGapMs, 0L)
                 } else {
                     sendModeCommand(
                         CommandBuilder.setDarkFrame(
@@ -622,6 +637,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         fraction * (step.rampEndExposureMs - step.rampStartExposureMs)).toLong()
                     if (_simulatorActive.value) {
                         simulateShots(1, expMs, step.rampIntervalMs, 0L)
+                    } else if (_phoneCameraActive.value) {
+                        phoneCameraShots(1, expMs, step.rampIntervalMs, 0L)
                     } else {
                         sendModeCommand(
                             CommandBuilder.setRamp(step.rampIntervalMs, expMs, 1, 0L)
@@ -755,7 +772,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun start() {
-        if (_simulatorActive.value) {
+        if (_simulatorActive.value || _phoneCameraActive.value) {
             startSimulatorRun()
             return
         }
@@ -764,7 +781,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun stop() {
-        if (_simulatorActive.value) {
+        if (_simulatorActive.value || _phoneCameraActive.value) {
             stopSimulatorRun()
             return
         }
@@ -777,7 +794,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun renameDevice(suffix: String) {
-        if (!_simulatorActive.value) {
+        if (!_simulatorActive.value && !_phoneCameraActive.value) {
             // Request GATT cache clear so the new name is picked up on reconnect
             bleManager.requestCacheRefresh()
             bleManager.sendCommand(CommandBuilder.setName(suffix))
@@ -788,15 +805,18 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     fun setAutoOff(minutes: Int) {
         _autoOffMinutes.value = minutes
         prefs.edit().putInt(KEY_AUTO_OFF, minutes).apply()
-        if (!_simulatorActive.value) {
+        if (!_simulatorActive.value && !_phoneCameraActive.value) {
             bleManager.sendCommand(CommandBuilder.setAutoOff(minutes))
         }
     }
 
     /** Press & Hold: shutter open on down */
     fun shutterDown() {
-        if (_simulatorActive.value) {
+        if (_simulatorActive.value || _phoneCameraActive.value) {
             _status.value = _status.value?.copy(state = DeviceState.RUNNING)
+            if (_phoneCameraActive.value) {
+                phoneCameraManager.capture()
+            }
             return
         }
         sendConfig()
@@ -805,7 +825,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Press & Hold: shutter close on up */
     fun shutterUp() {
-        if (_simulatorActive.value) {
+        if (_simulatorActive.value || _phoneCameraActive.value) {
             _status.value = _status.value?.copy(state = DeviceState.IDLE)
             return
         }
@@ -880,6 +900,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     shotsTaken = shot - 1,
                     timeRemainingMs = remaining,
                 )
+                if (_phoneCameraActive.value) {
+                    phoneCameraManager.captureAndWait()
+                }
                 delay(expMs)
                 // Shot complete — transition to WAITING with updated shot count
                 _status.value = _status.value?.copy(
@@ -908,6 +931,64 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             state = DeviceState.IDLE,
             timeRemainingMs = 0L,
         )
+    }
+
+    // ── Phone Camera ─────────────────────────────────────────────────────
+
+    fun connectPhoneCamera() {
+        stopScan()
+        _phoneCameraActive.value = true
+        _deviceName.value = "Phone Camera"
+        _status.value = StatusFrame(
+            state = DeviceState.IDLE,
+            mode = TriggerMode.INTERVALOMETER.id,
+            shotsTaken = 0,
+            timeRemainingMs = 0L,
+            batteryPct = 100,
+            errorCode = 0,
+        )
+        _connected.value = true
+    }
+
+    fun disconnectPhoneCamera() {
+        simulatorJob?.cancel()
+        simulatorJob = null
+        phoneCameraManager.release()
+        _phoneCameraActive.value = false
+        _connected.value = false
+        _status.value = null
+        _deviceName.value = "Pulsar"
+    }
+
+    /** Run a shot sequence using the phone camera via CameraX. */
+    private suspend fun phoneCameraShots(totalShots: Int, expMs: Long, gapMs: Long, startDelayMs: Long) {
+        if (startDelayMs > 0) {
+            _status.value = _status.value?.copy(
+                state = DeviceState.WAITING, shotsTaken = 0,
+                timeRemainingMs = startDelayMs + totalShots * (expMs + gapMs) - gapMs,
+            )
+            delay(startDelayMs)
+        }
+        for (shot in 1..totalShots) {
+            coroutineContext.ensureActive()
+            val remaining = (totalShots - shot + 1) * (expMs + gapMs) - gapMs
+            _status.value = _status.value?.copy(
+                state = DeviceState.RUNNING, shotsTaken = shot - 1, timeRemainingMs = remaining,
+            )
+            // Fire the phone camera
+            phoneCameraManager.captureAndWait()
+            // Wait for the exposure duration (phone camera exposure is near-instant,
+            // but we honour the configured timing for interval consistency)
+            delay(expMs)
+            _status.value = _status.value?.copy(
+                state = DeviceState.WAITING, shotsTaken = shot,
+                timeRemainingMs = (remaining - expMs).coerceAtLeast(0),
+            )
+            if (shot < totalShots) {
+                delay(gapMs)
+            }
+        }
+        _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
     }
 
     // ── Notification helpers ─────────────────────────────────────────────
@@ -946,6 +1027,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         super.onCleared()
         stopScan()
         simulatorJob?.cancel()
+        phoneCameraManager.release()
         // Send stop before tearing down so firmware doesn't keep firing
         if (flowJob != null || _status.value?.state.let {
                 it == DeviceState.RUNNING || it == DeviceState.WAITING

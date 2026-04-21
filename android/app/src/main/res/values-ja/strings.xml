@@ -7,6 +7,8 @@
     <string name="search_for_devices">デバイスを検索</string>
     <string name="use_simulator">シミュレーターを使用</string>
     <string name="simulator_description">実機なしでアプリを体験できます</string>
+    <string name="use_phone_camera">スマホカメラを使用</string>
+    <string name="phone_camera_description">スマホを撮影デバイスとして使用</string>
     <string name="unknown_device">不明なデバイス</string>
     <string name="mode_intervalometer">インターバロメーター</string>
     <string name="mode_intervalometer_desc">精密なタイミングでタイムラプスシーケンスを自動化</string>

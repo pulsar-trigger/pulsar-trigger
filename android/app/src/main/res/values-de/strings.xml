@@ -7,6 +7,8 @@
     <string name="search_for_devices">Geräte suchen</string>
     <string name="use_simulator">Simulator verwenden</string>
     <string name="simulator_description">Die App ohne echtes Gerät erkunden</string>
+    <string name="use_phone_camera">Handy-Kamera verwenden</string>
+    <string name="phone_camera_description">Verwenden Sie Ihr Handy als Aufnahmegerät</string>
     <string name="unknown_device">Unbekanntes Gerät</string>
     <string name="mode_intervalometer">Intervalltimer</string>
     <string name="mode_intervalometer_desc">Zeitraffersequenzen mit präzisem Timing automatisieren</string>

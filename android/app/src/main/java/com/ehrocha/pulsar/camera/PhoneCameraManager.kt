@@ -18,10 +18,13 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.suspendCancellableCoroutine
 import java.text.SimpleDateFormat
 import java.util.Locale
+import kotlin.coroutines.resume
 
 data class PhoneLens(
     val id: Int,
@@ -53,6 +56,44 @@ class PhoneCameraManager(private val context: Context) {
 
     private val _photoCount = MutableStateFlow(0)
     val photoCount: StateFlow<Int> = _photoCount
+
+    /** Initialize without preview — for headless capture in trigger modes. */
+    fun initializeHeadless(
+        lifecycleOwner: LifecycleOwner,
+        onReady: () -> Unit = {},
+    ) {
+        val future = ProcessCameraProvider.getInstance(context)
+        future.addListener({
+            val provider = future.get()
+            cameraProvider = provider
+
+            val available = mutableListOf<PhoneLens>()
+            var idx = 0
+            if (provider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA)) {
+                available.add(PhoneLens(idx++, "Back", CameraSelector.DEFAULT_BACK_CAMERA))
+            }
+            if (provider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA)) {
+                available.add(PhoneLens(idx++, "Front", CameraSelector.DEFAULT_FRONT_CAMERA))
+            }
+            _lenses.value = available
+
+            if (available.isNotEmpty()) {
+                provider.unbindAll()
+                imageCapture = ImageCapture.Builder()
+                    .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+                    .build()
+                try {
+                    provider.bindToLifecycle(lifecycleOwner, available[0].selector, imageCapture!!)
+                    _lastError.value = null
+                    Log.i(TAG, "Camera bound headless: ${available[0].selector}")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to bind camera headless", e)
+                    _lastError.value = e.message
+                }
+            }
+            onReady()
+        }, ContextCompat.getMainExecutor(context))
+    }
 
     fun initialize(
         lifecycleOwner: LifecycleOwner,
@@ -114,6 +155,55 @@ class PhoneCameraManager(private val context: Context) {
             Log.e(TAG, "Failed to bind camera", e)
             _lastError.value = e.message
         }
+    }
+
+    /** Fire a single capture and suspend until the photo is saved (or fails). */
+    suspend fun captureAndWait(): Boolean = suspendCancellableCoroutine { cont ->
+        val capture = imageCapture
+        if (capture == null) {
+            _lastError.value = "Camera not ready"
+            cont.resume(false)
+            return@suspendCancellableCoroutine
+        }
+        _isCapturing.value = true
+        _lastError.value = null
+
+        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
+            .format(System.currentTimeMillis())
+
+        val contentValues = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, "PULSAR_$timestamp")
+            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.MediaColumns.RELATIVE_PATH, "DCIM/Pulsar")
+            }
+        }
+
+        val outputOptions = ImageCapture.OutputFileOptions.Builder(
+            context.contentResolver,
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            contentValues,
+        ).build()
+
+        capture.takePicture(
+            outputOptions,
+            ContextCompat.getMainExecutor(context),
+            object : ImageCapture.OnImageSavedCallback {
+                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                    _isCapturing.value = false
+                    _photoCount.value += 1
+                    Log.i(TAG, "Photo saved: ${output.savedUri}")
+                    cont.resume(true)
+                }
+
+                override fun onError(exception: ImageCaptureException) {
+                    _isCapturing.value = false
+                    _lastError.value = exception.message
+                    Log.e(TAG, "Capture failed", exception)
+                    cont.resume(false)
+                }
+            },
+        )
     }
 
     fun capture() {

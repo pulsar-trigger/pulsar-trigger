@@ -7,6 +7,8 @@
     <string name="search_for_devices">Search for devices</string>
     <string name="use_simulator">Use Simulator</string>
     <string name="simulator_description">Explore the app without a real device</string>
+    <string name="use_phone_camera">Usar Câmera do Celular</string>
+    <string name="phone_camera_description">Use seu celular como dispositivo de captura</string>
     <string name="unknown_device">Unknown Device</string>
     <string name="mode_intervalometer">Intervalômetro</string>
     <string name="mode_intervalometer_desc">Automatize sequências timelapse com precisão</string>

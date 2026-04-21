@@ -65,6 +65,7 @@ import com.ehrocha.pulsar.ui.screens.SettingsScreen
 import com.ehrocha.pulsar.ui.screens.SettingsSection
 import com.ehrocha.pulsar.ui.screens.CustomFlowScreen
 import com.ehrocha.pulsar.ui.screens.AlignmentScreen
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import com.ehrocha.pulsar.ui.screens.CameraScreen
 import com.ehrocha.pulsar.ui.screens.WhatsUpScreen
 import com.ehrocha.pulsar.ui.screens.DashboardScreen
@@ -218,6 +219,15 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
     var currentScreen by remember { mutableStateOf<AppScreen>(AppScreen.Scan) }
     var menuTab by remember { mutableIntStateOf(0) }
     val connected by vm.connected.collectAsState()
+    val phoneCameraActive by vm.phoneCameraActive.collectAsState()
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Initialize phone camera when connected
+    LaunchedEffect(phoneCameraActive) {
+        if (phoneCameraActive) {
+            vm.phoneCameraManager.initializeHeadless(lifecycleOwner)
+        }
+    }
 
     // ── Update-available dialog ──────────────────────────────────────
     val fwState by vm.firmwareManager.state.collectAsState()
@@ -319,8 +329,10 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                         letterSpacing = 1.sp,
                         modifier = Modifier.weight(1f),
                     )
-                    BatteryIndicator()
-                    SignalStrengthIndicator()
+                    if (!phoneCameraActive) {
+                        BatteryIndicator()
+                        SignalStrengthIndicator()
+                    }
                 }
             }
             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
@@ -349,7 +361,6 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                 onAlignmentSelected = { currentScreen = AppScreen.Alignment },
                 onWhatsUpSelected = { currentScreen = AppScreen.WhatsUp },
                 onSettingsSelected = { currentScreen = AppScreen.Settings(SettingsSection.UPDATES) },
-                onCameraSelected = { currentScreen = AppScreen.Camera },
             )
             is AppScreen.Mode -> {
                 BackHandler { currentScreen = AppScreen.Menu }
@@ -454,6 +465,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                 )
             }
             AppScreen.Camera -> {
+                // Reserved for future live preview mode
                 BackHandler { currentScreen = AppScreen.Menu }
                 CameraScreen(
                     onBack = { currentScreen = AppScreen.Menu },

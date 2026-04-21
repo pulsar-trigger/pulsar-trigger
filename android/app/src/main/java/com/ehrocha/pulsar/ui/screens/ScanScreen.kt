@@ -5,6 +5,7 @@
 
 package com.ehrocha.pulsar.ui.screens
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import androidx.compose.animation.core.RepeatMode
@@ -21,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material3.*
@@ -46,8 +48,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @SuppressLint("MissingPermission")
 @Composable
 fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
@@ -60,6 +65,18 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
     }
 
     var showLanguageDialog by remember { mutableStateOf(false) }
+
+    // Camera permission for phone camera connection
+    val cameraPermission = rememberPermissionState(Manifest.permission.CAMERA)
+    var pendingCameraConnect by remember { mutableStateOf(false) }
+
+    // Connect once permission is granted after user tapped Phone Camera
+    LaunchedEffect(cameraPermission.status.isGranted, pendingCameraConnect) {
+        if (pendingCameraConnect && cameraPermission.status.isGranted) {
+            pendingCameraConnect = false
+            vm.connectPhoneCamera()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -203,7 +220,49 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
                 }
             }
         }
-        
+
+        Spacer(Modifier.height(12.dp))
+
+        // Phone Camera option
+        Surface(
+            onClick = {
+                if (cameraPermission.status.isGranted) {
+                    vm.connectPhoneCamera()
+                } else {
+                    pendingCameraConnect = true
+                    cameraPermission.launchPermissionRequest()
+                }
+            },
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    Icons.Default.CameraAlt,
+                    contentDescription = stringResource(R.string.mode_camera),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(Modifier.width(16.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.use_phone_camera),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        stringResource(R.string.phone_camera_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
         Spacer(Modifier.height(24.dp))
     }
 
