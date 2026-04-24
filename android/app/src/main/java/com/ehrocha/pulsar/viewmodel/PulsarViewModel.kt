@@ -962,33 +962,46 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Run a shot sequence using the phone camera via CameraX. */
     private suspend fun phoneCameraShots(totalShots: Int, expMs: Long, gapMs: Long, startDelayMs: Long) {
-        if (startDelayMs > 0) {
-            _status.value = _status.value?.copy(
-                state = DeviceState.WAITING, shotsTaken = 0,
-                timeRemainingMs = startDelayMs + totalShots * (expMs + gapMs) - gapMs,
-            )
-            delay(startDelayMs)
-        }
-        for (shot in 1..totalShots) {
-            coroutineContext.ensureActive()
-            val remaining = (totalShots - shot + 1) * (expMs + gapMs) - gapMs
-            _status.value = _status.value?.copy(
-                state = DeviceState.RUNNING, shotsTaken = shot - 1, timeRemainingMs = remaining,
-            )
-            // Fire the phone camera
-            phoneCameraManager.captureAndWait()
-            // Wait for the exposure duration (phone camera exposure is near-instant,
-            // but we honour the configured timing for interval consistency)
-            delay(expMs)
-            _status.value = _status.value?.copy(
-                state = DeviceState.WAITING, shotsTaken = shot,
-                timeRemainingMs = (remaining - expMs).coerceAtLeast(0),
-            )
-            if (shot < totalShots) {
-                delay(gapMs)
+        // Configure sensor exposure time if the hardware supports it.
+        // Returns the actual exposure time set (ns), or 0 if not supported.
+        val actualExpNs = phoneCameraManager.setSensorExposureForCapture(expMs)
+        val sensorHandlesExposure = actualExpNs > 0
+
+        try {
+            if (startDelayMs > 0) {
+                _status.value = _status.value?.copy(
+                    state = DeviceState.WAITING, shotsTaken = 0,
+                    timeRemainingMs = startDelayMs + totalShots * (expMs + gapMs) - gapMs,
+                )
+                delay(startDelayMs)
             }
+            for (shot in 1..totalShots) {
+                coroutineContext.ensureActive()
+                val remaining = (totalShots - shot + 1) * (expMs + gapMs) - gapMs
+                _status.value = _status.value?.copy(
+                    state = DeviceState.RUNNING, shotsTaken = shot - 1, timeRemainingMs = remaining,
+                )
+                // Fire the phone camera — the sensor integrates light for the configured
+                // exposure time. captureAndWait() blocks until the photo is saved.
+                phoneCameraManager.captureAndWait()
+                // If the sensor doesn't support manual exposure, simulate the exposure
+                // duration with a delay so interval timing stays consistent.
+                if (!sensorHandlesExposure) {
+                    delay(expMs)
+                }
+                _status.value = _status.value?.copy(
+                    state = DeviceState.WAITING, shotsTaken = shot,
+                    timeRemainingMs = (remaining - expMs).coerceAtLeast(0),
+                )
+                if (shot < totalShots) {
+                    delay(gapMs)
+                }
+            }
+            _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
+        } finally {
+            // Restore the user's original exposure settings
+            phoneCameraManager.restoreExposureSettings()
         }
-        _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
     }
 
     // ── Notification helpers ─────────────────────────────────────────────

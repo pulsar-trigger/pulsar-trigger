@@ -160,6 +160,52 @@ class PhoneCameraManager(private val context: Context) {
         cam2Ctrl.setCaptureRequestOptions(builder.build())
     }
 
+    // Saved state for restoring after capture sequence
+    private var savedIso: Int? = null
+    private var savedExpNs: Long? = null
+    private var exposureOverridden = false
+
+    /**
+     * Configure the sensor exposure time for a capture sequence.
+     * Returns the actual exposure time (ns) that was set, or 0 if manual exposure is not supported
+     * (meaning the caller should use a delay to simulate the exposure time).
+     */
+    fun setSensorExposureForCapture(requestedMs: Long): Long {
+        val lens = _lenses.value.getOrNull(_selectedLens.value) ?: return 0L
+        val caps = lens.capabilities
+        if (!caps.supportsManualExposure || caps.exposureTimeRange == null || caps.isoRange == null) {
+            return 0L
+        }
+
+        // Save current state so we can restore after the sequence
+        savedIso = _manualIso.value
+        savedExpNs = _manualExposureNs.value
+        exposureOverridden = true
+
+        val requestedNs = requestedMs * 1_000_000L
+        val clampedNs = requestedNs.coerceIn(caps.exposureTimeRange!!.lower, caps.exposureTimeRange!!.upper)
+
+        // If user hasn't set manual ISO, use a sensible default for long exposures
+        if (_manualIso.value == null) {
+            val defaultIso = caps.isoRange!!.lower.coerceAtLeast(400)
+                .coerceAtMost(caps.isoRange!!.upper)
+            _manualIso.value = defaultIso
+        }
+        _manualExposureNs.value = clampedNs
+        applyManualSettings()
+
+        return clampedNs
+    }
+
+    /** Restore exposure settings to what the user had before the capture sequence. */
+    fun restoreExposureSettings() {
+        if (!exposureOverridden) return
+        _manualIso.value = savedIso
+        _manualExposureNs.value = savedExpNs
+        exposureOverridden = false
+        applyManualSettings()
+    }
+
     /**
      * Star auto-focus: sweep focus from infinity to near, measuring sharpness at each step.
      * Locks focus at the distance with maximum sharpness.
