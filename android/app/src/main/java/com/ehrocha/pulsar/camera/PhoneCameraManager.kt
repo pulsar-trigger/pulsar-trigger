@@ -54,6 +54,14 @@ class PhoneCameraManager(private val context: Context) {
     private var preview: Preview? = null
     private val camera2Manager = context.getSystemService(Context.CAMERA_SERVICE) as Camera2Manager
 
+    /** True if the device has at least one usable camera. */
+    val isAvailable: Boolean
+        get() = try {
+            camera2Manager.cameraIdList.isNotEmpty()
+        } catch (_: Exception) {
+            false
+        }
+
     private val _lenses = MutableStateFlow<List<PhoneLens>>(emptyList())
     val lenses: StateFlow<List<PhoneLens>> = _lenses
 

@@ -223,8 +223,8 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
 
         Spacer(Modifier.height(12.dp))
 
-        // Phone Camera option
-        Surface(
+        // Phone Camera option (only shown on devices with a camera)
+        if (vm.phoneCameraManager.isAvailable) Surface(
             onClick = {
                 if (cameraPermission.status.isGranted) {
                     vm.connectPhoneCamera()
