@@ -454,4 +454,20 @@
     <string name="camera_title">相机</string>
     <string name="camera_permission_needed">使用此功能需要相机权限。</string>
     <string name="camera_grant_permission">授予权限</string>
+    <string name="camera_controls">相机控制</string>
+    <string name="camera_parameters">参数</string>
+    <string name="camera_select_mode">选择模式</string>
+    <string name="btn_expand">展开</string>
+    <string name="btn_collapse">收起</string>
+    <string name="exposure_auto">自动</string>
+    <string name="exposure_manual">手动</string>
+    <string name="focus_auto">自动</string>
+    <string name="focus_manual">手动</string>
+    <string name="label_iso">ISO: %d</string>
+    <string name="label_shutter_speed">快门: %s</string>
+    <string name="label_focus_distance">对焦: %s</string>
+    <string name="label_exposure_mode">曝光</string>
+    <string name="label_focus_mode">对焦</string>
+    <string name="star_focus">星空自动对焦</string>
+    <string name="star_focus_running">对焦中…</string>
 </resources>

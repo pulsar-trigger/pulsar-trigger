@@ -590,4 +590,20 @@
     <string name="camera_title">Camera</string>
     <string name="camera_permission_needed">Camera permission is required to use this feature.</string>
     <string name="camera_grant_permission">Grant Permission</string>
+    <string name="camera_controls">Camera Controls</string>
+    <string name="camera_parameters">Parameters</string>
+    <string name="camera_select_mode">Select Mode</string>
+    <string name="btn_expand">Expand</string>
+    <string name="btn_collapse">Collapse</string>
+    <string name="exposure_auto">Auto</string>
+    <string name="exposure_manual">Manual</string>
+    <string name="focus_auto">Auto</string>
+    <string name="focus_manual">Manual</string>
+    <string name="label_iso">ISO: %d</string>
+    <string name="label_shutter_speed">Shutter: %s</string>
+    <string name="label_focus_distance">Focus: %s</string>
+    <string name="label_exposure_mode">Exposure</string>
+    <string name="label_focus_mode">Focus</string>
+    <string name="star_focus">Star Auto-Focus</string>
+    <string name="star_focus_running">Focusing…</string>
 </resources>

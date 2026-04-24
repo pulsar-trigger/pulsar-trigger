@@ -7,15 +7,24 @@ package com.ehrocha.pulsar.camera
 
 import android.content.ContentValues
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.ImageFormat
 import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CameraManager as Camera2Manager
 import android.hardware.camera2.CameraMetadata
 import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
+import android.util.Range
+import androidx.camera.camera2.interop.Camera2CameraInfo
+import androidx.camera.camera2.interop.Camera2Interop
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -31,6 +40,16 @@ import kotlin.coroutines.resume
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
+/** Per-lens capabilities queried from Camera2. */
+data class LensCapabilities(
+    val supportsManualExposure: Boolean = false,
+    val isoRange: Range<Int>? = null,
+    val exposureTimeRange: Range<Long>? = null,  // nanoseconds
+    val supportsManualFocus: Boolean = false,
+    val minFocusDistance: Float = 0f,  // diopters (0 = infinity)
+    val cameraId: String = "",
+)
+
 data class PhoneLens(
     val id: Int,
     val label: String,
@@ -41,6 +60,7 @@ data class PhoneLens(
     val sensorHeight: Float = 0f,
     val megapixels: Float = 0f,
     val facing: Int = CameraCharacteristics.LENS_FACING_BACK,
+    val capabilities: LensCapabilities = LensCapabilities(),
 )
 
 class PhoneCameraManager(private val context: Context) {
@@ -77,6 +97,195 @@ class PhoneCameraManager(private val context: Context) {
     private val _photoCount = MutableStateFlow(0)
     val photoCount: StateFlow<Int> = _photoCount
 
+    // ── Manual exposure controls ─────────────────────────────────────────
+    private val _manualIso = MutableStateFlow<Int?>(null)  // null = auto
+    val manualIso: StateFlow<Int?> = _manualIso
+
+    private val _manualExposureNs = MutableStateFlow<Long?>(null)  // null = auto
+    val manualExposureNs: StateFlow<Long?> = _manualExposureNs
+
+    private val _manualFocusDist = MutableStateFlow<Float?>(null)  // null = auto, 0 = infinity
+    val manualFocusDist: StateFlow<Float?> = _manualFocusDist
+
+    // ── Star focus state ─────────────────────────────────────────────────
+    private val _starFocusRunning = MutableStateFlow(false)
+    val starFocusRunning: StateFlow<Boolean> = _starFocusRunning
+
+    private val _starFocusProgress = MutableStateFlow(0f)
+    val starFocusProgress: StateFlow<Float> = _starFocusProgress
+
+    private var boundCamera: Camera? = null
+
+    fun setManualIso(iso: Int?) {
+        _manualIso.value = iso
+        applyManualSettings()
+    }
+
+    fun setManualExposureNs(ns: Long?) {
+        _manualExposureNs.value = ns
+        applyManualSettings()
+    }
+
+    fun setManualFocusDist(dist: Float?) {
+        _manualFocusDist.value = dist
+        applyManualSettings()
+    }
+
+    @androidx.annotation.OptIn(androidx.camera.camera2.interop.ExperimentalCamera2Interop::class)
+    private fun applyManualSettings() {
+        val camera = boundCamera ?: return
+        val ctrl = camera.cameraControl
+
+        val builder = androidx.camera.camera2.interop.CaptureRequestOptions.Builder()
+
+        val iso = _manualIso.value
+        val expNs = _manualExposureNs.value
+        if (iso != null && expNs != null) {
+            builder.setCaptureRequestOption(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+            builder.setCaptureRequestOption(CaptureRequest.SENSOR_SENSITIVITY, iso)
+            builder.setCaptureRequestOption(CaptureRequest.SENSOR_EXPOSURE_TIME, expNs)
+        } else {
+            builder.setCaptureRequestOption(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+        }
+
+        val focusDist = _manualFocusDist.value
+        if (focusDist != null) {
+            builder.setCaptureRequestOption(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+            builder.setCaptureRequestOption(CaptureRequest.LENS_FOCUS_DISTANCE, focusDist)
+        } else {
+            builder.setCaptureRequestOption(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+        }
+
+        val cam2Ctrl = androidx.camera.camera2.interop.Camera2CameraControl.from(ctrl)
+        cam2Ctrl.setCaptureRequestOptions(builder.build())
+    }
+
+    /**
+     * Star auto-focus: sweep focus from infinity to near, measuring sharpness at each step.
+     * Locks focus at the distance with maximum sharpness.
+     */
+    suspend fun starAutoFocus() {
+        val lens = _lenses.value.getOrNull(_selectedLens.value) ?: return
+        if (!lens.capabilities.supportsManualFocus) return
+        val maxDist = lens.capabilities.minFocusDistance
+        if (maxDist <= 0f) return
+
+        _starFocusRunning.value = true
+        _starFocusProgress.value = 0f
+
+        val steps = 20
+        var bestSharpness = -1.0
+        var bestDist = 0f  // start at infinity
+
+        try {
+            for (i in 0..steps) {
+                val dist = (maxDist * i.toFloat() / steps)
+                _starFocusProgress.value = i.toFloat() / steps
+
+                // Set focus distance
+                setManualFocusDist(dist)
+                // Let the camera settle
+                delay(300)
+
+                // Measure sharpness from preview
+                val sharpness = measureSharpness()
+                Log.d(TAG, "Star focus: dist=%.3f sharpness=%.1f".format(dist, sharpness))
+
+                if (sharpness > bestSharpness) {
+                    bestSharpness = sharpness
+                    bestDist = dist
+                }
+            }
+
+            // Lock at best focus distance
+            Log.i(TAG, "Star focus: best distance=%.3f sharpness=%.1f".format(bestDist, bestSharpness))
+            setManualFocusDist(bestDist)
+            _starFocusProgress.value = 1f
+        } finally {
+            _starFocusRunning.value = false
+        }
+    }
+
+    /**
+     * Measure image sharpness using Laplacian variance on the current preview frame.
+     * Higher values = sharper image (stars in focus are sharp point sources).
+     */
+    private suspend fun measureSharpness(): Double = suspendCancellableCoroutine { cont ->
+        val capture = imageCapture
+        if (capture == null) {
+            cont.resume(0.0)
+            return@suspendCancellableCoroutine
+        }
+
+        // Use ImageAnalysis to grab a frame for sharpness measurement
+        // Since we may not have ImageAnalysis bound, we'll use a lightweight approach:
+        // take a quick capture to memory and analyze it
+        capture.takePicture(
+            ContextCompat.getMainExecutor(context),
+            object : ImageCapture.OnImageCapturedCallback() {
+                override fun onCaptureSuccess(image: ImageProxy) {
+                    val sharpness = computeLaplacianVariance(image)
+                    image.close()
+                    cont.resume(sharpness)
+                }
+
+                override fun onError(exception: ImageCaptureException) {
+                    Log.w(TAG, "Sharpness capture failed", exception)
+                    cont.resume(0.0)
+                }
+            },
+        )
+    }
+
+    /** Compute Laplacian variance as a sharpness metric on an ImageProxy. */
+    private fun computeLaplacianVariance(image: ImageProxy): Double {
+        val plane = image.planes[0]
+        val buffer = plane.buffer
+        val width = image.width
+        val height = image.height
+        val rowStride = plane.rowStride
+        val pixelStride = plane.pixelStride
+
+        // Sample a center crop for speed (quarter resolution)
+        val cropSize = minOf(width, height) / 2
+        val startX = (width - cropSize) / 2
+        val startY = (height - cropSize) / 2
+
+        var sum = 0.0
+        var sumSq = 0.0
+        var count = 0
+
+        // Laplacian kernel: center pixel * 4 - four neighbors
+        for (y in (startY + 1) until (startY + cropSize - 1) step 2) {
+            for (x in (startX + 1) until (startX + cropSize - 1) step 2) {
+                val center = getPixelLuminance(buffer, x, y, rowStride, pixelStride)
+                val top = getPixelLuminance(buffer, x, y - 1, rowStride, pixelStride)
+                val bottom = getPixelLuminance(buffer, x, y + 1, rowStride, pixelStride)
+                val left = getPixelLuminance(buffer, x - 1, y, rowStride, pixelStride)
+                val right = getPixelLuminance(buffer, x + 1, y, rowStride, pixelStride)
+                val laplacian = (4 * center - top - bottom - left - right).toDouble()
+                sum += laplacian
+                sumSq += laplacian * laplacian
+                count++
+            }
+        }
+
+        if (count == 0) return 0.0
+        val mean = sum / count
+        return sumSq / count - mean * mean  // variance
+    }
+
+    private fun getPixelLuminance(
+        buffer: java.nio.ByteBuffer,
+        x: Int,
+        y: Int,
+        rowStride: Int,
+        pixelStride: Int,
+    ): Int {
+        val offset = y * rowStride + x * pixelStride
+        return if (offset < buffer.capacity()) buffer.get(offset).toInt() and 0xFF else 0
+    }
+
     /** Enumerate physical cameras with Camera2 metadata. */
     private fun enumerateLenses(provider: ProcessCameraProvider): List<PhoneLens> {
         val available = mutableListOf<PhoneLens>()
@@ -85,8 +294,8 @@ class PhoneCameraManager(private val context: Context) {
             try {
                 val chars = camera2Manager.getCameraCharacteristics(cameraId)
                 val facing = chars.get(CameraCharacteristics.LENS_FACING) ?: continue
-                // Skip external cameras
-                if (facing == CameraMetadata.LENS_FACING_EXTERNAL) continue
+                // Only keep back-facing cameras
+                if (facing != CameraMetadata.LENS_FACING_BACK) continue
 
                 val selector = CameraSelector.Builder()
                     .addCameraFilter { cameraInfos ->
@@ -114,6 +323,31 @@ class PhoneCameraManager(private val context: Context) {
                     (pixelArray.width.toLong() * pixelArray.height / 1_000_000f)
                 } else 0f
 
+                // Query manual control capabilities
+                val hwLevel = chars.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)
+                    ?: CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY
+                val supportsManual = hwLevel == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL
+                    || hwLevel == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3
+
+                val isoRange = if (supportsManual) {
+                    chars.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+                } else null
+                val exposureTimeRange = if (supportsManual) {
+                    chars.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
+                } else null
+
+                val minFocusDist = chars.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) ?: 0f
+                val supportsManualFocus = minFocusDist > 0f
+
+                val capabilities = LensCapabilities(
+                    supportsManualExposure = supportsManual,
+                    isoRange = isoRange,
+                    exposureTimeRange = exposureTimeRange,
+                    supportsManualFocus = supportsManualFocus,
+                    minFocusDistance = minFocusDist,
+                    cameraId = cameraId,
+                )
+
                 // Build a descriptive label
                 val facingStr = if (facing == CameraMetadata.LENS_FACING_FRONT) "Front" else "Back"
                 val eqFl = if (focalLength > 0 && sensorW > 0) {
@@ -132,6 +366,7 @@ class PhoneCameraManager(private val context: Context) {
                         sensorHeight = sensorH,
                         megapixels = mp,
                         facing = facing,
+                        capabilities = capabilities,
                     )
                 )
             } catch (e: Exception) {
@@ -160,9 +395,10 @@ class PhoneCameraManager(private val context: Context) {
                     .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
                     .build()
                 try {
-                    provider.bindToLifecycle(lifecycleOwner, lensList[0].selector, imageCapture!!)
+                    boundCamera = provider.bindToLifecycle(lifecycleOwner, lensList[0].selector, imageCapture!!)
                     _lastError.value = null
                     Log.i(TAG, "Camera bound headless: ${lensList[0].label}")
+                    applyManualSettings()
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to bind camera headless", e)
                     _lastError.value = e.message
@@ -215,8 +451,9 @@ class PhoneCameraManager(private val context: Context) {
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
             .build()
         try {
-            provider.bindToLifecycle(lifecycleOwner, lensList[index].selector, imageCapture!!)
+            boundCamera = provider.bindToLifecycle(lifecycleOwner, lensList[index].selector, imageCapture!!)
             _lastError.value = null
+            applyManualSettings()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to bind camera headless", e)
             _lastError.value = e.message
@@ -240,9 +477,10 @@ class PhoneCameraManager(private val context: Context) {
             .build()
 
         try {
-            provider.bindToLifecycle(lifecycleOwner, selector, preview, imageCapture)
+            boundCamera = provider.bindToLifecycle(lifecycleOwner, selector, preview, imageCapture)
             _lastError.value = null
             Log.i(TAG, "Camera bound: ${selector}")
+            applyManualSettings()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to bind camera", e)
             _lastError.value = e.message
@@ -347,5 +585,6 @@ class PhoneCameraManager(private val context: Context) {
         cameraProvider = null
         imageCapture = null
         preview = null
+        boundCamera = null
     }
 }

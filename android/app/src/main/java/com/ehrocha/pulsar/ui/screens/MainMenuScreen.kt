@@ -17,6 +17,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Explore
@@ -53,6 +54,8 @@ fun MainMenuScreen(
     onQuickFlow: (FlowStepType) -> Unit,
     onManualSelected: () -> Unit,
     onCustomFlowSelected: () -> Unit = {},
+    onCameraSelected: () -> Unit = {},
+    phoneCameraActive: Boolean = false,
     onDashboardSelected: () -> Unit = {},
     onPlannerSelected: () -> Unit = {},
     onAlignmentSelected: () -> Unit = {},
@@ -166,26 +169,34 @@ fun MainMenuScreen(
         ) { page ->
             when (page) {
                 0 -> {
-                    val triggerItems = listOf(
-                        LauncherItem(R.string.mode_intervalometer, Icons.Default.Timer) {
-                            onQuickFlow(FlowStepType.INTERVALOMETER)
-                        },
-                        LauncherItem(R.string.mode_astro, Icons.Default.Stars) {
-                            onQuickFlow(FlowStepType.ASTRO)
-                        },
-                        LauncherItem(R.string.mode_dark_frame, Icons.Default.LensBlur) {
-                            onQuickFlow(FlowStepType.DARK_FRAME)
-                        },
-                        LauncherItem(R.string.mode_ramp, Icons.AutoMirrored.Filled.TrendingUp) {
-                            onQuickFlow(FlowStepType.RAMP)
-                        },
-                        LauncherItem(R.string.mode_manual, Icons.Default.TouchApp) {
-                            onManualSelected()
-                        },
-                        LauncherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList) {
-                            onCustomFlowSelected()
-                        },
-                    )
+                    val triggerItems = if (phoneCameraActive) {
+                        listOf(
+                            LauncherItem(R.string.mode_camera, Icons.Default.CameraAlt) {
+                                onCameraSelected()
+                            },
+                        )
+                    } else {
+                        listOf(
+                            LauncherItem(R.string.mode_intervalometer, Icons.Default.Timer) {
+                                onQuickFlow(FlowStepType.INTERVALOMETER)
+                            },
+                            LauncherItem(R.string.mode_astro, Icons.Default.Stars) {
+                                onQuickFlow(FlowStepType.ASTRO)
+                            },
+                            LauncherItem(R.string.mode_dark_frame, Icons.Default.LensBlur) {
+                                onQuickFlow(FlowStepType.DARK_FRAME)
+                            },
+                            LauncherItem(R.string.mode_ramp, Icons.AutoMirrored.Filled.TrendingUp) {
+                                onQuickFlow(FlowStepType.RAMP)
+                            },
+                            LauncherItem(R.string.mode_manual, Icons.Default.TouchApp) {
+                                onManualSelected()
+                            },
+                            LauncherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList) {
+                                onCustomFlowSelected()
+                            },
+                        )
+                    }
                     LauncherGrid(triggerItems)
                 }
                 1 -> {

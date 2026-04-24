@@ -65,8 +65,6 @@ import com.ehrocha.pulsar.ui.screens.SettingsScreen
 import com.ehrocha.pulsar.ui.screens.SettingsSection
 import com.ehrocha.pulsar.ui.screens.CustomFlowScreen
 import com.ehrocha.pulsar.ui.screens.AlignmentScreen
-import androidx.compose.ui.platform.LocalLifecycleOwner
-import com.ehrocha.pulsar.ui.screens.CameraIntervalometerScreen
 import com.ehrocha.pulsar.ui.screens.CameraScreen
 import com.ehrocha.pulsar.ui.screens.WhatsUpScreen
 import com.ehrocha.pulsar.ui.screens.DashboardScreen
@@ -221,14 +219,6 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
     var menuTab by remember { mutableIntStateOf(0) }
     val connected by vm.connected.collectAsState()
     val phoneCameraActive by vm.phoneCameraActive.collectAsState()
-    val lifecycleOwner = LocalLifecycleOwner.current
-
-    // Initialize phone camera when connected
-    LaunchedEffect(phoneCameraActive) {
-        if (phoneCameraActive) {
-            vm.phoneCameraManager.initializeHeadless(lifecycleOwner)
-        }
-    }
 
     // ── Update-available dialog ──────────────────────────────────────
     val fwState by vm.firmwareManager.state.collectAsState()
@@ -315,7 +305,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
     ) {
     Column(Modifier.fillMaxSize()) {
         // ── Persistent top bar (hidden on Scan screen) ───────────────
-        if (currentScreen !is AppScreen.Scan) {
+        if (currentScreen !is AppScreen.Scan && currentScreen !is AppScreen.Camera) {
             Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -342,29 +332,17 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
         Box(Modifier.weight(1f)) {
         when (val screen = currentScreen) {
             AppScreen.Scan -> ScanScreen(vm) { currentScreen = AppScreen.Menu }
-            AppScreen.Menu -> MainMenuScreen(
-                vm = vm,
-                initialTab = menuTab,
-                onTabChanged = { menuTab = it },
-                onQuickFlow = { type ->
-                    if (phoneCameraActive) {
-                        // Phone camera: route to integrated camera screen
-                        when (type) {
-                            FlowStepType.INTERVALOMETER -> {
-                                vm.selectMode(TriggerMode.INTERVALOMETER)
-                                currentScreen = AppScreen.CameraIntervalometer
-                            }
-                            else -> {
-                                // Other modes use standard ModeScreen for now
-                                when (type) {
-                                    FlowStepType.ASTRO -> currentScreen = AppScreen.Mode(TriggerMode.ASTRO)
-                                    FlowStepType.DARK_FRAME -> currentScreen = AppScreen.Mode(TriggerMode.DARK_FRAME)
-                                    FlowStepType.RAMP -> currentScreen = AppScreen.Mode(TriggerMode.RAMP)
-                                    else -> return@MainMenuScreen
-                                }
-                            }
-                        }
-                    } else {
+            AppScreen.Menu -> {
+                if (phoneCameraActive) {
+                    BackHandler { vm.disconnect() }
+                }
+                MainMenuScreen(
+                    vm = vm,
+                    initialTab = menuTab,
+                    onTabChanged = { menuTab = it },
+                    phoneCameraActive = phoneCameraActive,
+                    onCameraSelected = { currentScreen = AppScreen.Camera },
+                    onQuickFlow = { type ->
                         when (type) {
                             FlowStepType.INTERVALOMETER -> currentScreen = AppScreen.Mode(TriggerMode.INTERVALOMETER)
                             FlowStepType.ASTRO -> currentScreen = AppScreen.Mode(TriggerMode.ASTRO)
@@ -372,16 +350,16 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                             FlowStepType.RAMP -> currentScreen = AppScreen.Mode(TriggerMode.RAMP)
                             else -> return@MainMenuScreen
                         }
-                    }
-                },
-                onManualSelected = { currentScreen = AppScreen.Mode(TriggerMode.PRESS_HOLD) },
-                onCustomFlowSelected = { currentScreen = AppScreen.CustomFlow() },
-                onDashboardSelected = { currentScreen = AppScreen.Dashboard },
-                onPlannerSelected = { currentScreen = AppScreen.Planner },
-                onAlignmentSelected = { currentScreen = AppScreen.Alignment },
-                onWhatsUpSelected = { currentScreen = AppScreen.WhatsUp },
-                onSettingsSelected = { currentScreen = AppScreen.Settings(SettingsSection.UPDATES) },
-            )
+                    },
+                    onManualSelected = { currentScreen = AppScreen.Mode(TriggerMode.PRESS_HOLD) },
+                    onCustomFlowSelected = { currentScreen = AppScreen.CustomFlow() },
+                    onDashboardSelected = { currentScreen = AppScreen.Dashboard },
+                    onPlannerSelected = { currentScreen = AppScreen.Planner },
+                    onAlignmentSelected = { currentScreen = AppScreen.Alignment },
+                    onWhatsUpSelected = { currentScreen = AppScreen.WhatsUp },
+                    onSettingsSelected = { currentScreen = AppScreen.Settings(SettingsSection.UPDATES) },
+                )
+            }
             is AppScreen.Mode -> {
                 BackHandler { currentScreen = AppScreen.Menu }
                 ModeScreen(
@@ -487,17 +465,8 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
             AppScreen.Camera -> {
                 BackHandler { currentScreen = AppScreen.Menu }
                 CameraScreen(
-                    onBack = { currentScreen = AppScreen.Menu },
-                )
-            }
-            AppScreen.CameraIntervalometer -> {
-                CameraIntervalometerScreen(
                     vm = vm,
                     onBack = { currentScreen = AppScreen.Menu },
-                    onStartFlow = {
-                        vm.loadQuickMode(FlowStepType.INTERVALOMETER)
-                        vm.startFlow()
-                    },
                 )
             }
         }
@@ -558,5 +527,4 @@ private sealed class AppScreen {
     data object Alignment : AppScreen()
     data object WhatsUp : AppScreen()
     data object Camera : AppScreen()
-    data object CameraIntervalometer : AppScreen()
 }

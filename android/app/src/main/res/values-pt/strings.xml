@@ -454,4 +454,20 @@
     <string name="camera_title">Câmera</string>
     <string name="camera_permission_needed">Permissão da câmera é necessária para usar este recurso.</string>
     <string name="camera_grant_permission">Conceder Permissão</string>
+    <string name="camera_controls">Controles da Câmera</string>
+    <string name="camera_parameters">Parâmetros</string>
+    <string name="camera_select_mode">Selecionar Modo</string>
+    <string name="btn_expand">Expandir</string>
+    <string name="btn_collapse">Recolher</string>
+    <string name="exposure_auto">Auto</string>
+    <string name="exposure_manual">Manual</string>
+    <string name="focus_auto">Auto</string>
+    <string name="focus_manual">Manual</string>
+    <string name="label_iso">ISO: %d</string>
+    <string name="label_shutter_speed">Obturador: %s</string>
+    <string name="label_focus_distance">Foco: %s</string>
+    <string name="label_exposure_mode">Exposição</string>
+    <string name="label_focus_mode">Foco</string>
+    <string name="star_focus">Foco Automático em Estrelas</string>
+    <string name="star_focus_running">Focando…</string>
 </resources>

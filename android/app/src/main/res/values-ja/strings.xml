@@ -454,4 +454,20 @@
     <string name="camera_title">カメラ</string>
     <string name="camera_permission_needed">この機能を使用するにはカメラの許可が必要です。</string>
     <string name="camera_grant_permission">許可する</string>
+    <string name="camera_controls">カメラコントロール</string>
+    <string name="camera_parameters">パラメーター</string>
+    <string name="camera_select_mode">モード選択</string>
+    <string name="btn_expand">展開</string>
+    <string name="btn_collapse">折りたたむ</string>
+    <string name="exposure_auto">自動</string>
+    <string name="exposure_manual">手動</string>
+    <string name="focus_auto">自動</string>
+    <string name="focus_manual">手動</string>
+    <string name="label_iso">ISO: %d</string>
+    <string name="label_shutter_speed">シャッター: %s</string>
+    <string name="label_focus_distance">フォーカス: %s</string>
+    <string name="label_exposure_mode">露出</string>
+    <string name="label_focus_mode">フォーカス</string>
+    <string name="star_focus">星オートフォーカス</string>
+    <string name="star_focus_running">フォーカス中…</string>
 </resources>
