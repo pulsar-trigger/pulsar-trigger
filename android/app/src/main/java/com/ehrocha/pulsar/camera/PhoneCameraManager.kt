@@ -85,6 +85,9 @@ class PhoneCameraManager(private val context: Context) {
     private val _lenses = MutableStateFlow<List<PhoneLens>>(emptyList())
     val lenses: StateFlow<List<PhoneLens>> = _lenses
 
+    private val _cameraDebugLog = MutableStateFlow<List<String>>(emptyList())
+    val cameraDebugLog: StateFlow<List<String>> = _cameraDebugLog
+
     private val _selectedLens = MutableStateFlow(0)
     val selectedLens: StateFlow<Int> = _selectedLens
 
@@ -335,6 +338,7 @@ class PhoneCameraManager(private val context: Context) {
     /** Enumerate physical cameras with Camera2 metadata. */
     private fun enumerateLenses(provider: ProcessCameraProvider): List<PhoneLens> {
         val available = mutableListOf<PhoneLens>()
+        val debugLog = mutableListOf<String>()
         var idx = 0
 
         // Collect physical camera IDs that belong to logical cameras so we can
@@ -406,9 +410,10 @@ class PhoneCameraManager(private val context: Context) {
                 } else 0
                 val label = if (eqFl > 0) "Back ${eqFl}mm" else "Back"
 
-                Log.d(TAG, "Camera $cameraId: facing=BACK fl=${focalLength}mm " +
-                    "eq35=${eqFl}mm f/$aperture ${mp.roundToInt()}MP hwLevel=$hwLevel " +
-                    "cameraX=$cameraXAvailable")
+                val info = "Camera $cameraId: ${eqFl}mm f/$aperture ${mp.roundToInt()}MP" +
+                    " hwLevel=$hwLevel cameraX=$cameraXAvailable"
+                Log.d(TAG, info)
+                debugLog.add(if (cameraXAvailable) "\u2705 $info" else "\u274C $info")
 
                 if (cameraXAvailable) {
                     available.add(
@@ -431,13 +436,15 @@ class PhoneCameraManager(private val context: Context) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     val physicalIds = chars.physicalCameraIds
                     if (physicalIds.size > 1) {
-                        Log.d(TAG, "Camera $cameraId is logical multi-camera with " +
-                            "physical IDs: $physicalIds")
+                        val logicalInfo = "Logical $cameraId has physical IDs: $physicalIds"
+                        Log.d(TAG, logicalInfo)
+                        debugLog.add(logicalInfo)
                         for (physId in physicalIds) {
                             // Skip if we already added this as a top-level camera
                             if (camera2Manager.cameraIdList.contains(physId)) {
                                 val alreadyAdded = available.any { it.capabilities.cameraId == physId }
                                 if (alreadyAdded) {
+                                    debugLog.add("  Physical $physId: already top-level")
                                     Log.d(TAG, "  Physical $physId already added as top-level")
                                     continue
                                 }
@@ -451,9 +458,12 @@ class PhoneCameraManager(private val context: Context) {
                                 val physEqFl = if (physFl > 0 && physSensorSize != null && physSensorSize.width > 0) {
                                     (physFl * 36f / physSensorSize.width).roundToInt()
                                 } else 0
-                                Log.d(TAG, "  Physical $physId: fl=${physFl}mm eq35=${physEqFl}mm")
+                                val physInfo = "  Physical $physId: ${physEqFl}mm"
+                                Log.d(TAG, physInfo)
+                                debugLog.add(physInfo)
                             } catch (e: Exception) {
                                 Log.w(TAG, "  Failed to query physical camera $physId", e)
+                                debugLog.add("  Physical $physId: error — ${e.message}")
                             }
                         }
                     }
@@ -483,7 +493,9 @@ class PhoneCameraManager(private val context: Context) {
                     } else 0
                     kotlin.math.abs(existingEqFl - physEqFl) < 3
                 }) {
-                    Log.d(TAG, "Physical $physId (eq35=${physEqFl}mm) skipped — similar lens exists")
+                    val skipMsg = "Physical $physId (${physEqFl}mm) skipped — similar lens exists"
+                    Log.d(TAG, skipMsg)
+                    debugLog.add(skipMsg)
                     continue
                 }
 
@@ -519,7 +531,9 @@ class PhoneCameraManager(private val context: Context) {
                     .build()
 
                 val label = if (physEqFl > 0) "Back ${physEqFl}mm" else "Back"
-                Log.d(TAG, "Adding physical sub-camera $physId via logical $logicalId: $label")
+                val addMsg = "\u2705 Physical $physId via logical $logicalId: $label f/$physAperture ${physMp.roundToInt()}MP"
+                Log.d(TAG, addMsg)
+                debugLog.add(addMsg)
 
                 available.add(
                     PhoneLens(
@@ -545,7 +559,10 @@ class PhoneCameraManager(private val context: Context) {
             }
         }
 
-        Log.d(TAG, "Enumerated ${available.size} lenses: ${available.map { "${it.label} (${it.capabilities.cameraId})" }}")
+        val summary = "Total: ${available.size} lenses"
+        Log.d(TAG, summary)
+        debugLog.add(summary)
+        _cameraDebugLog.value = debugLog
         // Sort by focal length ascending (wide → tele)
         return available.sortedBy { it.focalLength }
     }

@@ -120,6 +120,7 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
     val selectedLens by cameraManager.selectedLens.collectAsState()
     val isCapturing by cameraManager.isCapturing.collectAsState()
     val photoCount by cameraManager.photoCount.collectAsState()
+    val cameraDebugLog by cameraManager.cameraDebugLog.collectAsState()
 
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -147,8 +148,9 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
     val exposureMs by vm.exposureMs.collectAsState()
     val shotCount by vm.shotCount.collectAsState()
 
-    // Exit confirmation while running
+    // Dialogs
     var showExitDialog by remember { mutableStateOf(false) }
+    var showCameraDebug by remember { mutableStateOf(false) }
     BackHandler(enabled = isRunning) { showExitDialog = true }
 
     Column(Modifier.fillMaxSize()) {
@@ -234,6 +236,7 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                 val currentLens = lenses.getOrNull(selectedLens)
                 if (currentLens != null && (currentLens.aperture > 0 || currentLens.megapixels > 0)) {
                     Surface(
+                        onClick = { showCameraDebug = true },
                         color = Color.Black.copy(alpha = 0.5f),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.padding(bottom = 4.dp),
@@ -340,6 +343,32 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
             dismissButton = {
                 TextButton(onClick = { showExitDialog = false }) {
                     Text(stringResource(R.string.btn_keep_running))
+                }
+            },
+        )
+    }
+
+    // Camera debug info dialog
+    if (showCameraDebug) {
+        AlertDialog(
+            onDismissRequest = { showCameraDebug = false },
+            title = { Text("Camera Info") },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    cameraDebugLog.forEach { line ->
+                        Text(
+                            line,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showCameraDebug = false }) {
+                    Text("OK")
                 }
             },
         )
