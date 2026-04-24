@@ -21,6 +21,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.CenterFocusStrong
+import androidx.compose.material.icons.filled.Iso
+import androidx.compose.material.icons.filled.Lens
+import androidx.compose.material.icons.filled.ShutterSpeed
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
@@ -29,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
@@ -148,6 +153,13 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
     val exposureMs by vm.exposureMs.collectAsState()
     val shotCount by vm.shotCount.collectAsState()
 
+    // Camera overlay panel state (only one open at a time)
+    var activePanel by remember { mutableStateOf<CameraPanel?>(null) }
+
+    // Current lens capabilities
+    val currentLens = lenses.getOrNull(selectedLens)
+    val caps = currentLens?.capabilities ?: LensCapabilities()
+
     // Dialogs
     var showExitDialog by remember { mutableStateOf(false) }
     var showCameraDebug by remember { mutableStateOf(false) }
@@ -226,59 +238,24 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                 )
             }
 
-            // Camera info + lens picker at bottom of preview
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
+            // ── Camera controls strip (right side) ────────────────
+            CameraControlsStrip(
+                cameraManager = cameraManager,
+                lenses = lenses,
+                selectedLens = selectedLens,
+                caps = caps,
+                activePanel = activePanel,
+                onPanelToggle = { panel ->
+                    activePanel = if (activePanel == panel) null else panel
+                },
+                onLensSelected = { index ->
+                    cameraManager.selectLens(index, lifecycleOwner, previewView)
+                },
+                onShowDebug = { showCameraDebug = true },
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 8.dp),
-            ) {
-                val currentLens = lenses.getOrNull(selectedLens)
-                if (currentLens != null && (currentLens.aperture > 0 || currentLens.megapixels > 0)) {
-                    Surface(
-                        onClick = { showCameraDebug = true },
-                        color = Color.Black.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.padding(bottom = 4.dp),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            if (currentLens.aperture > 0) {
-                                Text("f/%.1f".format(currentLens.aperture), style = MaterialTheme.typography.labelSmall, color = Color.White)
-                            }
-                            if (currentLens.focalLength > 0) {
-                                Text("%.1fmm".format(currentLens.focalLength), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
-                            }
-                            if (currentLens.megapixels > 0) {
-                                Text("%.0f MP".format(currentLens.megapixels), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
-                            }
-                        }
-                    }
-                }
-
-                if (lenses.size > 1) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        lenses.forEachIndexed { index, lens ->
-                            val isSelected = index == selectedLens
-                            Surface(
-                                onClick = { cameraManager.selectLens(index, lifecycleOwner, previewView) },
-                                color = if (isSelected) Color.White else Color.Black.copy(alpha = 0.5f),
-                                shape = RoundedCornerShape(16.dp),
-                            ) {
-                                Text(
-                                    lens.label,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) Color.Black else Color.White,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 8.dp),
+            )
         }
 
         // ── Bottom bar (non-overlapping) ────────────────────────────
@@ -314,7 +291,6 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
         ) {
             SetupControls(
                 vm = vm,
-                cameraManager = cameraManager,
                 onStart = {
                     showSheet = false
                     vm.selectMode(TriggerMode.INTERVALOMETER)
@@ -491,14 +467,8 @@ private fun RunningBar(
 @Composable
 private fun SetupControls(
     vm: PulsarViewModel,
-    cameraManager: PhoneCameraManager,
     onStart: () -> Unit,
 ) {
-    val lenses by cameraManager.lenses.collectAsState()
-    val selectedLens by cameraManager.selectedLens.collectAsState()
-    val currentLens = lenses.getOrNull(selectedLens)
-    val caps = currentLens?.capabilities ?: LensCapabilities()
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -506,9 +476,6 @@ private fun SetupControls(
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        // ── Camera controls (ISO, shutter, focus) ───────────────
-        CameraControlsSection(cameraManager, caps)
-
         // ── Intervalometer parameters ───────────────────────────
         IntervalometerPanel(vm, enabled = true)
 
@@ -529,7 +496,413 @@ private fun SetupControls(
     }
 }
 
-// ── Camera controls (ISO, shutter speed, focus) ─────────────────────────
+// ── Camera panel enum ───────────────────────────────────────────────────
+
+private enum class CameraPanel { LENS, ISO, SHUTTER, FOCUS }
+
+// ── Camera controls strip (right-side icons + expandable panels) ────────
+
+@Composable
+private fun CameraControlsStrip(
+    cameraManager: PhoneCameraManager,
+    lenses: List<com.ehrocha.pulsar.camera.PhoneLens>,
+    selectedLens: Int,
+    caps: LensCapabilities,
+    activePanel: CameraPanel?,
+    onPanelToggle: (CameraPanel) -> Unit,
+    onLensSelected: (Int) -> Unit,
+    onShowDebug: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val manualIso by cameraManager.manualIso.collectAsState()
+    val manualExpNs by cameraManager.manualExposureNs.collectAsState()
+    val manualFocus by cameraManager.manualFocusDist.collectAsState()
+    val currentLens = lenses.getOrNull(selectedLens)
+
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // ── Expanded panel (appears to the left of the icon strip) ──
+        AnimatedVisibility(visible = activePanel != null) {
+            Surface(
+                color = Color.Black.copy(alpha = 0.7f),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .widthIn(max = 260.dp)
+                    .padding(end = 8.dp),
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    when (activePanel) {
+                        CameraPanel.LENS -> LensPanel(
+                            lenses = lenses,
+                            selectedLens = selectedLens,
+                            onLensSelected = onLensSelected,
+                            onShowDebug = onShowDebug,
+                        )
+                        CameraPanel.ISO -> IsoPanel(cameraManager, caps)
+                        CameraPanel.SHUTTER -> ShutterPanel(cameraManager, caps)
+                        CameraPanel.FOCUS -> FocusPanel(cameraManager, caps)
+                        null -> {}
+                    }
+                }
+            }
+        }
+
+        // ── Icon strip ──────────────────────────────────────────────
+        Surface(
+            color = Color.Black.copy(alpha = 0.5f),
+            shape = RoundedCornerShape(24.dp),
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
+            ) {
+                // Lens
+                if (lenses.size > 1) {
+                    ControlIconButton(
+                        icon = Icons.Default.Lens,
+                        label = currentLens?.label?.removePrefix("Back ") ?: "",
+                        active = activePanel == CameraPanel.LENS,
+                        onClick = { onPanelToggle(CameraPanel.LENS) },
+                    )
+                }
+
+                // ISO
+                if (caps.supportsManualExposure) {
+                    ControlIconButton(
+                        icon = Icons.Default.Iso,
+                        label = if (manualIso != null) "${manualIso}" else "Auto",
+                        active = activePanel == CameraPanel.ISO,
+                        onClick = { onPanelToggle(CameraPanel.ISO) },
+                    )
+                }
+
+                // Shutter speed
+                if (caps.supportsManualExposure) {
+                    ControlIconButton(
+                        icon = Icons.Default.ShutterSpeed,
+                        label = if (manualExpNs != null) formatShutterSpeed(manualExpNs!!) else "Auto",
+                        active = activePanel == CameraPanel.SHUTTER,
+                        onClick = { onPanelToggle(CameraPanel.SHUTTER) },
+                    )
+                }
+
+                // Focus
+                if (caps.supportsManualFocus) {
+                    ControlIconButton(
+                        icon = Icons.Default.CenterFocusStrong,
+                        label = if (manualFocus != null) formatFocusDistance(manualFocus!!) else "AF",
+                        active = activePanel == CameraPanel.FOCUS,
+                        onClick = { onPanelToggle(CameraPanel.FOCUS) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ControlIconButton(
+    icon: ImageVector,
+    label: String,
+    active: Boolean,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        color = if (active) Color.White.copy(alpha = 0.3f) else Color.Transparent,
+        shape = RoundedCornerShape(16.dp),
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = if (active) Color.White else Color.White.copy(alpha = 0.8f),
+                modifier = Modifier.size(22.dp),
+            )
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (active) Color.White else Color.White.copy(alpha = 0.7f),
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+// ── Expandable panels ──────────────────────────────────────────────────
+
+@Composable
+private fun LensPanel(
+    lenses: List<com.ehrocha.pulsar.camera.PhoneLens>,
+    selectedLens: Int,
+    onLensSelected: (Int) -> Unit,
+    onShowDebug: () -> Unit,
+) {
+    lenses.forEachIndexed { index, lens ->
+        val isSelected = index == selectedLens
+        Surface(
+            onClick = { onLensSelected(index) },
+            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.15f),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    lens.label,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                    color = if (isSelected) Color.Black else Color.White,
+                    modifier = Modifier.weight(1f),
+                )
+                if (lens.aperture > 0) {
+                    Text(
+                        "f/%.1f".format(lens.aperture),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isSelected) Color.Black.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.6f),
+                    )
+                }
+                if (lens.megapixels > 0) {
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        "%.0fMP".format(lens.megapixels),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isSelected) Color.Black.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.6f),
+                    )
+                }
+            }
+        }
+    }
+    // Debug info link
+    Surface(
+        onClick = onShowDebug,
+        color = Color.Transparent,
+        shape = RoundedCornerShape(8.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text(
+            "Camera info...",
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White.copy(alpha = 0.4f),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+        )
+    }
+}
+
+@Composable
+private fun IsoPanel(cameraManager: PhoneCameraManager, caps: LensCapabilities) {
+    val manualIso by cameraManager.manualIso.collectAsState()
+    val isoRange = caps.isoRange ?: return
+    val isManual = manualIso != null
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text("ISO", style = MaterialTheme.typography.labelMedium, color = Color.White, modifier = Modifier.weight(1f))
+        Surface(
+            onClick = {
+                if (isManual) {
+                    cameraManager.setManualIso(null)
+                    cameraManager.setManualExposureNs(null)
+                } else {
+                    cameraManager.setManualIso((isoRange.lower + isoRange.upper) / 2)
+                    cameraManager.setManualExposureNs(1_000_000_000L)
+                }
+            },
+            color = if (isManual) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.15f),
+            shape = RoundedCornerShape(8.dp),
+        ) {
+            Text(
+                if (isManual) "Manual" else "Auto",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            )
+        }
+    }
+    if (isManual) {
+        Text(
+            "ISO ${manualIso ?: isoRange.lower}",
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Medium,
+        )
+        Slider(
+            value = (manualIso ?: isoRange.lower).toFloat(),
+            onValueChange = { cameraManager.setManualIso(it.roundToInt()) },
+            valueRange = isoRange.lower.toFloat()..isoRange.upper.toFloat(),
+            colors = SliderDefaults.colors(
+                thumbColor = Color.White,
+                activeTrackColor = Color.White,
+                inactiveTrackColor = Color.White.copy(alpha = 0.3f),
+            ),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("${isoRange.lower}", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
+            Text("${isoRange.upper}", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
+        }
+    }
+}
+
+@Composable
+private fun ShutterPanel(cameraManager: PhoneCameraManager, caps: LensCapabilities) {
+    val manualExpNs by cameraManager.manualExposureNs.collectAsState()
+    val manualIso by cameraManager.manualIso.collectAsState()
+    val expRange = caps.exposureTimeRange ?: return
+    val isManual = manualIso != null
+
+    if (!isManual) {
+        Text(
+            stringResource(R.string.exposure_auto),
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.White.copy(alpha = 0.7f),
+        )
+        Text(
+            "Enable manual ISO first",
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White.copy(alpha = 0.4f),
+        )
+        return
+    }
+
+    val validSteps = SHUTTER_STEPS_NS.filter { it in expRange.lower..expRange.upper }
+    if (validSteps.isEmpty()) return
+
+    val currentNs = manualExpNs ?: 1_000_000_000L
+    val nearestIdx = validSteps.indices.minBy { idx ->
+        kotlin.math.abs(validSteps[idx] - currentNs)
+    }
+
+    Text(
+        formatShutterSpeed(validSteps[nearestIdx]),
+        style = MaterialTheme.typography.titleMedium,
+        color = Color.White,
+        fontWeight = FontWeight.Bold,
+    )
+    Slider(
+        value = nearestIdx.toFloat(),
+        onValueChange = { idx ->
+            val step = validSteps[idx.roundToInt().coerceIn(0, validSteps.lastIndex)]
+            cameraManager.setManualExposureNs(step)
+        },
+        valueRange = 0f..(validSteps.lastIndex).toFloat(),
+        steps = (validSteps.size - 2).coerceAtLeast(0),
+        colors = SliderDefaults.colors(
+            thumbColor = Color.White,
+            activeTrackColor = Color.White,
+            inactiveTrackColor = Color.White.copy(alpha = 0.3f),
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(formatShutterSpeed(validSteps.first()), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
+        Text(formatShutterSpeed(validSteps.last()), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
+    }
+}
+
+@Composable
+private fun FocusPanel(cameraManager: PhoneCameraManager, caps: LensCapabilities) {
+    val manualFocus by cameraManager.manualFocusDist.collectAsState()
+    val isManualFocus = manualFocus != null
+    val starFocusRunning by cameraManager.starFocusRunning.collectAsState()
+    val starFocusProgress by cameraManager.starFocusProgress.collectAsState()
+    val scope = rememberCoroutineScope()
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text("Focus", style = MaterialTheme.typography.labelMedium, color = Color.White, modifier = Modifier.weight(1f))
+        Surface(
+            onClick = {
+                if (isManualFocus) cameraManager.setManualFocusDist(null)
+                else cameraManager.setManualFocusDist(0f)
+            },
+            color = if (isManualFocus) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.15f),
+            shape = RoundedCornerShape(8.dp),
+        ) {
+            Text(
+                if (isManualFocus) "Manual" else "Auto",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            )
+        }
+    }
+
+    if (isManualFocus && caps.minFocusDistance > 0f) {
+        val currentDist = manualFocus ?: 0f
+        Text(
+            formatFocusDistance(currentDist),
+            style = MaterialTheme.typography.titleMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+        )
+        Slider(
+            value = currentDist,
+            onValueChange = { cameraManager.setManualFocusDist(it) },
+            valueRange = 0f..caps.minFocusDistance,
+            colors = SliderDefaults.colors(
+                thumbColor = Color.White,
+                activeTrackColor = Color.White,
+                inactiveTrackColor = Color.White.copy(alpha = 0.3f),
+            ),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("\u221E", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
+            Text(formatFocusDistance(caps.minFocusDistance), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
+        }
+
+        // Star auto-focus button
+        Surface(
+            onClick = { scope.launch { cameraManager.starAutoFocus() } },
+            color = if (starFocusRunning) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.15f),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(vertical = 8.dp),
+            ) {
+                Icon(Icons.Default.AutoFixHigh, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    if (starFocusRunning) stringResource(R.string.star_focus_running)
+                    else stringResource(R.string.star_focus),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White,
+                )
+            }
+        }
+        if (starFocusRunning) {
+            LinearProgressIndicator(
+                progress = { starFocusProgress },
+                color = Color.White,
+                trackColor = Color.White.copy(alpha = 0.2f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(2.dp)),
+            )
+        }
+    }
+}
+
+// ── Camera controls helpers ────────────────────────────────────────────
 
 private val SHUTTER_STEPS_NS = longArrayOf(
     1_000_000_000L / 8000,
@@ -567,251 +940,6 @@ private fun formatFocusDistance(diopters: Float): String {
     if (diopters <= 0.01f) return "\u221E"
     val meters = 1f / diopters
     return if (meters >= 1f) "%.1fm".format(meters) else "%.0fcm".format(meters * 100)
-}
-
-@Composable
-private fun CameraControlsSection(
-    cameraManager: PhoneCameraManager,
-    caps: LensCapabilities,
-) {
-    val hasAnyControl = caps.supportsManualExposure || caps.supportsManualFocus
-    if (!hasAnyControl) return
-
-    var expanded by remember { mutableStateOf(false) }
-
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column {
-            Surface(
-                onClick = { expanded = !expanded },
-                shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
-                color = Color.Transparent,
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        Icons.Default.Tune,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp),
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        stringResource(R.string.camera_controls),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text(
-                        if (expanded) stringResource(R.string.btn_collapse)
-                        else stringResource(R.string.btn_expand),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-
-            AnimatedVisibility(visible = expanded) {
-                Column(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    if (caps.supportsManualExposure) {
-                        ExposureControls(cameraManager, caps)
-                    }
-                    if (caps.supportsManualFocus) {
-                        FocusControls(cameraManager, caps)
-                    }
-                    Spacer(Modifier.height(4.dp))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ExposureControls(
-    cameraManager: PhoneCameraManager,
-    caps: LensCapabilities,
-) {
-    val manualIso by cameraManager.manualIso.collectAsState()
-    val manualExpNs by cameraManager.manualExposureNs.collectAsState()
-    val isManual = manualIso != null
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text(
-            stringResource(R.string.label_exposure_mode),
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.weight(1f),
-        )
-        SingleChoiceSegmentedButtonRow {
-            SegmentedButton(
-                selected = !isManual,
-                onClick = {
-                    cameraManager.setManualIso(null)
-                    cameraManager.setManualExposureNs(null)
-                },
-                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-            ) {
-                Text(stringResource(R.string.exposure_auto))
-            }
-            SegmentedButton(
-                selected = isManual,
-                onClick = {
-                    val isoRange = caps.isoRange ?: return@SegmentedButton
-                    cameraManager.setManualIso((isoRange.lower + isoRange.upper) / 2)
-                    cameraManager.setManualExposureNs(1_000_000_000L)
-                },
-                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-            ) {
-                Text(stringResource(R.string.exposure_manual))
-            }
-        }
-    }
-
-    if (isManual && caps.isoRange != null && caps.exposureTimeRange != null) {
-        val isoRange = caps.isoRange!!
-        Text(
-            stringResource(R.string.label_iso, manualIso ?: isoRange.lower),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Medium,
-        )
-        Slider(
-            value = (manualIso ?: isoRange.lower).toFloat(),
-            onValueChange = { cameraManager.setManualIso(it.roundToInt()) },
-            valueRange = isoRange.lower.toFloat()..isoRange.upper.toFloat(),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("${isoRange.lower}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("${isoRange.upper}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-
-        Spacer(Modifier.height(4.dp))
-
-        val expRange = caps.exposureTimeRange!!
-        val validSteps = SHUTTER_STEPS_NS.filter { it in expRange.lower..expRange.upper }
-        if (validSteps.isNotEmpty()) {
-            val currentNs = manualExpNs ?: 1_000_000_000L
-            val nearestIdx = validSteps.indices.minBy { idx ->
-                kotlin.math.abs(validSteps[idx] - currentNs)
-            }
-
-            Text(
-                stringResource(R.string.label_shutter_speed, formatShutterSpeed(validSteps[nearestIdx])),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Medium,
-            )
-            Slider(
-                value = nearestIdx.toFloat(),
-                onValueChange = { idx ->
-                    val step = validSteps[idx.roundToInt().coerceIn(0, validSteps.lastIndex)]
-                    cameraManager.setManualExposureNs(step)
-                },
-                valueRange = 0f..(validSteps.lastIndex).toFloat(),
-                steps = (validSteps.size - 2).coerceAtLeast(0),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(formatShutterSpeed(validSteps.first()), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(formatShutterSpeed(validSteps.last()), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-    }
-}
-
-@Composable
-private fun FocusControls(
-    cameraManager: PhoneCameraManager,
-    caps: LensCapabilities,
-) {
-    val manualFocus by cameraManager.manualFocusDist.collectAsState()
-    val isManualFocus = manualFocus != null
-    val starFocusRunning by cameraManager.starFocusRunning.collectAsState()
-    val starFocusProgress by cameraManager.starFocusProgress.collectAsState()
-    val scope = rememberCoroutineScope()
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text(
-            stringResource(R.string.label_focus_mode),
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.weight(1f),
-        )
-        SingleChoiceSegmentedButtonRow {
-            SegmentedButton(
-                selected = !isManualFocus,
-                onClick = { cameraManager.setManualFocusDist(null) },
-                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-            ) {
-                Text(stringResource(R.string.focus_auto))
-            }
-            SegmentedButton(
-                selected = isManualFocus,
-                onClick = { cameraManager.setManualFocusDist(0f) },
-                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-            ) {
-                Text(stringResource(R.string.focus_manual))
-            }
-        }
-    }
-
-    if (isManualFocus && caps.minFocusDistance > 0f) {
-        val currentDist = manualFocus ?: 0f
-        Text(
-            stringResource(R.string.label_focus_distance, formatFocusDistance(currentDist)),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Medium,
-        )
-        Slider(
-            value = currentDist,
-            onValueChange = { cameraManager.setManualFocusDist(it) },
-            valueRange = 0f..caps.minFocusDistance,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("\u221E", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(formatFocusDistance(caps.minFocusDistance), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-
-        Spacer(Modifier.height(4.dp))
-
-        OutlinedButton(
-            onClick = { scope.launch { cameraManager.starAutoFocus() } },
-            enabled = !starFocusRunning,
-            shape = RoundedCornerShape(8.dp),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Icon(Icons.Default.AutoFixHigh, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(
-                if (starFocusRunning) stringResource(R.string.star_focus_running)
-                else stringResource(R.string.star_focus),
-            )
-        }
-
-        if (starFocusRunning) {
-            LinearProgressIndicator(
-                progress = { starFocusProgress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp)),
-            )
-        }
-    }
 }
 
 // ── Running overlay (on preview) ────────────────────────────────────────
