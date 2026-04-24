@@ -7,6 +7,9 @@ package com.ehrocha.pulsar.camera
 
 import android.content.ContentValues
 import android.content.Context
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraManager as Camera2Manager
+import android.hardware.camera2.CameraMetadata
 import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
@@ -25,11 +28,19 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.coroutines.resume
+import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 data class PhoneLens(
     val id: Int,
     val label: String,
     val selector: CameraSelector,
+    val focalLength: Float = 0f,
+    val aperture: Float = 0f,
+    val sensorWidth: Float = 0f,
+    val sensorHeight: Float = 0f,
+    val megapixels: Float = 0f,
+    val facing: Int = CameraCharacteristics.LENS_FACING_BACK,
 )
 
 class PhoneCameraManager(private val context: Context) {
@@ -41,6 +52,7 @@ class PhoneCameraManager(private val context: Context) {
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageCapture: ImageCapture? = null
     private var preview: Preview? = null
+    private val camera2Manager = context.getSystemService(Context.CAMERA_SERVICE) as Camera2Manager
 
     private val _lenses = MutableStateFlow<List<PhoneLens>>(emptyList())
     val lenses: StateFlow<List<PhoneLens>> = _lenses
@@ -57,6 +69,71 @@ class PhoneCameraManager(private val context: Context) {
     private val _photoCount = MutableStateFlow(0)
     val photoCount: StateFlow<Int> = _photoCount
 
+    /** Enumerate physical cameras with Camera2 metadata. */
+    private fun enumerateLenses(provider: ProcessCameraProvider): List<PhoneLens> {
+        val available = mutableListOf<PhoneLens>()
+        var idx = 0
+        for (cameraId in camera2Manager.cameraIdList) {
+            try {
+                val chars = camera2Manager.getCameraCharacteristics(cameraId)
+                val facing = chars.get(CameraCharacteristics.LENS_FACING) ?: continue
+                // Skip external cameras
+                if (facing == CameraMetadata.LENS_FACING_EXTERNAL) continue
+
+                val selector = CameraSelector.Builder()
+                    .addCameraFilter { cameraInfos ->
+                        cameraInfos.filter {
+                            val id = androidx.camera.camera2.interop.Camera2CameraInfo
+                                .from(it).cameraId
+                            id == cameraId
+                        }
+                    }
+                    .build()
+
+                // Check if CameraX can actually use this camera
+                if (!provider.hasCamera(selector)) continue
+
+                val focalLengths = chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)
+                val apertures = chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_APERTURES)
+                val sensorSize = chars.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE)
+                val pixelArray = chars.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)
+
+                val focalLength = focalLengths?.firstOrNull() ?: 0f
+                val aperture = apertures?.firstOrNull() ?: 0f
+                val sensorW = sensorSize?.width ?: 0f
+                val sensorH = sensorSize?.height ?: 0f
+                val mp = if (pixelArray != null) {
+                    (pixelArray.width.toLong() * pixelArray.height / 1_000_000f)
+                } else 0f
+
+                // Build a descriptive label
+                val facingStr = if (facing == CameraMetadata.LENS_FACING_FRONT) "Front" else "Back"
+                val eqFl = if (focalLength > 0 && sensorW > 0) {
+                    (focalLength * 36f / sensorW).roundToInt()
+                } else 0
+                val label = if (eqFl > 0) "$facingStr ${eqFl}mm" else facingStr
+
+                available.add(
+                    PhoneLens(
+                        id = idx++,
+                        label = label,
+                        selector = selector,
+                        focalLength = focalLength,
+                        aperture = aperture,
+                        sensorWidth = sensorW,
+                        sensorHeight = sensorH,
+                        megapixels = mp,
+                        facing = facing,
+                    )
+                )
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to query camera $cameraId", e)
+            }
+        }
+        // Sort: back cameras first (by focal length ascending), then front cameras
+        return available.sortedWith(compareBy<PhoneLens> { it.facing }.thenBy { it.focalLength })
+    }
+
     /** Initialize without preview — for headless capture in trigger modes. */
     fun initializeHeadless(
         lifecycleOwner: LifecycleOwner,
@@ -66,26 +143,18 @@ class PhoneCameraManager(private val context: Context) {
         future.addListener({
             val provider = future.get()
             cameraProvider = provider
+            _lenses.value = enumerateLenses(provider)
 
-            val available = mutableListOf<PhoneLens>()
-            var idx = 0
-            if (provider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA)) {
-                available.add(PhoneLens(idx++, "Back", CameraSelector.DEFAULT_BACK_CAMERA))
-            }
-            if (provider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA)) {
-                available.add(PhoneLens(idx++, "Front", CameraSelector.DEFAULT_FRONT_CAMERA))
-            }
-            _lenses.value = available
-
-            if (available.isNotEmpty()) {
+            val lensList = _lenses.value
+            if (lensList.isNotEmpty()) {
                 provider.unbindAll()
                 imageCapture = ImageCapture.Builder()
                     .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
                     .build()
                 try {
-                    provider.bindToLifecycle(lifecycleOwner, available[0].selector, imageCapture!!)
+                    provider.bindToLifecycle(lifecycleOwner, lensList[0].selector, imageCapture!!)
                     _lastError.value = null
-                    Log.i(TAG, "Camera bound headless: ${available[0].selector}")
+                    Log.i(TAG, "Camera bound headless: ${lensList[0].label}")
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to bind camera headless", e)
                     _lastError.value = e.message
@@ -104,20 +173,11 @@ class PhoneCameraManager(private val context: Context) {
         future.addListener({
             val provider = future.get()
             cameraProvider = provider
+            _lenses.value = enumerateLenses(provider)
 
-            // Enumerate available lenses
-            val available = mutableListOf<PhoneLens>()
-            var idx = 0
-            if (provider.hasCamera(CameraSelector.DEFAULT_BACK_CAMERA)) {
-                available.add(PhoneLens(idx++, "Back", CameraSelector.DEFAULT_BACK_CAMERA))
-            }
-            if (provider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA)) {
-                available.add(PhoneLens(idx++, "Front", CameraSelector.DEFAULT_FRONT_CAMERA))
-            }
-            _lenses.value = available
-
-            if (available.isNotEmpty()) {
-                bindCamera(provider, lifecycleOwner, previewView, available[0].selector)
+            val lensList = _lenses.value
+            if (lensList.isNotEmpty()) {
+                bindCamera(provider, lifecycleOwner, previewView, lensList[0].selector)
             }
             onReady()
         }, ContextCompat.getMainExecutor(context))
@@ -129,6 +189,30 @@ class PhoneCameraManager(private val context: Context) {
         _selectedLens.value = index
         val provider = cameraProvider ?: return
         bindCamera(provider, lifecycleOwner, previewView, lensList[index].selector)
+    }
+
+    /** Select lens with preview — used by the integrated camera screen. */
+    fun selectLensWithPreview(index: Int, lifecycleOwner: LifecycleOwner, previewView: PreviewView) {
+        selectLens(index, lifecycleOwner, previewView)
+    }
+
+    /** Select lens without preview — for headless mode. */
+    fun selectLensHeadless(index: Int, lifecycleOwner: LifecycleOwner) {
+        val lensList = _lenses.value
+        if (index < 0 || index >= lensList.size) return
+        _selectedLens.value = index
+        val provider = cameraProvider ?: return
+        provider.unbindAll()
+        imageCapture = ImageCapture.Builder()
+            .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+            .build()
+        try {
+            provider.bindToLifecycle(lifecycleOwner, lensList[index].selector, imageCapture!!)
+            _lastError.value = null
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to bind camera headless", e)
+            _lastError.value = e.message
+        }
     }
 
     private fun bindCamera(

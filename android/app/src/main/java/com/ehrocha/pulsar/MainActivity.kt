@@ -66,6 +66,7 @@ import com.ehrocha.pulsar.ui.screens.SettingsSection
 import com.ehrocha.pulsar.ui.screens.CustomFlowScreen
 import com.ehrocha.pulsar.ui.screens.AlignmentScreen
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import com.ehrocha.pulsar.ui.screens.CameraIntervalometerScreen
 import com.ehrocha.pulsar.ui.screens.CameraScreen
 import com.ehrocha.pulsar.ui.screens.WhatsUpScreen
 import com.ehrocha.pulsar.ui.screens.DashboardScreen
@@ -346,12 +347,31 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                 initialTab = menuTab,
                 onTabChanged = { menuTab = it },
                 onQuickFlow = { type ->
-                    when (type) {
-                        FlowStepType.INTERVALOMETER -> currentScreen = AppScreen.Mode(TriggerMode.INTERVALOMETER)
-                        FlowStepType.ASTRO -> currentScreen = AppScreen.Mode(TriggerMode.ASTRO)
-                        FlowStepType.DARK_FRAME -> currentScreen = AppScreen.Mode(TriggerMode.DARK_FRAME)
-                        FlowStepType.RAMP -> currentScreen = AppScreen.Mode(TriggerMode.RAMP)
-                        else -> return@MainMenuScreen
+                    if (phoneCameraActive) {
+                        // Phone camera: route to integrated camera screen
+                        when (type) {
+                            FlowStepType.INTERVALOMETER -> {
+                                vm.selectMode(TriggerMode.INTERVALOMETER)
+                                currentScreen = AppScreen.CameraIntervalometer
+                            }
+                            else -> {
+                                // Other modes use standard ModeScreen for now
+                                when (type) {
+                                    FlowStepType.ASTRO -> currentScreen = AppScreen.Mode(TriggerMode.ASTRO)
+                                    FlowStepType.DARK_FRAME -> currentScreen = AppScreen.Mode(TriggerMode.DARK_FRAME)
+                                    FlowStepType.RAMP -> currentScreen = AppScreen.Mode(TriggerMode.RAMP)
+                                    else -> return@MainMenuScreen
+                                }
+                            }
+                        }
+                    } else {
+                        when (type) {
+                            FlowStepType.INTERVALOMETER -> currentScreen = AppScreen.Mode(TriggerMode.INTERVALOMETER)
+                            FlowStepType.ASTRO -> currentScreen = AppScreen.Mode(TriggerMode.ASTRO)
+                            FlowStepType.DARK_FRAME -> currentScreen = AppScreen.Mode(TriggerMode.DARK_FRAME)
+                            FlowStepType.RAMP -> currentScreen = AppScreen.Mode(TriggerMode.RAMP)
+                            else -> return@MainMenuScreen
+                        }
                     }
                 },
                 onManualSelected = { currentScreen = AppScreen.Mode(TriggerMode.PRESS_HOLD) },
@@ -465,10 +485,19 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                 )
             }
             AppScreen.Camera -> {
-                // Reserved for future live preview mode
                 BackHandler { currentScreen = AppScreen.Menu }
                 CameraScreen(
                     onBack = { currentScreen = AppScreen.Menu },
+                )
+            }
+            AppScreen.CameraIntervalometer -> {
+                CameraIntervalometerScreen(
+                    vm = vm,
+                    onBack = { currentScreen = AppScreen.Menu },
+                    onStartFlow = {
+                        vm.loadQuickMode(FlowStepType.INTERVALOMETER)
+                        vm.startFlow()
+                    },
                 )
             }
         }
@@ -529,4 +558,5 @@ private sealed class AppScreen {
     data object Alignment : AppScreen()
     data object WhatsUp : AppScreen()
     data object Camera : AppScreen()
+    data object CameraIntervalometer : AppScreen()
 }
