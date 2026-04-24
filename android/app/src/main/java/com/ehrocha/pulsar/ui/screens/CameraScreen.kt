@@ -6,12 +6,14 @@
 package com.ehrocha.pulsar.ui.screens
 
 import android.Manifest
+import android.location.LocationManager
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -25,6 +27,7 @@ import androidx.compose.material.icons.filled.AvTimer
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.Iso
+import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Lens
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.PhotoLibrary
@@ -36,17 +39,26 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.ble.TriggerMode
+import com.ehrocha.pulsar.camera.DeviceOrientation
 import com.ehrocha.pulsar.camera.LensCapabilities
 import com.ehrocha.pulsar.camera.PhoneCameraManager
 import com.ehrocha.pulsar.model.FlowStepType
@@ -141,6 +153,31 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
         }
     }
 
+    // Grid overlay
+    var gridMode by remember { mutableStateOf(GridMode.OFF) }
+
+    // Device orientation for celestial pole overlay
+    val deviceOrientation = remember { DeviceOrientation(context) }
+    val azimuth by deviceOrientation.azimuth.collectAsState()
+    val pitch by deviceOrientation.pitch.collectAsState()
+
+    DisposableEffect(gridMode) {
+        if (gridMode == GridMode.CELESTIAL) deviceOrientation.start()
+        else deviceOrientation.stop()
+        onDispose { deviceOrientation.stop() }
+    }
+
+    // Get latitude for celestial pole calculation
+    val latitude = remember {
+        try {
+            val lm = context.getSystemService(android.content.Context.LOCATION_SERVICE) as LocationManager
+            @Suppress("MissingPermission")
+            val loc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                ?: lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+            loc?.latitude?.toFloat() ?: 0f
+        } catch (_: Exception) { 0f }
+    }
+
     // Keep screen awake
     var keepAwake by remember { mutableStateOf(false) }
     DisposableEffect(keepAwake) {
@@ -202,6 +239,18 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                     modifier = Modifier
                         .fillMaxSize()
                         .background(Color.White.copy(alpha = flashAlpha)),
+                )
+            }
+
+            // Grid overlay
+            if (gridMode != GridMode.OFF) {
+                GridOverlay(
+                    gridMode = gridMode,
+                    azimuth = azimuth,
+                    pitch = pitch,
+                    latitude = latitude,
+                    currentLens = currentLens,
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
 
@@ -267,6 +316,10 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                     cameraManager.selectLens(index, lifecycleOwner, previewView)
                 },
                 onShowDebug = { showCameraDebug = true },
+                gridMode = gridMode,
+                onGridCycle = {
+                    gridMode = GridMode.entries[(gridMode.ordinal + 1) % GridMode.entries.size]
+                },
                 keepAwake = keepAwake,
                 onKeepAwakeToggle = { keepAwake = it },
                 onStart = {
@@ -422,6 +475,132 @@ private fun RunningBar(
     }
 }
 
+// ── Grid overlay ────────────────────────────────────────────────────────
+
+private enum class GridMode(val label: String) {
+    OFF("Off"),
+    THIRDS("3x3"),
+    GRID_4X4("4x4"),
+    CELESTIAL("Pole"),
+}
+
+@Composable
+private fun GridOverlay(
+    gridMode: GridMode,
+    azimuth: Float,
+    pitch: Float,
+    latitude: Float,
+    currentLens: com.ehrocha.pulsar.camera.PhoneLens?,
+    modifier: Modifier = Modifier,
+) {
+    val gridColor = Color.White.copy(alpha = 0.4f)
+    val poleColor = Color.Red.copy(alpha = 0.8f)
+    val textMeasurer = rememberTextMeasurer()
+
+    Canvas(modifier = modifier) {
+        when (gridMode) {
+            GridMode.THIRDS -> drawGrid(3, 3, gridColor)
+            GridMode.GRID_4X4 -> drawGrid(4, 4, gridColor)
+            GridMode.CELESTIAL -> drawCelestialPole(
+                azimuth = azimuth,
+                pitch = pitch,
+                latitude = latitude,
+                lens = currentLens,
+                poleColor = poleColor,
+                gridColor = gridColor,
+                textMeasurer = textMeasurer,
+            )
+            GridMode.OFF -> {}
+        }
+    }
+}
+
+private fun DrawScope.drawGrid(cols: Int, rows: Int, color: Color) {
+    val strokeWidth = 1f
+    // Vertical lines
+    for (i in 1 until cols) {
+        val x = size.width * i / cols
+        drawLine(color, Offset(x, 0f), Offset(x, size.height), strokeWidth)
+    }
+    // Horizontal lines
+    for (i in 1 until rows) {
+        val y = size.height * i / rows
+        drawLine(color, Offset(0f, y), Offset(size.width, y), strokeWidth)
+    }
+}
+
+private fun DrawScope.drawCelestialPole(
+    azimuth: Float,
+    pitch: Float,
+    latitude: Float,
+    lens: com.ehrocha.pulsar.camera.PhoneLens?,
+    poleColor: Color,
+    gridColor: Color,
+    textMeasurer: androidx.compose.ui.text.TextMeasurer,
+) {
+    // Draw a subtle grid for reference
+    drawGrid(3, 3, gridColor.copy(alpha = 0.2f))
+
+    if (lens == null || lens.focalLength <= 0 || lens.sensorWidth <= 0 || latitude == 0f) return
+
+    // Camera field of view
+    val hFovDeg = 2.0 * Math.toDegrees(
+        kotlin.math.atan((lens.sensorWidth / 2.0) / lens.focalLength)
+    )
+    val vFovDeg = 2.0 * Math.toDegrees(
+        kotlin.math.atan((lens.sensorHeight / 2.0) / lens.focalLength)
+    )
+    if (hFovDeg <= 0 || vFovDeg <= 0) return
+
+    // Celestial pole position:
+    // NCP: azimuth = 0° (north), altitude = +latitude
+    // SCP: azimuth = 180° (south), altitude = -latitude (visible when latitude < 0)
+    val isNorth = latitude >= 0
+    val poleAz = if (isNorth) 0.0 else 180.0
+    val poleAlt = kotlin.math.abs(latitude).toDouble()
+
+    // Camera is pointing at (azimuth, -pitch) in alt-az coordinates
+    // (pitch from sensor: 0 = horizon, negative = looking up when phone held upright in landscape)
+    val camAz = azimuth.toDouble()
+    val camAlt = -pitch.toDouble() // Negate: sensor pitch is negative when looking up
+
+    // Angular offset from camera center to pole
+    var deltaAz = poleAz - camAz
+    // Normalize to -180..180
+    while (deltaAz > 180) deltaAz -= 360
+    while (deltaAz < -180) deltaAz += 360
+    val deltaAlt = poleAlt - camAlt
+
+    // Convert to screen pixels
+    val pixPerDegH = size.width / hFovDeg
+    val pixPerDegV = size.height / vFovDeg
+
+    val screenX = (size.width / 2.0 + deltaAz * pixPerDegH).toFloat()
+    val screenY = (size.height / 2.0 - deltaAlt * pixPerDegV).toFloat() // Y inverted
+
+    // Draw crosshair at pole position (even if off-screen, partial lines may show)
+    val crossSize = 30f
+    val dashEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f))
+
+    // Crosshair
+    drawLine(poleColor, Offset(screenX - crossSize, screenY), Offset(screenX + crossSize, screenY), 2f)
+    drawLine(poleColor, Offset(screenX, screenY - crossSize), Offset(screenX, screenY + crossSize), 2f)
+
+    // Concentric circles (1° and 3° radius)
+    val r1 = (1.0 * pixPerDegH).toFloat()
+    val r3 = (3.0 * pixPerDegH).toFloat()
+    drawCircle(poleColor, r1, Offset(screenX, screenY), style = Stroke(1.5f))
+    drawCircle(poleColor.copy(alpha = 0.5f), r3, Offset(screenX, screenY), style = Stroke(1f, pathEffect = dashEffect))
+
+    // Label
+    val label = if (isNorth) "NCP" else "SCP"
+    val textResult = textMeasurer.measure(
+        label,
+        style = TextStyle(color = poleColor, fontSize = 12.sp, fontWeight = FontWeight.Bold),
+    )
+    drawText(textResult, topLeft = Offset(screenX + crossSize + 4f, screenY - textResult.size.height / 2f))
+}
+
 // ── Camera panel enum ───────────────────────────────────────────────────
 
 private enum class CameraPanel { LENS, ISO, SHUTTER, FOCUS, SHOTS, EXPOSURE, GAP }
@@ -439,6 +618,8 @@ private fun CameraControlsStrip(
     onPanelToggle: (CameraPanel) -> Unit,
     onLensSelected: (Int) -> Unit,
     onShowDebug: () -> Unit,
+    gridMode: GridMode = GridMode.OFF,
+    onGridCycle: () -> Unit = {},
     keepAwake: Boolean = false,
     onKeepAwakeToggle: (Boolean) -> Unit = {},
     onStart: () -> Unit = {},
@@ -572,6 +753,14 @@ private fun CameraControlsStrip(
                     label = formatExposureLabel(intervalMs),
                     active = activePanel == CameraPanel.GAP,
                     onClick = { onPanelToggle(CameraPanel.GAP) },
+                )
+
+                // Grid overlay
+                ControlIconButton(
+                    icon = Icons.Default.GridOn,
+                    label = gridMode.label,
+                    active = gridMode != GridMode.OFF,
+                    onClick = onGridCycle,
                 )
 
                 // Keep screen awake
