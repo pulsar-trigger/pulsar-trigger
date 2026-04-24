@@ -372,21 +372,23 @@ class PhoneCameraManager(private val context: Context) {
 
                 val hwLevel = chars.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)
                     ?: CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY
-                val supportsManual = hwLevel == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL
+
+                // Check for MANUAL_SENSOR capability (works on LIMITED devices too)
+                val caps2 = chars.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES) ?: intArrayOf()
+                val hasManualSensor = CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR in caps2
+                    || hwLevel == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL
                     || hwLevel == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3
 
-                val isoRange = if (supportsManual) {
-                    chars.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
-                } else null
-                val exposureTimeRange = if (supportsManual) {
-                    chars.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
-                } else null
+                // Try reading ranges regardless — some devices expose them even without the capability flag
+                val isoRange = chars.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+                val exposureTimeRange = chars.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
+                val supportsManualExposure = hasManualSensor || (isoRange != null && exposureTimeRange != null)
 
                 val minFocusDist = chars.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) ?: 0f
                 val supportsManualFocus = minFocusDist > 0f
 
                 val capabilities = LensCapabilities(
-                    supportsManualExposure = supportsManual,
+                    supportsManualExposure = supportsManualExposure,
                     isoRange = isoRange,
                     exposureTimeRange = exposureTimeRange,
                     supportsManualFocus = supportsManualFocus,
@@ -410,8 +412,18 @@ class PhoneCameraManager(private val context: Context) {
                 } else 0
                 val label = if (eqFl > 0) "Back ${eqFl}mm" else "Back"
 
+                val hwLevelName = when (hwLevel) {
+                    CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY -> "LEGACY"
+                    CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LIMITED -> "LIMITED"
+                    CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL -> "FULL"
+                    CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3 -> "LEVEL_3"
+                    CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL -> "EXTERNAL"
+                    else -> "UNKNOWN($hwLevel)"
+                }
                 val info = "Camera $cameraId: ${eqFl}mm f/$aperture ${mp.roundToInt()}MP" +
-                    " hwLevel=$hwLevel cameraX=$cameraXAvailable"
+                    " hw=$hwLevelName manual=$supportsManualExposure" +
+                    " iso=${isoRange ?: "none"} focus=$supportsManualFocus" +
+                    " cameraX=$cameraXAvailable"
                 Log.d(TAG, info)
                 debugLog.add(if (cameraXAvailable) "\u2705 $info" else "\u274C $info")
 
@@ -507,17 +519,11 @@ class PhoneCameraManager(private val context: Context) {
                     (physPixelArray.width.toLong() * physPixelArray.height / 1_000_000f)
                 } else 0f
 
-                val physHwLevel = physChars.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)
-                    ?: CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY
-                val physSupportsManual = physHwLevel == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL
-                    || physHwLevel == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3
-
-                val physIsoRange = if (physSupportsManual) {
-                    physChars.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
-                } else null
-                val physExpRange = if (physSupportsManual) {
-                    physChars.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
-                } else null
+                val physCaps2 = physChars.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES) ?: intArrayOf()
+                val physHasManualSensor = CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR in physCaps2
+                val physIsoRange = physChars.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+                val physExpRange = physChars.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
+                val physSupportsManual = physHasManualSensor || (physIsoRange != null && physExpRange != null)
                 val physMinFocus = physChars.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) ?: 0f
 
                 // Use the logical camera's selector — CameraX routes to the physical camera
