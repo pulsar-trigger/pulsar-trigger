@@ -336,25 +336,22 @@ class PhoneCameraManager(private val context: Context) {
     private fun enumerateLenses(provider: ProcessCameraProvider): List<PhoneLens> {
         val available = mutableListOf<PhoneLens>()
         var idx = 0
+
+        // Collect physical camera IDs that belong to logical cameras so we can
+        // expose them as selectable lenses via the logical camera's CameraSelector.
+        data class PhysicalCamInfo(
+            val logicalCameraId: String,
+            val physicalCameraId: String,
+            val chars: CameraCharacteristics,
+        )
+        val physicalCams = mutableListOf<PhysicalCamInfo>()
+
         for (cameraId in camera2Manager.cameraIdList) {
             try {
                 val chars = camera2Manager.getCameraCharacteristics(cameraId)
                 val facing = chars.get(CameraCharacteristics.LENS_FACING) ?: continue
                 // Only keep back-facing cameras
                 if (facing != CameraMetadata.LENS_FACING_BACK) continue
-
-                val selector = CameraSelector.Builder()
-                    .addCameraFilter { cameraInfos ->
-                        cameraInfos.filter {
-                            val id = androidx.camera.camera2.interop.Camera2CameraInfo
-                                .from(it).cameraId
-                            id == cameraId
-                        }
-                    }
-                    .build()
-
-                // Check if CameraX can actually use this camera
-                if (!provider.hasCamera(selector)) continue
 
                 val focalLengths = chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)
                 val apertures = chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_APERTURES)
@@ -369,7 +366,6 @@ class PhoneCameraManager(private val context: Context) {
                     (pixelArray.width.toLong() * pixelArray.height / 1_000_000f)
                 } else 0f
 
-                // Query manual control capabilities
                 val hwLevel = chars.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)
                     ?: CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY
                 val supportsManual = hwLevel == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL
@@ -394,33 +390,164 @@ class PhoneCameraManager(private val context: Context) {
                     cameraId = cameraId,
                 )
 
-                // Build a descriptive label
-                val facingStr = if (facing == CameraMetadata.LENS_FACING_FRONT) "Front" else "Back"
+                val selector = CameraSelector.Builder()
+                    .addCameraFilter { cameraInfos ->
+                        cameraInfos.filter {
+                            Camera2CameraInfo.from(it).cameraId == cameraId
+                        }
+                    }
+                    .build()
+
+                // Check if CameraX can use this camera directly
+                val cameraXAvailable = provider.hasCamera(selector)
+
                 val eqFl = if (focalLength > 0 && sensorW > 0) {
                     (focalLength * 36f / sensorW).roundToInt()
                 } else 0
-                val label = if (eqFl > 0) "$facingStr ${eqFl}mm" else facingStr
+                val label = if (eqFl > 0) "Back ${eqFl}mm" else "Back"
+
+                Log.d(TAG, "Camera $cameraId: facing=BACK fl=${focalLength}mm " +
+                    "eq35=${eqFl}mm f/$aperture ${mp.roundToInt()}MP hwLevel=$hwLevel " +
+                    "cameraX=$cameraXAvailable")
+
+                if (cameraXAvailable) {
+                    available.add(
+                        PhoneLens(
+                            id = idx++,
+                            label = label,
+                            selector = selector,
+                            focalLength = focalLength,
+                            aperture = aperture,
+                            sensorWidth = sensorW,
+                            sensorHeight = sensorH,
+                            megapixels = mp,
+                            facing = facing,
+                            capabilities = capabilities,
+                        )
+                    )
+                }
+
+                // Discover physical sub-cameras of logical multi-camera devices
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    val physicalIds = chars.physicalCameraIds
+                    if (physicalIds.size > 1) {
+                        Log.d(TAG, "Camera $cameraId is logical multi-camera with " +
+                            "physical IDs: $physicalIds")
+                        for (physId in physicalIds) {
+                            // Skip if we already added this as a top-level camera
+                            if (camera2Manager.cameraIdList.contains(physId)) {
+                                val alreadyAdded = available.any { it.capabilities.cameraId == physId }
+                                if (alreadyAdded) {
+                                    Log.d(TAG, "  Physical $physId already added as top-level")
+                                    continue
+                                }
+                            }
+                            try {
+                                val physChars = camera2Manager.getCameraCharacteristics(physId)
+                                physicalCams.add(PhysicalCamInfo(cameraId, physId, physChars))
+                                val physFl = physChars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)
+                                    ?.firstOrNull() ?: 0f
+                                val physSensorSize = physChars.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE)
+                                val physEqFl = if (physFl > 0 && physSensorSize != null && physSensorSize.width > 0) {
+                                    (physFl * 36f / physSensorSize.width).roundToInt()
+                                } else 0
+                                Log.d(TAG, "  Physical $physId: fl=${physFl}mm eq35=${physEqFl}mm")
+                            } catch (e: Exception) {
+                                Log.w(TAG, "  Failed to query physical camera $physId", e)
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to query camera $cameraId", e)
+            }
+        }
+
+        // Add physical sub-cameras that weren't already discovered as top-level cameras.
+        // These are accessed via the logical camera's selector — CameraX handles the routing.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            for ((logicalId, physId, physChars) in physicalCams) {
+                // Skip if a top-level camera with the same focal length already exists
+                val physFl = physChars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)
+                    ?.firstOrNull() ?: 0f
+                val physSensorSize = physChars.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE)
+                val physSensorW = physSensorSize?.width ?: 0f
+                val physEqFl = if (physFl > 0 && physSensorW > 0) {
+                    (physFl * 36f / physSensorW).roundToInt()
+                } else 0
+
+                // Deduplicate: skip if we already have a lens within 3mm equivalent focal length
+                if (available.any { existing ->
+                    val existingEqFl = if (existing.focalLength > 0 && existing.sensorWidth > 0) {
+                        (existing.focalLength * 36f / existing.sensorWidth).roundToInt()
+                    } else 0
+                    kotlin.math.abs(existingEqFl - physEqFl) < 3
+                }) {
+                    Log.d(TAG, "Physical $physId (eq35=${physEqFl}mm) skipped — similar lens exists")
+                    continue
+                }
+
+                val physApertures = physChars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_APERTURES)
+                val physPixelArray = physChars.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE)
+                val physAperture = physApertures?.firstOrNull() ?: 0f
+                val physSensorH = physSensorSize?.height ?: 0f
+                val physMp = if (physPixelArray != null) {
+                    (physPixelArray.width.toLong() * physPixelArray.height / 1_000_000f)
+                } else 0f
+
+                val physHwLevel = physChars.get(CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL)
+                    ?: CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_LEGACY
+                val physSupportsManual = physHwLevel == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL
+                    || physHwLevel == CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_3
+
+                val physIsoRange = if (physSupportsManual) {
+                    physChars.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)
+                } else null
+                val physExpRange = if (physSupportsManual) {
+                    physChars.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
+                } else null
+                val physMinFocus = physChars.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) ?: 0f
+
+                // Use the logical camera's selector — CameraX routes to the physical camera
+                // based on zoom ratio / focal length
+                val selector = CameraSelector.Builder()
+                    .addCameraFilter { cameraInfos ->
+                        cameraInfos.filter {
+                            Camera2CameraInfo.from(it).cameraId == logicalId
+                        }
+                    }
+                    .build()
+
+                val label = if (physEqFl > 0) "Back ${physEqFl}mm" else "Back"
+                Log.d(TAG, "Adding physical sub-camera $physId via logical $logicalId: $label")
 
                 available.add(
                     PhoneLens(
                         id = idx++,
                         label = label,
                         selector = selector,
-                        focalLength = focalLength,
-                        aperture = aperture,
-                        sensorWidth = sensorW,
-                        sensorHeight = sensorH,
-                        megapixels = mp,
-                        facing = facing,
-                        capabilities = capabilities,
+                        focalLength = physFl,
+                        aperture = physAperture,
+                        sensorWidth = physSensorW,
+                        sensorHeight = physSensorH,
+                        megapixels = physMp,
+                        facing = CameraMetadata.LENS_FACING_BACK,
+                        capabilities = LensCapabilities(
+                            supportsManualExposure = physSupportsManual,
+                            isoRange = physIsoRange,
+                            exposureTimeRange = physExpRange,
+                            supportsManualFocus = physMinFocus > 0f,
+                            minFocusDistance = physMinFocus,
+                            cameraId = physId,
+                        ),
                     )
                 )
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to query camera $cameraId", e)
             }
         }
-        // Sort: back cameras first (by focal length ascending), then front cameras
-        return available.sortedWith(compareBy<PhoneLens> { it.facing }.thenBy { it.focalLength })
+
+        Log.d(TAG, "Enumerated ${available.size} lenses: ${available.map { "${it.label} (${it.capabilities.cameraId})" }}")
+        // Sort by focal length ascending (wide → tele)
+        return available.sortedBy { it.focalLength }
     }
 
     /** Initialize without preview — for headless capture in trigger modes. */
