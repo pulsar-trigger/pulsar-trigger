@@ -6,6 +6,7 @@
 package com.ehrocha.pulsar.ui.screens
 
 import android.Manifest
+import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.AnimatedVisibility
@@ -20,13 +21,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.AvTimer
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.Iso
 import androidx.compose.material.icons.filled.Lens
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.ShutterSpeed
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -129,10 +133,24 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
 
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val activity = context as? android.app.Activity
 
     val previewView = remember {
         PreviewView(context).apply {
             implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+        }
+    }
+
+    // Keep screen awake
+    var keepAwake by remember { mutableStateOf(false) }
+    DisposableEffect(keepAwake) {
+        if (keepAwake) {
+            activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        onDispose {
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
     }
 
@@ -144,11 +162,7 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
         onDispose { cameraManager.release() }
     }
 
-    // Bottom sheet state
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var showSheet by remember { mutableStateOf(false) }
-
-    // Intervalometer params (for running overlay)
+    // Intervalometer params
     val intervalMs by vm.intervalMs.collectAsState()
     val exposureMs by vm.exposureMs.collectAsState()
     val shotCount by vm.shotCount.collectAsState()
@@ -240,6 +254,7 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
 
             // ── Camera controls strip (right side) ────────────────
             CameraControlsStrip(
+                vm = vm,
                 cameraManager = cameraManager,
                 lenses = lenses,
                 selectedLens = selectedLens,
@@ -252,52 +267,33 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                     cameraManager.selectLens(index, lifecycleOwner, previewView)
                 },
                 onShowDebug = { showCameraDebug = true },
+                keepAwake = keepAwake,
+                onKeepAwakeToggle = { keepAwake = it },
+                onStart = {
+                    activePanel = null
+                    vm.selectMode(TriggerMode.INTERVALOMETER)
+                    vm.loadQuickMode(FlowStepType.INTERVALOMETER)
+                    vm.startFlow()
+                },
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .padding(end = 8.dp),
             )
         }
 
-        // ── Bottom bar (non-overlapping) ────────────────────────────
-        Surface(
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 2.dp,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            if (isRunning && status != null) {
+        // ── Bottom bar (only when running) ─────────────────────────
+        if (isRunning && status != null) {
+            Surface(
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 2.dp,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 RunningBar(
                     status = status,
                     totalShots = shotCount,
                     onStop = { vm.stop() },
                 )
-            } else {
-                SetupBar(
-                    onOpenSheet = { showSheet = true },
-                    onStart = {
-                        vm.selectMode(TriggerMode.INTERVALOMETER)
-                        vm.loadQuickMode(FlowStepType.INTERVALOMETER)
-                        vm.startFlow()
-                    },
-                )
             }
-        }
-    }
-
-    // ── Pull-up bottom sheet for full controls ──────────────────────
-    if (showSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showSheet = false },
-            sheetState = sheetState,
-        ) {
-            SetupControls(
-                vm = vm,
-                onStart = {
-                    showSheet = false
-                    vm.selectMode(TriggerMode.INTERVALOMETER)
-                    vm.loadQuickMode(FlowStepType.INTERVALOMETER)
-                    vm.startFlow()
-                },
-            )
         }
     }
 
@@ -348,42 +344,6 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                 }
             },
         )
-    }
-}
-
-/** Compact bottom bar when idle — settings button + start button. */
-@Composable
-private fun SetupBar(
-    onOpenSheet: () -> Unit,
-    onStart: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .navigationBarsPadding()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        OutlinedButton(
-            onClick = onOpenSheet,
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.weight(1f),
-        ) {
-            Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(stringResource(R.string.camera_parameters))
-        }
-        Button(
-            onClick = onStart,
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.weight(1f),
-        ) {
-            Text(
-                stringResource(R.string.btn_start),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-        }
     }
 }
 
@@ -462,48 +422,15 @@ private fun RunningBar(
     }
 }
 
-// ── Setup controls (bottom panel) ───────────────────────────────────────
-
-@Composable
-private fun SetupControls(
-    vm: PulsarViewModel,
-    onStart: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        // ── Intervalometer parameters ───────────────────────────
-        IntervalometerPanel(vm, enabled = true)
-
-        // ── Start button ────────────────────────────────────────
-        Button(
-            onClick = onStart,
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp),
-        ) {
-            Text(
-                stringResource(R.string.btn_start),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-    }
-}
-
 // ── Camera panel enum ───────────────────────────────────────────────────
 
-private enum class CameraPanel { LENS, ISO, SHUTTER, FOCUS }
+private enum class CameraPanel { LENS, ISO, SHUTTER, FOCUS, SHOTS, EXPOSURE, GAP }
 
 // ── Camera controls strip (right-side icons + expandable panels) ────────
 
 @Composable
 private fun CameraControlsStrip(
+    vm: PulsarViewModel,
     cameraManager: PhoneCameraManager,
     lenses: List<com.ehrocha.pulsar.camera.PhoneLens>,
     selectedLens: Int,
@@ -512,12 +439,19 @@ private fun CameraControlsStrip(
     onPanelToggle: (CameraPanel) -> Unit,
     onLensSelected: (Int) -> Unit,
     onShowDebug: () -> Unit,
+    keepAwake: Boolean = false,
+    onKeepAwakeToggle: (Boolean) -> Unit = {},
+    onStart: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val manualIso by cameraManager.manualIso.collectAsState()
     val manualExpNs by cameraManager.manualExposureNs.collectAsState()
     val manualFocus by cameraManager.manualFocusDist.collectAsState()
     val currentLens = lenses.getOrNull(selectedLens)
+
+    val shotCount by vm.shotCount.collectAsState()
+    val exposureMs by vm.exposureMs.collectAsState()
+    val intervalMs by vm.intervalMs.collectAsState()
 
     Row(
         modifier = modifier,
@@ -546,6 +480,9 @@ private fun CameraControlsStrip(
                         CameraPanel.ISO -> IsoPanel(cameraManager, caps)
                         CameraPanel.SHUTTER -> ShutterPanel(cameraManager, caps)
                         CameraPanel.FOCUS -> FocusPanel(cameraManager, caps)
+                        CameraPanel.SHOTS -> ShotsPanel(vm)
+                        CameraPanel.EXPOSURE -> ExposurePanel(vm, currentLens)
+                        CameraPanel.GAP -> GapPanel(vm)
                         null -> {}
                     }
                 }
@@ -561,6 +498,7 @@ private fun CameraControlsStrip(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
             ) {
+                // ── Camera controls ─────────────────────────────────
                 // Lens
                 if (lenses.size > 1) {
                     ControlIconButton(
@@ -600,6 +538,53 @@ private fun CameraControlsStrip(
                         onClick = { onPanelToggle(CameraPanel.FOCUS) },
                     )
                 }
+
+                // ── Divider ─────────────────────────────────────────
+                Spacer(Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .width(24.dp)
+                        .height(1.dp)
+                        .background(Color.White.copy(alpha = 0.3f)),
+                )
+                Spacer(Modifier.height(4.dp))
+
+                // ── Intervalometer controls ──────────────────────────
+                // Shots
+                ControlIconButton(
+                    icon = Icons.Default.PhotoLibrary,
+                    label = "$shotCount",
+                    active = activePanel == CameraPanel.SHOTS,
+                    onClick = { onPanelToggle(CameraPanel.SHOTS) },
+                )
+
+                // Exposure
+                ControlIconButton(
+                    icon = Icons.Default.Timer,
+                    label = formatExposureLabel(exposureMs),
+                    active = activePanel == CameraPanel.EXPOSURE,
+                    onClick = { onPanelToggle(CameraPanel.EXPOSURE) },
+                )
+
+                // Gap
+                ControlIconButton(
+                    icon = Icons.Default.AvTimer,
+                    label = formatExposureLabel(intervalMs),
+                    active = activePanel == CameraPanel.GAP,
+                    onClick = { onPanelToggle(CameraPanel.GAP) },
+                )
+
+                // Keep screen awake
+                ControlIconButton(
+                    icon = Icons.Default.LightMode,
+                    label = if (keepAwake) "On" else "Off",
+                    active = keepAwake,
+                    onClick = { onKeepAwakeToggle(!keepAwake) },
+                )
+
+                // ── Start button ────────────────────────────────────
+                Spacer(Modifier.height(4.dp))
+                StartIconButton(onClick = onStart)
             }
         }
     }
@@ -634,6 +619,41 @@ private fun ControlIconButton(
                 maxLines = 1,
             )
         }
+    }
+}
+
+@Composable
+private fun StartIconButton(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        color = MaterialTheme.colorScheme.primary,
+        shape = RoundedCornerShape(16.dp),
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+        ) {
+            Icon(
+                Icons.Default.CameraAlt,
+                contentDescription = stringResource(R.string.btn_start),
+                tint = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.size(22.dp),
+            )
+            Text(
+                stringResource(R.string.btn_start),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onPrimary,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+private fun formatExposureLabel(ms: Long): String {
+    return when {
+        ms < 1000 -> "${ms}ms"
+        ms % 1000 == 0L -> "${ms / 1000}s"
+        else -> "%.1fs".format(ms / 1000.0)
     }
 }
 
@@ -820,29 +840,82 @@ private fun FocusPanel(cameraManager: PhoneCameraManager, caps: LensCapabilities
     val starFocusProgress by cameraManager.starFocusProgress.collectAsState()
     val scope = rememberCoroutineScope()
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text("Focus", style = MaterialTheme.typography.labelMedium, color = Color.White, modifier = Modifier.weight(1f))
+    // Three focus mode buttons: Auto, Manual, Star
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        // Auto focus
         Surface(
-            onClick = {
-                if (isManualFocus) cameraManager.setManualFocusDist(null)
-                else cameraManager.setManualFocusDist(0f)
-            },
-            color = if (isManualFocus) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.15f),
+            onClick = { cameraManager.setManualFocusDist(null) },
+            color = if (!isManualFocus) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.15f),
             shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                if (isManualFocus) "Manual" else "Auto",
-                style = MaterialTheme.typography.labelSmall,
+                stringResource(R.string.focus_auto),
+                style = MaterialTheme.typography.labelMedium,
                 color = Color.White,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
             )
+        }
+
+        // Manual focus
+        Surface(
+            onClick = { if (!isManualFocus) cameraManager.setManualFocusDist(0f) },
+            color = if (isManualFocus && !starFocusRunning) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.15f),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                stringResource(R.string.focus_manual),
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            )
+        }
+
+        // Star auto-focus
+        if (caps.minFocusDistance > 0f) {
+            Surface(
+                onClick = {
+                    if (!starFocusRunning) {
+                        if (!isManualFocus) cameraManager.setManualFocusDist(0f)
+                        scope.launch { cameraManager.starAutoFocus() }
+                    }
+                },
+                color = if (starFocusRunning) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                ) {
+                    Icon(Icons.Default.AutoFixHigh, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        if (starFocusRunning) stringResource(R.string.star_focus_running)
+                        else stringResource(R.string.star_focus),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White,
+                    )
+                }
+            }
+            if (starFocusRunning) {
+                LinearProgressIndicator(
+                    progress = { starFocusProgress },
+                    color = Color.White,
+                    trackColor = Color.White.copy(alpha = 0.2f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .clip(RoundedCornerShape(2.dp)),
+                )
+            }
         }
     }
 
+    // Manual focus slider (when manual is active)
     if (isManualFocus && caps.minFocusDistance > 0f) {
+        Spacer(Modifier.height(4.dp))
         val currentDist = manualFocus ?: 0f
         Text(
             formatFocusDistance(currentDist),
@@ -864,40 +937,6 @@ private fun FocusPanel(cameraManager: PhoneCameraManager, caps: LensCapabilities
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("\u221E", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
             Text(formatFocusDistance(caps.minFocusDistance), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
-        }
-
-        // Star auto-focus button
-        Surface(
-            onClick = { scope.launch { cameraManager.starAutoFocus() } },
-            color = if (starFocusRunning) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.15f),
-            shape = RoundedCornerShape(8.dp),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(vertical = 8.dp),
-            ) {
-                Icon(Icons.Default.AutoFixHigh, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    if (starFocusRunning) stringResource(R.string.star_focus_running)
-                    else stringResource(R.string.star_focus),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color.White,
-                )
-            }
-        }
-        if (starFocusRunning) {
-            LinearProgressIndicator(
-                progress = { starFocusProgress },
-                color = Color.White,
-                trackColor = Color.White.copy(alpha = 0.2f),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(3.dp)
-                    .clip(RoundedCornerShape(2.dp)),
-            )
         }
     }
 }
@@ -940,6 +979,153 @@ private fun formatFocusDistance(diopters: Float): String {
     if (diopters <= 0.01f) return "\u221E"
     val meters = 1f / diopters
     return if (meters >= 1f) "%.1fm".format(meters) else "%.0fcm".format(meters * 100)
+}
+
+// ── Intervalometer panels ───────────────────────────────────────────────
+
+private val SHOT_STEPS = intArrayOf(1, 2, 5, 10, 20, 30, 50, 100, 200, 300, 500)
+private val EXPOSURE_STEPS_MS = longArrayOf(
+    100, 250, 500, 1000, 2000, 3000, 4000, 5000,
+    8000, 10000, 13000, 15000, 20000, 25000, 30000,
+)
+private val GAP_STEPS_MS = longArrayOf(
+    0, 500, 1000, 2000, 3000, 5000, 8000, 10000, 15000, 20000, 30000,
+)
+
+@Composable
+private fun ShotsPanel(vm: PulsarViewModel) {
+    val shotCount by vm.shotCount.collectAsState()
+    val nearestIdx = SHOT_STEPS.indices.minBy { idx ->
+        kotlin.math.abs(SHOT_STEPS[idx] - shotCount)
+    }
+
+    Text(
+        "$shotCount shots",
+        style = MaterialTheme.typography.titleMedium,
+        color = Color.White,
+        fontWeight = FontWeight.Bold,
+    )
+    Slider(
+        value = nearestIdx.toFloat(),
+        onValueChange = { idx ->
+            val value = SHOT_STEPS[idx.roundToInt().coerceIn(0, SHOT_STEPS.lastIndex)]
+            vm.setShotCount(value)
+        },
+        valueRange = 0f..(SHOT_STEPS.lastIndex).toFloat(),
+        steps = (SHOT_STEPS.size - 2).coerceAtLeast(0),
+        colors = SliderDefaults.colors(
+            thumbColor = Color.White,
+            activeTrackColor = Color.White,
+            inactiveTrackColor = Color.White.copy(alpha = 0.3f),
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text("${SHOT_STEPS.first()}", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
+        Text("${SHOT_STEPS.last()}", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
+    }
+}
+
+@Composable
+private fun ExposurePanel(vm: PulsarViewModel, currentLens: com.ehrocha.pulsar.camera.PhoneLens?) {
+    val exposureMs by vm.exposureMs.collectAsState()
+
+    // Compute NPF-based max exposure for this lens
+    val npfMs = if (currentLens != null && currentLens.focalLength > 0 && currentLens.sensorWidth > 0) {
+        val cropFactor = 36f / currentLens.sensorWidth
+        val pixelArray = currentLens.megapixels * 1_000_000f
+        // Estimate pixel pitch: sensorWidth (mm) * 1000 (μm) / sqrt(pixelCount * aspect)
+        // Simplified: use sensor width in mm / sqrt(megapixels * 4/3) * 1000
+        val sensorWidthUm = currentLens.sensorWidth * 1000f
+        val approxPixelsWide = kotlin.math.sqrt(pixelArray.toDouble() * 4.0 / 3.0)
+        val pixelPitchUm = sensorWidthUm / approxPixelsWide
+        val aperture = if (currentLens.aperture > 0) currentLens.aperture.toDouble() else 2.8
+        val exposureS = (35.0 * aperture + 30.0 * pixelPitchUm) / (currentLens.focalLength * cropFactor)
+        (exposureS * 1000).toLong().coerceAtLeast(1000)
+    } else null
+
+    // Auto (NPF) button
+    if (npfMs != null) {
+        Surface(
+            onClick = { vm.setExposureMs(npfMs) },
+            color = if (exposureMs == npfMs) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.15f),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("NPF Auto", style = MaterialTheme.typography.labelMedium, color = Color.White, modifier = Modifier.weight(1f))
+                Text(formatExposureLabel(npfMs), style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.7f))
+            }
+        }
+    }
+
+    // Manual slider
+    val nearestIdx = EXPOSURE_STEPS_MS.indices.minBy { idx ->
+        kotlin.math.abs(EXPOSURE_STEPS_MS[idx] - exposureMs)
+    }
+
+    Text(
+        formatExposureLabel(exposureMs),
+        style = MaterialTheme.typography.titleMedium,
+        color = Color.White,
+        fontWeight = FontWeight.Bold,
+    )
+    Slider(
+        value = nearestIdx.toFloat(),
+        onValueChange = { idx ->
+            val value = EXPOSURE_STEPS_MS[idx.roundToInt().coerceIn(0, EXPOSURE_STEPS_MS.lastIndex)]
+            vm.setExposureMs(value)
+        },
+        valueRange = 0f..(EXPOSURE_STEPS_MS.lastIndex).toFloat(),
+        steps = (EXPOSURE_STEPS_MS.size - 2).coerceAtLeast(0),
+        colors = SliderDefaults.colors(
+            thumbColor = Color.White,
+            activeTrackColor = Color.White,
+            inactiveTrackColor = Color.White.copy(alpha = 0.3f),
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(formatExposureLabel(EXPOSURE_STEPS_MS.first()), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
+        Text(formatExposureLabel(EXPOSURE_STEPS_MS.last()), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
+    }
+}
+
+@Composable
+private fun GapPanel(vm: PulsarViewModel) {
+    val intervalMs by vm.intervalMs.collectAsState()
+    val nearestIdx = GAP_STEPS_MS.indices.minBy { idx ->
+        kotlin.math.abs(GAP_STEPS_MS[idx] - intervalMs)
+    }
+
+    Text(
+        if (intervalMs == 0L) "No gap" else formatExposureLabel(intervalMs),
+        style = MaterialTheme.typography.titleMedium,
+        color = Color.White,
+        fontWeight = FontWeight.Bold,
+    )
+    Slider(
+        value = nearestIdx.toFloat(),
+        onValueChange = { idx ->
+            val value = GAP_STEPS_MS[idx.roundToInt().coerceIn(0, GAP_STEPS_MS.lastIndex)]
+            vm.setIntervalMs(value)
+        },
+        valueRange = 0f..(GAP_STEPS_MS.lastIndex).toFloat(),
+        steps = (GAP_STEPS_MS.size - 2).coerceAtLeast(0),
+        colors = SliderDefaults.colors(
+            thumbColor = Color.White,
+            activeTrackColor = Color.White,
+            inactiveTrackColor = Color.White.copy(alpha = 0.3f),
+        ),
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text("0s", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
+        Text(formatExposureLabel(GAP_STEPS_MS.last()), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
+    }
 }
 
 // ── Running overlay (on preview) ────────────────────────────────────────
