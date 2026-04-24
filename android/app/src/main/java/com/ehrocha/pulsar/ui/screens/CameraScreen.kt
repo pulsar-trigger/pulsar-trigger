@@ -138,168 +138,164 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
         onDispose { cameraManager.release() }
     }
 
-    // Mode selection state
-    var selectedMode by remember { mutableStateOf(TriggerMode.INTERVALOMETER) }
-
     // Bottom sheet state
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     var showSheet by remember { mutableStateOf(false) }
+
+    // Intervalometer params (for running overlay)
+    val intervalMs by vm.intervalMs.collectAsState()
+    val exposureMs by vm.exposureMs.collectAsState()
+    val shotCount by vm.shotCount.collectAsState()
 
     // Exit confirmation while running
     var showExitDialog by remember { mutableStateOf(false) }
     BackHandler(enabled = isRunning) { showExitDialog = true }
 
-    Box(Modifier.fillMaxSize()) {
-        // ── Full-screen camera preview ──────────────────────────────
-        AndroidView(
-            factory = { previewView },
-            modifier = Modifier.fillMaxSize(),
-        )
-
-        // Capture flash effect
-        val flashAlpha by animateFloatAsState(
-            targetValue = if (isCapturing) 0.4f else 0f,
-            animationSpec = tween(if (isCapturing) 50 else 200),
-            label = "captureFlash",
-        )
-        if (flashAlpha > 0f) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.White.copy(alpha = flashAlpha)),
-            )
-        }
-
-        // Back button
-        IconButton(
-            onClick = { if (isRunning) showExitDialog = true else onBack() },
+    Column(Modifier.fillMaxSize()) {
+        // ── Camera preview (takes all remaining space) ──────────────
+        Box(
             modifier = Modifier
-                .align(Alignment.TopStart)
-                .statusBarsPadding()
-                .padding(4.dp),
+                .fillMaxWidth()
+                .weight(1f),
         ) {
-            Icon(
-                Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = stringResource(R.string.back),
-                tint = Color.White,
+            AndroidView(
+                factory = { previewView },
+                modifier = Modifier.fillMaxSize(),
             )
-        }
 
-        // Photo counter badge
-        if (photoCount > 0) {
-            Surface(
-                color = Color.Black.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .statusBarsPadding()
-                    .padding(12.dp),
-            ) {
-                Text(
-                    "$photoCount",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = Color.White,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            // Capture flash effect
+            val flashAlpha by animateFloatAsState(
+                targetValue = if (isCapturing) 0.4f else 0f,
+                animationSpec = tween(if (isCapturing) 50 else 200),
+                label = "captureFlash",
+            )
+            if (flashAlpha > 0f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.White.copy(alpha = flashAlpha)),
                 )
             }
-        }
 
-        // Running overlay on preview
-        if (isRunning && status != null) {
-            RunningOverlay(
-                status = status,
-                totalShots = getTotalShots(vm, selectedMode),
-                exposureMs = getExposureMs(vm, selectedMode),
-                gapMs = getGapMs(vm, selectedMode),
+            // Back button
+            IconButton(
+                onClick = { if (isRunning) showExitDialog = true else onBack() },
                 modifier = Modifier
-                    .align(Alignment.Center)
-                    .padding(16.dp),
-            )
-        }
+                    .align(Alignment.TopStart)
+                    .statusBarsPadding()
+                    .padding(4.dp),
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.back),
+                    tint = Color.White,
+                )
+            }
 
-        // Camera info + lens picker at bottom of preview (above the bottom bar)
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 72.dp),
-        ) {
-            val currentLens = lenses.getOrNull(selectedLens)
-            if (currentLens != null && (currentLens.aperture > 0 || currentLens.megapixels > 0)) {
+            // Photo counter badge
+            if (photoCount > 0) {
                 Surface(
                     color = Color.Black.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.padding(bottom = 4.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .statusBarsPadding()
+                        .padding(12.dp),
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        if (currentLens.aperture > 0) {
-                            Text("f/%.1f".format(currentLens.aperture), style = MaterialTheme.typography.labelSmall, color = Color.White)
-                        }
-                        if (currentLens.focalLength > 0) {
-                            Text("%.1fmm".format(currentLens.focalLength), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
-                        }
-                        if (currentLens.megapixels > 0) {
-                            Text("%.0f MP".format(currentLens.megapixels), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
-                        }
-                    }
+                    Text(
+                        "$photoCount",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                    )
                 }
             }
 
-            if (lenses.size > 1) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    lenses.forEachIndexed { index, lens ->
-                        val isSelected = index == selectedLens
-                        Surface(
-                            onClick = { cameraManager.selectLens(index, lifecycleOwner, previewView) },
-                            color = if (isSelected) Color.White else Color.Black.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(16.dp),
+            // Running overlay on preview
+            if (isRunning && status != null) {
+                RunningOverlay(
+                    status = status,
+                    totalShots = shotCount,
+                    exposureMs = exposureMs,
+                    gapMs = intervalMs,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(16.dp),
+                )
+            }
+
+            // Camera info + lens picker at bottom of preview
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 8.dp),
+            ) {
+                val currentLens = lenses.getOrNull(selectedLens)
+                if (currentLens != null && (currentLens.aperture > 0 || currentLens.megapixels > 0)) {
+                    Surface(
+                        color = Color.Black.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.padding(bottom = 4.dp),
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Text(
-                                lens.label,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) Color.Black else Color.White,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            )
+                            if (currentLens.aperture > 0) {
+                                Text("f/%.1f".format(currentLens.aperture), style = MaterialTheme.typography.labelSmall, color = Color.White)
+                            }
+                            if (currentLens.focalLength > 0) {
+                                Text("%.1fmm".format(currentLens.focalLength), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
+                            }
+                            if (currentLens.megapixels > 0) {
+                                Text("%.0f MP".format(currentLens.megapixels), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
+                            }
+                        }
+                    }
+                }
+
+                if (lenses.size > 1) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        lenses.forEachIndexed { index, lens ->
+                            val isSelected = index == selectedLens
+                            Surface(
+                                onClick = { cameraManager.selectLens(index, lifecycleOwner, previewView) },
+                                color = if (isSelected) Color.White else Color.Black.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(16.dp),
+                            ) {
+                                Text(
+                                    lens.label,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) Color.Black else Color.White,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                )
+                            }
                         }
                     }
                 }
             }
         }
 
-        // ── Bottom bar — compact strip to pull up controls ──────────
+        // ── Bottom bar (non-overlapping) ────────────────────────────
         Surface(
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 2.dp,
+            modifier = Modifier.fillMaxWidth(),
         ) {
             if (isRunning && status != null) {
-                // Running: compact status + stop
                 RunningBar(
                     status = status,
-                    totalShots = getTotalShots(vm, selectedMode),
+                    totalShots = shotCount,
                     onStop = { vm.stop() },
                 )
             } else {
-                // Idle: mode chips + start + pull-up trigger
                 SetupBar(
-                    selectedMode = selectedMode,
-                    onModeChanged = { selectedMode = it },
                     onOpenSheet = { showSheet = true },
                     onStart = {
-                        val flowType = when (selectedMode) {
-                            TriggerMode.INTERVALOMETER -> FlowStepType.INTERVALOMETER
-                            TriggerMode.ASTRO -> FlowStepType.ASTRO
-                            TriggerMode.DARK_FRAME -> FlowStepType.DARK_FRAME
-                            TriggerMode.RAMP -> FlowStepType.RAMP
-                            else -> return@SetupBar
-                        }
-                        vm.selectMode(selectedMode)
-                        vm.loadQuickMode(flowType)
+                        vm.selectMode(TriggerMode.INTERVALOMETER)
+                        vm.loadQuickMode(FlowStepType.INTERVALOMETER)
                         vm.startFlow()
                     },
                 )
@@ -316,19 +312,10 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
             SetupControls(
                 vm = vm,
                 cameraManager = cameraManager,
-                selectedMode = selectedMode,
-                onModeChanged = { selectedMode = it },
                 onStart = {
                     showSheet = false
-                    val flowType = when (selectedMode) {
-                        TriggerMode.INTERVALOMETER -> FlowStepType.INTERVALOMETER
-                        TriggerMode.ASTRO -> FlowStepType.ASTRO
-                        TriggerMode.DARK_FRAME -> FlowStepType.DARK_FRAME
-                        TriggerMode.RAMP -> FlowStepType.RAMP
-                        else -> return@SetupControls
-                    }
-                    vm.selectMode(selectedMode)
-                    vm.loadQuickMode(flowType)
+                    vm.selectMode(TriggerMode.INTERVALOMETER)
+                    vm.loadQuickMode(FlowStepType.INTERVALOMETER)
                     vm.startFlow()
                 },
             )
@@ -359,48 +346,38 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
     }
 }
 
-/** Compact bottom bar when idle — mode chips, settings button, start button. */
+/** Compact bottom bar when idle — settings button + start button. */
 @Composable
 private fun SetupBar(
-    selectedMode: TriggerMode,
-    onModeChanged: (TriggerMode) -> Unit,
     onOpenSheet: () -> Unit,
     onStart: () -> Unit,
 ) {
-    Column(
+    Row(
         modifier = Modifier
             .navigationBarsPadding()
             .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Mode chips
-        ModeChips(selectedMode = selectedMode, onModeChanged = onModeChanged)
-
-        // Settings + Start row
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        OutlinedButton(
+            onClick = onOpenSheet,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.weight(1f),
         ) {
-            OutlinedButton(
-                onClick = onOpenSheet,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.weight(1f),
-            ) {
-                Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.camera_parameters))
-            }
-            Button(
-                onClick = onStart,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.weight(1f),
-            ) {
-                Text(
-                    stringResource(R.string.btn_start),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
+            Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(stringResource(R.string.camera_parameters))
+        }
+        Button(
+            onClick = onStart,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.weight(1f),
+        ) {
+            Text(
+                stringResource(R.string.btn_start),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
         }
     }
 }
@@ -486,8 +463,6 @@ private fun RunningBar(
 private fun SetupControls(
     vm: PulsarViewModel,
     cameraManager: PhoneCameraManager,
-    selectedMode: TriggerMode,
-    onModeChanged: (TriggerMode) -> Unit,
     onStart: () -> Unit,
 ) {
     val lenses by cameraManager.lenses.collectAsState()
@@ -505,11 +480,8 @@ private fun SetupControls(
         // ── Camera controls (ISO, shutter, focus) ───────────────
         CameraControlsSection(cameraManager, caps)
 
-        // ── Mode selector chips ─────────────────────────────────
-        ModeChips(selectedMode = selectedMode, onModeChanged = onModeChanged)
-
-        // ── Mode-specific parameters ────────────────────────────
-        ModeParametersSection(vm = vm, selectedMode = selectedMode)
+        // ── Intervalometer parameters ───────────────────────────
+        IntervalometerPanel(vm, enabled = true)
 
         // ── Start button ────────────────────────────────────────
         Button(
@@ -524,95 +496,6 @@ private fun SetupControls(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
-        }
-    }
-}
-
-// ── Mode selector ───────────────────────────────────────────────────────
-
-private data class ModeOption(
-    val mode: TriggerMode,
-    val labelRes: Int,
-)
-
-private val CAMERA_MODES = listOf(
-    ModeOption(TriggerMode.INTERVALOMETER, R.string.mode_intervalometer),
-    ModeOption(TriggerMode.ASTRO, R.string.mode_astro),
-    ModeOption(TriggerMode.DARK_FRAME, R.string.mode_dark_frame),
-    ModeOption(TriggerMode.RAMP, R.string.mode_ramp),
-)
-
-@Composable
-private fun ModeChips(selectedMode: TriggerMode, onModeChanged: (TriggerMode) -> Unit) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        CAMERA_MODES.forEach { option ->
-            FilterChip(
-                selected = selectedMode == option.mode,
-                onClick = { onModeChanged(option.mode) },
-                label = {
-                    Text(
-                        stringResource(option.labelRes),
-                        style = MaterialTheme.typography.labelSmall,
-                    )
-                },
-                modifier = Modifier.weight(1f),
-            )
-        }
-    }
-}
-
-// ── Mode parameters (collapsible) ───────────────────────────────────────
-
-@Composable
-private fun ModeParametersSection(vm: PulsarViewModel, selectedMode: TriggerMode) {
-    var expanded by remember { mutableStateOf(true) }
-
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column {
-            Surface(
-                onClick = { expanded = !expanded },
-                shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
-                color = Color.Transparent,
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        stringResource(R.string.camera_parameters),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text(
-                        if (expanded) stringResource(R.string.btn_collapse)
-                        else stringResource(R.string.btn_expand),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-
-            AnimatedVisibility(visible = expanded) {
-                Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
-                    when (selectedMode) {
-                        TriggerMode.INTERVALOMETER -> IntervalometerPanel(vm, enabled = true)
-                        TriggerMode.ASTRO -> AstroPanel(vm, enabled = true)
-                        TriggerMode.DARK_FRAME -> DarkFramePanel(vm, enabled = true)
-                        TriggerMode.RAMP -> RampPanel(vm, enabled = true)
-                        else -> {}
-                    }
-                }
-            }
         }
     }
 }
@@ -951,48 +834,3 @@ private fun RunningOverlay(
     }
 }
 
-// ── Helpers ─────────────────────────────────────────────────────────────
-
-/** Get total shots for the currently selected mode. */
-@Composable
-private fun getTotalShots(vm: PulsarViewModel, mode: TriggerMode): Int {
-    return when (mode) {
-        TriggerMode.INTERVALOMETER -> vm.shotCount.collectAsState().value
-        TriggerMode.ASTRO -> vm.astroShotCount.collectAsState().value
-        TriggerMode.DARK_FRAME -> vm.darkFrameCount.collectAsState().value
-        TriggerMode.RAMP -> vm.rampSteps.collectAsState().value
-        else -> 0
-    }
-}
-
-/** Get exposure duration (ms) for the currently selected mode. */
-@Composable
-private fun getExposureMs(vm: PulsarViewModel, mode: TriggerMode): Long {
-    return when (mode) {
-        TriggerMode.INTERVALOMETER -> vm.exposureMs.collectAsState().value
-        TriggerMode.ASTRO -> vm.exposureMs.collectAsState().value
-        TriggerMode.DARK_FRAME -> vm.darkFrameExposureMs.collectAsState().value
-        TriggerMode.RAMP -> vm.rampStartExposureMs.collectAsState().value
-        else -> 0L
-    }
-}
-
-/** Get gap/interval duration (ms) for the currently selected mode. */
-@Composable
-private fun getGapMs(vm: PulsarViewModel, mode: TriggerMode): Long {
-    return when (mode) {
-        TriggerMode.INTERVALOMETER -> vm.intervalMs.collectAsState().value
-        TriggerMode.ASTRO -> vm.astroGapMs.collectAsState().value
-        TriggerMode.DARK_FRAME -> vm.darkFrameGapMs.collectAsState().value
-        TriggerMode.RAMP -> vm.rampIntervalMs.collectAsState().value
-        else -> 0L
-    }
-}
-
-private fun formatTimeRemaining(ms: Long): String {
-    val totalSec = ms / 1000
-    val h = totalSec / 3600
-    val m = (totalSec % 3600) / 60
-    val s = totalSec % 60
-    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
-}
