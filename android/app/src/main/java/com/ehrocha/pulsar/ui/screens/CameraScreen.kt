@@ -140,7 +140,7 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
     }
 
     // Bottom sheet state
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showSheet by remember { mutableStateOf(false) }
 
     // Intervalometer params (for running overlay)
