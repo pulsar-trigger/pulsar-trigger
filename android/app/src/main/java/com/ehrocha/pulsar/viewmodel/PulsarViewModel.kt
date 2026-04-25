@@ -363,7 +363,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
 
     // ── Field setters (encapsulation) ────────────────────────────────────
-    fun setIntervalMs(v: Long) { _intervalMs.value = v.coerceAtLeast(AppConfig.MIN_INTERVAL_MS) }
+    fun setIntervalMs(v: Long) {
+        // Phone camera can shoot back-to-back (gap=0); BLE device needs minimum gap
+        val min = if (_phoneCameraActive.value) 0L else AppConfig.MIN_INTERVAL_MS
+        _intervalMs.value = v.coerceAtLeast(min)
+    }
     fun setExposureMs(v: Long) { _exposureMs.value = v.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS) }
     fun setShotCount(v: Int) { _shotCount.value = v.coerceAtLeast(AppConfig.MIN_SHOT_COUNT) }
     fun setDelayMs(v: Long) { _delayMs.value = v }
@@ -940,6 +944,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     fun connectPhoneCamera() {
         stopScan()
         _phoneCameraActive.value = true
+        _intervalMs.value = 0L  // Phone camera defaults to no gap (back-to-back)
         _deviceName.value = "Phone Camera"
         _status.value = StatusFrame(
             state = DeviceState.IDLE,

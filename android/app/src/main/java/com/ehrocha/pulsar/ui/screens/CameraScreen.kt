@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -354,6 +355,7 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
             if (!isRunning) {
                 val saveAsRaw by cameraManager.saveAsRaw.collectAsState()
                 val oisEnabled by cameraManager.oisEnabled.collectAsState()
+                val expSimEnabled by cameraManager.expSimEnabled.collectAsState()
 
                 CameraSettingsStrip(
                     cameraManager = cameraManager,
@@ -380,6 +382,8 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                     supportsOis = caps.supportsOis,
                     oisEnabled = oisEnabled,
                     onOisToggle = { cameraManager.setOisEnabled(it) },
+                    expSimEnabled = expSimEnabled,
+                    onExpSimToggle = { cameraManager.setExpSimEnabled(it) },
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .padding(bottom = 8.dp, start = 8.dp),
@@ -830,6 +834,8 @@ private fun CameraSettingsStrip(
     supportsOis: Boolean = false,
     oisEnabled: Boolean = true,
     onOisToggle: (Boolean) -> Unit = {},
+    expSimEnabled: Boolean = true,
+    onExpSimToggle: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val manualIso by cameraManager.manualIso.collectAsState()
@@ -909,6 +915,16 @@ private fun CameraSettingsStrip(
                         label = if (oisEnabled) "OIS" else "Off",
                         active = !oisEnabled,  // highlight when OFF (tripod mode)
                         onClick = { onOisToggle(!oisEnabled) },
+                    )
+                }
+
+                // Exposure Simulation toggle (only when manual exposure is available)
+                if (caps.supportsManualExposure) {
+                    ControlIconButton(
+                        icon = Icons.Default.Visibility,
+                        label = if (expSimEnabled) "ExpSim" else "Off",
+                        active = expSimEnabled,
+                        onClick = { onExpSimToggle(!expSimEnabled) },
                     )
                 }
             }
@@ -1349,40 +1365,25 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
     val intervalMs by vm.intervalMs.collectAsState()
     val scrollState = rememberScrollState()
 
+    // NPF auto calculation
+    val npfMs = if (currentLens != null && currentLens.focalLength > 0 && currentLens.sensorWidth > 0) {
+        val cropFactor = 36f / currentLens.sensorWidth
+        val pixelArray = currentLens.megapixels * 1_000_000f
+        val sensorWidthUm = currentLens.sensorWidth * 1000f
+        val approxPixelsWide = kotlin.math.sqrt(pixelArray.toDouble() * 4.0 / 3.0)
+        val pixelPitchUm = sensorWidthUm / approxPixelsWide
+        val aperture = if (currentLens.aperture > 0) currentLens.aperture.toDouble() else 2.8
+        val exposureS = (35.0 * aperture + 30.0 * pixelPitchUm) / (currentLens.focalLength * cropFactor)
+        (exposureS * 1000).toLong().coerceAtLeast(1000)
+    } else null
+
+    val isNpfAuto = npfMs != null && exposureMs == npfMs
+
     Column(
         modifier = Modifier.verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        // ── Shots ──
-        val shotIdx = SHOT_STEPS.indices.minBy { kotlin.math.abs(SHOT_STEPS[it] - shotCount) }
-        Text(
-            stringResource(R.string.camera_shots_fmt, shotCount),
-            style = MaterialTheme.typography.labelMedium,
-            color = Color.White,
-            fontWeight = FontWeight.Medium,
-        )
-        Slider(
-            value = shotIdx.toFloat(),
-            onValueChange = { vm.setShotCount(SHOT_STEPS[it.roundToInt().coerceIn(0, SHOT_STEPS.lastIndex)]) },
-            valueRange = 0f..(SHOT_STEPS.lastIndex).toFloat(),
-            steps = (SHOT_STEPS.size - 2).coerceAtLeast(0),
-            colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha = 0.3f)),
-            modifier = Modifier.fillMaxWidth(),
-        )
-
         // ── Exposure ──
-        // NPF auto option
-        val npfMs = if (currentLens != null && currentLens.focalLength > 0 && currentLens.sensorWidth > 0) {
-            val cropFactor = 36f / currentLens.sensorWidth
-            val pixelArray = currentLens.megapixels * 1_000_000f
-            val sensorWidthUm = currentLens.sensorWidth * 1000f
-            val approxPixelsWide = kotlin.math.sqrt(pixelArray.toDouble() * 4.0 / 3.0)
-            val pixelPitchUm = sensorWidthUm / approxPixelsWide
-            val aperture = if (currentLens.aperture > 0) currentLens.aperture.toDouble() else 2.8
-            val exposureS = (35.0 * aperture + 30.0 * pixelPitchUm) / (currentLens.focalLength * cropFactor)
-            (exposureS * 1000).toLong().coerceAtLeast(1000)
-        } else null
-
         Text(
             stringResource(R.string.camera_exposure_fmt, formatExposureLabel(exposureMs)),
             style = MaterialTheme.typography.labelMedium,
@@ -1392,7 +1393,7 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
         if (npfMs != null) {
             Surface(
                 onClick = { vm.setExposureMs(npfMs) },
-                color = if (exposureMs == npfMs) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.15f),
+                color = if (isNpfAuto) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.15f),
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -1416,18 +1417,37 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
         )
 
         // ── Gap ──
+        val gapAlpha = if (isNpfAuto) 0.4f else 1f
         Text(
             stringResource(R.string.camera_gap_fmt, if (intervalMs == 0L) "0s" else formatExposureLabel(intervalMs)),
             style = MaterialTheme.typography.labelMedium,
-            color = Color.White,
+            color = Color.White.copy(alpha = gapAlpha),
             fontWeight = FontWeight.Medium,
         )
         val gapIdx = GAP_STEPS_MS.indices.minBy { kotlin.math.abs(GAP_STEPS_MS[it] - intervalMs) }
         Slider(
             value = gapIdx.toFloat(),
             onValueChange = { vm.setIntervalMs(GAP_STEPS_MS[it.roundToInt().coerceIn(0, GAP_STEPS_MS.lastIndex)]) },
+            enabled = !isNpfAuto,
             valueRange = 0f..(GAP_STEPS_MS.lastIndex).toFloat(),
             steps = (GAP_STEPS_MS.size - 2).coerceAtLeast(0),
+            colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha = 0.3f)),
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        // ── Shots ──
+        val shotIdx = SHOT_STEPS.indices.minBy { kotlin.math.abs(SHOT_STEPS[it] - shotCount) }
+        Text(
+            stringResource(R.string.camera_shots_fmt, shotCount),
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Medium,
+        )
+        Slider(
+            value = shotIdx.toFloat(),
+            onValueChange = { vm.setShotCount(SHOT_STEPS[it.roundToInt().coerceIn(0, SHOT_STEPS.lastIndex)]) },
+            valueRange = 0f..(SHOT_STEPS.lastIndex).toFloat(),
+            steps = (SHOT_STEPS.size - 2).coerceAtLeast(0),
             colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha = 0.3f)),
             modifier = Modifier.fillMaxWidth(),
         )

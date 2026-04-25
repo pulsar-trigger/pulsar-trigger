@@ -155,11 +155,18 @@ class PhoneCameraManager(private val context: Context) {
 
     fun setOisEnabled(enabled: Boolean) {
         _oisEnabled.value = enabled
-        applyOisSetting()
+        applyManualSettings()
     }
 
-    private fun applyOisSetting() {
-        applyManualSettings()  // OIS is applied together with other Camera2 settings
+    // ── Exposure Simulation ─────────────────────────────────────────────
+    // When ON: preview shows manual ISO/shutter effect (WYSIWYG).
+    // When OFF: preview stays auto-exposed; manual settings only apply to captures.
+    private val _expSimEnabled = MutableStateFlow(true)  // default on
+    val expSimEnabled: StateFlow<Boolean> = _expSimEnabled
+
+    fun setExpSimEnabled(enabled: Boolean) {
+        _expSimEnabled.value = enabled
+        applyManualSettings()
     }
 
     fun setManualIso(iso: Int?) {
@@ -186,7 +193,8 @@ class PhoneCameraManager(private val context: Context) {
 
         val iso = _manualIso.value
         val expNs = _manualExposureNs.value
-        if (iso != null && expNs != null) {
+        // When ExpSim is OFF, keep preview auto-exposed — unless actively capturing
+        if (iso != null && expNs != null && (_expSimEnabled.value || captureActive)) {
             builder.setCaptureRequestOption(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
             builder.setCaptureRequestOption(CaptureRequest.SENSOR_SENSITIVITY, iso)
             builder.setCaptureRequestOption(CaptureRequest.SENSOR_EXPOSURE_TIME, expNs)
@@ -219,6 +227,8 @@ class PhoneCameraManager(private val context: Context) {
     private var savedIso: Int? = null
     private var savedExpNs: Long? = null
     private var exposureOverridden = false
+    /** When true, applyManualSettings always applies manual exposure (ignores ExpSim). */
+    private var captureActive = false
 
     /**
      * Configure the sensor exposure time for a capture sequence.
@@ -236,6 +246,7 @@ class PhoneCameraManager(private val context: Context) {
         savedIso = _manualIso.value
         savedExpNs = _manualExposureNs.value
         exposureOverridden = true
+        captureActive = true
 
         val requestedNs = requestedMs * 1_000_000L
         val clampedNs = requestedNs.coerceIn(caps.exposureTimeRange!!.lower, caps.exposureTimeRange!!.upper)
@@ -259,6 +270,7 @@ class PhoneCameraManager(private val context: Context) {
         val iso = savedIso
         val expNs = savedExpNs
         exposureOverridden = false
+        captureActive = false
         savedIso = null
         savedExpNs = null
         _manualIso.value = iso
