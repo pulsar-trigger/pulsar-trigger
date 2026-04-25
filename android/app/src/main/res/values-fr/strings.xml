@@ -475,4 +475,13 @@
     <string name="camera_shots_fmt">Photos : %d</string>
     <string name="camera_exposure_fmt">Exposition : %s</string>
     <string name="camera_gap_fmt">Intervalle : %s</string>
+    <string name="tooltip_lens">Changer d\'objectif</string>
+    <string name="tooltip_iso">Sensibilité ISO</string>
+    <string name="tooltip_focus">Distance de mise au point manuelle</string>
+    <string name="tooltip_grid">Grille de superposition</string>
+    <string name="tooltip_keep_awake">Garder l\'écran allumé</string>
+    <string name="tooltip_raw">Enregistrer en RAW ou JPEG</string>
+    <string name="tooltip_ois">Stabilisation optique — désactiver pour trépied</string>
+    <string name="tooltip_expsim">Simulation d\'exposition — l\'aperçu reflète ISO/vitesse</string>
+    <string name="tooltip_intervalometer">Paramètres de l\'intervallomètre</string>
 </resources>

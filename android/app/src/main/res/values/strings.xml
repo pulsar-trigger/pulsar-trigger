@@ -611,4 +611,14 @@
     <string name="camera_shots_fmt">Shots: %d</string>
     <string name="camera_exposure_fmt">Exposure: %s</string>
     <string name="camera_gap_fmt">Gap: %s</string>
+    <!-- Camera control tooltips -->
+    <string name="tooltip_lens">Switch camera lens</string>
+    <string name="tooltip_iso">ISO sensitivity</string>
+    <string name="tooltip_focus">Manual focus distance</string>
+    <string name="tooltip_grid">Grid overlay</string>
+    <string name="tooltip_keep_awake">Keep screen on</string>
+    <string name="tooltip_raw">Save as RAW or JPEG</string>
+    <string name="tooltip_ois">Optical image stabilization — disable for tripod</string>
+    <string name="tooltip_expsim">Exposure simulation — preview reflects ISO/shutter settings</string>
+    <string name="tooltip_intervalometer">Intervalometer settings</string>
 </resources>

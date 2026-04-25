@@ -475,4 +475,13 @@
     <string name="camera_shots_fmt">Aufnahmen: %d</string>
     <string name="camera_exposure_fmt">Belichtung: %s</string>
     <string name="camera_gap_fmt">Abstand: %s</string>
+    <string name="tooltip_lens">Kameraobjektiv wechseln</string>
+    <string name="tooltip_iso">ISO-Empfindlichkeit</string>
+    <string name="tooltip_focus">Manuelle Fokusentfernung</string>
+    <string name="tooltip_grid">Rasterüberlagerung</string>
+    <string name="tooltip_keep_awake">Bildschirm eingeschaltet lassen</string>
+    <string name="tooltip_raw">Als RAW oder JPEG speichern</string>
+    <string name="tooltip_ois">Optische Stabilisierung — für Stativ deaktivieren</string>
+    <string name="tooltip_expsim">Belichtungssimulation — Vorschau zeigt ISO/Verschluss</string>
+    <string name="tooltip_intervalometer">Intervallometer-Einstellungen</string>
 </resources>

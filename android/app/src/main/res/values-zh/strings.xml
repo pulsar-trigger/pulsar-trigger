@@ -475,4 +475,13 @@
     <string name="camera_shots_fmt">拍摄张数: %d</string>
     <string name="camera_exposure_fmt">曝光: %s</string>
     <string name="camera_gap_fmt">间隔: %s</string>
+    <string name="tooltip_lens">切换相机镜头</string>
+    <string name="tooltip_iso">ISO感光度</string>
+    <string name="tooltip_focus">手动对焦距离</string>
+    <string name="tooltip_grid">网格叠加</string>
+    <string name="tooltip_keep_awake">保持屏幕常亮</string>
+    <string name="tooltip_raw">保存为RAW或JPEG</string>
+    <string name="tooltip_ois">光学防抖 — 使用三脚架时关闭</string>
+    <string name="tooltip_expsim">曝光模拟 — 预览反映ISO/快门设置</string>
+    <string name="tooltip_intervalometer">间隔拍摄设置</string>
 </resources>

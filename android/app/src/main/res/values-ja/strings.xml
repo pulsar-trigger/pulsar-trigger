@@ -475,4 +475,13 @@
     <string name="camera_shots_fmt">撮影枚数: %d</string>
     <string name="camera_exposure_fmt">露出: %s</string>
     <string name="camera_gap_fmt">間隔: %s</string>
+    <string name="tooltip_lens">カメラレンズを切り替え</string>
+    <string name="tooltip_iso">ISO感度</string>
+    <string name="tooltip_focus">マニュアルフォーカス距離</string>
+    <string name="tooltip_grid">グリッドオーバーレイ</string>
+    <string name="tooltip_keep_awake">画面を常時点灯</string>
+    <string name="tooltip_raw">RAWまたはJPEGで保存</string>
+    <string name="tooltip_ois">光学手ブレ補正 — 三脚使用時はオフに</string>
+    <string name="tooltip_expsim">露出シミュレーション — プレビューにISO/シャッター反映</string>
+    <string name="tooltip_intervalometer">インターバル撮影設定</string>
 </resources>

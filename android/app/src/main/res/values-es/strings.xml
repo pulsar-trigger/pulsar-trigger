@@ -473,4 +473,13 @@
     <string name="camera_shots_fmt">Fotos: %d</string>
     <string name="camera_exposure_fmt">Exposición: %s</string>
     <string name="camera_gap_fmt">Intervalo: %s</string>
+    <string name="tooltip_lens">Cambiar lente de cámara</string>
+    <string name="tooltip_iso">Sensibilidad ISO</string>
+    <string name="tooltip_focus">Distancia de enfoque manual</string>
+    <string name="tooltip_grid">Cuadrícula de superposición</string>
+    <string name="tooltip_keep_awake">Mantener pantalla encendida</string>
+    <string name="tooltip_raw">Guardar como RAW o JPEG</string>
+    <string name="tooltip_ois">Estabilización óptica — desactivar para trípode</string>
+    <string name="tooltip_expsim">Simulación de exposición — la vista previa refleja ISO/velocidad</string>
+    <string name="tooltip_intervalometer">Ajustes del intervalómetro</string>
 </resources>

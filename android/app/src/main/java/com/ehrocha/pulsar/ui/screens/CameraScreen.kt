@@ -164,7 +164,7 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
     val pitch by deviceOrientation.pitch.collectAsState()
 
     DisposableEffect(gridMode) {
-        if (gridMode == GridMode.CELESTIAL || gridMode == GridMode.MILKY_WAY) deviceOrientation.start()
+        if (gridMode == GridMode.CELESTIAL) deviceOrientation.start()
         else deviceOrientation.stop()
         onDispose { deviceOrientation.stop() }
     }
@@ -557,8 +557,7 @@ private enum class GridMode(val label: String) {
     OFF("Off"),
     THIRDS("3x3"),
     GRID_4X4("4x4"),
-    CELESTIAL("Pole"),
-    MILKY_WAY("MW"),
+    CELESTIAL("Sky"),
 }
 
 @Composable
@@ -580,22 +579,14 @@ private fun GridOverlay(
         when (gridMode) {
             GridMode.THIRDS -> drawGrid(3, 3, gridColor)
             GridMode.GRID_4X4 -> drawGrid(4, 4, gridColor)
-            GridMode.CELESTIAL -> drawCelestialPole(
-                azimuth = azimuth,
-                pitch = pitch,
-                latitude = latitude,
-                lens = currentLens,
-                poleColor = poleColor,
-                gridColor = gridColor,
-                textMeasurer = textMeasurer,
-            )
-            GridMode.MILKY_WAY -> drawMilkyWayCore(
+            GridMode.CELESTIAL -> drawCelestialGrid(
                 azimuth = azimuth,
                 pitch = pitch,
                 latitude = latitude,
                 longitude = longitude,
                 lens = currentLens,
-                coreColor = mwColor,
+                poleColor = poleColor,
+                mwColor = mwColor,
                 gridColor = gridColor,
                 textMeasurer = textMeasurer,
             )
@@ -618,147 +609,26 @@ private fun DrawScope.drawGrid(cols: Int, rows: Int, color: Color) {
     }
 }
 
-private fun DrawScope.drawCelestialPole(
-    azimuth: Float,
-    pitch: Float,
-    latitude: Float,
-    lens: com.ehrocha.pulsar.camera.PhoneLens?,
-    poleColor: Color,
-    gridColor: Color,
-    textMeasurer: androidx.compose.ui.text.TextMeasurer,
-) {
-    // Draw a subtle grid for reference
-    drawGrid(3, 3, gridColor.copy(alpha = 0.2f))
-
-    if (lens == null || lens.focalLength <= 0 || lens.sensorWidth <= 0 || latitude == 0f) return
-
-    // Camera field of view
-    val hFovDeg = 2.0 * Math.toDegrees(
-        kotlin.math.atan((lens.sensorWidth / 2.0) / lens.focalLength)
-    )
-    val vFovDeg = 2.0 * Math.toDegrees(
-        kotlin.math.atan((lens.sensorHeight / 2.0) / lens.focalLength)
-    )
-    if (hFovDeg <= 0 || vFovDeg <= 0) return
-
-    // Celestial pole position:
-    // NCP: azimuth = 0° (north), altitude = +latitude
-    // SCP: azimuth = 180° (south), altitude = -latitude (visible when latitude < 0)
-    val isNorth = latitude >= 0
-    val poleAz = if (isNorth) 0.0 else 180.0
-    val poleAlt = kotlin.math.abs(latitude).toDouble()
-
-    // Camera is pointing at (azimuth, -pitch) in alt-az coordinates
-    // (pitch from sensor: 0 = horizon, negative = looking up when phone held upright in landscape)
-    val camAz = azimuth.toDouble()
-    val camAlt = -pitch.toDouble() // Negate: sensor pitch is negative when looking up
-
-    // Angular offset from camera center to pole
-    var deltaAz = poleAz - camAz
-    // Normalize to -180..180
-    while (deltaAz > 180) deltaAz -= 360
-    while (deltaAz < -180) deltaAz += 360
-    val deltaAlt = poleAlt - camAlt
-
-    // Convert to screen pixels
-    val pixPerDegH = size.width / hFovDeg
-    val pixPerDegV = size.height / vFovDeg
-
-    val screenX = (size.width / 2.0 + deltaAz * pixPerDegH).toFloat()
-    val screenY = (size.height / 2.0 - deltaAlt * pixPerDegV).toFloat() // Y inverted
-
-    // Draw crosshair at pole position (even if off-screen, partial lines may show)
-    val crossSize = 30f
-    val dashEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f))
-
-    // Crosshair
-    drawLine(poleColor, Offset(screenX - crossSize, screenY), Offset(screenX + crossSize, screenY), 2f)
-    drawLine(poleColor, Offset(screenX, screenY - crossSize), Offset(screenX, screenY + crossSize), 2f)
-
-    // Concentric circles (1° and 3° radius)
-    val r1 = (1.0 * pixPerDegH).toFloat()
-    val r3 = (3.0 * pixPerDegH).toFloat()
-    drawCircle(poleColor, r1, Offset(screenX, screenY), style = Stroke(1.5f))
-    drawCircle(poleColor.copy(alpha = 0.5f), r3, Offset(screenX, screenY), style = Stroke(1f, pathEffect = dashEffect))
-
-    // Label
-    val label = if (isNorth) "NCP" else "SCP"
-    val textResult = textMeasurer.measure(
-        label,
-        style = TextStyle(color = poleColor, fontSize = 12.sp, fontWeight = FontWeight.Bold),
-    )
-    drawText(textResult, topLeft = Offset(screenX + crossSize + 4f, screenY - textResult.size.height / 2f))
-}
-
-// ── Milky Way core overlay ─────────────────────────────────────────────
-
-/** Galactic center: RA 17h 45m 40s = 266.417°, Dec -29.008° */
-private const val GC_RA_DEG = 266.417
-private const val GC_DEC_DEG = -29.008
-
 /**
- * Compute local sidereal time in degrees from current UTC time and longitude.
- * Uses simplified formula accurate to ~1 minute.
+ * Unified celestial overlay: spherical declination grid centered on the pole
+ * (like PhotoPills) plus a Milky Way core marker.
+ *
+ * Draws concentric circles at 10° declination intervals from the pole.
+ * Small circles near the pole, growing toward the equator (90° away).
  */
-private fun localSiderealTimeDeg(longitudeDeg: Double): Double {
-    val now = System.currentTimeMillis()
-    // J2000.0 epoch: 2000-01-01 12:00:00 UTC = 946728000000L ms
-    val j2000Ms = 946728000000L
-    val daysSinceJ2000 = (now - j2000Ms) / 86400000.0
-
-    // Greenwich Mean Sidereal Time (degrees)
-    // GMST = 280.46061837 + 360.98564736629 * d
-    val gmst = (280.46061837 + 360.98564736629 * daysSinceJ2000) % 360.0
-
-    // Local sidereal time
-    val lst = (gmst + longitudeDeg) % 360.0
-    return if (lst < 0) lst + 360.0 else lst
-}
-
-/**
- * Convert RA/Dec (degrees) to Alt/Az (degrees) for a given latitude and local sidereal time.
- * Returns Pair(altitude, azimuth) in degrees.
- */
-private fun raDecToAltAz(raDeg: Double, decDeg: Double, latDeg: Double, lstDeg: Double): Pair<Double, Double> {
-    val ha = Math.toRadians(lstDeg - raDeg) // Hour angle
-    val dec = Math.toRadians(decDeg)
-    val lat = Math.toRadians(latDeg)
-
-    // Altitude
-    val sinAlt = kotlin.math.sin(dec) * kotlin.math.sin(lat) +
-        kotlin.math.cos(dec) * kotlin.math.cos(lat) * kotlin.math.cos(ha)
-    val alt = Math.toDegrees(kotlin.math.asin(sinAlt.coerceIn(-1.0, 1.0)))
-
-    // Azimuth
-    val cosA = (kotlin.math.sin(dec) - kotlin.math.sin(lat) * sinAlt) /
-        (kotlin.math.cos(lat) * kotlin.math.cos(Math.toRadians(alt)))
-    var az = Math.toDegrees(kotlin.math.acos(cosA.coerceIn(-1.0, 1.0)))
-    if (kotlin.math.sin(ha) > 0) az = 360.0 - az
-
-    return Pair(alt, az)
-}
-
-private fun DrawScope.drawMilkyWayCore(
+private fun DrawScope.drawCelestialGrid(
     azimuth: Float,
     pitch: Float,
     latitude: Float,
     longitude: Float,
     lens: com.ehrocha.pulsar.camera.PhoneLens?,
-    coreColor: Color,
+    poleColor: Color,
+    mwColor: Color,
     gridColor: Color,
     textMeasurer: androidx.compose.ui.text.TextMeasurer,
 ) {
-    // Draw subtle reference grid
-    drawGrid(3, 3, gridColor.copy(alpha = 0.2f))
-
     if (lens == null || lens.focalLength <= 0 || lens.sensorWidth <= 0) return
-    if (latitude == 0f && longitude == 0f) return
 
-    // Compute galactic center alt/az
-    val lst = localSiderealTimeDeg(longitude.toDouble())
-    val (gcAlt, gcAz) = raDecToAltAz(GC_RA_DEG, GC_DEC_DEG, latitude.toDouble(), lst)
-
-    // Camera FOV
     val hFovDeg = 2.0 * Math.toDegrees(
         kotlin.math.atan((lens.sensorWidth / 2.0) / lens.focalLength)
     )
@@ -767,45 +637,121 @@ private fun DrawScope.drawMilkyWayCore(
     )
     if (hFovDeg <= 0 || vFovDeg <= 0) return
 
-    val camAz = azimuth.toDouble()
-    val camAlt = -pitch.toDouble()
-
-    // Angular offset
-    var deltaAz = gcAz - camAz
-    while (deltaAz > 180) deltaAz -= 360
-    while (deltaAz < -180) deltaAz += 360
-    val deltaAlt = gcAlt - camAlt
-
+    val pixPerDeg = ((size.width / hFovDeg + size.height / vFovDeg) / 2.0)
     val pixPerDegH = size.width / hFovDeg
     val pixPerDegV = size.height / vFovDeg
 
-    val screenX = (size.width / 2.0 + deltaAz * pixPerDegH).toFloat()
-    val screenY = (size.height / 2.0 - deltaAlt * pixPerDegV).toFloat()
+    val camAz = azimuth.toDouble()
+    val camAlt = -pitch.toDouble()
 
-    val belowHorizon = gcAlt < 0
+    // ── Celestial pole position ──
+    val isNorth = latitude >= 0
+    val poleAz = if (isNorth) 0.0 else 180.0
+    val poleAlt = kotlin.math.abs(latitude).toDouble()
 
-    // Color: dimmed if below horizon
-    val drawColor = if (belowHorizon) coreColor.copy(alpha = 0.3f) else coreColor
+    var deltaAz = poleAz - camAz
+    while (deltaAz > 180) deltaAz -= 360
+    while (deltaAz < -180) deltaAz += 360
+    val deltaAlt = poleAlt - camAlt
+
+    val poleX = (size.width / 2.0 + deltaAz * pixPerDegH).toFloat()
+    val poleY = (size.height / 2.0 - deltaAlt * pixPerDegV).toFloat()
+
     val dashEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f))
 
-    // Crosshair
-    val crossSize = 35f
-    drawLine(drawColor, Offset(screenX - crossSize, screenY), Offset(screenX + crossSize, screenY), 2.5f)
-    drawLine(drawColor, Offset(screenX, screenY - crossSize), Offset(screenX, screenY + crossSize), 2.5f)
+    // ── Spherical declination rings at 10° intervals from the pole ──
+    if (latitude != 0f) {
+        for (degFromPole in 10..90 step 10) {
+            val radiusPx = (degFromPole.toDouble() * pixPerDeg).toFloat()
+            val isEquator = degFromPole == 90
+            val strokeW = if (isEquator) 1.5f else 0.8f
+            val ringAlpha = if (isEquator) 0.4f else 0.2f
 
-    // Concentric circles (2° and 5°)
-    val r2 = (2.0 * pixPerDegH).toFloat()
-    val r5 = (5.0 * pixPerDegH).toFloat()
-    drawCircle(drawColor, r2, Offset(screenX, screenY), style = Stroke(2f))
-    drawCircle(drawColor.copy(alpha = 0.4f), r5, Offset(screenX, screenY), style = Stroke(1.5f, pathEffect = dashEffect))
+            drawCircle(
+                color = gridColor.copy(alpha = ringAlpha),
+                radius = radiusPx,
+                center = Offset(poleX, poleY),
+                style = Stroke(strokeW, pathEffect = if (!isEquator) dashEffect else null),
+            )
+        }
 
-    // Label
-    val label = if (belowHorizon) "MW Core (below horizon)" else "MW Core  Alt: %.0f°".format(gcAlt)
-    val textResult = textMeasurer.measure(
-        label,
-        style = TextStyle(color = drawColor, fontSize = 12.sp, fontWeight = FontWeight.Bold),
-    )
-    drawText(textResult, topLeft = Offset(screenX + crossSize + 4f, screenY - textResult.size.height / 2f))
+        // ── Pole crosshair ──
+        val crossSize = 25f
+        drawLine(poleColor, Offset(poleX - crossSize, poleY), Offset(poleX + crossSize, poleY), 2f)
+        drawLine(poleColor, Offset(poleX, poleY - crossSize), Offset(poleX, poleY + crossSize), 2f)
+
+        // Inner 1° circle
+        val r1 = pixPerDeg.toFloat()
+        drawCircle(poleColor, r1, Offset(poleX, poleY), style = Stroke(1.5f))
+
+        // Pole label
+        val poleLabel = if (isNorth) "NCP" else "SCP"
+        val poleLabelResult = textMeasurer.measure(
+            poleLabel,
+            style = TextStyle(color = poleColor, fontSize = 12.sp, fontWeight = FontWeight.Bold),
+        )
+        drawText(poleLabelResult, topLeft = Offset(poleX + crossSize + 4f, poleY - poleLabelResult.size.height / 2f))
+    }
+
+    // ── Milky Way core marker ─��
+    if (latitude != 0f || longitude != 0f) {
+        val lst = localSiderealTimeDeg(longitude.toDouble())
+        val (gcAlt, gcAz) = raDecToAltAz(GC_RA_DEG, GC_DEC_DEG, latitude.toDouble(), lst)
+
+        var mwDeltaAz = gcAz - camAz
+        while (mwDeltaAz > 180) mwDeltaAz -= 360
+        while (mwDeltaAz < -180) mwDeltaAz += 360
+        val mwDeltaAlt = gcAlt - camAlt
+
+        val mwX = (size.width / 2.0 + mwDeltaAz * pixPerDegH).toFloat()
+        val mwY = (size.height / 2.0 - mwDeltaAlt * pixPerDegV).toFloat()
+
+        val belowHorizon = gcAlt < 0
+        val drawColor = if (belowHorizon) mwColor.copy(alpha = 0.3f) else mwColor
+
+        val mwCross = 20f
+        drawLine(drawColor, Offset(mwX - mwCross, mwY), Offset(mwX + mwCross, mwY), 2f)
+        drawLine(drawColor, Offset(mwX, mwY - mwCross), Offset(mwX, mwY + mwCross), 2f)
+
+        val mwR = (2.0 * pixPerDeg).toFloat()
+        drawCircle(drawColor, mwR, Offset(mwX, mwY), style = Stroke(1.5f))
+
+        val mwLabel = if (belowHorizon) "MW \u2193" else "MW"
+        val mwLabelResult = textMeasurer.measure(
+            mwLabel,
+            style = TextStyle(color = drawColor, fontSize = 11.sp, fontWeight = FontWeight.Bold),
+        )
+        drawText(mwLabelResult, topLeft = Offset(mwX + mwCross + 4f, mwY - mwLabelResult.size.height / 2f))
+    }
+}
+
+// ── Celestial helpers ─────────────────────────────────────────────────
+
+/** Galactic center: RA 17h 45m 40s = 266.417°, Dec -29.008° */
+private const val GC_RA_DEG = 266.417
+private const val GC_DEC_DEG = -29.008
+
+private fun localSiderealTimeDeg(longitudeDeg: Double): Double {
+    val now = System.currentTimeMillis()
+    val j2000Ms = 946728000000L
+    val daysSinceJ2000 = (now - j2000Ms) / 86400000.0
+    val gmst = (280.46061837 + 360.98564736629 * daysSinceJ2000) % 360.0
+    val lst = (gmst + longitudeDeg) % 360.0
+    return if (lst < 0) lst + 360.0 else lst
+}
+
+private fun raDecToAltAz(raDeg: Double, decDeg: Double, latDeg: Double, lstDeg: Double): Pair<Double, Double> {
+    val ha = Math.toRadians(lstDeg - raDeg)
+    val dec = Math.toRadians(decDeg)
+    val lat = Math.toRadians(latDeg)
+    val sinAlt = kotlin.math.sin(dec) * kotlin.math.sin(lat) +
+        kotlin.math.cos(dec) * kotlin.math.cos(lat) * kotlin.math.cos(ha)
+    val alt = Math.toDegrees(kotlin.math.asin(sinAlt.coerceIn(-1.0, 1.0)))
+    val cosA = (kotlin.math.sin(dec) - kotlin.math.sin(lat) * sinAlt) /
+        (kotlin.math.cos(lat) * kotlin.math.cos(Math.toRadians(alt)))
+    var az = Math.toDegrees(kotlin.math.acos(cosA.coerceIn(-1.0, 1.0)))
+    if (kotlin.math.sin(ha) > 0) az = 360.0 - az
+    return Pair(alt, az)
 }
 
 // ── Camera panel enum ───────────────────────────────────────────────────
@@ -863,6 +809,7 @@ private fun CameraSettingsStrip(
                         label = lenses.getOrNull(selectedLens)?.label?.removePrefix("Back ") ?: "",
                         active = activePanel == CameraPanel.LENS,
                         onClick = { onPanelToggle(CameraPanel.LENS) },
+                        tooltip = stringResource(R.string.tooltip_lens),
                     )
                 }
                 if (caps.supportsManualExposure) {
@@ -871,6 +818,7 @@ private fun CameraSettingsStrip(
                         label = if (manualIso != null) "$manualIso" else "Auto",
                         active = activePanel == CameraPanel.ISO,
                         onClick = { onPanelToggle(CameraPanel.ISO) },
+                        tooltip = stringResource(R.string.tooltip_iso),
                     )
                 }
                 if (caps.supportsManualFocus) {
@@ -879,6 +827,7 @@ private fun CameraSettingsStrip(
                         label = if (manualFocus != null) formatFocusDistance(manualFocus!!) else "AF",
                         active = activePanel == CameraPanel.FOCUS,
                         onClick = { onPanelToggle(CameraPanel.FOCUS) },
+                        tooltip = stringResource(R.string.tooltip_focus),
                     )
                 }
 
@@ -888,6 +837,7 @@ private fun CameraSettingsStrip(
                     label = gridMode.label,
                     active = gridMode != GridMode.OFF,
                     onClick = onGridCycle,
+                    tooltip = stringResource(R.string.tooltip_grid),
                 )
 
                 // Keep screen awake
@@ -896,6 +846,7 @@ private fun CameraSettingsStrip(
                     label = if (keepAwake) "On" else "Off",
                     active = keepAwake,
                     onClick = { onKeepAwakeToggle(!keepAwake) },
+                    tooltip = stringResource(R.string.tooltip_keep_awake),
                 )
 
                 // RAW toggle
@@ -905,6 +856,7 @@ private fun CameraSettingsStrip(
                         label = if (saveAsRaw) "RAW" else "JPG",
                         active = saveAsRaw,
                         onClick = { onRawToggle(!saveAsRaw) },
+                        tooltip = stringResource(R.string.tooltip_raw),
                     )
                 }
 
@@ -915,6 +867,7 @@ private fun CameraSettingsStrip(
                         label = if (oisEnabled) "OIS" else "Off",
                         active = !oisEnabled,  // highlight when OFF (tripod mode)
                         onClick = { onOisToggle(!oisEnabled) },
+                        tooltip = stringResource(R.string.tooltip_ois),
                     )
                 }
 
@@ -925,6 +878,7 @@ private fun CameraSettingsStrip(
                         label = if (expSimEnabled) "ExpSim" else "Off",
                         active = expSimEnabled,
                         onClick = { onExpSimToggle(!expSimEnabled) },
+                        tooltip = stringResource(R.string.tooltip_expsim),
                     )
                 }
             }
@@ -989,6 +943,7 @@ private fun IntervalometerStrip(
                     label = "$shotCount\u00D7${formatExposureLabel(exposureMs)}",
                     active = activePanel == CameraPanel.INTERVALOMETER,
                     onClick = { onPanelToggle(CameraPanel.INTERVALOMETER) },
+                    tooltip = stringResource(R.string.tooltip_intervalometer),
                 )
                 Spacer(Modifier.height(4.dp))
                 StartIconButton(onClick = onStart)
@@ -1039,35 +994,51 @@ private fun ExpandedPanel(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ControlIconButton(
     icon: ImageVector,
     label: String,
     active: Boolean,
     onClick: () -> Unit,
+    tooltip: String? = null,
 ) {
-    Surface(
-        onClick = onClick,
-        color = if (active) Color.White.copy(alpha = 0.3f) else Color.Transparent,
-        shape = RoundedCornerShape(16.dp),
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+    val content = @Composable {
+        Surface(
+            onClick = onClick,
+            color = if (active) Color.White.copy(alpha = 0.3f) else Color.Transparent,
+            shape = RoundedCornerShape(16.dp),
         ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = if (active) Color.White else Color.White.copy(alpha = 0.8f),
-                modifier = Modifier.size(22.dp),
-            )
-            Text(
-                label,
-                style = MaterialTheme.typography.labelSmall,
-                color = if (active) Color.White else Color.White.copy(alpha = 0.7f),
-                maxLines = 1,
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = tooltip ?: label,
+                    tint = if (active) Color.White else Color.White.copy(alpha = 0.8f),
+                    modifier = Modifier.size(22.dp),
+                )
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (active) Color.White else Color.White.copy(alpha = 0.7f),
+                    maxLines = 1,
+                )
+            }
         }
+    }
+
+    if (tooltip != null) {
+        TooltipBox(
+            positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+            tooltip = { PlainTooltip { Text(tooltip) } },
+            state = rememberTooltipState(),
+        ) {
+            content()
+        }
+    } else {
+        content()
     }
 }
 
