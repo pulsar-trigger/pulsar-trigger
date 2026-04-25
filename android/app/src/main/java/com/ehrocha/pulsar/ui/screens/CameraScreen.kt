@@ -45,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -762,7 +763,7 @@ private fun DrawScope.drawCelestialGrid(
         drawText(poleLabelResult, topLeft = Offset(poleX + crossSize + 4f, poleY - poleLabelResult.size.height / 2f))
     }
 
-    // ── Milky Way core marker ─��
+    // ── Milky Way core ──
     if (latitude != 0f || longitude != 0f) {
         val lst = localSiderealTimeDeg(longitude.toDouble())
         val (gcAlt, gcAz) = raDecToAltAz(GC_RA_DEG, GC_DEC_DEG, latitude.toDouble(), lst)
@@ -778,19 +779,132 @@ private fun DrawScope.drawCelestialGrid(
         val belowHorizon = gcAlt < 0
         val drawColor = if (belowHorizon) mwColor.copy(alpha = 0.3f) else mwColor
 
-        val mwCross = 20f
-        drawLine(drawColor, Offset(mwX - mwCross, mwY), Offset(mwX + mwCross, mwY), 2f)
-        drawLine(drawColor, Offset(mwX, mwY - mwCross), Offset(mwX, mwY + mwCross), 2f)
+        val margin = 40f
+        val onScreen = mwX in -margin..size.width + margin &&
+            mwY in -margin..size.height + margin
 
-        val mwR = (2.0 * pixPerDeg).toFloat()
-        drawCircle(drawColor, mwR, Offset(mwX, mwY), style = Stroke(1.5f))
+        if (onScreen) {
+            // Draw crosshair + circle when visible
+            val mwCross = 20f
+            drawLine(drawColor, Offset(mwX - mwCross, mwY), Offset(mwX + mwCross, mwY), 2f)
+            drawLine(drawColor, Offset(mwX, mwY - mwCross), Offset(mwX, mwY + mwCross), 2f)
 
-        val mwLabel = if (belowHorizon) "MW \u2193" else "MW"
-        val mwLabelResult = textMeasurer.measure(
-            mwLabel,
-            style = TextStyle(color = drawColor, fontSize = 11.sp, fontWeight = FontWeight.Bold),
-        )
-        drawText(mwLabelResult, topLeft = Offset(mwX + mwCross + 4f, mwY - mwLabelResult.size.height / 2f))
+            val mwR = (2.0 * pixPerDeg).toFloat()
+            drawCircle(drawColor, mwR, Offset(mwX, mwY), style = Stroke(1.5f))
+
+            val mwLabel = if (belowHorizon) "MW \u2193" else "MW"
+            val mwLabelResult = textMeasurer.measure(
+                mwLabel,
+                style = TextStyle(color = drawColor, fontSize = 11.sp, fontWeight = FontWeight.Bold),
+            )
+            drawText(mwLabelResult, topLeft = Offset(mwX + mwCross + 4f, mwY - mwLabelResult.size.height / 2f))
+        } else {
+            // Off-screen: draw an arrow at the edge pointing toward the MW core
+            val edgePadding = 50f
+            val cx = size.width / 2f
+            val cy = size.height / 2f
+
+            // Direction from center to MW position
+            val dx = mwX - cx
+            val dy = mwY - cy
+            val angle = kotlin.math.atan2(dy.toDouble(), dx.toDouble())
+
+            // Clamp to screen edge with padding
+            val edgeX = (cx + (size.width / 2f - edgePadding) * kotlin.math.cos(angle)).toFloat()
+                .coerceIn(edgePadding, size.width - edgePadding)
+            val edgeY = (cy + (size.height / 2f - edgePadding) * kotlin.math.sin(angle)).toFloat()
+                .coerceIn(edgePadding, size.height - edgePadding)
+
+            // Arrow triangle pointing in the direction of the MW core
+            val arrowSize = 14f
+            val cos = kotlin.math.cos(angle).toFloat()
+            val sin = kotlin.math.sin(angle).toFloat()
+
+            val tip = Offset(edgeX + arrowSize * cos, edgeY + arrowSize * sin)
+            val left = Offset(
+                edgeX - arrowSize * cos + arrowSize * 0.6f * -sin,
+                edgeY - arrowSize * sin + arrowSize * 0.6f * cos,
+            )
+            val right = Offset(
+                edgeX - arrowSize * cos - arrowSize * 0.6f * -sin,
+                edgeY - arrowSize * sin - arrowSize * 0.6f * cos,
+            )
+
+            val arrowPath = Path().apply {
+                moveTo(tip.x, tip.y)
+                lineTo(left.x, left.y)
+                lineTo(right.x, right.y)
+                close()
+            }
+            drawPath(arrowPath, color = drawColor)
+
+            // Label next to arrow
+            val mwLabel = if (belowHorizon) "MW \u2193" else "MW"
+            val mwLabelResult = textMeasurer.measure(
+                mwLabel,
+                style = TextStyle(color = drawColor, fontSize = 11.sp, fontWeight = FontWeight.Bold),
+            )
+            // Position label offset from arrow, away from center
+            val labelOffsetX = if (edgeX > cx) -mwLabelResult.size.width - arrowSize else arrowSize
+            drawText(
+                mwLabelResult,
+                topLeft = Offset(edgeX + labelOffsetX, edgeY - mwLabelResult.size.height / 2f),
+            )
+        }
+    }
+
+    // ── Pole off-screen arrow ──
+    if (latitude != 0f) {
+        val poleMargin = 40f
+        val poleOnScreen = poleX in -poleMargin..size.width + poleMargin &&
+            poleY in -poleMargin..size.height + poleMargin
+
+        if (!poleOnScreen) {
+            val edgePadding = 50f
+            val cx = size.width / 2f
+            val cy = size.height / 2f
+            val dx = poleX - cx
+            val dy = poleY - cy
+            val angle = kotlin.math.atan2(dy.toDouble(), dx.toDouble())
+
+            val edgeX = (cx + (size.width / 2f - edgePadding) * kotlin.math.cos(angle)).toFloat()
+                .coerceIn(edgePadding, size.width - edgePadding)
+            val edgeY = (cy + (size.height / 2f - edgePadding) * kotlin.math.sin(angle)).toFloat()
+                .coerceIn(edgePadding, size.height - edgePadding)
+
+            val arrowSize = 12f
+            val cos = kotlin.math.cos(angle).toFloat()
+            val sin = kotlin.math.sin(angle).toFloat()
+
+            val tip = Offset(edgeX + arrowSize * cos, edgeY + arrowSize * sin)
+            val left = Offset(
+                edgeX - arrowSize * cos + arrowSize * 0.6f * -sin,
+                edgeY - arrowSize * sin + arrowSize * 0.6f * cos,
+            )
+            val right = Offset(
+                edgeX - arrowSize * cos - arrowSize * 0.6f * -sin,
+                edgeY - arrowSize * sin - arrowSize * 0.6f * cos,
+            )
+
+            val arrowPath = Path().apply {
+                moveTo(tip.x, tip.y)
+                lineTo(left.x, left.y)
+                lineTo(right.x, right.y)
+                close()
+            }
+            drawPath(arrowPath, color = poleColor)
+
+            val poleLabel = if (isNorth) "NCP" else "SCP"
+            val poleLabelResult = textMeasurer.measure(
+                poleLabel,
+                style = TextStyle(color = poleColor, fontSize = 10.sp, fontWeight = FontWeight.Bold),
+            )
+            val labelOffsetX = if (edgeX > cx) -poleLabelResult.size.width - arrowSize else arrowSize
+            drawText(
+                poleLabelResult,
+                topLeft = Offset(edgeX + labelOffsetX, edgeY - poleLabelResult.size.height / 2f),
+            )
+        }
     }
 }
 
