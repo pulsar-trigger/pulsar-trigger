@@ -117,6 +117,10 @@ class PhoneCameraManager(private val context: Context) {
 
     private var boundCamera: Camera? = null
 
+    /** Guard against concurrent bind operations (e.g. rapid lens switch during init). */
+    @Volatile
+    private var binding = false
+
     // ── Zoom ────────────────────────────────────────────────────────────
     private val _zoomRatio = MutableStateFlow(1f)
     val zoomRatio: StateFlow<Float> = _zoomRatio
@@ -328,12 +332,12 @@ class PhoneCameraManager(private val context: Context) {
                 override fun onCaptureSuccess(image: ImageProxy) {
                     val sharpness = computeLaplacianVariance(image)
                     image.close()
-                    cont.resume(sharpness)
+                    if (cont.isActive) cont.resume(sharpness)
                 }
 
                 override fun onError(exception: ImageCaptureException) {
                     Log.w(TAG, "Sharpness capture failed", exception)
-                    cont.resume(0.0)
+                    if (cont.isActive) cont.resume(0.0)
                 }
             },
         )
@@ -750,6 +754,9 @@ class PhoneCameraManager(private val context: Context) {
         previewView: PreviewView,
         selector: CameraSelector,
     ) {
+        if (binding) return
+        binding = true
+
         provider.unbindAll()
 
         preview = Preview.Builder().build().also {
@@ -768,6 +775,8 @@ class PhoneCameraManager(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to bind camera", e)
             _lastError.value = e.message
+        } finally {
+            binding = false
         }
     }
 
@@ -807,14 +816,14 @@ class PhoneCameraManager(private val context: Context) {
                     _isCapturing.value = false
                     _photoCount.value += 1
                     Log.i(TAG, "Photo saved: ${output.savedUri}")
-                    cont.resume(true)
+                    if (cont.isActive) cont.resume(true)
                 }
 
                 override fun onError(exception: ImageCaptureException) {
                     _isCapturing.value = false
                     _lastError.value = exception.message
                     Log.e(TAG, "Capture failed", exception)
-                    cont.resume(false)
+                    if (cont.isActive) cont.resume(false)
                 }
             },
         )
