@@ -7,8 +7,6 @@ package com.ehrocha.pulsar.camera
 
 import android.content.ContentValues
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.ImageFormat
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CaptureRequest
 import android.hardware.camera2.CameraManager as Camera2Manager
@@ -18,10 +16,8 @@ import android.provider.MediaStore
 import android.util.Log
 import android.util.Range
 import androidx.camera.camera2.interop.Camera2CameraInfo
-import androidx.camera.camera2.interop.Camera2Interop
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
@@ -38,7 +34,6 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlin.coroutines.resume
 import kotlin.math.roundToInt
-import kotlin.math.sqrt
 
 /** Per-lens capabilities queried from Camera2. */
 data class LensCapabilities(
@@ -49,6 +44,8 @@ data class LensCapabilities(
     val minFocusDistance: Float = 0f,  // diopters (0 = infinity)
     val cameraId: String = "",
     val maxDigitalZoom: Float = 1f,  // from SCALER_AVAILABLE_MAX_DIGITAL_ZOOM
+    val supportsRaw: Boolean = false,
+    val supportsOis: Boolean = false,
 )
 
 data class PhoneLens(
@@ -140,6 +137,27 @@ class PhoneCameraManager(private val context: Context) {
         return boundCamera?.cameraInfo?.zoomState?.value?.minZoomRatio ?: 1f
     }
 
+    // ── RAW capture ─────────────────────────────────────────────────────
+    private val _saveAsRaw = MutableStateFlow(false)
+    val saveAsRaw: StateFlow<Boolean> = _saveAsRaw
+
+    fun setSaveAsRaw(enabled: Boolean) {
+        _saveAsRaw.value = enabled
+    }
+
+    // ── OIS (Optical Image Stabilization) ───────────────────────────────
+    private val _oisEnabled = MutableStateFlow(true)  // default on
+    val oisEnabled: StateFlow<Boolean> = _oisEnabled
+
+    fun setOisEnabled(enabled: Boolean) {
+        _oisEnabled.value = enabled
+        applyOisSetting()
+    }
+
+    private fun applyOisSetting() {
+        applyManualSettings()  // OIS is applied together with other Camera2 settings
+    }
+
     fun setManualIso(iso: Int?) {
         _manualIso.value = iso
         applyManualSettings()
@@ -179,6 +197,15 @@ class PhoneCameraManager(private val context: Context) {
         } else {
             builder.setCaptureRequestOption(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
         }
+
+        // OIS
+        builder.setCaptureRequestOption(
+            CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE,
+            if (_oisEnabled.value)
+                CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON
+            else
+                CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_OFF,
+        )
 
         val cam2Ctrl = androidx.camera.camera2.interop.Camera2CameraControl.from(ctrl)
         cam2Ctrl.setCaptureRequestOptions(builder.build())
@@ -224,9 +251,14 @@ class PhoneCameraManager(private val context: Context) {
     /** Restore exposure settings to what the user had before the capture sequence. */
     fun restoreExposureSettings() {
         if (!exposureOverridden) return
-        _manualIso.value = savedIso
-        _manualExposureNs.value = savedExpNs
+        // Restore all at once before applying to avoid partial state
+        val iso = savedIso
+        val expNs = savedExpNs
         exposureOverridden = false
+        savedIso = null
+        savedExpNs = null
+        _manualIso.value = iso
+        _manualExposureNs.value = expNs
         applyManualSettings()
     }
 
@@ -309,6 +341,7 @@ class PhoneCameraManager(private val context: Context) {
 
     /** Compute Laplacian variance as a sharpness metric on an ImageProxy. */
     private fun computeLaplacianVariance(image: ImageProxy): Double {
+        if (image.planes.isEmpty()) return 0.0
         val plane = image.planes[0]
         val buffer = plane.buffer
         val width = image.width
@@ -408,6 +441,9 @@ class PhoneCameraManager(private val context: Context) {
                 val minFocusDist = chars.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) ?: 0f
                 val supportsManualFocus = minFocusDist > 0f
                 val maxDigZoom = chars.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM) ?: 1f
+                val hasRaw = CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW in caps2
+                val oisModes = chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION)
+                val hasOis = oisModes != null && CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON in oisModes
 
                 val capabilities = LensCapabilities(
                     supportsManualExposure = supportsManualExposure,
@@ -417,6 +453,8 @@ class PhoneCameraManager(private val context: Context) {
                     minFocusDistance = minFocusDist,
                     cameraId = cameraId,
                     maxDigitalZoom = maxDigZoom,
+                    supportsRaw = hasRaw,
+                    supportsOis = hasOis,
                 )
 
                 val selector = CameraSelector.Builder()
@@ -549,6 +587,9 @@ class PhoneCameraManager(private val context: Context) {
                 val physSupportsManual = physHasManualSensor || (physIsoRange != null && physExpRange != null)
                 val physMinFocus = physChars.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) ?: 0f
                 val physMaxDigZoom = physChars.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM) ?: 1f
+                val physHasRaw = CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW in physCaps2
+                val physOisModes = physChars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION)
+                val physHasOis = physOisModes != null && CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE_ON in physOisModes
 
                 // Use the logical camera's selector — CameraX routes to the physical camera
                 // based on zoom ratio / focal length
@@ -584,6 +625,8 @@ class PhoneCameraManager(private val context: Context) {
                             minFocusDistance = physMinFocus,
                             cameraId = physId,
                             maxDigitalZoom = physMaxDigZoom,
+                            supportsRaw = physHasRaw,
+                            supportsOis = physHasOis,
                         ),
                     )
                 )
@@ -605,7 +648,14 @@ class PhoneCameraManager(private val context: Context) {
     ) {
         val future = ProcessCameraProvider.getInstance(context)
         future.addListener({
-            val provider = future.get()
+            val provider = try {
+                future.get()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to get CameraProvider", e)
+                _lastError.value = e.message
+                onReady()
+                return@addListener
+            }
             cameraProvider = provider
             _lenses.value = enumerateLenses(provider)
 
@@ -636,7 +686,14 @@ class PhoneCameraManager(private val context: Context) {
     ) {
         val future = ProcessCameraProvider.getInstance(context)
         future.addListener({
-            val provider = future.get()
+            val provider = try {
+                future.get()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to get CameraProvider", e)
+                _lastError.value = e.message
+                onReady()
+                return@addListener
+            }
             cameraProvider = provider
             _lenses.value = enumerateLenses(provider)
 
@@ -651,20 +708,18 @@ class PhoneCameraManager(private val context: Context) {
     fun selectLens(index: Int, lifecycleOwner: LifecycleOwner, previewView: PreviewView) {
         val lensList = _lenses.value
         if (index < 0 || index >= lensList.size) return
+        // Reset state that's lens-specific
+        resetLensState()
         _selectedLens.value = index
         val provider = cameraProvider ?: return
         bindCamera(provider, lifecycleOwner, previewView, lensList[index].selector)
-    }
-
-    /** Select lens with preview — used by the integrated camera screen. */
-    fun selectLensWithPreview(index: Int, lifecycleOwner: LifecycleOwner, previewView: PreviewView) {
-        selectLens(index, lifecycleOwner, previewView)
     }
 
     /** Select lens without preview — for headless mode. */
     fun selectLensHeadless(index: Int, lifecycleOwner: LifecycleOwner) {
         val lensList = _lenses.value
         if (index < 0 || index >= lensList.size) return
+        resetLensState()
         _selectedLens.value = index
         val provider = cameraProvider ?: return
         provider.unbindAll()
@@ -679,6 +734,14 @@ class PhoneCameraManager(private val context: Context) {
             Log.e(TAG, "Failed to bind camera headless", e)
             _lastError.value = e.message
         }
+    }
+
+    /** Reset zoom and manual controls when switching lenses. */
+    private fun resetLensState() {
+        _zoomRatio.value = 1f
+        _manualIso.value = null
+        _manualExposureNs.value = null
+        _manualFocusDist.value = null
     }
 
     private fun bindCamera(

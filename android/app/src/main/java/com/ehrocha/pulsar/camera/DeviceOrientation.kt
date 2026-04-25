@@ -10,17 +10,23 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.os.Handler
+import android.os.Looper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Provides device azimuth (compass heading) and pitch (tilt up/down)
  * using the rotation vector sensor.
+ *
+ * Sensor updates are posted to the main thread to avoid data races
+ * with Compose StateFlow collectors.
  */
 class DeviceOrientation(context: Context) : SensorEventListener {
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val rotationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     private val rotationMatrix = FloatArray(9)
     private val orientation = FloatArray(3)
@@ -39,14 +45,21 @@ class DeviceOrientation(context: Context) : SensorEventListener {
 
     val isAvailable: Boolean get() = rotationSensor != null
 
+    @Volatile
+    private var listening = false
+
     fun start() {
+        if (listening) return  // Prevent duplicate registrations
         rotationSensor?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI, mainHandler)
+            listening = true
         }
     }
 
     fun stop() {
+        if (!listening) return
         sensorManager.unregisterListener(this)
+        listening = false
     }
 
     override fun onSensorChanged(event: SensorEvent) {

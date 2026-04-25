@@ -24,17 +24,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoFixHigh
-
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CenterFocusStrong
-import androidx.compose.material.icons.filled.Iso
 import androidx.compose.material.icons.filled.GridOn
+import androidx.compose.material.icons.filled.Iso
 import androidx.compose.material.icons.filled.Lens
 import androidx.compose.material.icons.filled.LightMode
-
-import androidx.compose.material.icons.filled.ShutterSpeed
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -339,7 +338,7 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
             }
 
             // Running overlay on preview
-            if (isRunning && status != null) {
+            if (isRunning) {
                 RunningOverlay(
                     status = status,
                     totalShots = shotCount,
@@ -351,8 +350,11 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                 )
             }
 
-            // ── Camera settings strip (top-right, hidden while shooting) ──
+            // ── Camera settings strip (bottom-left, hidden while shooting) ──
             if (!isRunning) {
+                val saveAsRaw by cameraManager.saveAsRaw.collectAsState()
+                val oisEnabled by cameraManager.oisEnabled.collectAsState()
+
                 CameraSettingsStrip(
                     cameraManager = cameraManager,
                     lenses = lenses,
@@ -366,10 +368,21 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                         cameraManager.selectLens(index, lifecycleOwner, previewView)
                     },
                     onShowDebug = { showCameraDebug = true },
+                    gridMode = gridMode,
+                    onGridCycle = {
+                        gridMode = GridMode.entries[(gridMode.ordinal + 1) % GridMode.entries.size]
+                    },
+                    keepAwake = keepAwake,
+                    onKeepAwakeToggle = { keepAwake = it },
+                    supportsRaw = caps.supportsRaw,
+                    saveAsRaw = saveAsRaw,
+                    onRawToggle = { cameraManager.setSaveAsRaw(it) },
+                    supportsOis = caps.supportsOis,
+                    oisEnabled = oisEnabled,
+                    onOisToggle = { cameraManager.setOisEnabled(it) },
                     modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .statusBarsPadding()
-                        .padding(top = 48.dp, end = 8.dp),
+                        .align(Alignment.BottomStart)
+                        .padding(bottom = 8.dp, start = 8.dp),
                 )
 
                 // ── Intervalometer strip (bottom-right, hidden while shooting) ──
@@ -380,12 +393,6 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                     onPanelToggle = { panel ->
                         activePanel = if (activePanel == panel) null else panel
                     },
-                    gridMode = gridMode,
-                    onGridCycle = {
-                        gridMode = GridMode.entries[(gridMode.ordinal + 1) % GridMode.entries.size]
-                    },
-                    keepAwake = keepAwake,
-                    onKeepAwakeToggle = { keepAwake = it },
                     onStart = {
                         activePanel = null
                         vm.selectMode(TriggerMode.INTERVALOMETER)
@@ -400,7 +407,7 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
         }
 
         // ── Bottom bar (only when running) ─────────────────────────
-        if (isRunning && status != null) {
+        if (isRunning) {
             Surface(
                 color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 2.dp,
@@ -799,9 +806,9 @@ private fun DrawScope.drawMilkyWayCore(
 
 // ── Camera panel enum ───────────────────────────────────────────────────
 
-private enum class CameraPanel { LENS, ISO, SHUTTER, FOCUS, INTERVALOMETER }
+private enum class CameraPanel { LENS, ISO, FOCUS, INTERVALOMETER }
 
-// ── Camera settings strip (top-right: lens, ISO, shutter, focus) ──────
+// ── Camera settings strip (bottom-left: lens, ISO, focus, grid, awake, RAW) ──
 
 @Composable
 private fun CameraSettingsStrip(
@@ -813,12 +820,20 @@ private fun CameraSettingsStrip(
     onPanelToggle: (CameraPanel) -> Unit,
     onLensSelected: (Int) -> Unit,
     onShowDebug: () -> Unit,
+    gridMode: GridMode = GridMode.OFF,
+    onGridCycle: () -> Unit = {},
+    keepAwake: Boolean = false,
+    onKeepAwakeToggle: (Boolean) -> Unit = {},
+    supportsRaw: Boolean = false,
+    saveAsRaw: Boolean = false,
+    onRawToggle: (Boolean) -> Unit = {},
+    supportsOis: Boolean = false,
+    oisEnabled: Boolean = true,
+    onOisToggle: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val manualIso by cameraManager.manualIso.collectAsState()
-    val manualExpNs by cameraManager.manualExposureNs.collectAsState()
     val manualFocus by cameraManager.manualFocusDist.collectAsState()
-    val currentLens = lenses.getOrNull(selectedLens)
 
     // Only show panel if it belongs to this strip
     val cameraPanel = activePanel?.takeIf { it in CAMERA_PANELS }
@@ -827,19 +842,6 @@ private fun CameraSettingsStrip(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Expanded panel (left of icons)
-        AnimatedVisibility(visible = cameraPanel != null) {
-            ExpandedPanel(activePanel = cameraPanel) {
-                when (cameraPanel) {
-                    CameraPanel.LENS -> LensPanel(lenses, selectedLens, onLensSelected, onShowDebug)
-                    CameraPanel.ISO -> IsoPanel(cameraManager, caps)
-                    CameraPanel.SHUTTER -> ShutterPanel(cameraManager, caps)
-                    CameraPanel.FOCUS -> FocusPanel(cameraManager, caps)
-                    else -> {}
-                }
-            }
-        }
-
         // Icon strip
         Surface(
             color = Color.Black.copy(alpha = 0.5f),
@@ -852,7 +854,7 @@ private fun CameraSettingsStrip(
                 if (lenses.size > 1) {
                     ControlIconButton(
                         icon = Icons.Default.Lens,
-                        label = currentLens?.label?.removePrefix("Back ") ?: "",
+                        label = lenses.getOrNull(selectedLens)?.label?.removePrefix("Back ") ?: "",
                         active = activePanel == CameraPanel.LENS,
                         onClick = { onPanelToggle(CameraPanel.LENS) },
                     )
@@ -864,12 +866,6 @@ private fun CameraSettingsStrip(
                         active = activePanel == CameraPanel.ISO,
                         onClick = { onPanelToggle(CameraPanel.ISO) },
                     )
-                    ControlIconButton(
-                        icon = Icons.Default.ShutterSpeed,
-                        label = if (manualExpNs != null) formatShutterSpeed(manualExpNs!!) else "Auto",
-                        active = activePanel == CameraPanel.SHUTTER,
-                        onClick = { onPanelToggle(CameraPanel.SHUTTER) },
-                    )
                 }
                 if (caps.supportsManualFocus) {
                     ControlIconButton(
@@ -879,12 +875,60 @@ private fun CameraSettingsStrip(
                         onClick = { onPanelToggle(CameraPanel.FOCUS) },
                     )
                 }
+
+                // Grid overlay
+                ControlIconButton(
+                    icon = Icons.Default.GridOn,
+                    label = gridMode.label,
+                    active = gridMode != GridMode.OFF,
+                    onClick = onGridCycle,
+                )
+
+                // Keep screen awake
+                ControlIconButton(
+                    icon = Icons.Default.LightMode,
+                    label = if (keepAwake) "On" else "Off",
+                    active = keepAwake,
+                    onClick = { onKeepAwakeToggle(!keepAwake) },
+                )
+
+                // RAW toggle
+                if (supportsRaw) {
+                    ControlIconButton(
+                        icon = Icons.Default.PhotoLibrary,
+                        label = if (saveAsRaw) "RAW" else "JPG",
+                        active = saveAsRaw,
+                        onClick = { onRawToggle(!saveAsRaw) },
+                    )
+                }
+
+                // OIS toggle
+                if (supportsOis) {
+                    ControlIconButton(
+                        icon = Icons.Default.Vibration,
+                        label = if (oisEnabled) "OIS" else "Off",
+                        active = !oisEnabled,  // highlight when OFF (tripod mode)
+                        onClick = { onOisToggle(!oisEnabled) },
+                    )
+                }
+            }
+        }
+
+        // Expanded panel (right of icons, since strip is on the left)
+        AnimatedVisibility(visible = cameraPanel != null) {
+            ExpandedPanel(activePanel = cameraPanel, paddingStart = true) {
+                when (cameraPanel) {
+                    CameraPanel.LENS -> LensPanel(lenses, selectedLens, onLensSelected, onShowDebug)
+                    CameraPanel.ISO -> IsoPanel(cameraManager, caps)
+                    CameraPanel.FOCUS -> FocusPanel(cameraManager, caps)
+                    else -> {}
+                }
             }
         }
     }
 }
 
-// ── Intervalometer strip (bottom-right: timer, grid, awake, start) ────
+// ── Intervalometer strip (bottom-right: timer + start) ──────────────
 
 @Composable
 private fun IntervalometerStrip(
@@ -892,10 +936,6 @@ private fun IntervalometerStrip(
     currentLens: com.ehrocha.pulsar.camera.PhoneLens?,
     activePanel: CameraPanel?,
     onPanelToggle: (CameraPanel) -> Unit,
-    gridMode: GridMode = GridMode.OFF,
-    onGridCycle: () -> Unit = {},
-    keepAwake: Boolean = false,
-    onKeepAwakeToggle: (Boolean) -> Unit = {},
     onStart: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -934,18 +974,6 @@ private fun IntervalometerStrip(
                     active = activePanel == CameraPanel.INTERVALOMETER,
                     onClick = { onPanelToggle(CameraPanel.INTERVALOMETER) },
                 )
-                ControlIconButton(
-                    icon = Icons.Default.GridOn,
-                    label = gridMode.label,
-                    active = gridMode != GridMode.OFF,
-                    onClick = onGridCycle,
-                )
-                ControlIconButton(
-                    icon = Icons.Default.LightMode,
-                    label = if (keepAwake) "On" else "Off",
-                    active = keepAwake,
-                    onClick = { onKeepAwakeToggle(!keepAwake) },
-                )
                 Spacer(Modifier.height(4.dp))
                 StartIconButton(onClick = onStart)
             }
@@ -954,13 +982,14 @@ private fun IntervalometerStrip(
 }
 
 // Panel group membership
-private val CAMERA_PANELS = setOf(CameraPanel.LENS, CameraPanel.ISO, CameraPanel.SHUTTER, CameraPanel.FOCUS)
+private val CAMERA_PANELS = setOf(CameraPanel.LENS, CameraPanel.ISO, CameraPanel.FOCUS)
 private val INTERVALOMETER_PANELS = setOf(CameraPanel.INTERVALOMETER)
 
 /** Shared expanded panel container with title. */
 @Composable
 private fun ExpandedPanel(
     activePanel: CameraPanel?,
+    paddingStart: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     Surface(
@@ -968,7 +997,7 @@ private fun ExpandedPanel(
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier
             .widthIn(max = 260.dp)
-            .padding(end = 8.dp),
+            .then(if (paddingStart) Modifier.padding(start = 8.dp) else Modifier.padding(end = 8.dp)),
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -977,7 +1006,6 @@ private fun ExpandedPanel(
             val panelTitle = when (activePanel) {
                 CameraPanel.LENS -> stringResource(R.string.label_lens)
                 CameraPanel.ISO -> "ISO"
-                CameraPanel.SHUTTER -> stringResource(R.string.label_exposure_mode)
                 CameraPanel.FOCUS -> stringResource(R.string.label_focus_mode)
                 CameraPanel.INTERVALOMETER -> stringResource(R.string.mode_intervalometer)
                 null -> ""
@@ -1182,62 +1210,6 @@ private fun IsoPanel(cameraManager: PhoneCameraManager, caps: LensCapabilities) 
 }
 
 @Composable
-private fun ShutterPanel(cameraManager: PhoneCameraManager, caps: LensCapabilities) {
-    val manualExpNs by cameraManager.manualExposureNs.collectAsState()
-    val manualIso by cameraManager.manualIso.collectAsState()
-    val expRange = caps.exposureTimeRange ?: return
-    val isManual = manualIso != null
-
-    if (!isManual) {
-        Text(
-            stringResource(R.string.exposure_auto),
-            style = MaterialTheme.typography.labelMedium,
-            color = Color.White.copy(alpha = 0.7f),
-        )
-        Text(
-            "Enable manual ISO first",
-            style = MaterialTheme.typography.labelSmall,
-            color = Color.White.copy(alpha = 0.4f),
-        )
-        return
-    }
-
-    val validSteps = SHUTTER_STEPS_NS.filter { it in expRange.lower..expRange.upper }
-    if (validSteps.isEmpty()) return
-
-    val currentNs = manualExpNs ?: 1_000_000_000L
-    val nearestIdx = validSteps.indices.minBy { idx ->
-        kotlin.math.abs(validSteps[idx] - currentNs)
-    }
-
-    Text(
-        formatShutterSpeed(validSteps[nearestIdx]),
-        style = MaterialTheme.typography.titleMedium,
-        color = Color.White,
-        fontWeight = FontWeight.Bold,
-    )
-    Slider(
-        value = nearestIdx.toFloat(),
-        onValueChange = { idx ->
-            val step = validSteps[idx.roundToInt().coerceIn(0, validSteps.lastIndex)]
-            cameraManager.setManualExposureNs(step)
-        },
-        valueRange = 0f..(validSteps.lastIndex).toFloat(),
-        steps = (validSteps.size - 2).coerceAtLeast(0),
-        colors = SliderDefaults.colors(
-            thumbColor = Color.White,
-            activeTrackColor = Color.White,
-            inactiveTrackColor = Color.White.copy(alpha = 0.3f),
-        ),
-        modifier = Modifier.fillMaxWidth(),
-    )
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(formatShutterSpeed(validSteps.first()), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
-        Text(formatShutterSpeed(validSteps.last()), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
-    }
-}
-
-@Composable
 private fun FocusPanel(cameraManager: PhoneCameraManager, caps: LensCapabilities) {
     val manualFocus by cameraManager.manualFocusDist.collectAsState()
     val isManualFocus = manualFocus != null
@@ -1352,38 +1324,6 @@ private fun FocusPanel(cameraManager: PhoneCameraManager, caps: LensCapabilities
 }
 
 // ── Camera controls helpers ────────────────────────────────────────────
-
-private val SHUTTER_STEPS_NS = longArrayOf(
-    1_000_000_000L / 8000,
-    1_000_000_000L / 4000,
-    1_000_000_000L / 2000,
-    1_000_000_000L / 1000,
-    1_000_000_000L / 500,
-    1_000_000_000L / 250,
-    1_000_000_000L / 125,
-    1_000_000_000L / 60,
-    1_000_000_000L / 30,
-    1_000_000_000L / 15,
-    1_000_000_000L / 8,
-    1_000_000_000L / 4,
-    1_000_000_000L / 2,
-    1_000_000_000L,
-    2_000_000_000L,
-    4_000_000_000L,
-    8_000_000_000L,
-    15_000_000_000L,
-    30_000_000_000L,
-)
-
-private fun formatShutterSpeed(ns: Long): String {
-    return if (ns >= 1_000_000_000L) {
-        val sec = ns / 1_000_000_000.0
-        if (sec == sec.toLong().toDouble()) "${sec.toLong()}s" else "%.1fs".format(sec)
-    } else {
-        val denom = (1_000_000_000.0 / ns).roundToInt()
-        "1/${denom}"
-    }
-}
 
 private fun formatFocusDistance(diopters: Float): String {
     if (diopters <= 0.01f) return "\u221E"

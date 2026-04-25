@@ -27,8 +27,10 @@ import com.ehrocha.pulsar.model.FlowPresets
 import com.ehrocha.pulsar.model.SavedFlow
 import com.ehrocha.pulsar.service.PulsarNotificationService
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -999,8 +1001,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             }
             _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
         } finally {
-            // Restore the user's original exposure settings
-            phoneCameraManager.restoreExposureSettings()
+            // Restore the user's original exposure settings even if cancelled
+            withContext(NonCancellable) {
+                phoneCameraManager.restoreExposureSettings()
+            }
         }
     }
 
