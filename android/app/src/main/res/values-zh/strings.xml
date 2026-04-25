@@ -470,4 +470,9 @@
     <string name="label_focus_mode">对焦</string>
     <string name="star_focus">星空自动对焦</string>
     <string name="star_focus_running">对焦中…</string>
+    <string name="star_focus_hint">请保持手机稳定 — 可能需要一些时间</string>
+    <string name="label_lens">镜头</string>
+    <string name="camera_shots_fmt">拍摄张数: %d</string>
+    <string name="camera_exposure_fmt">曝光: %s</string>
+    <string name="camera_gap_fmt">间隔: %s</string>
 </resources>

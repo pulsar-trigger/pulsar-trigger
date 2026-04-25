@@ -470,4 +470,9 @@
     <string name="label_focus_mode">Fokus</string>
     <string name="star_focus">Stern-Autofokus</string>
     <string name="star_focus_running">Fokussierung…</string>
+    <string name="star_focus_hint">Halten Sie das Telefon ruhig — dies kann einen Moment dauern</string>
+    <string name="label_lens">Objektiv</string>
+    <string name="camera_shots_fmt">Aufnahmen: %d</string>
+    <string name="camera_exposure_fmt">Belichtung: %s</string>
+    <string name="camera_gap_fmt">Abstand: %s</string>
 </resources>

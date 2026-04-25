@@ -470,4 +470,9 @@
     <string name="label_focus_mode">Mise au point</string>
     <string name="star_focus">Mise au Point Étoiles</string>
     <string name="star_focus_running">Mise au point…</string>
+    <string name="star_focus_hint">Gardez le téléphone stable — cela peut prendre un moment</string>
+    <string name="label_lens">Objectif</string>
+    <string name="camera_shots_fmt">Photos : %d</string>
+    <string name="camera_exposure_fmt">Exposition : %s</string>
+    <string name="camera_gap_fmt">Intervalle : %s</string>
 </resources>

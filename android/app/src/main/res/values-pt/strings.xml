@@ -470,4 +470,9 @@
     <string name="label_focus_mode">Foco</string>
     <string name="star_focus">Foco Automático em Estrelas</string>
     <string name="star_focus_running">Focando…</string>
+    <string name="star_focus_hint">Mantenha o celular firme — pode demorar um pouco</string>
+    <string name="label_lens">Lente</string>
+    <string name="camera_shots_fmt">Fotos: %d</string>
+    <string name="camera_exposure_fmt">Exposição: %s</string>
+    <string name="camera_gap_fmt">Intervalo: %s</string>
 </resources>

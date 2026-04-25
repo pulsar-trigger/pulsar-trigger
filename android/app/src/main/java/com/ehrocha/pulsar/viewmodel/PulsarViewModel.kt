@@ -781,13 +781,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun stop() {
-        if (_simulatorActive.value || _phoneCameraActive.value) {
-            stopSimulatorRun()
-            return
-        }
-        // If a flow is active, cancel the entire flow (which also sends stop)
+        // Check flow first — phone camera and simulator both use flows from CameraScreen
         if (_flowRunning.value) {
             stopFlow()
+            return
+        }
+        if (_simulatorActive.value || _phoneCameraActive.value) {
+            stopSimulatorRun()
             return
         }
         bleManager.sendCommand(CommandBuilder.stop())

@@ -119,6 +119,26 @@ class PhoneCameraManager(private val context: Context) {
 
     private var boundCamera: Camera? = null
 
+    // ── Zoom ────────────────────────────────────────────────────────────
+    private val _zoomRatio = MutableStateFlow(1f)
+    val zoomRatio: StateFlow<Float> = _zoomRatio
+
+    fun setZoomRatio(ratio: Float) {
+        val camera = boundCamera ?: return
+        val zoomState = camera.cameraInfo.zoomState.value ?: return
+        val clamped = ratio.coerceIn(zoomState.minZoomRatio, zoomState.maxZoomRatio)
+        camera.cameraControl.setZoomRatio(clamped)
+        _zoomRatio.value = clamped
+    }
+
+    fun getMaxZoomRatio(): Float {
+        return boundCamera?.cameraInfo?.zoomState?.value?.maxZoomRatio ?: 1f
+    }
+
+    fun getMinZoomRatio(): Float {
+        return boundCamera?.cameraInfo?.zoomState?.value?.minZoomRatio ?: 1f
+    }
+
     fun setManualIso(iso: Int?) {
         _manualIso.value = iso
         applyManualSettings()

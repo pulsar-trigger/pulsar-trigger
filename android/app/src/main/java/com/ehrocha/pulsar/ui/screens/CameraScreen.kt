@@ -15,6 +15,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -23,14 +24,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoFixHigh
-import androidx.compose.material.icons.filled.AvTimer
+
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.Iso
 import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Lens
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.PhotoLibrary
+
 import androidx.compose.material.icons.filled.ShutterSpeed
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Timer
@@ -48,6 +49,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -162,20 +164,20 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
     val pitch by deviceOrientation.pitch.collectAsState()
 
     DisposableEffect(gridMode) {
-        if (gridMode == GridMode.CELESTIAL) deviceOrientation.start()
+        if (gridMode == GridMode.CELESTIAL || gridMode == GridMode.MILKY_WAY) deviceOrientation.start()
         else deviceOrientation.stop()
         onDispose { deviceOrientation.stop() }
     }
 
     // Get latitude for celestial pole calculation
-    val latitude = remember {
+    val (latitude, longitude) = remember {
         try {
             val lm = context.getSystemService(android.content.Context.LOCATION_SERVICE) as LocationManager
             @Suppress("MissingPermission")
             val loc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
                 ?: lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-            loc?.latitude?.toFloat() ?: 0f
-        } catch (_: Exception) { 0f }
+            Pair(loc?.latitude?.toFloat() ?: 0f, loc?.longitude?.toFloat() ?: 0f)
+        } catch (_: Exception) { Pair(0f, 0f) }
     }
 
     // Keep screen awake
@@ -223,10 +225,38 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                 .fillMaxWidth()
                 .weight(1f),
         ) {
+            val zoomRatio by cameraManager.zoomRatio.collectAsState()
+
             AndroidView(
                 factory = { previewView },
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        detectTransformGestures { _, _, zoom, _ ->
+                            val newZoom = cameraManager.zoomRatio.value * zoom
+                            cameraManager.setZoomRatio(newZoom)
+                        }
+                    },
             )
+
+            // Zoom indicator (shown when zoomed in)
+            if (zoomRatio > 1.05f) {
+                Surface(
+                    color = Color.Black.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .statusBarsPadding()
+                        .padding(top = 8.dp),
+                ) {
+                    Text(
+                        "%.1fx".format(zoomRatio),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    )
+                }
+            }
 
             // Capture flash effect
             val flashAlpha by animateFloatAsState(
@@ -249,6 +279,7 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                     azimuth = azimuth,
                     pitch = pitch,
                     latitude = latitude,
+                    longitude = longitude,
                     currentLens = currentLens,
                     modifier = Modifier.fillMaxSize(),
                 )
@@ -301,37 +332,39 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                 )
             }
 
-            // ── Camera controls strip (right side) ────────────────
-            CameraControlsStrip(
-                vm = vm,
-                cameraManager = cameraManager,
-                lenses = lenses,
-                selectedLens = selectedLens,
-                caps = caps,
-                activePanel = activePanel,
-                onPanelToggle = { panel ->
-                    activePanel = if (activePanel == panel) null else panel
-                },
-                onLensSelected = { index ->
-                    cameraManager.selectLens(index, lifecycleOwner, previewView)
-                },
-                onShowDebug = { showCameraDebug = true },
-                gridMode = gridMode,
-                onGridCycle = {
-                    gridMode = GridMode.entries[(gridMode.ordinal + 1) % GridMode.entries.size]
-                },
-                keepAwake = keepAwake,
-                onKeepAwakeToggle = { keepAwake = it },
-                onStart = {
-                    activePanel = null
-                    vm.selectMode(TriggerMode.INTERVALOMETER)
-                    vm.loadQuickMode(FlowStepType.INTERVALOMETER)
-                    vm.startFlow()
-                },
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 8.dp),
-            )
+            // ── Camera controls strip (right side, hidden while shooting) ──
+            if (!isRunning) {
+                CameraControlsStrip(
+                    vm = vm,
+                    cameraManager = cameraManager,
+                    lenses = lenses,
+                    selectedLens = selectedLens,
+                    caps = caps,
+                    activePanel = activePanel,
+                    onPanelToggle = { panel ->
+                        activePanel = if (activePanel == panel) null else panel
+                    },
+                    onLensSelected = { index ->
+                        cameraManager.selectLens(index, lifecycleOwner, previewView)
+                    },
+                    onShowDebug = { showCameraDebug = true },
+                    gridMode = gridMode,
+                    onGridCycle = {
+                        gridMode = GridMode.entries[(gridMode.ordinal + 1) % GridMode.entries.size]
+                    },
+                    keepAwake = keepAwake,
+                    onKeepAwakeToggle = { keepAwake = it },
+                    onStart = {
+                        activePanel = null
+                        vm.selectMode(TriggerMode.INTERVALOMETER)
+                        vm.loadQuickMode(FlowStepType.INTERVALOMETER)
+                        vm.startFlow()
+                    },
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 8.dp),
+                )
+            }
         }
 
         // ── Bottom bar (only when running) ─────────────────────────
@@ -482,6 +515,7 @@ private enum class GridMode(val label: String) {
     THIRDS("3x3"),
     GRID_4X4("4x4"),
     CELESTIAL("Pole"),
+    MILKY_WAY("MW"),
 }
 
 @Composable
@@ -490,11 +524,13 @@ private fun GridOverlay(
     azimuth: Float,
     pitch: Float,
     latitude: Float,
+    longitude: Float,
     currentLens: com.ehrocha.pulsar.camera.PhoneLens?,
     modifier: Modifier = Modifier,
 ) {
     val gridColor = Color.White.copy(alpha = 0.4f)
     val poleColor = Color.Red.copy(alpha = 0.8f)
+    val mwColor = Color(0xFFFF9800) // Orange for MW core
     val textMeasurer = rememberTextMeasurer()
 
     Canvas(modifier = modifier) {
@@ -507,6 +543,16 @@ private fun GridOverlay(
                 latitude = latitude,
                 lens = currentLens,
                 poleColor = poleColor,
+                gridColor = gridColor,
+                textMeasurer = textMeasurer,
+            )
+            GridMode.MILKY_WAY -> drawMilkyWayCore(
+                azimuth = azimuth,
+                pitch = pitch,
+                latitude = latitude,
+                longitude = longitude,
+                lens = currentLens,
+                coreColor = mwColor,
                 gridColor = gridColor,
                 textMeasurer = textMeasurer,
             )
@@ -601,9 +647,127 @@ private fun DrawScope.drawCelestialPole(
     drawText(textResult, topLeft = Offset(screenX + crossSize + 4f, screenY - textResult.size.height / 2f))
 }
 
+// ── Milky Way core overlay ─────────────────────────────────────────────
+
+/** Galactic center: RA 17h 45m 40s = 266.417°, Dec -29.008° */
+private const val GC_RA_DEG = 266.417
+private const val GC_DEC_DEG = -29.008
+
+/**
+ * Compute local sidereal time in degrees from current UTC time and longitude.
+ * Uses simplified formula accurate to ~1 minute.
+ */
+private fun localSiderealTimeDeg(longitudeDeg: Double): Double {
+    val now = System.currentTimeMillis()
+    // J2000.0 epoch: 2000-01-01 12:00:00 UTC = 946728000000L ms
+    val j2000Ms = 946728000000L
+    val daysSinceJ2000 = (now - j2000Ms) / 86400000.0
+
+    // Greenwich Mean Sidereal Time (degrees)
+    // GMST = 280.46061837 + 360.98564736629 * d
+    val gmst = (280.46061837 + 360.98564736629 * daysSinceJ2000) % 360.0
+
+    // Local sidereal time
+    val lst = (gmst + longitudeDeg) % 360.0
+    return if (lst < 0) lst + 360.0 else lst
+}
+
+/**
+ * Convert RA/Dec (degrees) to Alt/Az (degrees) for a given latitude and local sidereal time.
+ * Returns Pair(altitude, azimuth) in degrees.
+ */
+private fun raDecToAltAz(raDeg: Double, decDeg: Double, latDeg: Double, lstDeg: Double): Pair<Double, Double> {
+    val ha = Math.toRadians(lstDeg - raDeg) // Hour angle
+    val dec = Math.toRadians(decDeg)
+    val lat = Math.toRadians(latDeg)
+
+    // Altitude
+    val sinAlt = kotlin.math.sin(dec) * kotlin.math.sin(lat) +
+        kotlin.math.cos(dec) * kotlin.math.cos(lat) * kotlin.math.cos(ha)
+    val alt = Math.toDegrees(kotlin.math.asin(sinAlt.coerceIn(-1.0, 1.0)))
+
+    // Azimuth
+    val cosA = (kotlin.math.sin(dec) - kotlin.math.sin(lat) * sinAlt) /
+        (kotlin.math.cos(lat) * kotlin.math.cos(Math.toRadians(alt)))
+    var az = Math.toDegrees(kotlin.math.acos(cosA.coerceIn(-1.0, 1.0)))
+    if (kotlin.math.sin(ha) > 0) az = 360.0 - az
+
+    return Pair(alt, az)
+}
+
+private fun DrawScope.drawMilkyWayCore(
+    azimuth: Float,
+    pitch: Float,
+    latitude: Float,
+    longitude: Float,
+    lens: com.ehrocha.pulsar.camera.PhoneLens?,
+    coreColor: Color,
+    gridColor: Color,
+    textMeasurer: androidx.compose.ui.text.TextMeasurer,
+) {
+    // Draw subtle reference grid
+    drawGrid(3, 3, gridColor.copy(alpha = 0.2f))
+
+    if (lens == null || lens.focalLength <= 0 || lens.sensorWidth <= 0) return
+    if (latitude == 0f && longitude == 0f) return
+
+    // Compute galactic center alt/az
+    val lst = localSiderealTimeDeg(longitude.toDouble())
+    val (gcAlt, gcAz) = raDecToAltAz(GC_RA_DEG, GC_DEC_DEG, latitude.toDouble(), lst)
+
+    // Camera FOV
+    val hFovDeg = 2.0 * Math.toDegrees(
+        kotlin.math.atan((lens.sensorWidth / 2.0) / lens.focalLength)
+    )
+    val vFovDeg = 2.0 * Math.toDegrees(
+        kotlin.math.atan((lens.sensorHeight / 2.0) / lens.focalLength)
+    )
+    if (hFovDeg <= 0 || vFovDeg <= 0) return
+
+    val camAz = azimuth.toDouble()
+    val camAlt = -pitch.toDouble()
+
+    // Angular offset
+    var deltaAz = gcAz - camAz
+    while (deltaAz > 180) deltaAz -= 360
+    while (deltaAz < -180) deltaAz += 360
+    val deltaAlt = gcAlt - camAlt
+
+    val pixPerDegH = size.width / hFovDeg
+    val pixPerDegV = size.height / vFovDeg
+
+    val screenX = (size.width / 2.0 + deltaAz * pixPerDegH).toFloat()
+    val screenY = (size.height / 2.0 - deltaAlt * pixPerDegV).toFloat()
+
+    val belowHorizon = gcAlt < 0
+
+    // Color: dimmed if below horizon
+    val drawColor = if (belowHorizon) coreColor.copy(alpha = 0.3f) else coreColor
+    val dashEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f))
+
+    // Crosshair
+    val crossSize = 35f
+    drawLine(drawColor, Offset(screenX - crossSize, screenY), Offset(screenX + crossSize, screenY), 2.5f)
+    drawLine(drawColor, Offset(screenX, screenY - crossSize), Offset(screenX, screenY + crossSize), 2.5f)
+
+    // Concentric circles (2° and 5°)
+    val r2 = (2.0 * pixPerDegH).toFloat()
+    val r5 = (5.0 * pixPerDegH).toFloat()
+    drawCircle(drawColor, r2, Offset(screenX, screenY), style = Stroke(2f))
+    drawCircle(drawColor.copy(alpha = 0.4f), r5, Offset(screenX, screenY), style = Stroke(1.5f, pathEffect = dashEffect))
+
+    // Label
+    val label = if (belowHorizon) "MW Core (below horizon)" else "MW Core  Alt: %.0f°".format(gcAlt)
+    val textResult = textMeasurer.measure(
+        label,
+        style = TextStyle(color = drawColor, fontSize = 12.sp, fontWeight = FontWeight.Bold),
+    )
+    drawText(textResult, topLeft = Offset(screenX + crossSize + 4f, screenY - textResult.size.height / 2f))
+}
+
 // ── Camera panel enum ───────────────────────────────────────────────────
 
-private enum class CameraPanel { LENS, ISO, SHUTTER, FOCUS, SHOTS, EXPOSURE, GAP }
+private enum class CameraPanel { LENS, ISO, SHUTTER, FOCUS, INTERVALOMETER }
 
 // ── Camera controls strip (right-side icons + expandable panels) ────────
 
@@ -632,7 +796,6 @@ private fun CameraControlsStrip(
 
     val shotCount by vm.shotCount.collectAsState()
     val exposureMs by vm.exposureMs.collectAsState()
-    val intervalMs by vm.intervalMs.collectAsState()
 
     Row(
         modifier = modifier,
@@ -651,6 +814,24 @@ private fun CameraControlsStrip(
                     modifier = Modifier.padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
+                    // Panel title
+                    val panelTitle = when (activePanel) {
+                        CameraPanel.LENS -> stringResource(R.string.label_lens)
+                        CameraPanel.ISO -> "ISO"
+                        CameraPanel.SHUTTER -> stringResource(R.string.label_exposure_mode)
+                        CameraPanel.FOCUS -> stringResource(R.string.label_focus_mode)
+                        CameraPanel.INTERVALOMETER -> stringResource(R.string.mode_intervalometer)
+                        null -> ""
+                    }
+                    if (panelTitle.isNotEmpty()) {
+                        Text(
+                            panelTitle,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+
                     when (activePanel) {
                         CameraPanel.LENS -> LensPanel(
                             lenses = lenses,
@@ -661,9 +842,7 @@ private fun CameraControlsStrip(
                         CameraPanel.ISO -> IsoPanel(cameraManager, caps)
                         CameraPanel.SHUTTER -> ShutterPanel(cameraManager, caps)
                         CameraPanel.FOCUS -> FocusPanel(cameraManager, caps)
-                        CameraPanel.SHOTS -> ShotsPanel(vm)
-                        CameraPanel.EXPOSURE -> ExposurePanel(vm, currentLens)
-                        CameraPanel.GAP -> GapPanel(vm)
+                        CameraPanel.INTERVALOMETER -> IntervalometerPanel(vm, currentLens)
                         null -> {}
                     }
                 }
@@ -730,29 +909,12 @@ private fun CameraControlsStrip(
                 )
                 Spacer(Modifier.height(4.dp))
 
-                // ── Intervalometer controls ──────────────────────────
-                // Shots
-                ControlIconButton(
-                    icon = Icons.Default.PhotoLibrary,
-                    label = "$shotCount",
-                    active = activePanel == CameraPanel.SHOTS,
-                    onClick = { onPanelToggle(CameraPanel.SHOTS) },
-                )
-
-                // Exposure
+                // ── Intervalometer (single button for shots/exposure/gap) ──
                 ControlIconButton(
                     icon = Icons.Default.Timer,
-                    label = formatExposureLabel(exposureMs),
-                    active = activePanel == CameraPanel.EXPOSURE,
-                    onClick = { onPanelToggle(CameraPanel.EXPOSURE) },
-                )
-
-                // Gap
-                ControlIconButton(
-                    icon = Icons.Default.AvTimer,
-                    label = formatExposureLabel(intervalMs),
-                    active = activePanel == CameraPanel.GAP,
-                    onClick = { onPanelToggle(CameraPanel.GAP) },
+                    label = "$shotCount\u00D7${formatExposureLabel(exposureMs)}",
+                    active = activePanel == CameraPanel.INTERVALOMETER,
+                    onClick = { onPanelToggle(CameraPanel.INTERVALOMETER) },
                 )
 
                 // Grid overlay
@@ -1098,6 +1260,11 @@ private fun FocusPanel(cameraManager: PhoneCameraManager, caps: LensCapabilities
                         .height(3.dp)
                         .clip(RoundedCornerShape(2.dp)),
                 )
+                Text(
+                    stringResource(R.string.star_focus_hint),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.6f),
+                )
             }
         }
     }
@@ -1182,138 +1349,94 @@ private val GAP_STEPS_MS = longArrayOf(
 )
 
 @Composable
-private fun ShotsPanel(vm: PulsarViewModel) {
+private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pulsar.camera.PhoneLens?) {
     val shotCount by vm.shotCount.collectAsState()
-    val nearestIdx = SHOT_STEPS.indices.minBy { idx ->
-        kotlin.math.abs(SHOT_STEPS[idx] - shotCount)
-    }
-
-    Text(
-        "$shotCount shots",
-        style = MaterialTheme.typography.titleMedium,
-        color = Color.White,
-        fontWeight = FontWeight.Bold,
-    )
-    Slider(
-        value = nearestIdx.toFloat(),
-        onValueChange = { idx ->
-            val value = SHOT_STEPS[idx.roundToInt().coerceIn(0, SHOT_STEPS.lastIndex)]
-            vm.setShotCount(value)
-        },
-        valueRange = 0f..(SHOT_STEPS.lastIndex).toFloat(),
-        steps = (SHOT_STEPS.size - 2).coerceAtLeast(0),
-        colors = SliderDefaults.colors(
-            thumbColor = Color.White,
-            activeTrackColor = Color.White,
-            inactiveTrackColor = Color.White.copy(alpha = 0.3f),
-        ),
-        modifier = Modifier.fillMaxWidth(),
-    )
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text("${SHOT_STEPS.first()}", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
-        Text("${SHOT_STEPS.last()}", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
-    }
-}
-
-@Composable
-private fun ExposurePanel(vm: PulsarViewModel, currentLens: com.ehrocha.pulsar.camera.PhoneLens?) {
     val exposureMs by vm.exposureMs.collectAsState()
+    val intervalMs by vm.intervalMs.collectAsState()
+    val scrollState = rememberScrollState()
 
-    // Compute NPF-based max exposure for this lens
-    val npfMs = if (currentLens != null && currentLens.focalLength > 0 && currentLens.sensorWidth > 0) {
-        val cropFactor = 36f / currentLens.sensorWidth
-        val pixelArray = currentLens.megapixels * 1_000_000f
-        // Estimate pixel pitch: sensorWidth (mm) * 1000 (μm) / sqrt(pixelCount * aspect)
-        // Simplified: use sensor width in mm / sqrt(megapixels * 4/3) * 1000
-        val sensorWidthUm = currentLens.sensorWidth * 1000f
-        val approxPixelsWide = kotlin.math.sqrt(pixelArray.toDouble() * 4.0 / 3.0)
-        val pixelPitchUm = sensorWidthUm / approxPixelsWide
-        val aperture = if (currentLens.aperture > 0) currentLens.aperture.toDouble() else 2.8
-        val exposureS = (35.0 * aperture + 30.0 * pixelPitchUm) / (currentLens.focalLength * cropFactor)
-        (exposureS * 1000).toLong().coerceAtLeast(1000)
-    } else null
-
-    // Auto (NPF) button
-    if (npfMs != null) {
-        Surface(
-            onClick = { vm.setExposureMs(npfMs) },
-            color = if (exposureMs == npfMs) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.15f),
-            shape = RoundedCornerShape(8.dp),
+    Column(
+        modifier = Modifier.verticalScroll(scrollState),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        // ── Shots ──
+        val shotIdx = SHOT_STEPS.indices.minBy { kotlin.math.abs(SHOT_STEPS[it] - shotCount) }
+        Text(
+            stringResource(R.string.camera_shots_fmt, shotCount),
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Medium,
+        )
+        Slider(
+            value = shotIdx.toFloat(),
+            onValueChange = { vm.setShotCount(SHOT_STEPS[it.roundToInt().coerceIn(0, SHOT_STEPS.lastIndex)]) },
+            valueRange = 0f..(SHOT_STEPS.lastIndex).toFloat(),
+            steps = (SHOT_STEPS.size - 2).coerceAtLeast(0),
+            colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha = 0.3f)),
             modifier = Modifier.fillMaxWidth(),
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
+        )
+
+        // ── Exposure ──
+        // NPF auto option
+        val npfMs = if (currentLens != null && currentLens.focalLength > 0 && currentLens.sensorWidth > 0) {
+            val cropFactor = 36f / currentLens.sensorWidth
+            val pixelArray = currentLens.megapixels * 1_000_000f
+            val sensorWidthUm = currentLens.sensorWidth * 1000f
+            val approxPixelsWide = kotlin.math.sqrt(pixelArray.toDouble() * 4.0 / 3.0)
+            val pixelPitchUm = sensorWidthUm / approxPixelsWide
+            val aperture = if (currentLens.aperture > 0) currentLens.aperture.toDouble() else 2.8
+            val exposureS = (35.0 * aperture + 30.0 * pixelPitchUm) / (currentLens.focalLength * cropFactor)
+            (exposureS * 1000).toLong().coerceAtLeast(1000)
+        } else null
+
+        Text(
+            stringResource(R.string.camera_exposure_fmt, formatExposureLabel(exposureMs)),
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Medium,
+        )
+        if (npfMs != null) {
+            Surface(
+                onClick = { vm.setExposureMs(npfMs) },
+                color = if (exposureMs == npfMs) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("NPF Auto", style = MaterialTheme.typography.labelMedium, color = Color.White, modifier = Modifier.weight(1f))
-                Text(formatExposureLabel(npfMs), style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.7f))
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("NPF Auto", style = MaterialTheme.typography.labelSmall, color = Color.White, modifier = Modifier.weight(1f))
+                    Text(formatExposureLabel(npfMs), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
+                }
             }
         }
-    }
+        val expIdx = EXPOSURE_STEPS_MS.indices.minBy { kotlin.math.abs(EXPOSURE_STEPS_MS[it] - exposureMs) }
+        Slider(
+            value = expIdx.toFloat(),
+            onValueChange = { vm.setExposureMs(EXPOSURE_STEPS_MS[it.roundToInt().coerceIn(0, EXPOSURE_STEPS_MS.lastIndex)]) },
+            valueRange = 0f..(EXPOSURE_STEPS_MS.lastIndex).toFloat(),
+            steps = (EXPOSURE_STEPS_MS.size - 2).coerceAtLeast(0),
+            colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha = 0.3f)),
+            modifier = Modifier.fillMaxWidth(),
+        )
 
-    // Manual slider
-    val nearestIdx = EXPOSURE_STEPS_MS.indices.minBy { idx ->
-        kotlin.math.abs(EXPOSURE_STEPS_MS[idx] - exposureMs)
-    }
-
-    Text(
-        formatExposureLabel(exposureMs),
-        style = MaterialTheme.typography.titleMedium,
-        color = Color.White,
-        fontWeight = FontWeight.Bold,
-    )
-    Slider(
-        value = nearestIdx.toFloat(),
-        onValueChange = { idx ->
-            val value = EXPOSURE_STEPS_MS[idx.roundToInt().coerceIn(0, EXPOSURE_STEPS_MS.lastIndex)]
-            vm.setExposureMs(value)
-        },
-        valueRange = 0f..(EXPOSURE_STEPS_MS.lastIndex).toFloat(),
-        steps = (EXPOSURE_STEPS_MS.size - 2).coerceAtLeast(0),
-        colors = SliderDefaults.colors(
-            thumbColor = Color.White,
-            activeTrackColor = Color.White,
-            inactiveTrackColor = Color.White.copy(alpha = 0.3f),
-        ),
-        modifier = Modifier.fillMaxWidth(),
-    )
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(formatExposureLabel(EXPOSURE_STEPS_MS.first()), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
-        Text(formatExposureLabel(EXPOSURE_STEPS_MS.last()), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
-    }
-}
-
-@Composable
-private fun GapPanel(vm: PulsarViewModel) {
-    val intervalMs by vm.intervalMs.collectAsState()
-    val nearestIdx = GAP_STEPS_MS.indices.minBy { idx ->
-        kotlin.math.abs(GAP_STEPS_MS[idx] - intervalMs)
-    }
-
-    Text(
-        if (intervalMs == 0L) "No gap" else formatExposureLabel(intervalMs),
-        style = MaterialTheme.typography.titleMedium,
-        color = Color.White,
-        fontWeight = FontWeight.Bold,
-    )
-    Slider(
-        value = nearestIdx.toFloat(),
-        onValueChange = { idx ->
-            val value = GAP_STEPS_MS[idx.roundToInt().coerceIn(0, GAP_STEPS_MS.lastIndex)]
-            vm.setIntervalMs(value)
-        },
-        valueRange = 0f..(GAP_STEPS_MS.lastIndex).toFloat(),
-        steps = (GAP_STEPS_MS.size - 2).coerceAtLeast(0),
-        colors = SliderDefaults.colors(
-            thumbColor = Color.White,
-            activeTrackColor = Color.White,
-            inactiveTrackColor = Color.White.copy(alpha = 0.3f),
-        ),
-        modifier = Modifier.fillMaxWidth(),
-    )
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text("0s", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
-        Text(formatExposureLabel(GAP_STEPS_MS.last()), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
+        // ── Gap ──
+        Text(
+            stringResource(R.string.camera_gap_fmt, if (intervalMs == 0L) "0s" else formatExposureLabel(intervalMs)),
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Medium,
+        )
+        val gapIdx = GAP_STEPS_MS.indices.minBy { kotlin.math.abs(GAP_STEPS_MS[it] - intervalMs) }
+        Slider(
+            value = gapIdx.toFloat(),
+            onValueChange = { vm.setIntervalMs(GAP_STEPS_MS[it.roundToInt().coerceIn(0, GAP_STEPS_MS.lastIndex)]) },
+            valueRange = 0f..(GAP_STEPS_MS.lastIndex).toFloat(),
+            steps = (GAP_STEPS_MS.size - 2).coerceAtLeast(0),
+            colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha = 0.3f)),
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 

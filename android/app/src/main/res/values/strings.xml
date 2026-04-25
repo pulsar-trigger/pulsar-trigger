@@ -606,4 +606,9 @@
     <string name="label_focus_mode">Focus</string>
     <string name="star_focus">Star Auto-Focus</string>
     <string name="star_focus_running">Focusing…</string>
+    <string name="star_focus_hint">Hold the phone steady — this may take a moment</string>
+    <string name="label_lens">Lens</string>
+    <string name="camera_shots_fmt">Shots: %d</string>
+    <string name="camera_exposure_fmt">Exposure: %s</string>
+    <string name="camera_gap_fmt">Gap: %s</string>
 </resources>

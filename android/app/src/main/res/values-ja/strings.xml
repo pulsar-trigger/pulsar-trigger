@@ -470,4 +470,9 @@
     <string name="label_focus_mode">フォーカス</string>
     <string name="star_focus">星オートフォーカス</string>
     <string name="star_focus_running">フォーカス中…</string>
+    <string name="star_focus_hint">スマホを安定させてください — しばらくかかる場合があります</string>
+    <string name="label_lens">レンズ</string>
+    <string name="camera_shots_fmt">撮影枚数: %d</string>
+    <string name="camera_exposure_fmt">露出: %s</string>
+    <string name="camera_gap_fmt">間隔: %s</string>
 </resources>

@@ -468,4 +468,9 @@
     <string name="label_focus_mode">Enfoque</string>
     <string name="star_focus">Enfoque Automático en Estrellas</string>
     <string name="star_focus_running">Enfocando…</string>
+    <string name="star_focus_hint">Mantén el teléfono quieto — puede tardar un momento</string>
+    <string name="label_lens">Lente</string>
+    <string name="camera_shots_fmt">Fotos: %d</string>
+    <string name="camera_exposure_fmt">Exposición: %s</string>
+    <string name="camera_gap_fmt">Intervalo: %s</string>
 </resources>
