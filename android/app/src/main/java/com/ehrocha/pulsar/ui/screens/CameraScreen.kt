@@ -6,6 +6,9 @@
 package com.ehrocha.pulsar.ui.screens
 
 import android.Manifest
+import android.hardware.SensorManager
+import android.location.Location
+import android.location.LocationListener
 import android.location.LocationManager
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
@@ -162,6 +165,7 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
     val deviceOrientation = remember { DeviceOrientation(context) }
     val azimuth by deviceOrientation.azimuth.collectAsState()
     val pitch by deviceOrientation.pitch.collectAsState()
+    val sensorAccuracy by deviceOrientation.accuracy.collectAsState()
 
     DisposableEffect(gridMode) {
         if (gridMode == GridMode.CELESTIAL) deviceOrientation.start()
@@ -169,15 +173,46 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
         onDispose { deviceOrientation.stop() }
     }
 
-    // Get latitude for celestial pole calculation
-    val (latitude, longitude) = remember {
+    // Live location for celestial grid — updates as GPS locks improve
+    var latitude by remember { mutableFloatStateOf(0f) }
+    var longitude by remember { mutableFloatStateOf(0f) }
+    var locationAccuracy by remember { mutableFloatStateOf(Float.MAX_VALUE) }
+    var hasLocation by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        val lm = context.getSystemService(android.content.Context.LOCATION_SERVICE) as LocationManager
+
+        // Seed from cached location immediately
         try {
-            val lm = context.getSystemService(android.content.Context.LOCATION_SERVICE) as LocationManager
             @Suppress("MissingPermission")
-            val loc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+            val cached = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
                 ?: lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-            Pair(loc?.latitude?.toFloat() ?: 0f, loc?.longitude?.toFloat() ?: 0f)
-        } catch (_: Exception) { Pair(0f, 0f) }
+            if (cached != null) {
+                latitude = cached.latitude.toFloat()
+                longitude = cached.longitude.toFloat()
+                locationAccuracy = cached.accuracy
+                hasLocation = true
+            }
+        } catch (_: Exception) {}
+
+        // Listen for live updates
+        val listener = object : LocationListener {
+            override fun onLocationChanged(loc: Location) {
+                latitude = loc.latitude.toFloat()
+                longitude = loc.longitude.toFloat()
+                locationAccuracy = loc.accuracy
+                hasLocation = true
+            }
+        }
+
+        try {
+            @Suppress("MissingPermission")
+            lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10_000L, 10f, listener)
+        } catch (_: Exception) {}
+
+        onDispose {
+            lm.removeUpdates(listener)
+        }
     }
 
     // Keep screen awake
@@ -302,6 +337,40 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                     currentLens = currentLens,
                     modifier = Modifier.fillMaxSize(),
                 )
+            }
+
+            // Calibration warning for celestial grid
+            if (gridMode == GridMode.CELESTIAL) {
+                val compassLow = sensorAccuracy <= SensorManager.SENSOR_STATUS_ACCURACY_LOW
+                val noGps = !hasLocation
+                val gpsInaccurate = hasLocation && locationAccuracy > 100f
+
+                if (compassLow || noGps || gpsInaccurate) {
+                    val warning = buildString {
+                        if (compassLow) append(stringResource(R.string.warning_compass))
+                        if (noGps) {
+                            if (isNotEmpty()) append(" \u2022 ")
+                            append(stringResource(R.string.warning_no_gps))
+                        } else if (gpsInaccurate) {
+                            if (isNotEmpty()) append(" \u2022 ")
+                            append(stringResource(R.string.warning_gps_inaccurate, locationAccuracy.toInt()))
+                        }
+                    }
+                    Surface(
+                        color = Color(0xCC331100),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 80.dp, start = 16.dp, end = 16.dp),
+                    ) {
+                        Text(
+                            warning,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(0xFFFF9800),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        )
+                    }
+                }
             }
 
             // Back button

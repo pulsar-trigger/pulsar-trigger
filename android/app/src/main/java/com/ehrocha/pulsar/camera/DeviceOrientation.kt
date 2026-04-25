@@ -43,6 +43,10 @@ class DeviceOrientation(context: Context) : SensorEventListener {
     private val _roll = MutableStateFlow(0f)
     val roll: StateFlow<Float> = _roll
 
+    /** Sensor accuracy: SensorManager.SENSOR_STATUS_UNRELIABLE (0) through ACCURACY_HIGH (3). */
+    private val _accuracy = MutableStateFlow(SensorManager.SENSOR_STATUS_ACCURACY_HIGH)
+    val accuracy: StateFlow<Int> = _accuracy
+
     val isAvailable: Boolean get() = rotationSensor != null
 
     @Volatile
@@ -78,5 +82,7 @@ class DeviceOrientation(context: Context) : SensorEventListener {
         _roll.value = Math.toDegrees(orientation[2].toDouble()).toFloat()
     }
 
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+        _accuracy.value = accuracy
+    }
 }

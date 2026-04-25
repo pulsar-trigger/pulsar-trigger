@@ -484,4 +484,7 @@
     <string name="tooltip_ois">Stabilisation optique — désactiver pour trépied</string>
     <string name="tooltip_expsim">Simulation d\'exposition — l\'aperçu reflète ISO/vitesse</string>
     <string name="tooltip_intervalometer">Paramètres de l\'intervallomètre</string>
+    <string name="warning_compass">Boussole non calibrée — bougez le téléphone en 8</string>
+    <string name="warning_no_gps">Pas de signal GPS — position indisponible</string>
+    <string name="warning_gps_inaccurate">Précision GPS : ±%dm</string>
 </resources>

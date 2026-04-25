@@ -484,4 +484,7 @@
     <string name="tooltip_ois">光学手ブレ補正 — 三脚使用時はオフに</string>
     <string name="tooltip_expsim">露出シミュレーション — プレビューにISO/シャッター反映</string>
     <string name="tooltip_intervalometer">インターバル撮影設定</string>
+    <string name="warning_compass">コンパス未校正 — 8の字に動かしてください</string>
+    <string name="warning_no_gps">GPS信号なし — 位置情報が利用できません</string>
+    <string name="warning_gps_inaccurate">GPS精度: ±%dm</string>
 </resources>

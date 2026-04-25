@@ -621,4 +621,8 @@
     <string name="tooltip_ois">Optical image stabilization — disable for tripod</string>
     <string name="tooltip_expsim">Exposure simulation — preview reflects ISO/shutter settings</string>
     <string name="tooltip_intervalometer">Intervalometer settings</string>
+    <!-- Celestial grid calibration warnings -->
+    <string name="warning_compass">Compass uncalibrated — wave phone in figure-8</string>
+    <string name="warning_no_gps">No GPS fix — location unavailable</string>
+    <string name="warning_gps_inaccurate">GPS accuracy: ±%dm</string>
 </resources>

@@ -484,4 +484,7 @@
     <string name="tooltip_ois">光学防抖 — 使用三脚架时关闭</string>
     <string name="tooltip_expsim">曝光模拟 — 预览反映ISO/快门设置</string>
     <string name="tooltip_intervalometer">间隔拍摄设置</string>
+    <string name="warning_compass">指南针未校准 — 将手机画8字形</string>
+    <string name="warning_no_gps">无GPS信号 — 位置不可用</string>
+    <string name="warning_gps_inaccurate">GPS精度: ±%dm</string>
 </resources>

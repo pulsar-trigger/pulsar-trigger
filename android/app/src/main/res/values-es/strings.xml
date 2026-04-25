@@ -482,4 +482,7 @@
     <string name="tooltip_ois">Estabilización óptica — desactivar para trípode</string>
     <string name="tooltip_expsim">Simulación de exposición — la vista previa refleja ISO/velocidad</string>
     <string name="tooltip_intervalometer">Ajustes del intervalómetro</string>
+    <string name="warning_compass">Brújula sin calibrar — mueva el teléfono en forma de 8</string>
+    <string name="warning_no_gps">Sin señal GPS — ubicación no disponible</string>
+    <string name="warning_gps_inaccurate">Precisión GPS: ±%dm</string>
 </resources>

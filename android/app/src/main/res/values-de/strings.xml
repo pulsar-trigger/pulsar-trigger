@@ -484,4 +484,7 @@
     <string name="tooltip_ois">Optische Stabilisierung — für Stativ deaktivieren</string>
     <string name="tooltip_expsim">Belichtungssimulation — Vorschau zeigt ISO/Verschluss</string>
     <string name="tooltip_intervalometer">Intervallometer-Einstellungen</string>
+    <string name="warning_compass">Kompass unkalibriert — Telefon in Acht-Form bewegen</string>
+    <string name="warning_no_gps">Kein GPS-Signal — Standort nicht verfügbar</string>
+    <string name="warning_gps_inaccurate">GPS-Genauigkeit: ±%dm</string>
 </resources>

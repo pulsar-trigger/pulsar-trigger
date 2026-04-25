@@ -484,4 +484,7 @@
     <string name="tooltip_ois">Estabilização óptica — desative para tripé</string>
     <string name="tooltip_expsim">Simulação de exposição — visualização reflete ISO/velocidade</string>
     <string name="tooltip_intervalometer">Configurações do intervalômetro</string>
+    <string name="warning_compass">Bússola descalibrada — mova o celular em 8</string>
+    <string name="warning_no_gps">Sem sinal GPS — localização indisponível</string>
+    <string name="warning_gps_inaccurate">Precisão GPS: ±%dm</string>
 </resources>
