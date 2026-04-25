@@ -56,30 +56,30 @@ fun IntStepperField(
         }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             label,
-            style = MaterialTheme.typography.titleSmall,
+            style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             FilledTonalIconButton(
                 onClick = { onValueChange((value - step).coerceIn(min, max)) },
                 enabled = enabled && value > min,
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier.size(36.dp),
             ) {
-                Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.cd_decrease))
+                Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.cd_decrease), modifier = Modifier.size(18.dp))
             }
 
             OutlinedCard(
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(10.dp),
                 modifier = Modifier
                     .weight(1f)
-                    .height(56.dp)
+                    .height(40.dp)
                     .clickable(enabled = enabled) { showNumPad = true },
             ) {
                 Box(
@@ -88,7 +88,7 @@ fun IntStepperField(
                 ) {
                     Text(
                         text = text,
-                        style = MaterialTheme.typography.titleLarge.copy(
+                        style = MaterialTheme.typography.titleMedium.copy(
                             textAlign = TextAlign.Center,
                             fontWeight = FontWeight.Bold,
                             color = if (enabled) MaterialTheme.colorScheme.primary
@@ -101,9 +101,9 @@ fun IntStepperField(
             FilledTonalIconButton(
                 onClick = { onValueChange((value + step).coerceIn(min, max)) },
                 enabled = enabled && value < max,
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier.size(36.dp),
             ) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_increase))
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_increase), modifier = Modifier.size(18.dp))
             }
         }
 

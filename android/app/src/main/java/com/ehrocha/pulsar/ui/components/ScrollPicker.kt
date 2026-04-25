@@ -58,56 +58,51 @@ fun ScrollPicker(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha),
             )
-            Spacer(Modifier.height(2.dp))
         }
 
         // ▲ button
         FilledTonalIconButton(
             onClick = { step(1) },
             enabled = enabled && value < range.last,
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier.size(32.dp),
         ) {
             Icon(
                 Icons.Default.KeyboardArrowUp,
                 contentDescription = stringResource(R.string.cd_arrow_up),
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(18.dp),
             )
         }
-
-        Spacer(Modifier.height(2.dp))
 
         // Centre value — tap to open numpad
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .widthIn(min = 52.dp)
-                .height(40.dp)
+                .widthIn(min = 44.dp)
+                .height(32.dp)
                 .background(
                     MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
-                    RoundedCornerShape(8.dp),
+                    RoundedCornerShape(6.dp),
                 )
                 .clickable(enabled = enabled) { showNumPad = true },
         ) {
             Text(
                 text = format(value),
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary.copy(alpha = alpha),
                 textAlign = TextAlign.Center,
             )
         }
 
-        Spacer(Modifier.height(2.dp))
-
         // ▼ button
         FilledTonalIconButton(
             onClick = { step(-1) },
             enabled = enabled && value > range.first,
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier.size(32.dp),
         ) {
             Icon(
                 Icons.Default.KeyboardArrowDown,
                 contentDescription = stringResource(R.string.cd_arrow_down),
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(18.dp),
             )
         }
     }

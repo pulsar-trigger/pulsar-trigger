@@ -385,7 +385,7 @@ internal fun IntervalometerPanelContent(
 ) {
     val totalSequenceTimeMs = delayMs + shotCount.toLong() * (exposureMs + intervalMs) - intervalMs
 
-    Column(verticalArrangement = Arrangement.spacedBy(24.dp), modifier = modifier) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = modifier) {
         PanelHelpHeader(
             title = stringResource(R.string.panel_intervalometer),
             helpText = stringResource(R.string.panel_intervalometer_help),
@@ -432,7 +432,7 @@ internal fun IntervalometerPanelContent(
             }
         }
 
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(stringResource(R.string.label_capture_sequence), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             
             TimePicker(
@@ -565,7 +565,7 @@ internal fun AstroPanelContent(
     val intervalMs = maxExposureMs + gapMs
     val totalTimeMs = delayMs + shotCount.toLong() * (maxExposureMs + gapMs) - gapMs
 
-    Column(verticalArrangement = Arrangement.spacedBy(24.dp), modifier = modifier) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = modifier) {
         PanelHelpHeader(
             title = stringResource(R.string.panel_astro),
             helpText = stringResource(R.string.panel_astro_help),
@@ -668,7 +668,7 @@ internal fun AstroPanelContent(
             }
         }
 
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(stringResource(R.string.label_optics_configuration), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -699,7 +699,7 @@ internal fun AstroPanelContent(
             )
         }
 
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(stringResource(R.string.label_capture_sequence), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             
             if (onRuleChanged != null) {
@@ -799,7 +799,7 @@ internal fun DarkFramePanelContent(
 ) {
     val totalTimeMs = count.toLong() * (exposureMs + gapMs)
 
-    Column(verticalArrangement = Arrangement.spacedBy(24.dp), modifier = modifier) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = modifier) {
         PanelHelpHeader(
             title = stringResource(R.string.mode_dark_frame),
             helpText = stringResource(R.string.dark_frame_hint),
@@ -824,7 +824,7 @@ internal fun DarkFramePanelContent(
             }
         }
 
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             TimePicker(
                 totalMs = exposureMs,
                 onChanged = { onExposureMsChanged(it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS)) },
@@ -889,7 +889,7 @@ internal fun RampPanelContent(
     val avgExpMs = (startExposureMs + endExposureMs) / 2
     val totalTimeMs = steps.toLong() * (avgExpMs + intervalMs)
 
-    Column(verticalArrangement = Arrangement.spacedBy(24.dp), modifier = modifier) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = modifier) {
         PanelHelpHeader(
             title = stringResource(R.string.mode_ramp),
             helpText = stringResource(R.string.ramp_hint),
@@ -914,7 +914,7 @@ internal fun RampPanelContent(
             }
         }
 
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(stringResource(R.string.label_capture_sequence), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
 
             TimePicker(

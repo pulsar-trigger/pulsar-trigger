@@ -40,10 +40,10 @@ fun TimePicker(
         if (label.isNotEmpty()) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
         }
 
         Row(
@@ -93,8 +93,8 @@ fun TimePicker(
 private fun Separator() {
     Text(
         text = ":",
-        style = MaterialTheme.typography.titleLarge,
+        style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 2.dp),
+        modifier = Modifier.padding(horizontal = 1.dp),
     )
 }
