@@ -241,6 +241,13 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
 
             // Zoom indicator (shown when zoomed in)
             if (zoomRatio > 1.05f) {
+                // Optical zoom limit: CameraX total max / Camera2 digital max
+                val maxDigital = caps.maxDigitalZoom.coerceAtLeast(1f)
+                val totalMax = cameraManager.getMaxZoomRatio()
+                val opticalMax = if (maxDigital > 1f) (totalMax / maxDigital).coerceAtLeast(1f) else 1f
+                val isDigital = zoomRatio > opticalMax * 1.05f
+                val zoomColor = if (isDigital) Color(0xFFFF9800) else Color.White
+
                 Surface(
                     color = Color.Black.copy(alpha = 0.5f),
                     shape = RoundedCornerShape(12.dp),
@@ -249,12 +256,24 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                         .statusBarsPadding()
                         .padding(top = 8.dp),
                 ) {
-                    Text(
-                        "%.1fx".format(zoomRatio),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White,
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                    )
+                    ) {
+                        Text(
+                            "%.1fx".format(zoomRatio),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = zoomColor,
+                        )
+                        if (isDigital) {
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                "digital",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = zoomColor.copy(alpha = 0.7f),
+                            )
+                        }
+                    }
                 }
             }
 
@@ -332,10 +351,9 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                 )
             }
 
-            // ── Camera controls strip (right side, hidden while shooting) ──
+            // ── Camera settings strip (top-right, hidden while shooting) ──
             if (!isRunning) {
-                CameraControlsStrip(
-                    vm = vm,
+                CameraSettingsStrip(
                     cameraManager = cameraManager,
                     lenses = lenses,
                     selectedLens = selectedLens,
@@ -348,6 +366,20 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                         cameraManager.selectLens(index, lifecycleOwner, previewView)
                     },
                     onShowDebug = { showCameraDebug = true },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .statusBarsPadding()
+                        .padding(top = 48.dp, end = 8.dp),
+                )
+
+                // ── Intervalometer strip (bottom-right, hidden while shooting) ──
+                IntervalometerStrip(
+                    vm = vm,
+                    currentLens = lenses.getOrNull(selectedLens),
+                    activePanel = activePanel,
+                    onPanelToggle = { panel ->
+                        activePanel = if (activePanel == panel) null else panel
+                    },
                     gridMode = gridMode,
                     onGridCycle = {
                         gridMode = GridMode.entries[(gridMode.ordinal + 1) % GridMode.entries.size]
@@ -361,8 +393,8 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                         vm.startFlow()
                     },
                     modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .padding(end = 8.dp),
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = 8.dp, end = 8.dp),
                 )
             }
         }
@@ -769,11 +801,10 @@ private fun DrawScope.drawMilkyWayCore(
 
 private enum class CameraPanel { LENS, ISO, SHUTTER, FOCUS, INTERVALOMETER }
 
-// ── Camera controls strip (right-side icons + expandable panels) ────────
+// ── Camera settings strip (top-right: lens, ISO, shutter, focus) ──────
 
 @Composable
-private fun CameraControlsStrip(
-    vm: PulsarViewModel,
+private fun CameraSettingsStrip(
     cameraManager: PhoneCameraManager,
     lenses: List<com.ehrocha.pulsar.camera.PhoneLens>,
     selectedLens: Int,
@@ -782,11 +813,6 @@ private fun CameraControlsStrip(
     onPanelToggle: (CameraPanel) -> Unit,
     onLensSelected: (Int) -> Unit,
     onShowDebug: () -> Unit,
-    gridMode: GridMode = GridMode.OFF,
-    onGridCycle: () -> Unit = {},
-    keepAwake: Boolean = false,
-    onKeepAwakeToggle: (Boolean) -> Unit = {},
-    onStart: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val manualIso by cameraManager.manualIso.collectAsState()
@@ -794,62 +820,27 @@ private fun CameraControlsStrip(
     val manualFocus by cameraManager.manualFocusDist.collectAsState()
     val currentLens = lenses.getOrNull(selectedLens)
 
-    val shotCount by vm.shotCount.collectAsState()
-    val exposureMs by vm.exposureMs.collectAsState()
+    // Only show panel if it belongs to this strip
+    val cameraPanel = activePanel?.takeIf { it in CAMERA_PANELS }
 
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // ── Expanded panel (appears to the left of the icon strip) ──
-        AnimatedVisibility(visible = activePanel != null) {
-            Surface(
-                color = Color.Black.copy(alpha = 0.7f),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .widthIn(max = 260.dp)
-                    .padding(end = 8.dp),
-            ) {
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    // Panel title
-                    val panelTitle = when (activePanel) {
-                        CameraPanel.LENS -> stringResource(R.string.label_lens)
-                        CameraPanel.ISO -> "ISO"
-                        CameraPanel.SHUTTER -> stringResource(R.string.label_exposure_mode)
-                        CameraPanel.FOCUS -> stringResource(R.string.label_focus_mode)
-                        CameraPanel.INTERVALOMETER -> stringResource(R.string.mode_intervalometer)
-                        null -> ""
-                    }
-                    if (panelTitle.isNotEmpty()) {
-                        Text(
-                            panelTitle,
-                            style = MaterialTheme.typography.titleSmall,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-
-                    when (activePanel) {
-                        CameraPanel.LENS -> LensPanel(
-                            lenses = lenses,
-                            selectedLens = selectedLens,
-                            onLensSelected = onLensSelected,
-                            onShowDebug = onShowDebug,
-                        )
-                        CameraPanel.ISO -> IsoPanel(cameraManager, caps)
-                        CameraPanel.SHUTTER -> ShutterPanel(cameraManager, caps)
-                        CameraPanel.FOCUS -> FocusPanel(cameraManager, caps)
-                        CameraPanel.INTERVALOMETER -> IntervalometerPanel(vm, currentLens)
-                        null -> {}
-                    }
+        // Expanded panel (left of icons)
+        AnimatedVisibility(visible = cameraPanel != null) {
+            ExpandedPanel(activePanel = cameraPanel) {
+                when (cameraPanel) {
+                    CameraPanel.LENS -> LensPanel(lenses, selectedLens, onLensSelected, onShowDebug)
+                    CameraPanel.ISO -> IsoPanel(cameraManager, caps)
+                    CameraPanel.SHUTTER -> ShutterPanel(cameraManager, caps)
+                    CameraPanel.FOCUS -> FocusPanel(cameraManager, caps)
+                    else -> {}
                 }
             }
         }
 
-        // ── Icon strip ──────────────────────────────────────────────
+        // Icon strip
         Surface(
             color = Color.Black.copy(alpha = 0.5f),
             shape = RoundedCornerShape(24.dp),
@@ -858,8 +849,6 @@ private fun CameraControlsStrip(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
             ) {
-                // ── Camera controls ─────────────────────────────────
-                // Lens
                 if (lenses.size > 1) {
                     ControlIconButton(
                         icon = Icons.Default.Lens,
@@ -868,19 +857,13 @@ private fun CameraControlsStrip(
                         onClick = { onPanelToggle(CameraPanel.LENS) },
                     )
                 }
-
-                // ISO
                 if (caps.supportsManualExposure) {
                     ControlIconButton(
                         icon = Icons.Default.Iso,
-                        label = if (manualIso != null) "${manualIso}" else "Auto",
+                        label = if (manualIso != null) "$manualIso" else "Auto",
                         active = activePanel == CameraPanel.ISO,
                         onClick = { onPanelToggle(CameraPanel.ISO) },
                     )
-                }
-
-                // Shutter speed
-                if (caps.supportsManualExposure) {
                     ControlIconButton(
                         icon = Icons.Default.ShutterSpeed,
                         label = if (manualExpNs != null) formatShutterSpeed(manualExpNs!!) else "Auto",
@@ -888,8 +871,6 @@ private fun CameraControlsStrip(
                         onClick = { onPanelToggle(CameraPanel.SHUTTER) },
                     )
                 }
-
-                // Focus
                 if (caps.supportsManualFocus) {
                     ControlIconButton(
                         icon = Icons.Default.CenterFocusStrong,
@@ -898,45 +879,118 @@ private fun CameraControlsStrip(
                         onClick = { onPanelToggle(CameraPanel.FOCUS) },
                     )
                 }
+            }
+        }
+    }
+}
 
-                // ── Divider ─────────────────────────────────────────
-                Spacer(Modifier.height(4.dp))
-                Box(
-                    modifier = Modifier
-                        .width(24.dp)
-                        .height(1.dp)
-                        .background(Color.White.copy(alpha = 0.3f)),
-                )
-                Spacer(Modifier.height(4.dp))
+// ── Intervalometer strip (bottom-right: timer, grid, awake, start) ────
 
-                // ── Intervalometer (single button for shots/exposure/gap) ──
+@Composable
+private fun IntervalometerStrip(
+    vm: PulsarViewModel,
+    currentLens: com.ehrocha.pulsar.camera.PhoneLens?,
+    activePanel: CameraPanel?,
+    onPanelToggle: (CameraPanel) -> Unit,
+    gridMode: GridMode = GridMode.OFF,
+    onGridCycle: () -> Unit = {},
+    keepAwake: Boolean = false,
+    onKeepAwakeToggle: (Boolean) -> Unit = {},
+    onStart: () -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
+    val shotCount by vm.shotCount.collectAsState()
+    val exposureMs by vm.exposureMs.collectAsState()
+
+    // Only show panel if it belongs to this strip
+    val intervalPanel = activePanel?.takeIf { it in INTERVALOMETER_PANELS }
+
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Expanded panel (left of icons)
+        AnimatedVisibility(visible = intervalPanel != null) {
+            ExpandedPanel(activePanel = intervalPanel) {
+                when (intervalPanel) {
+                    CameraPanel.INTERVALOMETER -> IntervalometerPanel(vm, currentLens)
+                    else -> {}
+                }
+            }
+        }
+
+        // Icon strip
+        Surface(
+            color = Color.Black.copy(alpha = 0.5f),
+            shape = RoundedCornerShape(24.dp),
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
+            ) {
                 ControlIconButton(
                     icon = Icons.Default.Timer,
                     label = "$shotCount\u00D7${formatExposureLabel(exposureMs)}",
                     active = activePanel == CameraPanel.INTERVALOMETER,
                     onClick = { onPanelToggle(CameraPanel.INTERVALOMETER) },
                 )
-
-                // Grid overlay
                 ControlIconButton(
                     icon = Icons.Default.GridOn,
                     label = gridMode.label,
                     active = gridMode != GridMode.OFF,
                     onClick = onGridCycle,
                 )
-
-                // Keep screen awake
                 ControlIconButton(
                     icon = Icons.Default.LightMode,
                     label = if (keepAwake) "On" else "Off",
                     active = keepAwake,
                     onClick = { onKeepAwakeToggle(!keepAwake) },
                 )
-
-                // ── Start button ────────────────────────────────────
                 Spacer(Modifier.height(4.dp))
                 StartIconButton(onClick = onStart)
             }
+        }
+    }
+}
+
+// Panel group membership
+private val CAMERA_PANELS = setOf(CameraPanel.LENS, CameraPanel.ISO, CameraPanel.SHUTTER, CameraPanel.FOCUS)
+private val INTERVALOMETER_PANELS = setOf(CameraPanel.INTERVALOMETER)
+
+/** Shared expanded panel container with title. */
+@Composable
+private fun ExpandedPanel(
+    activePanel: CameraPanel?,
+    content: @Composable () -> Unit,
+) {
+    Surface(
+        color = Color.Black.copy(alpha = 0.7f),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier
+            .widthIn(max = 260.dp)
+            .padding(end = 8.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            val panelTitle = when (activePanel) {
+                CameraPanel.LENS -> stringResource(R.string.label_lens)
+                CameraPanel.ISO -> "ISO"
+                CameraPanel.SHUTTER -> stringResource(R.string.label_exposure_mode)
+                CameraPanel.FOCUS -> stringResource(R.string.label_focus_mode)
+                CameraPanel.INTERVALOMETER -> stringResource(R.string.mode_intervalometer)
+                null -> ""
+            }
+            if (panelTitle.isNotEmpty()) {
+                Text(
+                    panelTitle,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            content()
         }
     }
 }

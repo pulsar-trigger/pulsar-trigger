@@ -48,6 +48,7 @@ data class LensCapabilities(
     val supportsManualFocus: Boolean = false,
     val minFocusDistance: Float = 0f,  // diopters (0 = infinity)
     val cameraId: String = "",
+    val maxDigitalZoom: Float = 1f,  // from SCALER_AVAILABLE_MAX_DIGITAL_ZOOM
 )
 
 data class PhoneLens(
@@ -406,6 +407,7 @@ class PhoneCameraManager(private val context: Context) {
 
                 val minFocusDist = chars.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) ?: 0f
                 val supportsManualFocus = minFocusDist > 0f
+                val maxDigZoom = chars.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM) ?: 1f
 
                 val capabilities = LensCapabilities(
                     supportsManualExposure = supportsManualExposure,
@@ -414,6 +416,7 @@ class PhoneCameraManager(private val context: Context) {
                     supportsManualFocus = supportsManualFocus,
                     minFocusDistance = minFocusDist,
                     cameraId = cameraId,
+                    maxDigitalZoom = maxDigZoom,
                 )
 
                 val selector = CameraSelector.Builder()
@@ -545,6 +548,7 @@ class PhoneCameraManager(private val context: Context) {
                 val physExpRange = physChars.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE)
                 val physSupportsManual = physHasManualSensor || (physIsoRange != null && physExpRange != null)
                 val physMinFocus = physChars.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE) ?: 0f
+                val physMaxDigZoom = physChars.get(CameraCharacteristics.SCALER_AVAILABLE_MAX_DIGITAL_ZOOM) ?: 1f
 
                 // Use the logical camera's selector — CameraX routes to the physical camera
                 // based on zoom ratio / focal length
@@ -579,6 +583,7 @@ class PhoneCameraManager(private val context: Context) {
                             supportsManualFocus = physMinFocus > 0f,
                             minFocusDistance = physMinFocus,
                             cameraId = physId,
+                            maxDigitalZoom = physMaxDigZoom,
                         ),
                     )
                 )
