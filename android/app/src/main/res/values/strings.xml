@@ -620,6 +620,15 @@
     <string name="tooltip_raw">Save as RAW or JPEG</string>
     <string name="tooltip_ois">Optical image stabilization — disable for tripod</string>
     <string name="tooltip_expsim">Exposure simulation — preview reflects ISO/shutter settings</string>
+    <string name="tooltip_gallery">Open last photo in gallery</string>
+    <string name="tooltip_auto_astro">Auto Astro — NPF exposure, 20 shots, 4s gap</string>
+
+    <!-- About: tribute to Jocelyn Bell Burnell -->
+    <string name="about_tribute_heading">In honor of</string>
+    <string name="about_tribute_name">Dame Jocelyn Bell Burnell</string>
+    <string name="about_tribute_body">Pulsars were discovered in 1967 by Jocelyn Bell Burnell as a graduate student in radio astronomy. This app borrows their name in humble tribute to her discovery and to her enduring championing of science.</string>
+    <string name="about_tribute_link">Read on Wikipedia</string>
+    <string name="toast_no_gallery_app">No gallery app available</string>
     <string name="tooltip_intervalometer">Intervalometer settings</string>
     <!-- Celestial grid calibration warnings -->
     <string name="warning_compass">Compass uncalibrated — wave phone in figure-8</string>

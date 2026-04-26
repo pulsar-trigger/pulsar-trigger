@@ -228,7 +228,7 @@ internal fun ManualActionsContent(
         }
 
         Surface(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(32.dp),
             color = if (active) MaterialTheme.colorScheme.error
                     else MaterialTheme.colorScheme.primary,
             tonalElevation = if (active) 8.dp else 2.dp,
@@ -487,6 +487,7 @@ internal fun IntervalometerPanelContent(
                     range = AppConfig.MIN_SHOT_COUNT..maxShotCount,
                     onValueChange = { onShotCountChanged(it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT)) },
                     enabled = enabled,
+                    presets = listOf(30, 60, 120, 240),
                 )
             }
         }
@@ -752,6 +753,7 @@ internal fun AstroPanelContent(
                     range = AppConfig.MIN_SHOT_COUNT..AppConfig.DEFAULT_MAX_SHOTS,
                     onValueChange = { onShotCountChanged(it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT)) },
                     enabled = enabled,
+                    presets = listOf(30, 60, 120, 240),
                 )
             }
         }
@@ -1509,6 +1511,33 @@ internal fun AboutSectionContent() {
             shape = RoundedCornerShape(12.dp),
         ) {
             Text(stringResource(R.string.about_instagram))
+        }
+
+        Spacer(Modifier.height(8.dp))
+        HorizontalDivider()
+        Spacer(Modifier.height(8.dp))
+
+        Text(
+            stringResource(R.string.about_tribute_heading),
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            stringResource(R.string.about_tribute_name),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            stringResource(R.string.about_tribute_body),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        OutlinedButton(
+            onClick = { uriHandler.openUri("https://en.wikipedia.org/wiki/Jocelyn_Bell_Burnell") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+        ) {
+            Text(stringResource(R.string.about_tribute_link))
         }
 
         Spacer(Modifier.height(8.dp))

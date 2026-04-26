@@ -98,6 +98,32 @@ class PhoneCameraManager(private val context: Context) {
     private val _photoCount = MutableStateFlow(0)
     val photoCount: StateFlow<Int> = _photoCount
 
+    /** URI of the most recently saved photo — used by the gallery shortcut. */
+    private val _lastSavedUri = MutableStateFlow<android.net.Uri?>(null)
+    val lastSavedUri: StateFlow<android.net.Uri?> = _lastSavedUri
+
+    /** When non-null, captures land in DCIM/Pulsar/<this folder> instead of DCIM/Pulsar. */
+    private val _sequenceFolder = MutableStateFlow<String?>(null)
+    val sequenceFolder: StateFlow<String?> = _sequenceFolder
+
+    /** Begin a capture sequence — all subsequent saves go into a fresh subfolder. */
+    fun beginSequenceFolder() {
+        val ts = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
+            .format(System.currentTimeMillis())
+        _sequenceFolder.value = "Sequence_$ts"
+    }
+
+    /** End the active sequence — subsequent saves go back into DCIM/Pulsar. */
+    fun endSequenceFolder() {
+        _sequenceFolder.value = null
+    }
+
+    /** Resolves the MediaStore relative path for the next save. */
+    private fun currentRelativePath(): String {
+        val folder = _sequenceFolder.value
+        return if (folder != null) "DCIM/Pulsar/$folder" else "DCIM/Pulsar"
+    }
+
     // ── Manual exposure controls ─────────────────────────────────────────
     private val _manualIso = MutableStateFlow<Int?>(null)  // null = auto
     val manualIso: StateFlow<Int?> = _manualIso
@@ -810,7 +836,7 @@ class PhoneCameraManager(private val context: Context) {
             put(MediaStore.MediaColumns.DISPLAY_NAME, "PULSAR_$timestamp")
             put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                put(MediaStore.MediaColumns.RELATIVE_PATH, "DCIM/Pulsar")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, currentRelativePath())
             }
         }
 
@@ -827,6 +853,7 @@ class PhoneCameraManager(private val context: Context) {
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                     _isCapturing.value = false
                     _photoCount.value += 1
+                    output.savedUri?.let { _lastSavedUri.value = it }
                     Log.i(TAG, "Photo saved: ${output.savedUri}")
                     if (cont.isActive) cont.resume(true)
                 }
@@ -849,6 +876,16 @@ class PhoneCameraManager(private val context: Context) {
         _isCapturing.value = true
         _lastError.value = null
 
+        // ExpSim off but user has manual ISO + speed: force-apply for the still,
+        // then restore preview to auto on completion.
+        val needsManualOverride = !_expSimEnabled.value
+            && _manualIso.value != null
+            && _manualExposureNs.value != null
+        if (needsManualOverride) {
+            captureActive = true
+            applyManualSettings()
+        }
+
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
             .format(System.currentTimeMillis())
 
@@ -856,7 +893,7 @@ class PhoneCameraManager(private val context: Context) {
             put(MediaStore.MediaColumns.DISPLAY_NAME, "PULSAR_$timestamp")
             put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                put(MediaStore.MediaColumns.RELATIVE_PATH, "DCIM/Pulsar")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, currentRelativePath())
             }
         }
 
@@ -873,13 +910,22 @@ class PhoneCameraManager(private val context: Context) {
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                     _isCapturing.value = false
                     _photoCount.value += 1
+                    output.savedUri?.let { _lastSavedUri.value = it }
                     Log.i(TAG, "Photo saved: ${output.savedUri}")
+                    if (needsManualOverride) {
+                        captureActive = false
+                        applyManualSettings()
+                    }
                 }
 
                 override fun onError(exception: ImageCaptureException) {
                     _isCapturing.value = false
                     _lastError.value = exception.message
                     Log.e(TAG, "Capture failed", exception)
+                    if (needsManualOverride) {
+                        captureActive = false
+                        applyManualSettings()
+                    }
                 }
             },
         )

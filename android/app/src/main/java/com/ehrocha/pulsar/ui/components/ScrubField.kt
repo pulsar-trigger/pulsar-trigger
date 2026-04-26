@@ -168,7 +168,7 @@ fun IntScrubField(
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(
                         "$displayedValue",
-                        style = MaterialTheme.typography.displayMedium,
+                        style = MaterialTheme.typography.displaySmall,
                         fontWeight = FontWeight.Bold,
                         color = if (isDragging) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.onSurface,
@@ -262,7 +262,7 @@ private fun ScrubDigit(
     ) {
         Text(
             "%02d".format(displayedValue),
-            style = MaterialTheme.typography.displayMedium,
+            style = MaterialTheme.typography.displaySmall,
             fontWeight = FontWeight.Bold,
             color = if (isDragging) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurface,
@@ -287,7 +287,7 @@ private fun ScrubDigit(
 private fun Separator() {
     Text(
         ":",
-        style = MaterialTheme.typography.displayMedium,
+        style = MaterialTheme.typography.displaySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 4.dp, vertical = 0.dp),
     )

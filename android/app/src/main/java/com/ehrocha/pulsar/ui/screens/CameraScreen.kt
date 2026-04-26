@@ -6,11 +6,13 @@
 package com.ehrocha.pulsar.ui.screens
 
 import android.Manifest
+import android.content.Intent
 import android.hardware.SensorManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.AnimatedVisibility
@@ -26,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CenterFocusStrong
@@ -33,6 +36,7 @@ import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.Iso
 import androidx.compose.material.icons.filled.Lens
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Timer
@@ -454,6 +458,22 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                     onOisToggle = { cameraManager.setOisEnabled(it) },
                     expSimEnabled = expSimEnabled,
                     onExpSimToggle = { cameraManager.setExpSimEnabled(it) },
+                    onOpenGallery = {
+                        val savedUri = cameraManager.lastSavedUri.value
+                        val intent = if (savedUri != null) {
+                            Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(savedUri, "image/*")
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                        } else {
+                            Intent(Intent.ACTION_VIEW).apply { type = "image/*" }
+                        }
+                        try {
+                            context.startActivity(intent)
+                        } catch (_: Exception) {
+                            Toast.makeText(context, R.string.toast_no_gallery_app, Toast.LENGTH_SHORT).show()
+                        }
+                    },
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .padding(bottom = 8.dp, start = 8.dp),
@@ -472,6 +492,10 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                         vm.selectMode(TriggerMode.INTERVALOMETER)
                         vm.loadQuickMode(FlowStepType.INTERVALOMETER)
                         vm.startFlow()
+                    },
+                    onAutoStart = {
+                        activePanel = null
+                        vm.startAutoAstro()
                     },
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
@@ -965,6 +989,7 @@ private fun CameraSettingsStrip(
     onOisToggle: (Boolean) -> Unit = {},
     expSimEnabled: Boolean = true,
     onExpSimToggle: (Boolean) -> Unit = {},
+    onOpenGallery: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val manualIso by cameraManager.manualIso.collectAsState()
@@ -1064,6 +1089,15 @@ private fun CameraSettingsStrip(
                         tooltip = stringResource(R.string.tooltip_expsim),
                     )
                 }
+
+                // Gallery shortcut — opens last saved photo or system gallery
+                ControlIconButton(
+                    icon = Icons.Default.Collections,
+                    label = "Gallery",
+                    active = false,
+                    onClick = onOpenGallery,
+                    tooltip = stringResource(R.string.tooltip_gallery),
+                )
             }
         }
 
@@ -1090,6 +1124,7 @@ private fun IntervalometerStrip(
     activePanel: CameraPanel?,
     onPanelToggle: (CameraPanel) -> Unit,
     onStart: () -> Unit = {},
+    onAutoStart: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val shotCount by vm.shotCount.collectAsState()
@@ -1127,6 +1162,14 @@ private fun IntervalometerStrip(
                     active = activePanel == CameraPanel.INTERVALOMETER,
                     onClick = { onPanelToggle(CameraPanel.INTERVALOMETER) },
                     tooltip = stringResource(R.string.tooltip_intervalometer),
+                )
+                Spacer(Modifier.height(4.dp))
+                ControlIconButton(
+                    icon = Icons.Default.AutoAwesome,
+                    label = "Auto",
+                    active = false,
+                    onClick = onAutoStart,
+                    tooltip = stringResource(R.string.tooltip_auto_astro),
                 )
                 Spacer(Modifier.height(4.dp))
                 StartIconButton(onClick = onStart)

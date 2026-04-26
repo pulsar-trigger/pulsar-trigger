@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.coroutines.coroutineContext
+import kotlin.math.sqrt
 
 class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -483,6 +484,51 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         saveFlowSteps(listOf(step))
     }
 
+    /**
+     * One-tap astrophotography for phone camera. Computes NPF-rule exposure from
+     * the active lens's metadata, picks a sensible high ISO, then fires a 20-shot
+     * sequence with 4s gaps. Stacking later turns these into a single image.
+     */
+    fun startAutoAstro() {
+        if (!_phoneCameraActive.value) return
+        val lens = phoneCameraManager.lenses.value
+            .getOrNull(phoneCameraManager.selectedLens.value) ?: return
+
+        val expMs = computePhoneNpfExposureMs(lens)
+
+        // Lock a moderate astro ISO if the lens supports manual.
+        lens.capabilities.isoRange?.let { range ->
+            phoneCameraManager.setManualIso(1600.coerceIn(range.lower, range.upper))
+        }
+
+        val step = com.ehrocha.pulsar.model.FlowStep(
+            type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
+            intervalMs = 4_000L,
+            exposureMs = expMs,
+            shotCount = 20,
+            delayMs = 0L,
+        )
+        _flowSteps.value = listOf(step)
+        startFlow()
+    }
+
+    /** NPF rule applied to phone-camera lens metadata (handles small sensors with sub-2µm pitch). */
+    private fun computePhoneNpfExposureMs(lens: com.ehrocha.pulsar.camera.PhoneLens): Long {
+        val focal = if (lens.focalLength > 0f) lens.focalLength else 5f
+        val sensorWidth = if (lens.sensorWidth > 0f) lens.sensorWidth else 6f
+        val cropFactor = (36f / sensorWidth).coerceAtLeast(1f)
+        val aperture = if (lens.aperture > 0f) lens.aperture else 2.0f
+
+        // Estimate horizontal pixel count from megapixels assuming 4:3 aspect ratio.
+        val mp = if (lens.megapixels > 0f) lens.megapixels else 12f
+        val horizPixels = sqrt(mp.toDouble() * 1_000_000.0 * 4.0 / 3.0)
+        val pixelPitchUm = (sensorWidth.toDouble() / horizPixels) * 1000.0
+
+        // NPF: (35 × aperture + 30 × pixelPitch_um) / (focal × cropFactor)
+        val expS = (35.0 * aperture + 30.0 * pixelPitchUm) / (focal * cropFactor)
+        return (expS * 1000).toLong().coerceAtLeast(AppConfig.MIN_ASTRO_EXPOSURE_MS)
+    }
+
     fun saveFlowSteps(steps: List<FlowStep>) {
         _flowSteps.value = steps
         prefs.edit().putString(KEY_FLOW_STEPS, FlowStep.serializeList(steps)).apply()
@@ -889,44 +935,51 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
 
         simulatorJob = viewModelScope.launch {
-            if (startDelayMs > 0) {
-                val totalTimeMs = startDelayMs + totalShots * (expMs + gapMs) - gapMs
-                _status.value = _status.value?.copy(
-                    state = DeviceState.WAITING, shotsTaken = 0,
-                    timeRemainingMs = totalTimeMs,
-                )
-                delay(startDelayMs)
-            }
-
-            for (shot in 1..totalShots) {
-                val remaining = (totalShots - shot + 1) * (expMs + gapMs) - gapMs
-                // Exposing
-                _status.value = _status.value?.copy(
-                    state = DeviceState.RUNNING,
-                    shotsTaken = shot - 1,
-                    timeRemainingMs = remaining,
-                )
-                if (_phoneCameraActive.value) {
-                    phoneCameraManager.captureAndWait()
+            if (_phoneCameraActive.value) phoneCameraManager.beginSequenceFolder()
+            try {
+                if (startDelayMs > 0) {
+                    val totalTimeMs = startDelayMs + totalShots * (expMs + gapMs) - gapMs
+                    _status.value = _status.value?.copy(
+                        state = DeviceState.WAITING, shotsTaken = 0,
+                        timeRemainingMs = totalTimeMs,
+                    )
+                    delay(startDelayMs)
                 }
-                delay(expMs)
-                // Shot complete — transition to WAITING with updated shot count
+
+                for (shot in 1..totalShots) {
+                    val remaining = (totalShots - shot + 1) * (expMs + gapMs) - gapMs
+                    // Exposing
+                    _status.value = _status.value?.copy(
+                        state = DeviceState.RUNNING,
+                        shotsTaken = shot - 1,
+                        timeRemainingMs = remaining,
+                    )
+                    if (_phoneCameraActive.value) {
+                        phoneCameraManager.captureAndWait()
+                    }
+                    delay(expMs)
+                    // Shot complete — transition to WAITING with updated shot count
+                    _status.value = _status.value?.copy(
+                        state = DeviceState.WAITING,
+                        shotsTaken = shot,
+                        timeRemainingMs = (remaining - expMs).coerceAtLeast(0),
+                    )
+                    // Gap (except after last shot)
+                    if (shot < totalShots) {
+                        delay(gapMs)
+                    }
+                }
+
+                // Done
                 _status.value = _status.value?.copy(
-                    state = DeviceState.WAITING,
-                    shotsTaken = shot,
-                    timeRemainingMs = (remaining - expMs).coerceAtLeast(0),
+                    state = DeviceState.IDLE,
+                    timeRemainingMs = 0L,
                 )
-                // Gap (except after last shot)
-                if (shot < totalShots) {
-                    delay(gapMs)
+            } finally {
+                withContext(NonCancellable) {
+                    if (_phoneCameraActive.value) phoneCameraManager.endSequenceFolder()
                 }
             }
-
-            // Done
-            _status.value = _status.value?.copy(
-                state = DeviceState.IDLE,
-                timeRemainingMs = 0L,
-            )
         }
     }
 
@@ -973,6 +1026,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         // Returns the actual exposure time set (ns), or 0 if not supported.
         val actualExpNs = phoneCameraManager.setSensorExposureForCapture(expMs)
         val sensorHandlesExposure = actualExpNs > 0
+        phoneCameraManager.beginSequenceFolder()
 
         try {
             if (startDelayMs > 0) {
@@ -1009,6 +1063,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             // Restore the user's original exposure settings even if cancelled
             withContext(NonCancellable) {
                 phoneCameraManager.restoreExposureSettings()
+                phoneCameraManager.endSequenceFolder()
             }
         }
     }
