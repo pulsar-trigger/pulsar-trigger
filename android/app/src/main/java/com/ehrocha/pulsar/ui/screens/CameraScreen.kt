@@ -30,6 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.GridOn
@@ -495,7 +496,13 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                     },
                     onAutoStart = {
                         activePanel = null
+                        keepAwake = true
                         vm.startAutoAstro()
+                    },
+                    onStormStart = {
+                        activePanel = null
+                        keepAwake = true
+                        vm.startStormCapture()
                     },
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
@@ -1125,6 +1132,7 @@ private fun IntervalometerStrip(
     onPanelToggle: (CameraPanel) -> Unit,
     onStart: () -> Unit = {},
     onAutoStart: () -> Unit = {},
+    onStormStart: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val shotCount by vm.shotCount.collectAsState()
@@ -1170,6 +1178,14 @@ private fun IntervalometerStrip(
                     active = false,
                     onClick = onAutoStart,
                     tooltip = stringResource(R.string.tooltip_auto_astro),
+                )
+                Spacer(Modifier.height(4.dp))
+                ControlIconButton(
+                    icon = Icons.Default.Bolt,
+                    label = "Storm",
+                    active = false,
+                    onClick = onStormStart,
+                    tooltip = stringResource(R.string.tooltip_storm),
                 )
                 Spacer(Modifier.height(4.dp))
                 StartIconButton(onClick = onStart)

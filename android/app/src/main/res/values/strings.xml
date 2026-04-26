@@ -622,6 +622,7 @@
     <string name="tooltip_expsim">Exposure simulation — preview reflects ISO/shutter settings</string>
     <string name="tooltip_gallery">Open last photo in gallery</string>
     <string name="tooltip_auto_astro">Auto Astro — NPF exposure, 20 shots, 4s gap</string>
+    <string name="tooltip_storm">Storm — 4s exposures, no gap, 300 shots</string>
 
     <!-- About: tribute to Jocelyn Bell Burnell -->
     <string name="about_tribute_heading">In honor of</string>

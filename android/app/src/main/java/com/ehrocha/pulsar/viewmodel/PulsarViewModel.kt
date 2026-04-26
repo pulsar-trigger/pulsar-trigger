@@ -512,6 +512,33 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         startFlow()
     }
 
+    /**
+     * One-tap thunderstorm/lightning capture. Long-but-not-too-long exposures with
+     * zero gap to maximize the chance of catching a strike. ISO 400 keeps highlight
+     * headroom for the flash itself. Frames land in their own sequence folder so a
+     * later auto-cull/composite pass can pick out the winners.
+     */
+    fun startStormCapture() {
+        if (!_phoneCameraActive.value) return
+        val lens = phoneCameraManager.lenses.value
+            .getOrNull(phoneCameraManager.selectedLens.value) ?: return
+
+        // Modest ISO — storm sky has ambient light, lightning is bright.
+        lens.capabilities.isoRange?.let { range ->
+            phoneCameraManager.setManualIso(400.coerceIn(range.lower, range.upper))
+        }
+
+        val step = com.ehrocha.pulsar.model.FlowStep(
+            type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
+            intervalMs = 0L,
+            exposureMs = 4_000L,
+            shotCount = 300,
+            delayMs = 0L,
+        )
+        _flowSteps.value = listOf(step)
+        startFlow()
+    }
+
     /** NPF rule applied to phone-camera lens metadata (handles small sensors with sub-2µm pitch). */
     private fun computePhoneNpfExposureMs(lens: com.ehrocha.pulsar.camera.PhoneLens): Long {
         val focal = if (lens.focalLength > 0f) lens.focalLength else 5f
