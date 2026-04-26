@@ -59,9 +59,8 @@ import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.ui.graphics.vector.ImageVector
-import com.ehrocha.pulsar.ui.components.IntStepperField
+import com.ehrocha.pulsar.ui.components.IntScrubField
 import com.ehrocha.pulsar.ui.components.ScrubField
-import com.ehrocha.pulsar.ui.components.TimePicker
 import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
@@ -467,29 +466,27 @@ internal fun IntervalometerPanelContent(
                 enabled = enabled,
             )
 
-            TimePicker(
+            ScrubField(
+                label = stringResource(R.string.label_interval),
                 totalMs = intervalMs,
                 onChanged = { onIntervalChanged(it) },
-                label = stringResource(R.string.label_interval) + " (hh:mm:ss)",
                 enabled = enabled,
             )
 
-            TimePicker(
+            ScrubField(
+                label = stringResource(R.string.label_start_delay),
                 totalMs = delayMs,
                 onChanged = { onDelayChanged(it) },
-                label = stringResource(R.string.label_start_delay) + " (hh:mm:ss)",
                 enabled = enabled,
             )
 
             if (onShotCountChanged != null) {
-                IntStepperField(
+                IntScrubField(
                     label = stringResource(R.string.label_number_of_shots),
                     value = shotCount,
+                    range = AppConfig.MIN_SHOT_COUNT..maxShotCount,
                     onValueChange = { onShotCountChanged(it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT)) },
-                    min = AppConfig.MIN_SHOT_COUNT,
-                    max = maxShotCount,
                     enabled = enabled,
-                    presets = emptyList(),
                 )
             }
         }
@@ -692,13 +689,13 @@ internal fun AstroPanelContent(
                 }
             }
 
-            IntStepperField(
+            IntScrubField(
                 label = stringResource(R.string.label_focal_length),
                 value = focalLength,
+                range = AppConfig.MIN_FOCAL_LENGTH..AppConfig.MAX_FOCAL_LENGTH,
                 onValueChange = { onFocalLengthChanged(it) },
-                min = AppConfig.MIN_FOCAL_LENGTH,
-                max = AppConfig.MAX_FOCAL_LENGTH,
                 enabled = enabled,
+                unit = "mm",
                 presets = AppConfig.FOCAL_LENGTH_PRESETS,
                 presetLabel = { "${it}mm" },
             )
@@ -734,29 +731,27 @@ internal fun AstroPanelContent(
                 }
             }
 
-            TimePicker(
+            ScrubField(
+                label = stringResource(R.string.label_interval),
                 totalMs = gapMs,
                 onChanged = { onGapMsChanged(it) },
-                label = stringResource(R.string.label_interval) + " (hh:mm:ss)",
                 enabled = enabled,
             )
 
-            TimePicker(
+            ScrubField(
+                label = stringResource(R.string.label_start_delay),
                 totalMs = delayMs,
                 onChanged = { onDelayMsChanged(it) },
-                label = stringResource(R.string.label_start_delay) + " (hh:mm:ss)",
                 enabled = enabled,
             )
 
             if (onShotCountChanged != null) {
-                IntStepperField(
+                IntScrubField(
                     label = stringResource(R.string.label_number_of_shots),
                     value = shotCount,
+                    range = AppConfig.MIN_SHOT_COUNT..AppConfig.DEFAULT_MAX_SHOTS,
                     onValueChange = { onShotCountChanged(it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT)) },
-                    min = AppConfig.MIN_SHOT_COUNT,
-                    max = AppConfig.DEFAULT_MAX_SHOTS,
                     enabled = enabled,
-                    presets = emptyList(),
                 )
             }
         }
@@ -811,31 +806,29 @@ internal fun DarkFramePanelContent(
         )
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            TimePicker(
+            ScrubField(
+                label = stringResource(R.string.label_exposure),
                 totalMs = exposureMs,
                 onChanged = { onExposureMsChanged(it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS)) },
-                label = stringResource(R.string.label_exposure) + " (hh:mm:ss)",
                 enabled = enabled,
             )
 
-            TimePicker(
+            ScrubField(
+                label = stringResource(R.string.label_interval),
                 totalMs = gapMs,
                 onChanged = { onGapMsChanged(it.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS)) },
-                label = stringResource(R.string.label_interval) + " (hh:mm:ss)",
                 enabled = enabled,
             )
 
-            IntStepperField(
+            IntScrubField(
                 label = stringResource(R.string.label_dark_frame_count),
                 value = count,
+                range = 1..999,
                 onValueChange = { onCountChanged(it.coerceAtLeast(1)) },
-                min = 1,
-                max = 999,
                 enabled = enabled,
                 presets = listOf(10, 20, 30, 50),
-                presetLabel = { "$it" },
             )
-}
+        }
     }
 }
 
@@ -884,36 +877,34 @@ internal fun RampPanelContent(
         )
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            TimePicker(
+            ScrubField(
+                label = stringResource(R.string.label_ramp_start_exposure),
                 totalMs = startExposureMs,
                 onChanged = { onStartExposureChanged(it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS)) },
-                label = stringResource(R.string.label_ramp_start_exposure) + " (hh:mm:ss)",
                 enabled = enabled,
             )
 
-            TimePicker(
+            ScrubField(
+                label = stringResource(R.string.label_ramp_end_exposure),
                 totalMs = endExposureMs,
                 onChanged = { onEndExposureChanged(it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS)) },
-                label = stringResource(R.string.label_ramp_end_exposure) + " (hh:mm:ss)",
                 enabled = enabled,
             )
 
-            TimePicker(
+            ScrubField(
+                label = stringResource(R.string.label_interval),
                 totalMs = intervalMs,
                 onChanged = { onIntervalChanged(it.coerceAtLeast(AppConfig.MIN_INTERVAL_MS)) },
-                label = stringResource(R.string.label_interval) + " (hh:mm:ss)",
                 enabled = enabled,
             )
 
-            IntStepperField(
+            IntScrubField(
                 label = stringResource(R.string.label_ramp_steps),
                 value = steps,
+                range = 2..999,
                 onValueChange = { onStepsChanged(it.coerceAtLeast(2)) },
-                min = 2,
-                max = 999,
                 enabled = enabled,
                 presets = listOf(20, 50, 100, 200),
-                presetLabel = { "$it" },
             )
         }
     }

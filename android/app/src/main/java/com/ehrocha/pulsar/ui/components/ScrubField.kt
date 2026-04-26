@@ -9,6 +9,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -94,6 +96,124 @@ fun ScrubField(
                     enabled = enabled,
                     modifier = Modifier.weight(1f),
                 )
+            }
+        }
+    }
+}
+
+/**
+ * Integer scrub field. Big number with horizontal drag to change value.
+ * Optional preset chips render below for quick jumps.
+ *
+ * Replaces +/- stepper buttons + numpad popup.
+ */
+@Composable
+fun IntScrubField(
+    label: String,
+    value: Int,
+    range: IntRange,
+    onValueChange: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    unit: String? = null,
+    presets: List<Int> = emptyList(),
+    presetLabel: (Int) -> String = { it.toString() },
+) {
+    val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current
+    val pxPerStep = with(density) { 12.dp.toPx() }
+
+    var dragPx by remember { mutableFloatStateOf(0f) }
+    val isDragging = dragPx != 0f
+    val displayedValue = (value + (dragPx / pxPerStep).roundToInt()).coerceIn(range)
+
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(8.dp))
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .pointerInput(enabled, value, range) {
+                        if (!enabled) return@pointerInput
+                        detectHorizontalDragGestures(
+                            onDragStart = { dragPx = 0f },
+                            onDragEnd = {
+                                if (displayedValue != value) onValueChange(displayedValue)
+                                dragPx = 0f
+                            },
+                            onDragCancel = { dragPx = 0f },
+                            onHorizontalDrag = { _, delta ->
+                                val before = displayedValue
+                                dragPx += delta
+                                val after = (value + (dragPx / pxPerStep).roundToInt())
+                                    .coerceIn(range)
+                                if (after != before) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                            },
+                        )
+                    },
+            ) {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        "$displayedValue",
+                        style = MaterialTheme.typography.displayMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDragging) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface,
+                    )
+                    if (unit != null) {
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            unit,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 6.dp),
+                        )
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+                TickRuler(
+                    pixelOffset = if (isDragging) dragPx else 0f,
+                    anchorActive = isDragging,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(20.dp),
+                )
+            }
+
+            if (presets.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    presets.forEach { preset ->
+                        val selected = preset == value
+                        AssistChip(
+                            onClick = {
+                                if (enabled && preset in range) onValueChange(preset)
+                            },
+                            label = { Text(presetLabel(preset), style = MaterialTheme.typography.labelMedium) },
+                            colors = if (selected) AssistChipDefaults.assistChipColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            ) else AssistChipDefaults.assistChipColors(),
+                            enabled = enabled,
+                        )
+                    }
+                }
             }
         }
     }
