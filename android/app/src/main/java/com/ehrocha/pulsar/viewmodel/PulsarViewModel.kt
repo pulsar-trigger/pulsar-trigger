@@ -513,6 +513,32 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
+     * One-tap star trails capture. Don't fight earth rotation — embrace it. Many
+     * back-to-back medium-long exposures that lighten-blend later into iconic
+     * concentric arcs around the celestial pole.
+     */
+    fun startStarTrails() {
+        if (!_phoneCameraActive.value) return
+        val lens = phoneCameraManager.lenses.value
+            .getOrNull(phoneCameraManager.selectedLens.value) ?: return
+
+        // ISO 800 — moderate; balances per-frame trail brightness against noise.
+        lens.capabilities.isoRange?.let { range ->
+            phoneCameraManager.setManualIso(800.coerceIn(range.lower, range.upper))
+        }
+
+        val step = com.ehrocha.pulsar.model.FlowStep(
+            type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
+            intervalMs = 0L,
+            exposureMs = 30_000L,
+            shotCount = 120,
+            delayMs = 0L,
+        )
+        _flowSteps.value = listOf(step)
+        startFlow()
+    }
+
+    /**
      * One-tap thunderstorm/lightning capture. Long-but-not-too-long exposures with
      * zero gap to maximize the chance of catching a strike. ISO 400 keeps highlight
      * headroom for the flash itself. Frames land in their own sequence folder so a
