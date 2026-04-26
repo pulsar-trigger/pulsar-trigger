@@ -152,6 +152,8 @@ fun SequenceDetailScreen(
         loading = false
     }
 
+    var lastInfo by remember { mutableStateOf<String?>(null) }
+
     fun runStack(type: Stacker.Type) {
         val frames = folder?.frames ?: return
         if (frames.isEmpty() || processing) return
@@ -160,27 +162,58 @@ fun SequenceDetailScreen(
         totalFrames = frames.size
         lastResult = null
         lastError = null
+        lastInfo = null
         scope.launch {
             try {
-                val result = withContext(Dispatchers.Default) {
-                    val cb = Stacker.ProgressCallback { current, total ->
-                        processedFrames = current
-                        totalFrames = total
+                if (type == Stacker.Type.LIGHTNING) {
+                    val res = withContext(Dispatchers.Default) {
+                        Stacker.lightningCompose(context, frames) { current, total ->
+                            processedFrames = current
+                            totalFrames = total
+                        }
                     }
-                    when (type) {
-                        Stacker.Type.LIGHTEN -> Stacker.lightenBlend(context, frames, cb)
-                        Stacker.Type.MEAN -> Stacker.meanStack(context, frames, cb)
+                    if (res == null) {
+                        lastError = context.getString(R.string.stack_decode_failed)
+                    } else if (res.composite == null || res.winnerIndices.isEmpty()) {
+                        lastInfo = context.getString(R.string.stack_no_strikes, res.totalFrames)
+                    } else {
+                        val uri = withContext(Dispatchers.IO) {
+                            Stacker.saveResult(context, res.composite, sequencePath, type)
+                        }
+                        res.composite.recycle()
+                        if (uri != null) {
+                            lastResult = uri
+                            lastInfo = context.getString(
+                                R.string.stack_strikes_found,
+                                res.winnerIndices.size,
+                                res.totalFrames,
+                            )
+                        } else {
+                            lastError = context.getString(R.string.stack_save_failed)
+                        }
                     }
-                }
-                if (result != null) {
-                    val uri = withContext(Dispatchers.IO) {
-                        Stacker.saveResult(context, result, sequencePath, type)
-                    }
-                    result.recycle()
-                    if (uri != null) lastResult = uri
-                    else lastError = context.getString(R.string.stack_save_failed)
                 } else {
-                    lastError = context.getString(R.string.stack_decode_failed)
+                    val result = withContext(Dispatchers.Default) {
+                        val cb = Stacker.ProgressCallback { current, total ->
+                            processedFrames = current
+                            totalFrames = total
+                        }
+                        when (type) {
+                            Stacker.Type.LIGHTEN -> Stacker.lightenBlend(context, frames, cb)
+                            Stacker.Type.MEAN -> Stacker.meanStack(context, frames, cb)
+                            Stacker.Type.LIGHTNING -> null  // handled above
+                        }
+                    }
+                    if (result != null) {
+                        val uri = withContext(Dispatchers.IO) {
+                            Stacker.saveResult(context, result, sequencePath, type)
+                        }
+                        result.recycle()
+                        if (uri != null) lastResult = uri
+                        else lastError = context.getString(R.string.stack_save_failed)
+                    } else {
+                        lastError = context.getString(R.string.stack_decode_failed)
+                    }
                 }
             } catch (e: OutOfMemoryError) {
                 lastError = context.getString(R.string.stack_out_of_memory)
@@ -290,7 +323,7 @@ fun SequenceDetailScreen(
                     Icon(Icons.Default.WbSunny, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        stringResource(R.string.stack_done),
+                        lastInfo ?: stringResource(R.string.stack_done),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.weight(1f),
@@ -307,6 +340,20 @@ fun SequenceDetailScreen(
                 }
             }
             Spacer(Modifier.height(8.dp))
+        } else if (lastInfo != null) {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    lastInfo!!,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(12.dp),
+                )
+            }
+            Spacer(Modifier.height(8.dp))
         }
         if (lastError != null) {
             Text(
@@ -318,10 +365,11 @@ fun SequenceDetailScreen(
         }
 
         // Action buttons
+        val canRun = !processing && !loading && (folder?.frames?.isNotEmpty() == true)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             Button(
                 onClick = { runStack(Stacker.Type.LIGHTEN) },
-                enabled = !processing && !loading && (folder?.frames?.isNotEmpty() == true),
+                enabled = canRun,
                 shape = RoundedCornerShape(28.dp),
                 modifier = Modifier.weight(1f).height(56.dp),
             ) {
@@ -329,7 +377,7 @@ fun SequenceDetailScreen(
             }
             Button(
                 onClick = { runStack(Stacker.Type.MEAN) },
-                enabled = !processing && !loading && (folder?.frames?.isNotEmpty() == true),
+                enabled = canRun,
                 shape = RoundedCornerShape(28.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.secondary,
@@ -339,6 +387,19 @@ fun SequenceDetailScreen(
             ) {
                 Text(stringResource(R.string.stack_mean), fontWeight = FontWeight.Bold)
             }
+        }
+        Spacer(Modifier.height(8.dp))
+        Button(
+            onClick = { runStack(Stacker.Type.LIGHTNING) },
+            enabled = canRun,
+            shape = RoundedCornerShape(28.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.tertiary,
+                contentColor = MaterialTheme.colorScheme.onTertiary,
+            ),
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+        ) {
+            Text(stringResource(R.string.stack_lightning), fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.height(4.dp))
         Text(

@@ -644,6 +644,9 @@
     <string name="stack_decode_failed">Could not read frames.</string>
     <string name="stack_out_of_memory">Out of memory — too many frames or resolution too high.</string>
     <string name="stack_unknown_error">Stacking failed.</string>
+    <string name="stack_lightning">Lightning Composite</string>
+    <string name="stack_strikes_found">%1$d strikes found in %2$d frames — composite saved.</string>
+    <string name="stack_no_strikes">No lightning detected across %1$d frames.</string>
 
     <!-- About: tribute to Jocelyn Bell Burnell -->
     <string name="about_tribute_heading">In honor of</string>

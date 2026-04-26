@@ -29,7 +29,18 @@ import java.util.Locale
  */
 object Stacker {
 
-    enum class Type(val label: String) { LIGHTEN("lighten"), MEAN("mean") }
+    enum class Type(val label: String) {
+        LIGHTEN("lighten"),
+        MEAN("mean"),
+        LIGHTNING("lightning"),
+    }
+
+    /** Result of a lightning auto-cull pass. */
+    data class LightningResult(
+        val totalFrames: Int,
+        val winnerIndices: List<Int>,
+        val composite: Bitmap?,
+    )
 
     /** Reports `current` of `total` frames processed (current is 1-based). */
     fun interface ProgressCallback {
@@ -164,5 +175,72 @@ object Stacker {
         }
     } catch (_: Exception) {
         null
+    }
+
+    private fun decodeDownsampled(context: Context, uri: Uri, sampleSize: Int): Bitmap? = try {
+        context.contentResolver.openInputStream(uri)?.use {
+            val opts = BitmapFactory.Options().apply { inSampleSize = sampleSize.coerceAtLeast(1) }
+            BitmapFactory.decodeStream(it, null, opts)
+        }
+    } catch (_: Exception) {
+        null
+    }
+
+    /**
+     * Lightning auto-cull then composite: walk the sequence, score each frame by
+     * how many near-saturated pixels it has (lightning bolts spike this hard),
+     * flag frames whose ratio is well above the per-sequence median, and
+     * lighten-blend just those winners into a single composite image.
+     *
+     * If nothing stands out (no strike captured), `winnerIndices` is empty and
+     * `composite` is null — caller can surface a friendly "no strikes" message.
+     */
+    fun lightningCompose(
+        context: Context,
+        frames: List<Uri>,
+        progress: ProgressCallback,
+    ): LightningResult? {
+        if (frames.isEmpty()) return null
+
+        // ── Pass 1: bright-pixel ratio per frame, on downsampled frames for speed ──
+        val analysisSample = 8
+        val ratios = DoubleArray(frames.size)
+        val twoPassTotal = frames.size * 2
+        for (i in frames.indices) {
+            val bm = decodeDownsampled(context, frames[i], analysisSample)
+            if (bm != null) {
+                val w = bm.width
+                val h = bm.height
+                val px = IntArray(w * h)
+                bm.getPixels(px, 0, w, 0, 0, w, h)
+                bm.recycle()
+                var bright = 0
+                // Threshold: per-channel sum > 660 ≈ each channel ≥ 220/255.
+                for (p in px) {
+                    val s = ((p shr 16) and 0xff) + ((p shr 8) and 0xff) + (p and 0xff)
+                    if (s > 660) bright++
+                }
+                ratios[i] = bright.toDouble() / (w * h).coerceAtLeast(1)
+            }
+            progress.onProgress(i + 1, twoPassTotal)
+        }
+
+        // ── Threshold = max(3× median, 0.5%). Median is the quiet-sky baseline; ──
+        // ── 0.5% floor catches sequences where every frame is mostly dark.         ──
+        val sortedRatios = ratios.sortedArray()
+        val median = sortedRatios[sortedRatios.size / 2]
+        val threshold = maxOf(median * 3.0, 0.005)
+        val winnerIndices = ratios.indices.filter { ratios[it] > threshold }
+
+        if (winnerIndices.isEmpty()) {
+            return LightningResult(frames.size, emptyList(), null)
+        }
+
+        // ── Pass 2: lighten-blend just the winners at full resolution ──
+        val winnerUris = winnerIndices.map { frames[it] }
+        val composite = lightenBlend(context, winnerUris) { current, _ ->
+            progress.onProgress(frames.size + current, twoPassTotal)
+        }
+        return LightningResult(frames.size, winnerIndices, composite)
     }
 }
