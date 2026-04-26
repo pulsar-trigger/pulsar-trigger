@@ -1201,6 +1201,7 @@ private fun IntervalometerStrip(
                     tooltip = stringResource(R.string.tooltip_intervalometer),
                 )
                 Spacer(Modifier.height(4.dp))
+                // Astro group ───────
                 ControlIconButton(
                     icon = Icons.Default.AutoAwesome,
                     label = "Auto",
@@ -1210,19 +1211,27 @@ private fun IntervalometerStrip(
                 )
                 Spacer(Modifier.height(4.dp))
                 ControlIconButton(
-                    icon = Icons.Default.Bolt,
-                    label = "Storm",
-                    active = selectedMode == CaptureMode.STORM,
-                    onClick = { onModeSelected(CaptureMode.STORM) },
-                    tooltip = stringResource(R.string.tooltip_storm),
-                )
-                Spacer(Modifier.height(4.dp))
-                ControlIconButton(
                     icon = Icons.Default.Loop,
                     label = "Trails",
                     active = selectedMode == CaptureMode.TRAILS,
                     onClick = { onModeSelected(CaptureMode.TRAILS) },
                     tooltip = stringResource(R.string.tooltip_trails),
+                )
+                // ─── Group divider ───
+                Spacer(Modifier.height(10.dp))
+                HorizontalDivider(
+                    modifier = Modifier.fillMaxWidth(0.6f).padding(vertical = 2.dp),
+                    thickness = 1.dp,
+                    color = Color.White.copy(alpha = 0.2f),
+                )
+                Spacer(Modifier.height(10.dp))
+                // Weather/Events group ───────
+                ControlIconButton(
+                    icon = Icons.Default.Bolt,
+                    label = "Storm",
+                    active = selectedMode == CaptureMode.STORM,
+                    onClick = { onModeSelected(CaptureMode.STORM) },
+                    tooltip = stringResource(R.string.tooltip_storm),
                 )
                 Spacer(Modifier.height(4.dp))
                 ControlIconButton(
@@ -1232,7 +1241,7 @@ private fun IntervalometerStrip(
                     onClick = { onModeSelected(CaptureMode.FIREWORKS) },
                     tooltip = stringResource(R.string.tooltip_fireworks),
                 )
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(8.dp))
                 StartIconButton(onClick = onStart)
             }
         }
