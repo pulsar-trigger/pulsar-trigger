@@ -252,6 +252,9 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
     // Camera overlay panel state (only one open at a time)
     var activePanel by remember { mutableStateOf<CameraPanel?>(null) }
 
+    // Selected capture mode — Start fires whichever is selected
+    var selectedCaptureMode by remember { mutableStateOf(CaptureMode.MANUAL) }
+
     // Current lens capabilities
     val currentLens = lenses.getOrNull(selectedLens)
     val caps = currentLens?.capabilities ?: LensCapabilities()
@@ -487,34 +490,40 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                     vm = vm,
                     currentLens = lenses.getOrNull(selectedLens),
                     activePanel = activePanel,
+                    selectedMode = selectedCaptureMode,
+                    onModeSelected = { mode ->
+                        selectedCaptureMode = mode
+                        // Auto modes don't use the param panel — close it on switch.
+                        if (mode != CaptureMode.MANUAL) activePanel = null
+                    },
                     onPanelToggle = { panel ->
                         activePanel = if (activePanel == panel) null else panel
                     },
                     onStart = {
                         activePanel = null
-                        vm.selectMode(TriggerMode.INTERVALOMETER)
-                        vm.loadQuickMode(FlowStepType.INTERVALOMETER)
-                        vm.startFlow()
-                    },
-                    onAutoStart = {
-                        activePanel = null
-                        keepAwake = true
-                        vm.startAutoAstro()
-                    },
-                    onStormStart = {
-                        activePanel = null
-                        keepAwake = true
-                        vm.startStormCapture()
-                    },
-                    onTrailsStart = {
-                        activePanel = null
-                        keepAwake = true
-                        vm.startStarTrails()
-                    },
-                    onFireworksStart = {
-                        activePanel = null
-                        keepAwake = true
-                        vm.startFireworks()
+                        when (selectedCaptureMode) {
+                            CaptureMode.MANUAL -> {
+                                vm.selectMode(TriggerMode.INTERVALOMETER)
+                                vm.loadQuickMode(FlowStepType.INTERVALOMETER)
+                                vm.startFlow()
+                            }
+                            CaptureMode.AUTO -> {
+                                keepAwake = true
+                                vm.startAutoAstro()
+                            }
+                            CaptureMode.STORM -> {
+                                keepAwake = true
+                                vm.startStormCapture()
+                            }
+                            CaptureMode.TRAILS -> {
+                                keepAwake = true
+                                vm.startStarTrails()
+                            }
+                            CaptureMode.FIREWORKS -> {
+                                keepAwake = true
+                                vm.startFireworks()
+                            }
+                        }
                     },
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
@@ -1141,26 +1150,24 @@ private fun IntervalometerStrip(
     vm: PulsarViewModel,
     currentLens: com.ehrocha.pulsar.camera.PhoneLens?,
     activePanel: CameraPanel?,
+    selectedMode: CaptureMode,
+    onModeSelected: (CaptureMode) -> Unit,
     onPanelToggle: (CameraPanel) -> Unit,
     onStart: () -> Unit = {},
-    onAutoStart: () -> Unit = {},
-    onStormStart: () -> Unit = {},
-    onTrailsStart: () -> Unit = {},
-    onFireworksStart: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val shotCount by vm.shotCount.collectAsState()
     val exposureMs by vm.exposureMs.collectAsState()
 
-    // Only show panel if it belongs to this strip
+    // Only show panel if it belongs to this strip and Manual mode is selected
     val intervalPanel = activePanel?.takeIf { it in INTERVALOMETER_PANELS }
 
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Expanded panel (left of icons)
-        AnimatedVisibility(visible = intervalPanel != null) {
+        // Expanded panel (left of icons) — only for Manual mode
+        AnimatedVisibility(visible = intervalPanel != null && selectedMode == CaptureMode.MANUAL) {
             ExpandedPanel(activePanel = intervalPanel) {
                 when (intervalPanel) {
                     CameraPanel.INTERVALOMETER -> IntervalometerPanel(vm, currentLens)
@@ -1180,41 +1187,49 @@ private fun IntervalometerStrip(
             ) {
                 ControlIconButton(
                     icon = Icons.Default.Timer,
-                    label = "$shotCount\u00D7${formatExposureLabel(exposureMs)}",
-                    active = activePanel == CameraPanel.INTERVALOMETER,
-                    onClick = { onPanelToggle(CameraPanel.INTERVALOMETER) },
+                    label = if (selectedMode == CaptureMode.MANUAL)
+                        "$shotCount\u00D7${formatExposureLabel(exposureMs)}"
+                    else "Manual",
+                    active = selectedMode == CaptureMode.MANUAL,
+                    onClick = {
+                        if (selectedMode == CaptureMode.MANUAL) {
+                            onPanelToggle(CameraPanel.INTERVALOMETER)
+                        } else {
+                            onModeSelected(CaptureMode.MANUAL)
+                        }
+                    },
                     tooltip = stringResource(R.string.tooltip_intervalometer),
                 )
                 Spacer(Modifier.height(4.dp))
                 ControlIconButton(
                     icon = Icons.Default.AutoAwesome,
                     label = "Auto",
-                    active = false,
-                    onClick = onAutoStart,
+                    active = selectedMode == CaptureMode.AUTO,
+                    onClick = { onModeSelected(CaptureMode.AUTO) },
                     tooltip = stringResource(R.string.tooltip_auto_astro),
                 )
                 Spacer(Modifier.height(4.dp))
                 ControlIconButton(
                     icon = Icons.Default.Bolt,
                     label = "Storm",
-                    active = false,
-                    onClick = onStormStart,
+                    active = selectedMode == CaptureMode.STORM,
+                    onClick = { onModeSelected(CaptureMode.STORM) },
                     tooltip = stringResource(R.string.tooltip_storm),
                 )
                 Spacer(Modifier.height(4.dp))
                 ControlIconButton(
                     icon = Icons.Default.Loop,
                     label = "Trails",
-                    active = false,
-                    onClick = onTrailsStart,
+                    active = selectedMode == CaptureMode.TRAILS,
+                    onClick = { onModeSelected(CaptureMode.TRAILS) },
                     tooltip = stringResource(R.string.tooltip_trails),
                 )
                 Spacer(Modifier.height(4.dp))
                 ControlIconButton(
                     icon = Icons.Default.Celebration,
                     label = "Fireworks",
-                    active = false,
-                    onClick = onFireworksStart,
+                    active = selectedMode == CaptureMode.FIREWORKS,
+                    onClick = { onModeSelected(CaptureMode.FIREWORKS) },
                     tooltip = stringResource(R.string.tooltip_fireworks),
                 )
                 Spacer(Modifier.height(4.dp))
@@ -1227,6 +1242,8 @@ private fun IntervalometerStrip(
 // Panel group membership
 private val CAMERA_PANELS = setOf(CameraPanel.LENS, CameraPanel.ISO, CameraPanel.FOCUS)
 private val INTERVALOMETER_PANELS = setOf(CameraPanel.INTERVALOMETER)
+
+private enum class CaptureMode { MANUAL, AUTO, STORM, TRAILS, FIREWORKS }
 
 /** Shared expanded panel container with title. */
 @Composable
