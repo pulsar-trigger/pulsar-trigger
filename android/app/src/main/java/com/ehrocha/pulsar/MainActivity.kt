@@ -61,6 +61,8 @@ import com.ehrocha.pulsar.ui.components.NightModeToggle
 import com.ehrocha.pulsar.ui.screens.MainMenuScreen
 import com.ehrocha.pulsar.ui.screens.ModeScreen
 import com.ehrocha.pulsar.ui.screens.ScanScreen
+import com.ehrocha.pulsar.ui.screens.SequenceDetailScreen
+import com.ehrocha.pulsar.ui.screens.SequencesScreen
 import com.ehrocha.pulsar.ui.screens.SettingsScreen
 import com.ehrocha.pulsar.ui.screens.SettingsSection
 import com.ehrocha.pulsar.ui.screens.CustomFlowScreen
@@ -357,6 +359,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     onPlannerSelected = { currentScreen = AppScreen.Planner },
                     onAlignmentSelected = { currentScreen = AppScreen.Alignment },
                     onWhatsUpSelected = { currentScreen = AppScreen.WhatsUp },
+                    onSequencesSelected = { currentScreen = AppScreen.Sequences },
                     onSettingsSelected = { currentScreen = AppScreen.Settings(SettingsSection.UPDATES) },
                 )
             }
@@ -469,6 +472,20 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     onBack = { currentScreen = AppScreen.Menu },
                 )
             }
+            AppScreen.Sequences -> {
+                BackHandler { currentScreen = AppScreen.Menu }
+                SequencesScreen(
+                    onBack = { currentScreen = AppScreen.Menu },
+                    onOpenSequence = { path -> currentScreen = AppScreen.SequenceDetail(path) },
+                )
+            }
+            is AppScreen.SequenceDetail -> {
+                BackHandler { currentScreen = AppScreen.Sequences }
+                SequenceDetailScreen(
+                    sequencePath = screen.path,
+                    onBack = { currentScreen = AppScreen.Sequences },
+                )
+            }
         }
     }
         // ── Bottom bar (Menu screen only) ────────────────────────────
@@ -527,4 +544,6 @@ private sealed class AppScreen {
     data object Alignment : AppScreen()
     data object WhatsUp : AppScreen()
     data object Camera : AppScreen()
+    data object Sequences : AppScreen()
+    data class SequenceDetail(val path: String) : AppScreen()
 }

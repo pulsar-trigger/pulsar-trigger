@@ -626,6 +626,25 @@
     <string name="tooltip_trails">Star Trails — 30s exposures, no gap, 120 shots</string>
     <string name="tooltip_fireworks">Fireworks — 4s exposures, no gap, 200 shots, low ISO</string>
 
+    <!-- Sequences / stacking -->
+    <string name="mode_sequences">Sequences</string>
+    <string name="mode_sequences_desc">Stack captured frames into a single image</string>
+    <string name="sequences_title">Sequences</string>
+    <string name="sequences_empty">No captured sequences yet. Use any auto mode (Auto, Trails, Storm, Fireworks) to fill this list.</string>
+    <string name="sequences_frame_count">%1$d frames · %2$s</string>
+    <string name="sequences_frames_label">frames</string>
+    <string name="sequences_frames_in">%1$d frames in this sequence</string>
+    <string name="stack_lighten">Lighten Stack</string>
+    <string name="stack_mean">Mean Stack</string>
+    <string name="stack_explanation">Lighten = star trails, fireworks, lightning composite. Mean = noise reduction on tracked subjects.</string>
+    <string name="stack_progress">Stacking %1$d / %2$d</string>
+    <string name="stack_done">Stack saved to this sequence folder.</string>
+    <string name="stack_view">View</string>
+    <string name="stack_save_failed">Could not save stacked image.</string>
+    <string name="stack_decode_failed">Could not read frames.</string>
+    <string name="stack_out_of_memory">Out of memory — too many frames or resolution too high.</string>
+    <string name="stack_unknown_error">Stacking failed.</string>
+
     <!-- About: tribute to Jocelyn Bell Burnell -->
     <string name="about_tribute_heading">In honor of</string>
     <string name="about_tribute_name">Dame Jocelyn Bell Burnell</string>

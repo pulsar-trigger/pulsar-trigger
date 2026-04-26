@@ -1,0 +1,350 @@
+/*
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * Copyright (C) 2026 Pulsar Trigger contributors
+ */
+
+package com.ehrocha.pulsar.ui.screens
+
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.stacking.SequenceFolder
+import com.ehrocha.pulsar.stacking.SequenceRepository
+import com.ehrocha.pulsar.stacking.Stacker
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.text.DateFormat
+import java.util.Date
+
+@Composable
+fun SequencesScreen(
+    onBack: () -> Unit,
+    onOpenSequence: (String) -> Unit,
+) {
+    val context = LocalContext.current
+    var folders by remember { mutableStateOf<List<SequenceFolder>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        loading = true
+        folders = withContext(Dispatchers.IO) { SequenceRepository.list(context) }
+        loading = false
+    }
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+            }
+            Spacer(Modifier.width(4.dp))
+            Text(
+                stringResource(R.string.sequences_title),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+
+        when {
+            loading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
+            folders.isEmpty() -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        stringResource(R.string.sequences_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            else -> {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(folders, key = { it.path }) { folder ->
+                        SequenceFolderRow(folder, onClick = { onOpenSequence(folder.path) })
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SequenceFolderRow(folder: SequenceFolder, onClick: () -> Unit) {
+    val date = remember(folder.mostRecentMs) {
+        DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
+            .format(Date(folder.mostRecentMs))
+    }
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(16.dp),
+        ) {
+            Icon(
+                Icons.Default.Layers,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(folder.name, style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    stringResource(R.string.sequences_frame_count, folder.frames.size, date),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+fun SequenceDetailScreen(
+    sequencePath: String,
+    onBack: () -> Unit,
+) {
+    val context = LocalContext.current
+    var folder by remember { mutableStateOf<SequenceFolder?>(null) }
+    var loading by remember { mutableStateOf(true) }
+    var processing by remember { mutableStateOf(false) }
+    var processedFrames by remember { mutableIntStateOf(0) }
+    var totalFrames by remember { mutableIntStateOf(0) }
+    var lastResult by remember { mutableStateOf<Uri?>(null) }
+    var lastError by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(sequencePath) {
+        loading = true
+        folder = withContext(Dispatchers.IO) { SequenceRepository.get(context, sequencePath) }
+        loading = false
+    }
+
+    fun runStack(type: Stacker.Type) {
+        val frames = folder?.frames ?: return
+        if (frames.isEmpty() || processing) return
+        processing = true
+        processedFrames = 0
+        totalFrames = frames.size
+        lastResult = null
+        lastError = null
+        scope.launch {
+            try {
+                val result = withContext(Dispatchers.Default) {
+                    val cb = Stacker.ProgressCallback { current, total ->
+                        processedFrames = current
+                        totalFrames = total
+                    }
+                    when (type) {
+                        Stacker.Type.LIGHTEN -> Stacker.lightenBlend(context, frames, cb)
+                        Stacker.Type.MEAN -> Stacker.meanStack(context, frames, cb)
+                    }
+                }
+                if (result != null) {
+                    val uri = withContext(Dispatchers.IO) {
+                        Stacker.saveResult(context, result, sequencePath, type)
+                    }
+                    result.recycle()
+                    if (uri != null) lastResult = uri
+                    else lastError = context.getString(R.string.stack_save_failed)
+                } else {
+                    lastError = context.getString(R.string.stack_decode_failed)
+                }
+            } catch (e: OutOfMemoryError) {
+                lastError = context.getString(R.string.stack_out_of_memory)
+            } catch (e: Exception) {
+                lastError = e.message ?: context.getString(R.string.stack_unknown_error)
+            } finally {
+                processing = false
+            }
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack, enabled = !processing) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+            }
+            Spacer(Modifier.width(4.dp))
+            Text(
+                folder?.name ?: stringResource(R.string.sequences_title),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+
+        when {
+            loading -> {
+                Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
+            folder == null || folder!!.frames.isEmpty() -> {
+                Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                    Text(
+                        stringResource(R.string.sequences_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            else -> {
+                Box(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(horizontal = 28.dp, vertical = 24.dp),
+                        ) {
+                            Icon(
+                                Icons.Default.Layers,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(48.dp),
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                "${folder!!.frames.size}",
+                                style = MaterialTheme.typography.displayMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Text(
+                                stringResource(R.string.sequences_frames_label),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        // Progress / status
+        if (processing) {
+            val pct = if (totalFrames > 0) processedFrames.toFloat() / totalFrames else 0f
+            LinearProgressIndicator(
+                progress = { pct },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                stringResource(R.string.stack_progress, processedFrames, totalFrames),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(8.dp))
+        }
+        if (lastResult != null) {
+            val resultUri = lastResult!!
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(12.dp),
+                ) {
+                    Icon(Icons.Default.WbSunny, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(R.string.stack_done),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(resultUri, "image/*")
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        try {
+                            context.startActivity(intent)
+                        } catch (_: Exception) {}
+                    }) { Text(stringResource(R.string.stack_view)) }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+        if (lastError != null) {
+            Text(
+                lastError!!,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+            Spacer(Modifier.height(8.dp))
+        }
+
+        // Action buttons
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = { runStack(Stacker.Type.LIGHTEN) },
+                enabled = !processing && !loading && (folder?.frames?.isNotEmpty() == true),
+                shape = RoundedCornerShape(28.dp),
+                modifier = Modifier.weight(1f).height(56.dp),
+            ) {
+                Text(stringResource(R.string.stack_lighten), fontWeight = FontWeight.Bold)
+            }
+            Button(
+                onClick = { runStack(Stacker.Type.MEAN) },
+                enabled = !processing && !loading && (folder?.frames?.isNotEmpty() == true),
+                shape = RoundedCornerShape(28.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary,
+                ),
+                modifier = Modifier.weight(1f).height(56.dp),
+            ) {
+                Text(stringResource(R.string.stack_mean), fontWeight = FontWeight.Bold)
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            stringResource(R.string.stack_explanation),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}

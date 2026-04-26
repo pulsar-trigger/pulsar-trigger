@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LensBlur
 import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.Settings
@@ -60,6 +61,7 @@ fun MainMenuScreen(
     onPlannerSelected: () -> Unit = {},
     onAlignmentSelected: () -> Unit = {},
     onWhatsUpSelected: () -> Unit = {},
+    onSequencesSelected: () -> Unit = {},
     onSettingsSelected: () -> Unit = {},
 ) {
     val fwState by vm.firmwareManager.state.collectAsState()
@@ -212,6 +214,9 @@ fun MainMenuScreen(
                         },
                         LauncherItem(R.string.mode_whats_up, Icons.Default.Visibility) {
                             onWhatsUpSelected()
+                        },
+                        LauncherItem(R.string.mode_sequences, Icons.Default.Layers) {
+                            onSequencesSelected()
                         },
                     )
                     LauncherGrid(toolItems)
