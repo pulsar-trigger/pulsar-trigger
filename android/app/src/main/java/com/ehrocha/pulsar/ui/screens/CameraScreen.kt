@@ -31,6 +31,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Celebration
 import androidx.compose.material.icons.filled.Loop
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CenterFocusStrong
@@ -509,6 +510,11 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                         activePanel = null
                         keepAwake = true
                         vm.startStarTrails()
+                    },
+                    onFireworksStart = {
+                        activePanel = null
+                        keepAwake = true
+                        vm.startFireworks()
                     },
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
@@ -1140,6 +1146,7 @@ private fun IntervalometerStrip(
     onAutoStart: () -> Unit = {},
     onStormStart: () -> Unit = {},
     onTrailsStart: () -> Unit = {},
+    onFireworksStart: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val shotCount by vm.shotCount.collectAsState()
@@ -1201,6 +1208,14 @@ private fun IntervalometerStrip(
                     active = false,
                     onClick = onTrailsStart,
                     tooltip = stringResource(R.string.tooltip_trails),
+                )
+                Spacer(Modifier.height(4.dp))
+                ControlIconButton(
+                    icon = Icons.Default.Celebration,
+                    label = "Fireworks",
+                    active = false,
+                    onClick = onFireworksStart,
+                    tooltip = stringResource(R.string.tooltip_fireworks),
                 )
                 Spacer(Modifier.height(4.dp))
                 StartIconButton(onClick = onStart)

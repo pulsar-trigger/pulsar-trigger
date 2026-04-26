@@ -513,6 +513,32 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
+     * One-tap fireworks capture. Bursts are very bright, so we use the lowest
+     * ISO available and long-enough exposures to capture the full launch+bloom
+     * arc. Zero gap to never miss a burst during a show.
+     */
+    fun startFireworks() {
+        if (!_phoneCameraActive.value) return
+        val lens = phoneCameraManager.lenses.value
+            .getOrNull(phoneCameraManager.selectedLens.value) ?: return
+
+        // Lowest ISO — fireworks are bright; we want highlight headroom.
+        lens.capabilities.isoRange?.let { range ->
+            phoneCameraManager.setManualIso(range.lower.coerceAtMost(200))
+        }
+
+        val step = com.ehrocha.pulsar.model.FlowStep(
+            type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
+            intervalMs = 0L,
+            exposureMs = 4_000L,
+            shotCount = 200,
+            delayMs = 0L,
+        )
+        _flowSteps.value = listOf(step)
+        startFlow()
+    }
+
+    /**
      * One-tap star trails capture. Don't fight earth rotation — embrace it. Many
      * back-to-back medium-long exposures that lighten-blend later into iconic
      * concentric arcs around the celestial pole.
