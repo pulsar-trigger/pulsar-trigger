@@ -46,6 +46,9 @@ data class FlowStep(
     val pauseLabel: String = "Adjust camera settings",
     /** When true, the screen wakes and vibrates when this pause step is reached. */
     val wakeOnPause: Boolean = true,
+    /** Phone-camera-only: if non-null, lock the manual ISO to this value for the
+     *  duration of the step (e.g. low ISO for a long-exposure foreground frame). */
+    val isoOverride: Int? = null,
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
@@ -67,6 +70,7 @@ data class FlowStep(
         put("rampIntervalMs", rampIntervalMs)
         put("pauseLabel", pauseLabel)
         put("wakeOnPause", wakeOnPause)
+        if (isoOverride != null) put("isoOverride", isoOverride)
     }
 
     companion object {
@@ -91,6 +95,7 @@ data class FlowStep(
             rampIntervalMs = json.optLong("rampIntervalMs", AppConfig.DEFAULT_INTERVAL_MS),
             pauseLabel = json.optString("pauseLabel", "Adjust camera settings"),
             wakeOnPause = json.optBoolean("wakeOnPause", true),
+            isoOverride = if (json.has("isoOverride")) json.getInt("isoOverride") else null,
         )
 
         fun serializeList(steps: List<FlowStep>): String {

@@ -495,20 +495,30 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             .getOrNull(phoneCameraManager.selectedLens.value) ?: return
 
         val expMs = computePhoneNpfExposureMs(lens)
+        val isoRange = lens.capabilities.isoRange
+        val skyIso = isoRange?.let { 1600.coerceIn(it.lower, it.upper) }
+        val groundIso = isoRange?.let { 200.coerceIn(it.lower, it.upper) }
 
-        // Lock a moderate astro ISO if the lens supports manual.
-        lens.capabilities.isoRange?.let { range ->
-            phoneCameraManager.setManualIso(1600.coerceIn(range.lower, range.upper))
-        }
-
-        val step = com.ehrocha.pulsar.model.FlowStep(
+        // Two-step flow: 20 sharp-star sky frames, then one bonus long-exposure low-ISO
+        // ground frame. Both land in the same sequence folder so the eventual Nightscape
+        // compositor can pick out the foreground without re-shooting.
+        val sky = com.ehrocha.pulsar.model.FlowStep(
             type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
             intervalMs = 4_000L,
             exposureMs = expMs,
             shotCount = 20,
             delayMs = 0L,
+            isoOverride = skyIso,
         )
-        _flowSteps.value = listOf(step)
+        val ground = com.ehrocha.pulsar.model.FlowStep(
+            type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
+            intervalMs = 0L,
+            exposureMs = 30_000L,
+            shotCount = 1,
+            delayMs = 0L,
+            isoOverride = groundIso,
+        )
+        _flowSteps.value = listOf(sky, ground)
         startFlow()
     }
 
@@ -670,6 +680,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         _flowPaused.value = false
         _flowCurrentStep.value = 0
         flowJob = viewModelScope.launch {
+            // One sequence folder for the whole flow — all steps share a single
+            // DCIM/Pulsar/Sequence_<ts>/ so multi-step captures (e.g. Auto Astro
+            // sky frames + bonus foreground) stack cleanly together.
+            if (_phoneCameraActive.value) phoneCameraManager.beginSequenceFolder()
             try {
                 for (i in steps.indices) {
                     _flowCurrentStep.value = i
@@ -677,6 +691,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 // All steps complete
             } finally {
+                withContext(NonCancellable) {
+                    if (_phoneCameraActive.value) phoneCameraManager.endSequenceFolder()
+                }
                 _flowRunning.value = false
                 _flowPaused.value = false
                 _flowCurrentStep.value = -1
@@ -722,7 +739,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 if (_simulatorActive.value) {
                     simulateShots(shots, expMs, gapMs, step.delayMs)
                 } else if (_phoneCameraActive.value) {
-                    phoneCameraShots(shots, expMs, gapMs, step.delayMs)
+                    phoneCameraShots(shots, expMs, gapMs, step.delayMs, step.isoOverride)
                 } else {
                     sendModeCommand(
                         CommandBuilder.setIntervalometer(
@@ -1099,13 +1116,29 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         _deviceName.value = "Pulsar"
     }
 
-    /** Run a shot sequence using the phone camera via CameraX. */
-    private suspend fun phoneCameraShots(totalShots: Int, expMs: Long, gapMs: Long, startDelayMs: Long) {
-        // Configure sensor exposure time if the hardware supports it.
-        // Returns the actual exposure time set (ns), or 0 if not supported.
+    /**
+     * Run a shot sequence using the phone camera via CameraX.
+     *
+     * Sequence folder is owned by [startFlow], not this function — multi-step flows
+     * (e.g. Auto Astro sky + bonus foreground) deliberately share one folder.
+     *
+     * @param isoOverride if non-null, manual ISO is locked to this value for the
+     *   duration of the step and restored on exit. Used for the bonus foreground
+     *   frame (low ISO + long exposure).
+     */
+    private suspend fun phoneCameraShots(
+        totalShots: Int,
+        expMs: Long,
+        gapMs: Long,
+        startDelayMs: Long,
+        isoOverride: Int? = null,
+    ) {
         val actualExpNs = phoneCameraManager.setSensorExposureForCapture(expMs)
         val sensorHandlesExposure = actualExpNs > 0
-        phoneCameraManager.beginSequenceFolder()
+
+        // ISO override stash so we can restore on exit
+        val savedIso = phoneCameraManager.manualIso.value
+        if (isoOverride != null) phoneCameraManager.setManualIso(isoOverride)
 
         try {
             if (startDelayMs > 0) {
@@ -1121,11 +1154,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 _status.value = _status.value?.copy(
                     state = DeviceState.RUNNING, shotsTaken = shot - 1, timeRemainingMs = remaining,
                 )
-                // Fire the phone camera — the sensor integrates light for the configured
-                // exposure time. captureAndWait() blocks until the photo is saved.
                 phoneCameraManager.captureAndWait()
-                // If the sensor doesn't support manual exposure, simulate the exposure
-                // duration with a delay so interval timing stays consistent.
                 if (!sensorHandlesExposure) {
                     delay(expMs)
                 }
@@ -1139,10 +1168,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             }
             _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
         } finally {
-            // Restore the user's original exposure settings even if cancelled
             withContext(NonCancellable) {
                 phoneCameraManager.restoreExposureSettings()
-                phoneCameraManager.endSequenceFolder()
+                if (isoOverride != null) phoneCameraManager.setManualIso(savedIso)
             }
         }
     }
