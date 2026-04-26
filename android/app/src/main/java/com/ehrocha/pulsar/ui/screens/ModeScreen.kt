@@ -50,10 +50,13 @@ import com.ehrocha.pulsar.ui.theme.WaitingYellow
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.outlined.Info
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.input.pointer.pointerInput
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModeScreen(
     vm: PulsarViewModel,
@@ -99,6 +102,46 @@ fun ModeScreen(
             Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
 
             Spacer(Modifier.weight(1f))
+
+            // Mode-specific help — hidden while running to keep chrome clean
+            if (!isRunning) {
+                val helpRes = when (targetMode) {
+                    TriggerMode.INTERVALOMETER -> R.string.panel_intervalometer_help
+                    TriggerMode.ASTRO -> R.string.panel_astro_help
+                    TriggerMode.DARK_FRAME -> R.string.dark_frame_hint
+                    TriggerMode.RAMP -> R.string.ramp_hint
+                    TriggerMode.PRESS_HOLD, TriggerMode.PRESS_LOCK -> R.string.panel_manual_help
+                    else -> null
+                }
+                if (helpRes != null) {
+                    val tooltipState = rememberTooltipState(isPersistent = true)
+                    val scope = rememberCoroutineScope()
+                    val helpTitle = title
+                    val helpText = stringResource(helpRes)
+                    TooltipBox(
+                        positionProvider = TooltipDefaults.rememberRichTooltipPositionProvider(),
+                        tooltip = {
+                            RichTooltip(
+                                title = { Text(helpTitle) },
+                                action = {
+                                    TextButton(onClick = { scope.launch { tooltipState.dismiss() } }) {
+                                        Text(stringResource(R.string.action_dismiss))
+                                    }
+                                },
+                            ) { Text(helpText) }
+                        },
+                        state = tooltipState,
+                    ) {
+                        IconButton(onClick = { scope.launch { tooltipState.show() } }) {
+                            Icon(
+                                Icons.Outlined.Info,
+                                contentDescription = stringResource(R.string.cd_help),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
 
             // Lock toggle — only visible when a sequence is running
             if (isRunning && targetMode != TriggerMode.PRESS_HOLD) {

@@ -54,7 +54,9 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.DeveloperBoard
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SaveAlt
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.ehrocha.pulsar.ui.components.IntStepperField
@@ -134,18 +136,24 @@ internal fun DefaultActionsContent(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Button(
             onClick = { if (isRunning) onStop() else onStart() },
             enabled = connected,
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(32.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = if (isRunning) MaterialTheme.colorScheme.error
                 else MaterialTheme.colorScheme.primary
             ),
-            modifier = Modifier.fillMaxWidth().height(56.dp)
+            modifier = Modifier.fillMaxWidth().height(64.dp)
         ) {
+            Icon(
+                imageVector = if (isRunning) Icons.Default.Stop else Icons.Default.PlayArrow,
+                contentDescription = null,
+                modifier = Modifier.size(28.dp),
+            )
+            Spacer(Modifier.width(8.dp))
             Text(
                 text = if (isRunning) stringResource(R.string.btn_stop) else stringResource(R.string.btn_start),
                 style = MaterialTheme.typography.titleMedium,
@@ -314,18 +322,24 @@ internal fun AstroActionsContent(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Button(
             onClick = { if (isRunning) onStop() else onStart() },
             enabled = connected,
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(32.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = if (isRunning) MaterialTheme.colorScheme.error
                                  else MaterialTheme.colorScheme.primary
             ),
-            modifier = Modifier.fillMaxWidth().height(56.dp)
+            modifier = Modifier.fillMaxWidth().height(64.dp)
         ) {
+            Icon(
+                imageVector = if (isRunning) Icons.Default.Stop else Icons.Default.PlayArrow,
+                contentDescription = null,
+                modifier = Modifier.size(28.dp),
+            )
+            Spacer(Modifier.width(8.dp))
             Text(
                 text = stringResource(if (isRunning) R.string.btn_stop_astro else R.string.btn_start_astro),
                 style = MaterialTheme.typography.titleMedium,
@@ -345,6 +359,57 @@ internal fun AstroActionsContent(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+/** Glanceable two-column summary for mode panels. */
+@Composable
+private fun HeroSummary(
+    primaryLabel: String,
+    primaryValue: String,
+    secondaryLabel: String,
+    secondaryValue: String,
+) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    primaryLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    primaryValue,
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            VerticalDivider(
+                modifier = Modifier.height(56.dp).padding(horizontal = 12.dp),
+                color = MaterialTheme.colorScheme.outlineVariant,
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    secondaryLabel,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    secondaryValue,
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
         }
     }
 }
@@ -385,56 +450,15 @@ internal fun IntervalometerPanelContent(
 ) {
     val totalSequenceTimeMs = delayMs + shotCount.toLong() * (exposureMs + intervalMs) - intervalMs
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = modifier) {
-        PanelHelpHeader(
-            title = stringResource(R.string.panel_intervalometer),
-            helpText = stringResource(R.string.panel_intervalometer_help),
+    Column(verticalArrangement = Arrangement.spacedBy(20.dp), modifier = modifier) {
+        HeroSummary(
+            primaryLabel = stringResource(R.string.label_shots),
+            primaryValue = "$shotCount",
+            secondaryLabel = stringResource(R.string.label_total_duration),
+            secondaryValue = formatDuration(totalSequenceTimeMs),
         )
 
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            tonalElevation = 4.dp,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text(
-                    stringResource(R.string.label_sequence_estimate),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.label_shots), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("$shotCount", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.label_total_duration), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(formatDuration(totalSequenceTimeMs), style = MaterialTheme.typography.headlineLarge)
-                    }
-                }
-                
-                LinearProgressIndicator(
-                    progress = { (exposureMs.toFloat() / (exposureMs + intervalMs)).coerceIn(0f, 1f) },
-                    modifier = Modifier.fillMaxWidth().height(4.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                    strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
-                )
-                
-                Text(
-                    stringResource(R.string.label_duty_cycle, (exposureMs.toFloat() / (exposureMs + intervalMs) * 100).toInt()),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.alpha(0.7f)
-                )
-            }
-        }
-
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(stringResource(R.string.label_capture_sequence), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-            
             TimePicker(
                 totalMs = exposureMs,
                 onChanged = { onExposureChanged(it) },
@@ -487,11 +511,6 @@ internal fun ManualPanelContent(
         verticalArrangement = Arrangement.spacedBy(20.dp),
         modifier = modifier
     ) {
-        PanelHelpHeader(
-            title = stringResource(R.string.panel_manual),
-            helpText = stringResource(R.string.panel_manual_help),
-        )
-
         Surface(
             shape = RoundedCornerShape(12.dp),
             tonalElevation = 2.dp,
@@ -562,21 +581,15 @@ internal fun AstroPanelContent(
 ) {
     val maxExposureMs = AppConfig.astroExposureMs(focalLength, cropFactor, ruleDivisor)
     val maxExposureS = AppConfig.astroExposureS(focalLength, cropFactor, ruleDivisor)
-    val intervalMs = maxExposureMs + gapMs
     val totalTimeMs = delayMs + shotCount.toLong() * (maxExposureMs + gapMs) - gapMs
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = modifier) {
-        PanelHelpHeader(
-            title = stringResource(R.string.panel_astro),
-            helpText = stringResource(R.string.panel_astro_help),
-        )
-
+    Column(verticalArrangement = Arrangement.spacedBy(20.dp), modifier = modifier) {
         Surface(
-            shape = RoundedCornerShape(16.dp),
-            tonalElevation = 4.dp,
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     val ruleLabel = if (ruleDivisor == AppConfig.NPF_RULE_DIVISOR)
                         stringResource(R.string.label_npf_readout)
@@ -584,41 +597,37 @@ internal fun AstroPanelContent(
                         stringResource(R.string.label_rule_readout, ruleDivisor)
                     Text(
                         ruleLabel,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f)
                     )
                     Surface(
                         color = MaterialTheme.colorScheme.primaryContainer,
-                        shape = RoundedCornerShape(4.dp)
+                        shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(
-                            stringResource(R.string.label_effective_focal, "%.1f".format(focalLength * cropFactor)), 
+                            stringResource(R.string.label_effective_focal, "%.1f".format(focalLength * cropFactor)),
                             style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                         )
                     }
                 }
-                
-                Row(modifier = Modifier.fillMaxWidth()) {
+
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.label_max_exposure), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(formatDuration(maxExposureMs), style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(R.string.label_max_exposure), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(formatDuration(maxExposureMs), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
+                    VerticalDivider(
+                        modifier = Modifier.height(56.dp).padding(horizontal = 12.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                    )
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.label_total_duration), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(formatDuration(totalTimeMs), style = MaterialTheme.typography.headlineLarge)
+                        Text(stringResource(R.string.label_total_duration), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(formatDuration(totalTimeMs), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
                     }
                 }
-                
-                LinearProgressIndicator(
-                    progress = { (maxExposureMs.toFloat() / intervalMs).coerceIn(0f, 1f) },
-                    modifier = Modifier.fillMaxWidth().height(4.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                    strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
-                )
 
                 val formulaText = if (ruleDivisor == AppConfig.NPF_RULE_DIVISOR)
                     stringResource(R.string.label_npf_formula, focalLength, "$cropFactor", "%.1f".format(maxExposureS))
@@ -629,7 +638,7 @@ internal fun AstroPanelContent(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().alpha(0.6f)
+                    modifier = Modifier.fillMaxWidth().alpha(0.7f)
                 )
 
                 // NPF estimation note
@@ -669,20 +678,15 @@ internal fun AstroPanelContent(
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(stringResource(R.string.label_optics_configuration), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-            
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.label_sensor_preset), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    SENSOR_PRESETS.forEachIndexed { index, preset ->
-                        SegmentedButton(
-                            selected = cropFactor == preset.crop,
-                            onClick = { if (enabled) onCropFactorChanged(preset.crop) },
-                            enabled = enabled,
-                            shape = SegmentedButtonDefaults.itemShape(index = index, count = SENSOR_PRESETS.size),
-                        ) {
-                            Text("${preset.shortLabel}\n${preset.crop}×", style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, maxLines = 2)
-                        }
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                SENSOR_PRESETS.forEachIndexed { index, preset ->
+                    SegmentedButton(
+                        selected = cropFactor == preset.crop,
+                        onClick = { if (enabled) onCropFactorChanged(preset.crop) },
+                        enabled = enabled,
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = SENSOR_PRESETS.size),
+                    ) {
+                        Text("${preset.shortLabel}\n${preset.crop}×", style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, maxLines = 2)
                     }
                 }
             }
@@ -700,8 +704,6 @@ internal fun AstroPanelContent(
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(stringResource(R.string.label_capture_sequence), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-            
             if (onRuleChanged != null) {
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                     SegmentedButton(
@@ -799,30 +801,13 @@ internal fun DarkFramePanelContent(
 ) {
     val totalTimeMs = count.toLong() * (exposureMs + gapMs)
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = modifier) {
-        PanelHelpHeader(
-            title = stringResource(R.string.mode_dark_frame),
-            helpText = stringResource(R.string.dark_frame_hint),
+    Column(verticalArrangement = Arrangement.spacedBy(20.dp), modifier = modifier) {
+        HeroSummary(
+            primaryLabel = stringResource(R.string.label_exposure),
+            primaryValue = formatDuration(exposureMs),
+            secondaryLabel = stringResource(R.string.label_total_duration),
+            secondaryValue = formatDuration(totalTimeMs),
         )
-
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            tonalElevation = 4.dp,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.label_exposure), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(formatDuration(exposureMs), style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.label_total_duration), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(formatDuration(totalTimeMs), style = MaterialTheme.typography.headlineLarge)
-                    }
-                }
-            }
-        }
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             TimePicker(
@@ -889,34 +874,15 @@ internal fun RampPanelContent(
     val avgExpMs = (startExposureMs + endExposureMs) / 2
     val totalTimeMs = steps.toLong() * (avgExpMs + intervalMs)
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = modifier) {
-        PanelHelpHeader(
-            title = stringResource(R.string.mode_ramp),
-            helpText = stringResource(R.string.ramp_hint),
+    Column(verticalArrangement = Arrangement.spacedBy(20.dp), modifier = modifier) {
+        HeroSummary(
+            primaryLabel = stringResource(R.string.label_shots),
+            primaryValue = "$steps",
+            secondaryLabel = stringResource(R.string.label_total_duration),
+            secondaryValue = formatDuration(totalTimeMs),
         )
 
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            tonalElevation = 4.dp,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.label_shots), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("$steps", style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.primary)
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.label_total_duration), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(formatDuration(totalTimeMs), style = MaterialTheme.typography.headlineLarge)
-                    }
-                }
-            }
-        }
-
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(stringResource(R.string.label_capture_sequence), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-
             TimePicker(
                 totalMs = startExposureMs,
                 onChanged = { onStartExposureChanged(it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS)) },
