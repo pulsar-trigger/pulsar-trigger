@@ -16,6 +16,7 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -76,13 +77,17 @@ import com.ehrocha.pulsar.camera.LensCapabilities
 import com.ehrocha.pulsar.camera.PhoneCameraManager
 import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.ui.theme.ExposureGreen
+import com.ehrocha.pulsar.ui.theme.StatusRed
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 import com.ehrocha.pulsar.ui.theme.WaitingYellow
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.text.DateFormat
+import java.util.Date
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -534,14 +539,22 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
 
         // ── Bottom bar (only when running) ─────────────────────────
         if (isRunning) {
+            val flowSteps by vm.flowSteps.collectAsState()
+            val flowCurrentStep by vm.flowCurrentStep.collectAsState()
+            val activeStep = flowSteps.getOrNull(flowCurrentStep)
+            val activeShotCount = activeStep?.shotCount ?: shotCount
+            val activeExpMs = activeStep?.exposureMs ?: vm.exposureMs.collectAsState().value
+            val activeGapMs = activeStep?.intervalMs ?: vm.intervalMs.collectAsState().value
             Surface(
                 color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 2.dp,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                RunningBar(
+                RunningStatusPanel(
                     status = status,
-                    totalShots = shotCount,
+                    totalShots = activeShotCount,
+                    exposureMs = activeExpMs,
+                    gapMs = activeGapMs,
                     onStop = { vm.stop() },
                 )
             }
@@ -598,79 +611,231 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
     }
 }
 
-/** Compact bottom bar when running — state + shot counter + stop button. */
+/**
+ * Bottom bar shown while a sequence is running. Live phase countdown, per-phase
+ * progress bars, total time remaining, and a finishes-at timestamp — same idea as
+ * the ESP32 mode panels' RunningStatusContent but laid out compactly so the camera
+ * preview stays visible above it.
+ */
 @Composable
-private fun RunningBar(
+private fun RunningStatusPanel(
     status: com.ehrocha.pulsar.ble.StatusFrame,
     totalShots: Int,
+    exposureMs: Long,
+    gapMs: Long,
     onStop: () -> Unit,
 ) {
+    // ── Live tick / phase timing (ported from ModeScreen.RunningStatusContent) ──
+    var lastUpdateTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var lastRemainingMs by remember { mutableLongStateOf(status.timeRemainingMs) }
+    var liveRemainingMs by remember { mutableLongStateOf(status.timeRemainingMs) }
+    var phaseStartTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var lastState by remember { mutableStateOf(status.state) }
+
+    LaunchedEffect(status.timeRemainingMs, status.shotsTaken) {
+        lastUpdateTime = System.currentTimeMillis()
+        lastRemainingMs = status.timeRemainingMs
+        liveRemainingMs = status.timeRemainingMs
+    }
+    LaunchedEffect(status.state) {
+        if (status.state != lastState) {
+            phaseStartTime = System.currentTimeMillis()
+            lastState = status.state
+        }
+    }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(100L)
+            val elapsed = System.currentTimeMillis() - lastUpdateTime
+            liveRemainingMs = (lastRemainingMs - elapsed).coerceAtLeast(0)
+        }
+    }
+
+    val phaseDurationMs = when (status.state) {
+        DeviceState.RUNNING -> exposureMs
+        DeviceState.WAITING -> gapMs
+        else -> 0L
+    }
+    val phaseElapsed = System.currentTimeMillis() - phaseStartTime
+    val phaseRemainingMs = (phaseDurationMs - phaseElapsed).coerceAtLeast(0)
+
     val displayShots = when (status.state) {
         DeviceState.RUNNING, DeviceState.WAITING -> status.shotsTaken + 1
         else -> status.shotsTaken
     }
-    val stateColor = when (status.state) {
-        DeviceState.RUNNING -> ExposureGreen
-        DeviceState.WAITING -> WaitingYellow
-        else -> MaterialTheme.colorScheme.primary
-    }
 
-    Row(
+    val exposureProgress = when (status.state) {
+        DeviceState.RUNNING ->
+            if (exposureMs > 0) (phaseElapsed.toFloat() / exposureMs).coerceIn(0f, 1f) else 0f
+        else -> 0f
+    }
+    val waitProgress = when (status.state) {
+        DeviceState.WAITING ->
+            if (gapMs > 0) (phaseElapsed.toFloat() / gapMs).coerceIn(0f, 1f) else 0f
+        else -> 0f
+    }
+    val smoothExp by animateFloatAsState(
+        targetValue = exposureProgress,
+        animationSpec = tween(durationMillis = 300),
+        label = "expProgress",
+    )
+    val smoothWait by animateFloatAsState(
+        targetValue = waitProgress,
+        animationSpec = tween(durationMillis = 300),
+        label = "waitProgress",
+    )
+
+    val stateColor by animateColorAsState(
+        targetValue = when (status.state) {
+            DeviceState.RUNNING -> ExposureGreen
+            DeviceState.WAITING -> WaitingYellow
+            DeviceState.ERROR -> StatusRed
+            else -> MaterialTheme.colorScheme.primary
+        },
+        label = "stateColor",
+    )
+
+    Column(
         modifier = Modifier
             .navigationBarsPadding()
             .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        // State badge
-        Surface(
-            color = stateColor.copy(alpha = 0.15f),
-            shape = RoundedCornerShape(8.dp),
+        // Row 1: state badge with phase countdown · shot counter · stop
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            Surface(
+                color = stateColor.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(8.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(stateColor),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        when (status.state) {
+                            DeviceState.RUNNING -> stringResource(R.string.state_exposing)
+                            DeviceState.WAITING -> stringResource(R.string.state_waiting)
+                            else -> status.state.name
+                        },
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = stateColor,
+                    )
+                    if (phaseDurationMs > 0 && phaseRemainingMs > 0) {
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            formatTimeShort(phaseRemainingMs),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = stateColor,
+                        )
+                    }
+                }
+            }
+            Text(
+                "$displayShots / $totalShots",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f),
+            )
+            Button(
+                onClick = onStop,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Icon(Icons.Default.Stop, contentDescription = null)
+                Spacer(Modifier.width(4.dp))
+                Text(stringResource(R.string.btn_stop), fontWeight = FontWeight.Bold)
+            }
+        }
+
+        // Row 2: per-phase progress bars (only when both phases have non-zero duration)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                stringResource(R.string.state_exposing),
+                style = MaterialTheme.typography.labelSmall,
+                color = ExposureGreen,
+                modifier = Modifier.width(56.dp),
+            )
+            LinearProgressIndicator(
+                progress = { smoothExp },
+                modifier = Modifier.weight(1f).height(6.dp),
+                color = ExposureGreen,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
+            )
+        }
+        if (gapMs > 0) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(stateColor),
-                )
-                Spacer(Modifier.width(6.dp))
                 Text(
-                    when (status.state) {
-                        DeviceState.RUNNING -> stringResource(R.string.state_exposing)
-                        DeviceState.WAITING -> stringResource(R.string.state_waiting)
-                        else -> status.state.name
-                    },
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = stateColor,
+                    stringResource(R.string.state_waiting),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = WaitingYellow,
+                    modifier = Modifier.width(56.dp),
+                )
+                LinearProgressIndicator(
+                    progress = { smoothWait },
+                    modifier = Modifier.weight(1f).height(6.dp),
+                    color = WaitingYellow,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
                 )
             }
         }
 
-        // Shot counter
-        Text(
-            "$displayShots / $totalShots",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.weight(1f),
-        )
-
-        // Stop button
-        Button(
-            onClick = onStop,
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-            shape = RoundedCornerShape(12.dp),
-        ) {
-            Icon(Icons.Default.Stop, contentDescription = null)
-            Spacer(Modifier.width(4.dp))
-            Text(stringResource(R.string.btn_stop), fontWeight = FontWeight.Bold)
+        // Row 3: total time remaining + finishes-at
+        if (liveRemainingMs > 0) {
+            val finishTime = remember(liveRemainingMs / 1000) {
+                DateFormat.getTimeInstance(DateFormat.SHORT)
+                    .format(Date(System.currentTimeMillis() + liveRemainingMs))
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    formatTimeShort(liveRemainingMs),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    "·",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    stringResource(R.string.finishes_at, finishTime),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
+}
+
+private fun formatTimeShort(ms: Long): String {
+    val totalSec = ms / 1000
+    val h = totalSec / 3600
+    val m = (totalSec % 3600) / 60
+    val s = totalSec % 60
+    return if (h > 0) "%d:%02d:%02d".format(h, m, s)
+    else "%d:%02d".format(m, s)
 }
 
 // ── Grid overlay ────────────────────────────────────────────────────────
@@ -1179,11 +1344,11 @@ private fun IntervalometerStrip(
         // Icon strip
         Surface(
             color = Color.Black.copy(alpha = 0.5f),
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(20.dp),
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
+                modifier = Modifier.padding(vertical = 4.dp, horizontal = 2.dp),
             ) {
                 ControlIconButton(
                     icon = Icons.Default.Timer,
@@ -1209,7 +1374,7 @@ private fun IntervalometerStrip(
                     onClick = { onModeSelected(CaptureMode.AUTO) },
                     tooltip = stringResource(R.string.tooltip_auto_astro),
                 )
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(2.dp))
                 ControlIconButton(
                     icon = Icons.Default.Loop,
                     label = "Trails",
@@ -1218,13 +1383,13 @@ private fun IntervalometerStrip(
                     tooltip = stringResource(R.string.tooltip_trails),
                 )
                 // ─── Group divider ───
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(6.dp))
                 HorizontalDivider(
-                    modifier = Modifier.fillMaxWidth(0.6f).padding(vertical = 2.dp),
+                    modifier = Modifier.fillMaxWidth(0.6f),
                     thickness = 1.dp,
                     color = Color.White.copy(alpha = 0.2f),
                 )
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(6.dp))
                 // Weather/Events group ───────
                 ControlIconButton(
                     icon = Icons.Default.Bolt,
@@ -1233,7 +1398,7 @@ private fun IntervalometerStrip(
                     onClick = { onModeSelected(CaptureMode.STORM) },
                     tooltip = stringResource(R.string.tooltip_storm),
                 )
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(2.dp))
                 ControlIconButton(
                     icon = Icons.Default.Celebration,
                     label = "Fireworks",
@@ -1305,17 +1470,17 @@ private fun ControlIconButton(
         Surface(
             onClick = onClick,
             color = if (active) Color.White.copy(alpha = 0.3f) else Color.Transparent,
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
             ) {
                 Icon(
                     icon,
                     contentDescription = tooltip ?: label,
                     tint = if (active) Color.White else Color.White.copy(alpha = 0.8f),
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(18.dp),
                 )
                 Text(
                     label,
@@ -1345,17 +1510,17 @@ private fun StartIconButton(onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         color = MaterialTheme.colorScheme.primary,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(12.dp),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
         ) {
             Icon(
                 Icons.Default.CameraAlt,
                 contentDescription = stringResource(R.string.btn_start),
                 tint = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.size(22.dp),
+                modifier = Modifier.size(18.dp),
             )
             Text(
                 stringResource(R.string.btn_start),
