@@ -101,18 +101,6 @@
     <string name="label_start_delay">Start Delay</string>
     <string name="label_number_of_shots">Number of Shots</string>
 
-    <!-- Wizard-first preset cards -->
-    <string name="wizard_intervalometer_intro">What are you capturing?</string>
-    <string name="preset_cloud_title">Cloud timelapse</string>
-    <string name="preset_cloud_sub">Daytime motion</string>
-    <string name="preset_stars_title">Star trails</string>
-    <string name="preset_stars_sub">Long night exposures</string>
-    <string name="preset_slow_title">Slow timelapse</string>
-    <string name="preset_slow_sub">Hours of patience</string>
-    <string name="preset_custom_title">Custom</string>
-    <string name="preset_custom_sub">Tweak everything</string>
-    <string name="action_advanced">Advanced</string>
-
     <!-- ManualPanel -->
     <string name="panel_manual">Manual Shutter</string>
     <string name="panel_manual_help">Direct manual shutter control with two modes.\n\n• HOLD: The shutter stays open as long as you press the button. Release to close. Ideal for quick bulb shots.\n• LOCK: Tap once to open the shutter, tap again to close. Best for long exposures where you don\u2019t want to hold the button.\n\nSwitch between Hold and Lock using the segmented buttons in the action area.</string>

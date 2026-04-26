@@ -9,7 +9,6 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
@@ -54,14 +53,10 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.DeveloperBoard
 import androidx.compose.material.icons.filled.Memory
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.HourglassBottom
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.ehrocha.pulsar.ui.components.IntStepperField
@@ -368,111 +363,6 @@ internal fun AstroActionsContent(
     }
 }
 
-// ── Wizard-first presets (Intervalometer) ────────────────────────────────
-
-private data class IntervalPreset(
-    @StringRes val titleRes: Int,
-    @StringRes val subtitleRes: Int,
-    val icon: ImageVector,
-    val exposureMs: Long,
-    val intervalMs: Long,
-    val shotCount: Int,
-)
-
-private val INTERVALOMETER_PRESETS = listOf(
-    IntervalPreset(
-        titleRes = R.string.preset_cloud_title,
-        subtitleRes = R.string.preset_cloud_sub,
-        icon = Icons.Default.Cloud,
-        exposureMs = 200L,
-        intervalMs = 4_000L,
-        shotCount = 240,
-    ),
-    IntervalPreset(
-        titleRes = R.string.preset_stars_title,
-        subtitleRes = R.string.preset_stars_sub,
-        icon = Icons.Default.AutoAwesome,
-        exposureMs = 30_000L,
-        intervalMs = 2_000L,
-        shotCount = 120,
-    ),
-    IntervalPreset(
-        titleRes = R.string.preset_slow_title,
-        subtitleRes = R.string.preset_slow_sub,
-        icon = Icons.Default.HourglassBottom,
-        exposureMs = 100L,
-        intervalMs = 60_000L,
-        shotCount = 60,
-    ),
-)
-
-private fun matchIntervalPreset(exposureMs: Long, intervalMs: Long, shotCount: Int): IntervalPreset? =
-    INTERVALOMETER_PRESETS.firstOrNull {
-        it.exposureMs == exposureMs && it.intervalMs == intervalMs && it.shotCount == shotCount
-    }
-
-@Composable
-private fun PresetCard(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    duration: String?,
-    selected: Boolean,
-    enabled: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val containerColor by animateColorAsState(
-        targetValue = if (selected) MaterialTheme.colorScheme.primaryContainer
-                      else MaterialTheme.colorScheme.surfaceContainerHigh,
-        label = "presetBg",
-    )
-    val accent = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
-                 else MaterialTheme.colorScheme.primary
-    Surface(
-        onClick = onClick,
-        enabled = enabled,
-        shape = RoundedCornerShape(20.dp),
-        color = containerColor,
-        modifier = modifier.heightIn(min = 132.dp),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp).fillMaxSize(),
-            verticalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = accent,
-                modifier = Modifier.size(32.dp),
-            )
-            Column {
-                Text(
-                    title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                )
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
-                if (duration != null) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        duration,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = accent,
-                    )
-                }
-            }
-        }
-    }
-}
-
 /** Glanceable two-column summary for mode panels. */
 @Composable
 private fun HeroSummary(
@@ -558,129 +448,48 @@ internal fun IntervalometerPanelContent(
     maxShotCount: Int = 999,
     enabled: Boolean = true,
 ) {
-    val matched = matchIntervalPreset(exposureMs, intervalMs, shotCount)
-    val isCustom = matched == null
-
-    fun applyPreset(p: IntervalPreset) {
-        onExposureChanged(p.exposureMs)
-        onIntervalChanged(p.intervalMs)
-        onShotCountChanged?.invoke(p.shotCount.coerceIn(AppConfig.MIN_SHOT_COUNT, maxShotCount))
-        onDelayChanged(0L)
-    }
+    val totalSequenceTimeMs = delayMs + shotCount.toLong() * (exposureMs + intervalMs) - intervalMs
 
     Column(verticalArrangement = Arrangement.spacedBy(20.dp), modifier = modifier) {
-        Text(
-            stringResource(R.string.wizard_intervalometer_intro),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
+        HeroSummary(
+            primaryLabel = stringResource(R.string.label_shots),
+            primaryValue = "$shotCount",
+            secondaryLabel = stringResource(R.string.label_total_duration),
+            secondaryValue = formatDuration(totalSequenceTimeMs),
         )
 
-        // 2x2 preset grid: 3 use cases + Custom
-        val cells = INTERVALOMETER_PRESETS + null  // null = Custom slot
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            cells.chunked(2).forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    row.forEach { preset ->
-                        if (preset == null) {
-                            PresetCard(
-                                icon = Icons.Default.Tune,
-                                title = stringResource(R.string.preset_custom_title),
-                                subtitle = stringResource(R.string.preset_custom_sub),
-                                duration = null,
-                                selected = isCustom,
-                                enabled = enabled,
-                                onClick = { /* handled by Advanced section auto-opening */ },
-                                modifier = Modifier.weight(1f),
-                            )
-                        } else {
-                            val totalMs = preset.shotCount.toLong() *
-                                (preset.exposureMs + preset.intervalMs) - preset.intervalMs
-                            PresetCard(
-                                icon = preset.icon,
-                                title = stringResource(preset.titleRes),
-                                subtitle = stringResource(preset.subtitleRes),
-                                duration = "≈ ${formatDuration(totalMs)}",
-                                selected = matched == preset,
-                                enabled = enabled,
-                                onClick = { applyPreset(preset) },
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                    }
-                    if (row.size == 1) Spacer(Modifier.weight(1f))
-                }
-            }
-        }
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            TimePicker(
+                totalMs = exposureMs,
+                onChanged = { onExposureChanged(it) },
+                label = stringResource(R.string.label_exposure) + " (hh:mm:ss)",
+                enabled = enabled,
+            )
 
-        // Advanced section — auto-expanded when params don't match a preset
-        var userToggledAdvanced by remember { mutableStateOf(false) }
-        val advancedExpanded = isCustom || userToggledAdvanced
+            TimePicker(
+                totalMs = intervalMs,
+                onChanged = { onIntervalChanged(it) },
+                label = stringResource(R.string.label_interval) + " (hh:mm:ss)",
+                enabled = enabled,
+            )
 
-        Surface(
-            onClick = { userToggledAdvanced = !advancedExpanded },
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                ) {
-                    Text(
-                        stringResource(R.string.action_advanced),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Icon(
-                        if (advancedExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        contentDescription = if (advancedExpanded) stringResource(R.string.cd_collapse)
-                                             else stringResource(R.string.cd_expand),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+            TimePicker(
+                totalMs = delayMs,
+                onChanged = { onDelayChanged(it) },
+                label = stringResource(R.string.label_start_delay) + " (hh:mm:ss)",
+                enabled = enabled,
+            )
 
-                AnimatedVisibility(
-                    visible = advancedExpanded,
-                    enter = expandVertically(),
-                    exit = shrinkVertically(),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        TimePicker(
-                            totalMs = exposureMs,
-                            onChanged = { onExposureChanged(it) },
-                            label = stringResource(R.string.label_exposure) + " (hh:mm:ss)",
-                            enabled = enabled,
-                        )
-                        TimePicker(
-                            totalMs = intervalMs,
-                            onChanged = { onIntervalChanged(it) },
-                            label = stringResource(R.string.label_interval) + " (hh:mm:ss)",
-                            enabled = enabled,
-                        )
-                        TimePicker(
-                            totalMs = delayMs,
-                            onChanged = { onDelayChanged(it) },
-                            label = stringResource(R.string.label_start_delay) + " (hh:mm:ss)",
-                            enabled = enabled,
-                        )
-                        if (onShotCountChanged != null) {
-                            IntStepperField(
-                                label = stringResource(R.string.label_number_of_shots),
-                                value = shotCount,
-                                onValueChange = { onShotCountChanged(it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT)) },
-                                min = AppConfig.MIN_SHOT_COUNT,
-                                max = maxShotCount,
-                                enabled = enabled,
-                                presets = emptyList(),
-                            )
-                        }
-                    }
-                }
+            if (onShotCountChanged != null) {
+                IntStepperField(
+                    label = stringResource(R.string.label_number_of_shots),
+                    value = shotCount,
+                    onValueChange = { onShotCountChanged(it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT)) },
+                    min = AppConfig.MIN_SHOT_COUNT,
+                    max = maxShotCount,
+                    enabled = enabled,
+                    presets = emptyList(),
+                )
             }
         }
     }
