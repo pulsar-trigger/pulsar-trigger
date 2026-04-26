@@ -364,36 +364,6 @@ internal fun AstroActionsContent(
     }
 }
 
-// ── ScrubField presets (Intervalometer exposure) ────────────────────────
-
-private val EXPOSURE_PRESETS_MS = listOf(
-    50L, 100L, 200L, 500L,
-    1_000L, 2_000L, 4_000L, 8_000L, 15_000L, 30_000L,
-    60_000L, 90_000L, 120_000L, 180_000L, 300_000L,
-    600_000L, 1_200_000L, 1_800_000L, 3_600_000L,
-)
-
-/** Returns ("number", "unit") pair for a millisecond duration, e.g. (200, "ms"), (1.5, "s"), (5, "min"). */
-private fun formatExposurePair(ms: Long): Pair<String, String> = when {
-    ms < 1000L -> "$ms" to "ms"
-    ms < 60_000L -> {
-        val s = ms / 1000.0
-        val text = if (ms % 1000L == 0L) "${ms / 1000}" else "%.1f".format(s)
-        text to "s"
-    }
-    ms < 3_600_000L -> {
-        val totalSec = ms / 1000
-        val m = totalSec / 60
-        val s = totalSec % 60
-        if (s == 0L) "$m" to "min" else "${m}m ${s}s" to ""
-    }
-    else -> {
-        val h = ms / 3_600_000
-        val rm = (ms % 3_600_000) / 60_000
-        if (rm == 0L) "$h" to "h" else "${h}h ${rm}m" to ""
-    }
-}
-
 /** Glanceable two-column summary for mode panels. */
 @Composable
 private fun HeroSummary(
@@ -492,10 +462,8 @@ internal fun IntervalometerPanelContent(
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             ScrubField(
                 label = stringResource(R.string.label_exposure),
-                value = exposureMs,
-                presetValues = EXPOSURE_PRESETS_MS,
-                onValueChange = { onExposureChanged(it) },
-                formatValue = ::formatExposurePair,
+                totalMs = exposureMs,
+                onChanged = { onExposureChanged(it) },
                 enabled = enabled,
             )
 
