@@ -177,12 +177,12 @@ object Stacker {
     }
 
     /**
-     * Nightscape composite. Assumes the last frame in the sequence is the bonus
-     * foreground (Auto Astro convention: 30s low-ISO ground frame at the end of
-     * the flow). Steps:
+     * Nightscape composite. Assumes the FIRST frame in the sequence is the bonus
+     * foreground (Auto Astro convention: 30s low-ISO ground frame captured at the
+     * start of the flow so users who stop early still have it). Steps:
      *
-     *  1. Mean-stack all but the last frame → clean sky.
-     *  2. Decode the last frame full-res → foreground.
+     *  1. Mean-stack all but the first frame → clean sky.
+     *  2. Decode the first frame full-res → foreground.
      *  3. Auto-detect horizon row by smoothing per-row luminance and finding the
      *     largest dark→bright gradient in the foreground.
      *  4. Blend stacked sky above the horizon with the foreground frame below,
@@ -198,8 +198,8 @@ object Stacker {
         progress: ProgressCallback,
     ): NightscapeResult? {
         if (frames.size < 2) return null
-        val skyUris = frames.dropLast(1)
-        val foregroundUri = frames.last()
+        val foregroundUri = frames.first()
+        val skyUris = frames.drop(1)
 
         val totalSteps = frames.size + 2
 

@@ -499,9 +499,18 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         val skyIso = isoRange?.let { 1600.coerceIn(it.lower, it.upper) }
         val groundIso = isoRange?.let { 200.coerceIn(it.lower, it.upper) }
 
-        // Two-step flow: 20 sharp-star sky frames, then one bonus long-exposure low-ISO
-        // ground frame. Both land in the same sequence folder so the eventual Nightscape
-        // compositor can pick out the foreground without re-shooting.
+        // Two-step flow: bonus long-exposure low-ISO foreground FIRST so users who
+        // stop the session early still have it; then 20 sharp-star sky frames.
+        // Both land in the same sequence folder; Nightscape compositor reads the
+        // foreground from the first frame.
+        val ground = com.ehrocha.pulsar.model.FlowStep(
+            type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
+            intervalMs = 2_000L,
+            exposureMs = 30_000L,
+            shotCount = 1,
+            delayMs = 0L,
+            isoOverride = groundIso,
+        )
         val sky = com.ehrocha.pulsar.model.FlowStep(
             type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
             intervalMs = 4_000L,
@@ -510,15 +519,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             delayMs = 0L,
             isoOverride = skyIso,
         )
-        val ground = com.ehrocha.pulsar.model.FlowStep(
-            type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
-            intervalMs = 0L,
-            exposureMs = 30_000L,
-            shotCount = 1,
-            delayMs = 0L,
-            isoOverride = groundIso,
-        )
-        _flowSteps.value = listOf(sky, ground)
+        _flowSteps.value = listOf(ground, sky)
         pendingSequenceMode = com.ehrocha.pulsar.stacking.CaptureMode.AUTO_ASTRO
         startFlow()
     }
@@ -540,7 +541,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
         val step = com.ehrocha.pulsar.model.FlowStep(
             type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
-            intervalMs = 0L,
+            intervalMs = 2_000L,
             exposureMs = 4_000L,
             shotCount = 200,
             delayMs = 0L,
@@ -567,7 +568,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
         val step = com.ehrocha.pulsar.model.FlowStep(
             type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
-            intervalMs = 0L,
+            intervalMs = 2_000L,
             exposureMs = 30_000L,
             shotCount = 120,
             delayMs = 0L,
@@ -595,7 +596,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
         val step = com.ehrocha.pulsar.model.FlowStep(
             type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
-            intervalMs = 0L,
+            intervalMs = 2_000L,
             exposureMs = 4_000L,
             shotCount = 300,
             delayMs = 0L,

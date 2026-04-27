@@ -504,8 +504,10 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                     selectedMode = selectedCaptureMode,
                     onModeSelected = { mode ->
                         selectedCaptureMode = mode
-                        // Auto modes don't use the param panel — close it on switch.
-                        if (mode != CaptureMode.MANUAL) activePanel = null
+                        // Selecting a non-Manual mode opens its info panel and closes
+                        // any other panel (left side or intervalometer params).
+                        // Selecting Manual clears panels entirely.
+                        activePanel = if (mode == CaptureMode.MANUAL) null else CameraPanel.MODE_INFO
                     },
                     onPanelToggle = { panel ->
                         activePanel = if (activePanel == panel) null else panel
@@ -1162,7 +1164,7 @@ private fun raDecToAltAz(raDeg: Double, decDeg: Double, latDeg: Double, lstDeg: 
 
 // ── Camera panel enum ───────────────────────────────────────────────────
 
-private enum class CameraPanel { LENS, ISO, FOCUS, INTERVALOMETER }
+private enum class CameraPanel { LENS, ISO, FOCUS, INTERVALOMETER, MODE_INFO }
 
 // ── Camera settings strip (bottom-left: lens, ISO, focus, grid, awake, RAW) ──
 
@@ -1347,7 +1349,7 @@ private fun IntervalometerStrip(
                 }
             }
         }
-        AnimatedVisibility(visible = selectedMode != CaptureMode.MANUAL) {
+        AnimatedVisibility(visible = activePanel == CameraPanel.MODE_INFO && selectedMode != CaptureMode.MANUAL) {
             ModeInfoPanel(selectedMode)
         }
 
@@ -1485,6 +1487,7 @@ private fun ExpandedPanel(
                 CameraPanel.ISO -> "ISO"
                 CameraPanel.FOCUS -> stringResource(R.string.label_focus_mode)
                 CameraPanel.INTERVALOMETER -> stringResource(R.string.mode_intervalometer)
+                CameraPanel.MODE_INFO -> ""
                 null -> ""
             }
             if (panelTitle.isNotEmpty()) {
@@ -1831,9 +1834,10 @@ private val EXPOSURE_STEPS_MS = longArrayOf(
     100, 250, 500, 1000, 2000, 3000, 4000, 5000,
     8000, 10000, 13000, 15000, 20000, 25000, 30000,
 )
-// DSLR-style discrete gap presets — mirrors the menus on common Canon/Nikon
-// intervalometer remotes. Users pick a chip, no slider tuning required.
-private val GAP_PRESETS_MS = longArrayOf(0, 1000, 2000, 5000, 10000)
+// DSLR-style discrete interval presets — mirrors the menus on common Canon/Nikon
+// intervalometer remotes. 2s minimum gives the camera time to write each file
+// and keeps the sensor from overheating across a long session.
+private val GAP_PRESETS_MS = longArrayOf(2000, 5000, 10000, 30000)
 
 @Composable
 private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pulsar.camera.PhoneLens?) {
@@ -1916,8 +1920,7 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
                     modifier = Modifier.weight(1f),
                 ) {
                     Text(
-                        text = if (ms == 0L) stringResource(R.string.camera_gap_none)
-                               else "${ms / 1000}s",
+                        text = "${ms / 1000}s",
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.White.copy(alpha = gapAlpha),
                         textAlign = TextAlign.Center,
