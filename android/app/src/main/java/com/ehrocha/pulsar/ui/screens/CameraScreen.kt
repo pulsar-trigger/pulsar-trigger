@@ -21,6 +21,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -287,6 +288,10 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                             val newZoom = cameraManager.zoomRatio.value * zoom
                             cameraManager.setZoomRatio(newZoom)
                         }
+                    }
+                    .pointerInput(Unit) {
+                        // Tap on the preview (no chip target) — dismiss any open panel.
+                        detectTapGestures(onTap = { activePanel = null })
                     },
             )
 
@@ -1383,13 +1388,13 @@ private fun IntervalometerStrip(
                     tooltip = stringResource(R.string.tooltip_trails),
                 )
                 // ─── Group divider ───
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(2.dp))
                 HorizontalDivider(
                     modifier = Modifier.fillMaxWidth(0.6f),
-                    thickness = 1.dp,
+                    thickness = 0.5.dp,
                     color = Color.White.copy(alpha = 0.2f),
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(2.dp))
                 // Weather/Events group ───────
                 ControlIconButton(
                     icon = Icons.Default.Bolt,
