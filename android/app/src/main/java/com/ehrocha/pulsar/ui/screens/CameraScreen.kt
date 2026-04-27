@@ -1388,13 +1388,6 @@ private fun IntervalometerStrip(
                     onClick = { onModeSelected(CaptureMode.TRAILS) },
                     tooltip = stringResource(R.string.tooltip_trails),
                 )
-                // ─── Group divider ───
-                Spacer(Modifier.height(2.dp))
-                HorizontalDivider(
-                    modifier = Modifier.fillMaxWidth(0.6f),
-                    thickness = 0.5.dp,
-                    color = Color.White.copy(alpha = 0.2f),
-                )
                 Spacer(Modifier.height(2.dp))
                 // Weather/Events group ───────
                 ControlIconButton(
