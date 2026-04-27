@@ -487,4 +487,51 @@
     <string name="warning_compass">Kompass unkalibriert — Telefon in Acht-Form bewegen</string>
     <string name="warning_no_gps">Kein GPS-Signal — Standort nicht verfügbar</string>
     <string name="warning_gps_inaccurate">GPS-Genauigkeit: ±%dm</string>
+
+    <!-- Camera one-tap modes -->
+    <string name="tooltip_gallery">Letztes Foto in Galerie öffnen</string>
+    <string name="toast_no_gallery_app">Keine Galerie-App verfügbar</string>
+    <string name="tooltip_auto_astro">Auto Astro — NPF-Belichtung, 20 Aufnahmen, 4s Pause</string>
+    <string name="tooltip_storm">Sturm — 4s Belichtungen, keine Pause, 300 Aufnahmen</string>
+    <string name="tooltip_trails">Sternspuren — 30s Belichtungen, keine Pause, 120 Aufnahmen</string>
+    <string name="tooltip_fireworks">Feuerwerk — 4s Belichtungen, keine Pause, 200 Aufnahmen, niedriges ISO</string>
+    <string name="camera_gap_label">Intervall</string>
+    <string name="camera_gap_none">Kein</string>
+
+    <!-- About: tribute -->
+    <string name="about_tribute_heading">Zu Ehren von</string>
+    <string name="about_tribute_name">Dame Jocelyn Bell Burnell</string>
+    <string name="about_tribute_body">Pulsare wurden 1967 von Jocelyn Bell Burnell als Doktorandin der Radioastronomie entdeckt. Diese App leiht sich ihren Namen in bescheidener Hommage an ihre Entdeckung und ihren anhaltenden Einsatz für die Wissenschaft.</string>
+    <string name="about_tribute_link">Auf Wikipedia lesen</string>
+
+    <!-- Sequences / stacking -->
+    <string name="mode_sequences">Sequenzen</string>
+    <string name="mode_sequences_desc">Aufgenommene Frames zu einem Bild stapeln</string>
+    <string name="sequences_title">Sequenzen</string>
+    <string name="sequences_empty">Noch keine aufgenommenen Sequenzen. Verwende einen Auto-Modus (Auto, Spuren, Sturm, Feuerwerk), um diese Liste zu füllen.</string>
+    <string name="sequences_frame_count">%1$d Frames · %2$s</string>
+    <string name="sequences_frames_label">Frames</string>
+    <string name="sequences_frames_in">%1$d Frames in dieser Sequenz</string>
+    <string name="stack_lighten">Stapeln (Aufhellen)</string>
+    <string name="stack_mean">Stapeln (Mittelwert)</string>
+    <string name="stack_lightning">Blitz-Komposition</string>
+    <string name="stack_explanation">Aufhellen = Sternspuren, Feuerwerk, Blitze. Mittelwert = Rauschreduzierung bei nachgeführten Motiven.</string>
+    <string name="stack_progress">Stapeln %1$d / %2$d</string>
+    <string name="stack_done">Stapel im Sequenzordner gespeichert.</string>
+    <string name="stack_view">Ansehen</string>
+    <string name="stack_save_failed">Stapelbild konnte nicht gespeichert werden.</string>
+    <string name="stack_decode_failed">Frames konnten nicht gelesen werden.</string>
+    <string name="stack_out_of_memory">Speicher voll — zu viele Frames oder zu hohe Auflösung.</string>
+    <string name="stack_unknown_error">Stapeln fehlgeschlagen.</string>
+    <string name="stack_strikes_found">%1$d Blitze in %2$d Frames gefunden — Komposition gespeichert.</string>
+    <string name="stack_no_strikes">Keine Blitze in %1$d Frames erkannt.</string>
+    <string name="sort_newest">Neueste</string>
+    <string name="sort_oldest">Älteste</string>
+    <string name="sort_name">Name</string>
+    <string name="sequences_action_prompt">Lange drücken, um eine Aktion zu wählen</string>
+    <string name="action_rename">Umbenennen</string>
+    <string name="action_delete">Löschen</string>
+    <string name="dialog_rename_sequence">Sequenz umbenennen</string>
+    <string name="dialog_delete_sequence">Sequenz löschen?</string>
+    <string name="dialog_delete_sequence_msg">%1$d Frames in „%2$s“ dauerhaft löschen? Diese Aktion kann nicht rückgängig gemacht werden.</string>
 </resources>

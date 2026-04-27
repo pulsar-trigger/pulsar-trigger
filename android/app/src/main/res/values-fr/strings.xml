@@ -487,4 +487,51 @@
     <string name="warning_compass">Boussole non calibrée — bougez le téléphone en 8</string>
     <string name="warning_no_gps">Pas de signal GPS — position indisponible</string>
     <string name="warning_gps_inaccurate">Précision GPS : ±%dm</string>
+
+    <!-- Camera one-tap modes -->
+    <string name="tooltip_gallery">Ouvrir la dernière photo dans la galerie</string>
+    <string name="toast_no_gallery_app">Aucune application de galerie disponible</string>
+    <string name="tooltip_auto_astro">Auto Astro — exposition NPF, 20 photos, 4s d\'intervalle</string>
+    <string name="tooltip_storm">Orage — expositions 4s, sans pause, 300 photos</string>
+    <string name="tooltip_trails">Filés d\'Étoiles — expositions 30s, sans pause, 120 photos</string>
+    <string name="tooltip_fireworks">Feux — expositions 4s, sans pause, 200 photos, ISO bas</string>
+    <string name="camera_gap_label">Intervalle</string>
+    <string name="camera_gap_none">Aucun</string>
+
+    <!-- About: tribute -->
+    <string name="about_tribute_heading">En hommage à</string>
+    <string name="about_tribute_name">Dame Jocelyn Bell Burnell</string>
+    <string name="about_tribute_body">Les pulsars ont été découverts en 1967 par Jocelyn Bell Burnell, alors étudiante en radioastronomie. Cette application emprunte leur nom en humble hommage à sa découverte et à son soutien durable à la science.</string>
+    <string name="about_tribute_link">Lire sur Wikipédia</string>
+
+    <!-- Sequences / stacking -->
+    <string name="mode_sequences">Séquences</string>
+    <string name="mode_sequences_desc">Empilez les images capturées en une seule</string>
+    <string name="sequences_title">Séquences</string>
+    <string name="sequences_empty">Aucune séquence capturée. Utilisez n\'importe quel mode auto (Auto, Filés, Orage, Feux) pour remplir cette liste.</string>
+    <string name="sequences_frame_count">%1$d images · %2$s</string>
+    <string name="sequences_frames_label">images</string>
+    <string name="sequences_frames_in">%1$d images dans cette séquence</string>
+    <string name="stack_lighten">Empiler (Lighten)</string>
+    <string name="stack_mean">Empiler (Moyenne)</string>
+    <string name="stack_lightning">Composer Éclairs</string>
+    <string name="stack_explanation">Lighten = filés d\'étoiles, feux, éclairs. Moyenne = réduction de bruit sur sujets suivis.</string>
+    <string name="stack_progress">Empilage %1$d / %2$d</string>
+    <string name="stack_done">Empilage enregistré dans ce dossier de séquence.</string>
+    <string name="stack_view">Voir</string>
+    <string name="stack_save_failed">Impossible d\'enregistrer l\'image empilée.</string>
+    <string name="stack_decode_failed">Impossible de lire les images.</string>
+    <string name="stack_out_of_memory">Mémoire insuffisante — trop d\'images ou résolution trop élevée.</string>
+    <string name="stack_unknown_error">Échec de l\'empilage.</string>
+    <string name="stack_strikes_found">%1$d éclairs trouvés dans %2$d images — composition enregistrée.</string>
+    <string name="stack_no_strikes">Aucun éclair détecté dans %1$d images.</string>
+    <string name="sort_newest">Plus récent</string>
+    <string name="sort_oldest">Plus ancien</string>
+    <string name="sort_name">Nom</string>
+    <string name="sequences_action_prompt">Appui long pour choisir une action</string>
+    <string name="action_rename">Renommer</string>
+    <string name="action_delete">Supprimer</string>
+    <string name="dialog_rename_sequence">Renommer la séquence</string>
+    <string name="dialog_delete_sequence">Supprimer la séquence ?</string>
+    <string name="dialog_delete_sequence_msg">Supprimer définitivement %1$d images dans « %2$s » ? Action irréversible.</string>
 </resources>

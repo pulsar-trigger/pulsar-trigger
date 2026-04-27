@@ -485,4 +485,51 @@
     <string name="warning_compass">Brújula sin calibrar — mueva el teléfono en forma de 8</string>
     <string name="warning_no_gps">Sin señal GPS — ubicación no disponible</string>
     <string name="warning_gps_inaccurate">Precisión GPS: ±%dm</string>
+
+    <!-- Camera one-tap modes -->
+    <string name="tooltip_gallery">Abrir última foto en la galería</string>
+    <string name="toast_no_gallery_app">No hay app de galería disponible</string>
+    <string name="tooltip_auto_astro">Auto Astro — exposición NPF, 20 fotos, 4s entre tomas</string>
+    <string name="tooltip_storm">Tormenta — exposiciones de 4s, sin pausa, 300 fotos</string>
+    <string name="tooltip_trails">Estelas Estelares — exposiciones de 30s, sin pausa, 120 fotos</string>
+    <string name="tooltip_fireworks">Fuegos — exposiciones de 4s, sin pausa, 200 fotos, ISO bajo</string>
+    <string name="camera_gap_label">Intervalo</string>
+    <string name="camera_gap_none">Ninguno</string>
+
+    <!-- About: tribute -->
+    <string name="about_tribute_heading">En honor a</string>
+    <string name="about_tribute_name">Dame Jocelyn Bell Burnell</string>
+    <string name="about_tribute_body">Los púlsares fueron descubiertos en 1967 por Jocelyn Bell Burnell, entonces estudiante de posgrado en radioastronomía. Esta aplicación toma su nombre en humilde homenaje a su descubrimiento y a su perdurable defensa de la ciencia.</string>
+    <string name="about_tribute_link">Leer en Wikipedia</string>
+
+    <!-- Sequences / stacking -->
+    <string name="mode_sequences">Secuencias</string>
+    <string name="mode_sequences_desc">Apilar fotogramas capturados en una sola imagen</string>
+    <string name="sequences_title">Secuencias</string>
+    <string name="sequences_empty">Aún no hay secuencias capturadas. Usa cualquier modo automático (Auto, Estelas, Tormenta, Fuegos) para llenar esta lista.</string>
+    <string name="sequences_frame_count">%1$d fotogramas · %2$s</string>
+    <string name="sequences_frames_label">fotogramas</string>
+    <string name="sequences_frames_in">%1$d fotogramas en esta secuencia</string>
+    <string name="stack_lighten">Apilar (Lighten)</string>
+    <string name="stack_mean">Apilar (Media)</string>
+    <string name="stack_lightning">Componer Rayos</string>
+    <string name="stack_explanation">Lighten = estelas estelares, fuegos, rayos. Media = reducción de ruido en sujetos rastreados.</string>
+    <string name="stack_progress">Apilando %1$d / %2$d</string>
+    <string name="stack_done">Apilado guardado en esta carpeta de secuencia.</string>
+    <string name="stack_view">Ver</string>
+    <string name="stack_save_failed">No se pudo guardar la imagen apilada.</string>
+    <string name="stack_decode_failed">No se pudieron leer los fotogramas.</string>
+    <string name="stack_out_of_memory">Memoria insuficiente — demasiados fotogramas o resolución muy alta.</string>
+    <string name="stack_unknown_error">Error de apilado.</string>
+    <string name="stack_strikes_found">%1$d rayos encontrados en %2$d fotogramas — composición guardada.</string>
+    <string name="stack_no_strikes">No se detectaron rayos en %1$d fotogramas.</string>
+    <string name="sort_newest">Más reciente</string>
+    <string name="sort_oldest">Más antiguo</string>
+    <string name="sort_name">Nombre</string>
+    <string name="sequences_action_prompt">Mantén pulsado para elegir una acción</string>
+    <string name="action_rename">Renombrar</string>
+    <string name="action_delete">Eliminar</string>
+    <string name="dialog_rename_sequence">Renombrar secuencia</string>
+    <string name="dialog_delete_sequence">¿Eliminar secuencia?</string>
+    <string name="dialog_delete_sequence_msg">¿Eliminar permanentemente %1$d fotogramas en “%2$s”? Esta acción no se puede deshacer.</string>
 </resources>

@@ -487,4 +487,51 @@
     <string name="warning_compass">Bússola descalibrada — mova o celular em 8</string>
     <string name="warning_no_gps">Sem sinal GPS — localização indisponível</string>
     <string name="warning_gps_inaccurate">Precisão GPS: ±%dm</string>
+
+    <!-- Camera one-tap modes -->
+    <string name="tooltip_gallery">Abrir última foto na galeria</string>
+    <string name="toast_no_gallery_app">Nenhum app de galeria disponível</string>
+    <string name="tooltip_auto_astro">Auto Astro — exposição NPF, 20 fotos, 4s entre tomadas</string>
+    <string name="tooltip_storm">Tempestade — exposições de 4s, sem intervalo, 300 fotos</string>
+    <string name="tooltip_trails">Trilhas Estelares — exposições de 30s, sem intervalo, 120 fotos</string>
+    <string name="tooltip_fireworks">Fogos — exposições de 4s, sem intervalo, 200 fotos, ISO baixo</string>
+    <string name="camera_gap_label">Intervalo</string>
+    <string name="camera_gap_none">Nenhum</string>
+
+    <!-- About: tribute -->
+    <string name="about_tribute_heading">Em homenagem a</string>
+    <string name="about_tribute_name">Dame Jocelyn Bell Burnell</string>
+    <string name="about_tribute_body">Os pulsares foram descobertos em 1967 por Jocelyn Bell Burnell, então estudante de pós-graduação em radioastronomia. Este app empresta o nome em humilde homenagem à sua descoberta e ao seu duradouro apoio à ciência.</string>
+    <string name="about_tribute_link">Ler na Wikipedia</string>
+
+    <!-- Sequences / stacking -->
+    <string name="mode_sequences">Sequências</string>
+    <string name="mode_sequences_desc">Empilhe quadros capturados em uma única imagem</string>
+    <string name="sequences_title">Sequências</string>
+    <string name="sequences_empty">Ainda não há sequências capturadas. Use qualquer modo automático (Auto, Trilhas, Tempestade, Fogos) para preencher esta lista.</string>
+    <string name="sequences_frame_count">%1$d quadros · %2$s</string>
+    <string name="sequences_frames_label">quadros</string>
+    <string name="sequences_frames_in">%1$d quadros nesta sequência</string>
+    <string name="stack_lighten">Empilhar (Lighten)</string>
+    <string name="stack_mean">Empilhar (Média)</string>
+    <string name="stack_lightning">Compor Raios</string>
+    <string name="stack_explanation">Lighten = trilhas estelares, fogos, raios. Média = redução de ruído em alvos rastreados.</string>
+    <string name="stack_progress">Empilhando %1$d / %2$d</string>
+    <string name="stack_done">Empilhamento salvo nesta pasta de sequência.</string>
+    <string name="stack_view">Ver</string>
+    <string name="stack_save_failed">Não foi possível salvar a imagem empilhada.</string>
+    <string name="stack_decode_failed">Não foi possível ler os quadros.</string>
+    <string name="stack_out_of_memory">Memória insuficiente — quadros demais ou resolução muito alta.</string>
+    <string name="stack_unknown_error">Falha no empilhamento.</string>
+    <string name="stack_strikes_found">%1$d raios encontrados em %2$d quadros — composição salva.</string>
+    <string name="stack_no_strikes">Nenhum raio detectado em %1$d quadros.</string>
+    <string name="sort_newest">Mais recente</string>
+    <string name="sort_oldest">Mais antigo</string>
+    <string name="sort_name">Nome</string>
+    <string name="sequences_action_prompt">Pressione e segure para escolher uma ação</string>
+    <string name="action_rename">Renomear</string>
+    <string name="action_delete">Excluir</string>
+    <string name="dialog_rename_sequence">Renomear sequência</string>
+    <string name="dialog_delete_sequence">Excluir sequência?</string>
+    <string name="dialog_delete_sequence_msg">Excluir permanentemente %1$d quadros em “%2$s”? Esta ação não pode ser desfeita.</string>
 </resources>
