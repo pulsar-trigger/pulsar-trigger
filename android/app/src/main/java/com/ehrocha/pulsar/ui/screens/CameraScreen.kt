@@ -66,6 +66,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -1793,9 +1794,9 @@ private val EXPOSURE_STEPS_MS = longArrayOf(
     100, 250, 500, 1000, 2000, 3000, 4000, 5000,
     8000, 10000, 13000, 15000, 20000, 25000, 30000,
 )
-private val GAP_STEPS_MS = longArrayOf(
-    0, 500, 1000, 2000, 3000, 5000, 8000, 10000, 15000, 20000, 30000,
-)
+// DSLR-style discrete gap presets — mirrors the menus on common Canon/Nikon
+// intervalometer remotes. Users pick a chip, no slider tuning required.
+private val GAP_PRESETS_MS = longArrayOf(0, 1000, 2000, 5000, 10000)
 
 @Composable
 private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pulsar.camera.PhoneLens?) {
@@ -1855,24 +1856,41 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
             modifier = Modifier.fillMaxWidth(),
         )
 
-        // ── Gap ──
+        // ── Gap (DSLR-style preset chips) ──
         val gapAlpha = if (isNpfAuto) 0.4f else 1f
         Text(
-            stringResource(R.string.camera_gap_fmt, if (intervalMs == 0L) "0s" else formatExposureLabel(intervalMs)),
+            stringResource(R.string.camera_gap_label),
             style = MaterialTheme.typography.labelMedium,
             color = Color.White.copy(alpha = gapAlpha),
             fontWeight = FontWeight.Medium,
         )
-        val gapIdx = GAP_STEPS_MS.indices.minBy { kotlin.math.abs(GAP_STEPS_MS[it] - intervalMs) }
-        Slider(
-            value = gapIdx.toFloat(),
-            onValueChange = { vm.setIntervalMs(GAP_STEPS_MS[it.roundToInt().coerceIn(0, GAP_STEPS_MS.lastIndex)]) },
-            enabled = !isNpfAuto,
-            valueRange = 0f..(GAP_STEPS_MS.lastIndex).toFloat(),
-            steps = (GAP_STEPS_MS.size - 2).coerceAtLeast(0),
-            colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha = 0.3f)),
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             modifier = Modifier.fillMaxWidth(),
-        )
+        ) {
+            GAP_PRESETS_MS.forEach { ms ->
+                val selected = intervalMs == ms
+                Surface(
+                    onClick = { if (!isNpfAuto) vm.setIntervalMs(ms) },
+                    enabled = !isNpfAuto,
+                    color = if (selected) Color.White.copy(alpha = 0.3f)
+                            else Color.White.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(
+                        text = if (ms == 0L) stringResource(R.string.camera_gap_none)
+                               else "${ms / 1000}s",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White.copy(alpha = gapAlpha),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                    )
+                }
+            }
+        }
 
         // ── Shots ──
         val shotIdx = SHOT_STEPS.indices.minBy { kotlin.math.abs(SHOT_STEPS[it] - shotCount) }
