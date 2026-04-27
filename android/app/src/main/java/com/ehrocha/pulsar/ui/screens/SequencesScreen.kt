@@ -30,9 +30,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.stacking.CaptureMode
 import com.ehrocha.pulsar.stacking.SequenceFolder
 import com.ehrocha.pulsar.stacking.SequenceLabels
 import com.ehrocha.pulsar.stacking.SequenceRepository
+import com.ehrocha.pulsar.stacking.SequenceTags
 import com.ehrocha.pulsar.stacking.Stacker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -547,55 +549,72 @@ fun SequenceDetailScreen(
             Spacer(Modifier.height(8.dp))
         }
 
-        // Action buttons
+        // Action buttons — filter by capture-mode tag so we only offer composites
+        // that make sense for the way the sequence was shot.
         val canRun = !processing && !loading && (folder?.frames?.isNotEmpty() == true)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            Button(
-                onClick = { runStack(Stacker.Type.LIGHTEN) },
-                enabled = canRun,
-                shape = RoundedCornerShape(28.dp),
-                modifier = Modifier.weight(1f).height(56.dp),
+        val captureMode = remember(sequencePath) { SequenceTags.get(context, sequencePath) }
+        val available = remember(captureMode) { SequenceTags.availableComposites(captureMode) }
+
+        // Capture-mode badge so the user knows why some composites are hidden
+        val modeLabel = when (captureMode) {
+            CaptureMode.AUTO_ASTRO -> stringResource(R.string.tag_auto_astro)
+            CaptureMode.STORM -> stringResource(R.string.tag_storm)
+            CaptureMode.TRAILS -> stringResource(R.string.tag_trails)
+            CaptureMode.FIREWORKS -> stringResource(R.string.tag_fireworks)
+            CaptureMode.MANUAL -> stringResource(R.string.tag_manual)
+            null -> null
+        }
+        if (modeLabel != null) {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shape = RoundedCornerShape(8.dp),
             ) {
-                Text(stringResource(R.string.stack_lighten), fontWeight = FontWeight.Bold)
+                Text(
+                    stringResource(R.string.tag_captured_with, modeLabel),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+
+        // Pair primary composites (Lighten / Mean) on top, special composites (Lightning / Nightscape) below.
+        val topRow = listOfNotNull(
+            if (Stacker.Type.LIGHTEN in available) Stacker.Type.LIGHTEN else null,
+            if (Stacker.Type.MEAN in available) Stacker.Type.MEAN else null,
+        )
+        val bottomRow = listOfNotNull(
+            if (Stacker.Type.LIGHTNING in available) Stacker.Type.LIGHTNING else null,
+            if (Stacker.Type.NIGHTSCAPE in available) Stacker.Type.NIGHTSCAPE else null,
+        )
+
+        @Composable
+        fun composeButton(t: Stacker.Type, modifier: Modifier) {
+            val (label, container, content) = when (t) {
+                Stacker.Type.LIGHTEN -> Triple(R.string.stack_lighten, MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.onPrimary)
+                Stacker.Type.MEAN -> Triple(R.string.stack_mean, MaterialTheme.colorScheme.secondary, MaterialTheme.colorScheme.onSecondary)
+                Stacker.Type.LIGHTNING -> Triple(R.string.stack_lightning, MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.onTertiary)
+                Stacker.Type.NIGHTSCAPE -> Triple(R.string.stack_nightscape, MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.onTertiary)
             }
             Button(
-                onClick = { runStack(Stacker.Type.MEAN) },
+                onClick = { runStack(t) },
                 enabled = canRun,
                 shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondary,
-                    contentColor = MaterialTheme.colorScheme.onSecondary,
-                ),
-                modifier = Modifier.weight(1f).height(56.dp),
-            ) {
-                Text(stringResource(R.string.stack_mean), fontWeight = FontWeight.Bold)
+                colors = ButtonDefaults.buttonColors(containerColor = container, contentColor = content),
+                modifier = modifier.height(56.dp),
+            ) { Text(stringResource(label), fontWeight = FontWeight.Bold) }
+        }
+
+        if (topRow.isNotEmpty()) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                topRow.forEach { composeButton(it, Modifier.weight(1f)) }
             }
         }
-        Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            Button(
-                onClick = { runStack(Stacker.Type.LIGHTNING) },
-                enabled = canRun,
-                shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.tertiary,
-                    contentColor = MaterialTheme.colorScheme.onTertiary,
-                ),
-                modifier = Modifier.weight(1f).height(56.dp),
-            ) {
-                Text(stringResource(R.string.stack_lightning), fontWeight = FontWeight.Bold)
-            }
-            Button(
-                onClick = { runStack(Stacker.Type.NIGHTSCAPE) },
-                enabled = canRun,
-                shape = RoundedCornerShape(28.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.tertiary,
-                    contentColor = MaterialTheme.colorScheme.onTertiary,
-                ),
-                modifier = Modifier.weight(1f).height(56.dp),
-            ) {
-                Text(stringResource(R.string.stack_nightscape), fontWeight = FontWeight.Bold)
+        if (bottomRow.isNotEmpty()) {
+            if (topRow.isNotEmpty()) Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                bottomRow.forEach { composeButton(it, Modifier.weight(1f)) }
             }
         }
         Spacer(Modifier.height(4.dp))

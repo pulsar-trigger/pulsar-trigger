@@ -661,6 +661,22 @@
     <string name="stack_nightscape">Nightscape</string>
     <string name="stack_nightscape_done">Nightscape composite saved (horizon at row %1$d).</string>
     <string name="stack_no_horizon">No clear horizon detected. Nightscape needs a brighter foreground frame at the bottom of the scene — Auto Astro\'s bonus frame works best.</string>
+    <string name="tag_captured_with">Captured with: %1$s</string>
+    <string name="tag_auto_astro">Auto Astro</string>
+    <string name="tag_storm">Storm</string>
+    <string name="tag_trails">Star Trails</string>
+    <string name="tag_fireworks">Fireworks</string>
+    <string name="tag_manual">Manual</string>
+
+    <!-- Camera mode info panels — shown when a non-Manual mode is selected -->
+    <string name="mode_info_auto_title">Auto Astro</string>
+    <string name="mode_info_auto_body">20 sharp-star frames using the NPF rule for your lens, then one bonus 30-second low-ISO foreground frame. Process the sequence later as Nightscape (sky + ground composite) or Mean (clean noise-reduced sky).</string>
+    <string name="mode_info_storm_title">Storm / Lightning</string>
+    <string name="mode_info_storm_body">300 × 4-second exposures with zero gap and ISO 400. Designed to catch lightning during a storm. Use Lightning Composite afterwards to auto-cull the winner frames into one image.</string>
+    <string name="mode_info_trails_title">Star Trails</string>
+    <string name="mode_info_trails_body">120 × 30-second exposures back-to-back at ISO 800. Process with Lighten Stack to merge the moving stars into iconic concentric arcs around the celestial pole.</string>
+    <string name="mode_info_fireworks_title">Fireworks</string>
+    <string name="mode_info_fireworks_body">200 × 4-second exposures with no gap, low ISO for highlight headroom. Process with Lighten Stack to overlay every burst from the show into a single image.</string>
 
     <!-- About: tribute to Jocelyn Bell Burnell -->
     <string name="about_tribute_heading">In honor of</string>

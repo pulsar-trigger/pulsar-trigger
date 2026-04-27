@@ -537,4 +537,18 @@
     <string name="stack_nightscape">Paysage Nocturne</string>
     <string name="stack_nightscape_done">Paysage nocturne enregistré (horizon à la ligne %1$d).</string>
     <string name="stack_no_horizon">Aucun horizon clair détecté. Le Paysage Nocturne nécessite une image de premier plan plus lumineuse en bas de la scène — l\'image bonus d\'Auto Astro fonctionne le mieux.</string>
+    <string name="tag_captured_with">Capturé avec : %1$s</string>
+    <string name="tag_auto_astro">Auto Astro</string>
+    <string name="tag_storm">Orage</string>
+    <string name="tag_trails">Filés d\'Étoiles</string>
+    <string name="tag_fireworks">Feux</string>
+    <string name="tag_manual">Manuel</string>
+    <string name="mode_info_auto_title">Auto Astro</string>
+    <string name="mode_info_auto_body">20 images avec étoiles nettes selon la règle NPF de votre objectif, puis une image bonus de 30 secondes à bas ISO pour le premier plan. Traitez la séquence ensuite en Paysage Nocturne (ciel + sol) ou Moyenne (ciel propre, sans bruit).</string>
+    <string name="mode_info_storm_title">Orage / Éclairs</string>
+    <string name="mode_info_storm_body">300 expositions de 4 secondes sans pause, ISO 400. Conçu pour capturer les éclairs pendant un orage. Utilisez Composer Éclairs ensuite pour sélectionner automatiquement les images gagnantes en une image unique.</string>
+    <string name="mode_info_trails_title">Filés d\'Étoiles</string>
+    <string name="mode_info_trails_body">120 expositions de 30 secondes consécutives à ISO 800. Traitez avec Empiler (Lighten) pour fusionner les étoiles en mouvement en arcs concentriques iconiques autour du pôle céleste.</string>
+    <string name="mode_info_fireworks_title">Feux d\'Artifice</string>
+    <string name="mode_info_fireworks_body">200 expositions de 4 secondes sans pause, ISO bas pour préserver les hautes lumières. Traitez avec Empiler (Lighten) pour superposer chaque explosion du spectacle en une seule image.</string>
 </resources>

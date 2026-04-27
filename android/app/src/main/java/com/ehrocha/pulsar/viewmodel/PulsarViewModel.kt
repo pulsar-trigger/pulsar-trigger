@@ -519,6 +519,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             isoOverride = groundIso,
         )
         _flowSteps.value = listOf(sky, ground)
+        pendingSequenceMode = com.ehrocha.pulsar.stacking.CaptureMode.AUTO_ASTRO
         startFlow()
     }
 
@@ -545,6 +546,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             delayMs = 0L,
         )
         _flowSteps.value = listOf(step)
+        pendingSequenceMode = com.ehrocha.pulsar.stacking.CaptureMode.FIREWORKS
         startFlow()
     }
 
@@ -571,6 +573,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             delayMs = 0L,
         )
         _flowSteps.value = listOf(step)
+        pendingSequenceMode = com.ehrocha.pulsar.stacking.CaptureMode.TRAILS
         startFlow()
     }
 
@@ -598,6 +601,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             delayMs = 0L,
         )
         _flowSteps.value = listOf(step)
+        pendingSequenceMode = com.ehrocha.pulsar.stacking.CaptureMode.STORM
         startFlow()
     }
 
@@ -672,6 +676,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         .map { flows -> flows.flatMap { it.tags }.distinct().sorted() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    /** Capture mode tag to write on the next sequence folder, consumed by [startFlow]. */
+    private var pendingSequenceMode: com.ehrocha.pulsar.stacking.CaptureMode? = null
+
     fun startFlow() {
         val steps = _flowSteps.value
         if (steps.isEmpty()) return
@@ -683,7 +690,18 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             // One sequence folder for the whole flow — all steps share a single
             // DCIM/Pulsar/Sequence_<ts>/ so multi-step captures (e.g. Auto Astro
             // sky frames + bonus foreground) stack cleanly together.
-            if (_phoneCameraActive.value) phoneCameraManager.beginSequenceFolder()
+            if (_phoneCameraActive.value) {
+                phoneCameraManager.beginSequenceFolder()
+                // Tag the folder with which capture mode produced it so the
+                // Sequences detail screen can offer only composites that fit.
+                val mode = pendingSequenceMode ?: com.ehrocha.pulsar.stacking.CaptureMode.MANUAL
+                phoneCameraManager.activeSequencePath()?.let { path ->
+                    com.ehrocha.pulsar.stacking.SequenceTags.set(
+                        getApplication<Application>(), path, mode,
+                    )
+                }
+                pendingSequenceMode = null
+            }
             try {
                 for (i in steps.indices) {
                     _flowCurrentStep.value = i

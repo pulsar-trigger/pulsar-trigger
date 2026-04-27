@@ -95,8 +95,9 @@ object SequenceRepository {
                 // them up via the system file manager.
             }
         }
-        // Also drop any custom label we'd stored for this path.
+        // Also drop any custom label and capture-mode tag we'd stored for this path.
         SequenceLabels.set(context, folder.path, null)
+        SequenceTags.set(context, folder.path, null)
         return deleted
     }
 }

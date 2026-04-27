@@ -537,4 +537,18 @@
     <string name="stack_nightscape">ナイトスケープ</string>
     <string name="stack_nightscape_done">ナイトスケープを保存しました（地平線は行 %1$d）。</string>
     <string name="stack_no_horizon">明確な地平線を検出できませんでした。ナイトスケープには、シーンの下部に明るい前景フレームが必要です — オートアストロのボーナスフレームが最適です。</string>
+    <string name="tag_captured_with">撮影モード: %1$s</string>
+    <string name="tag_auto_astro">オートアストロ</string>
+    <string name="tag_storm">ストーム</string>
+    <string name="tag_trails">スタートレイル</string>
+    <string name="tag_fireworks">花火</string>
+    <string name="tag_manual">マニュアル</string>
+    <string name="mode_info_auto_title">オートアストロ</string>
+    <string name="mode_info_auto_body">レンズのNPFルールで星をシャープに保つ20フレームと、低ISOで30秒の前景ボーナスフレームを撮影します。その後、ナイトスケープ（空＋地上の合成）または平均（クリーンでノイズ低減された空）として処理してください。</string>
+    <string name="mode_info_storm_title">ストーム / 雷</string>
+    <string name="mode_info_storm_body">4秒露光×300枚、間隔なし、ISO 400。嵐の最中の雷を捉えるために設計されています。後で雷コンポジットを使用すると、勝者フレームが自動選別されて1枚に合成されます。</string>
+    <string name="mode_info_trails_title">スタートレイル</string>
+    <string name="mode_info_trails_body">30秒露光×120枚、連続撮影、ISO 800。ライトンスタックで処理すると、移動する星々が天の極を中心とする象徴的な同心円弧に融合されます。</string>
+    <string name="mode_info_fireworks_title">花火</string>
+    <string name="mode_info_fireworks_body">4秒露光×200枚、間隔なし、ハイライトに余裕を持たせるため低ISO。ライトンスタックで処理すると、ショーの全ての花火が1枚の画像に重ね合わされます。</string>
 </resources>

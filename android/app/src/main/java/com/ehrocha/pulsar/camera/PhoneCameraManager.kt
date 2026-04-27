@@ -113,6 +113,10 @@ class PhoneCameraManager(private val context: Context) {
         _sequenceFolder.value = "Sequence_$ts"
     }
 
+    /** Full DCIM/... path for the active sequence folder, or null if none active. */
+    fun activeSequencePath(): String? =
+        _sequenceFolder.value?.let { "DCIM/Pulsar/$it" }
+
     /** End the active sequence — subsequent saves go back into DCIM/Pulsar. */
     fun endSequenceFolder() {
         _sequenceFolder.value = null

@@ -518,7 +518,7 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                                 vm.loadQuickMode(FlowStepType.INTERVALOMETER)
                                 vm.startFlow()
                             }
-                            CaptureMode.AUTO -> {
+                            CaptureMode.AUTO_ASTRO -> {
                                 keepAwake = true
                                 vm.startAutoAstro()
                             }
@@ -1337,7 +1337,8 @@ private fun IntervalometerStrip(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Expanded panel (left of icons) — only for Manual mode
+        // Expanded panel (left of icons) — Manual gets its params; auto modes get
+        // a brief explanation of what the mode captures and how to process it.
         AnimatedVisibility(visible = intervalPanel != null && selectedMode == CaptureMode.MANUAL) {
             ExpandedPanel(activePanel = intervalPanel) {
                 when (intervalPanel) {
@@ -1345,6 +1346,9 @@ private fun IntervalometerStrip(
                     else -> {}
                 }
             }
+        }
+        AnimatedVisibility(visible = selectedMode != CaptureMode.MANUAL) {
+            ModeInfoPanel(selectedMode)
         }
 
         // Icon strip
@@ -1376,8 +1380,8 @@ private fun IntervalometerStrip(
                 ControlIconButton(
                     icon = Icons.Default.AutoAwesome,
                     label = "Auto",
-                    active = selectedMode == CaptureMode.AUTO,
-                    onClick = { onModeSelected(CaptureMode.AUTO) },
+                    active = selectedMode == CaptureMode.AUTO_ASTRO,
+                    onClick = { onModeSelected(CaptureMode.AUTO_ASTRO) },
                     tooltip = stringResource(R.string.tooltip_auto_astro),
                 )
                 Spacer(Modifier.height(2.dp))
@@ -1416,7 +1420,47 @@ private fun IntervalometerStrip(
 private val CAMERA_PANELS = setOf(CameraPanel.LENS, CameraPanel.ISO, CameraPanel.FOCUS)
 private val INTERVALOMETER_PANELS = setOf(CameraPanel.INTERVALOMETER)
 
-private enum class CaptureMode { MANUAL, AUTO, STORM, TRAILS, FIREWORKS }
+// Capture mode is shared with the stacking package — same enum drives both the
+// camera UI and the post-capture composite filtering.
+private typealias CaptureMode = com.ehrocha.pulsar.stacking.CaptureMode
+
+/** Brief explanation panel for a non-Manual capture mode. Shows what the mode
+ *  captures (e.g. Auto Astro's bonus foreground frame) and which composite to
+ *  run on it afterwards, so the user knows what to expect before tapping Start. */
+@Composable
+private fun ModeInfoPanel(mode: CaptureMode) {
+    val (titleRes, bodyRes) = when (mode) {
+        CaptureMode.AUTO_ASTRO -> R.string.mode_info_auto_title to R.string.mode_info_auto_body
+        CaptureMode.STORM -> R.string.mode_info_storm_title to R.string.mode_info_storm_body
+        CaptureMode.TRAILS -> R.string.mode_info_trails_title to R.string.mode_info_trails_body
+        CaptureMode.FIREWORKS -> R.string.mode_info_fireworks_title to R.string.mode_info_fireworks_body
+        CaptureMode.MANUAL -> return
+    }
+    Surface(
+        color = Color.Black.copy(alpha = 0.7f),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier
+            .widthIn(max = 240.dp)
+            .padding(end = 8.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                stringResource(titleRes),
+                style = MaterialTheme.typography.titleSmall,
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                stringResource(bodyRes),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.85f),
+            )
+        }
+    }
+}
 
 /** Shared expanded panel container with title. */
 @Composable

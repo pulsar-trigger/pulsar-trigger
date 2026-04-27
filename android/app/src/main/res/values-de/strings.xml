@@ -537,4 +537,18 @@
     <string name="stack_nightscape">Nachtlandschaft</string>
     <string name="stack_nightscape_done">Nachtlandschaft gespeichert (Horizont in Zeile %1$d).</string>
     <string name="stack_no_horizon">Kein klarer Horizont erkannt. Nachtlandschaft benötigt ein helleres Vordergrundbild am unteren Rand der Szene — das Bonus-Bild von Auto Astro funktioniert am besten.</string>
+    <string name="tag_captured_with">Aufgenommen mit: %1$s</string>
+    <string name="tag_auto_astro">Auto Astro</string>
+    <string name="tag_storm">Sturm</string>
+    <string name="tag_trails">Sternspuren</string>
+    <string name="tag_fireworks">Feuerwerk</string>
+    <string name="tag_manual">Manuell</string>
+    <string name="mode_info_auto_title">Auto Astro</string>
+    <string name="mode_info_auto_body">20 scharfe Sternaufnahmen nach der NPF-Regel deines Objektivs, plus ein Bonus-Bild mit 30 Sekunden Belichtung und niedrigem ISO für den Vordergrund. Verarbeite die Sequenz später als Nachtlandschaft (Himmel + Vordergrund) oder Mittelwert (sauberer rauschreduzierter Himmel).</string>
+    <string name="mode_info_storm_title">Sturm / Blitze</string>
+    <string name="mode_info_storm_body">300 × 4-Sekunden-Belichtungen ohne Pause, ISO 400. Entwickelt, um Blitze während eines Gewitters zu erfassen. Verwende danach Blitz-Komposition, um die Gewinner-Frames automatisch zu einem Bild zusammenzuführen.</string>
+    <string name="mode_info_trails_title">Sternspuren</string>
+    <string name="mode_info_trails_body">120 × 30-Sekunden-Belichtungen hintereinander bei ISO 800. Verarbeite mit Stapeln (Aufhellen), um die ziehenden Sterne in ikonische konzentrische Bögen um den Himmelspol zu verschmelzen.</string>
+    <string name="mode_info_fireworks_title">Feuerwerk</string>
+    <string name="mode_info_fireworks_body">200 × 4-Sekunden-Belichtungen ohne Pause, niedriges ISO für Highlight-Spielraum. Verarbeite mit Stapeln (Aufhellen), um jede Explosion des Spektakels zu einem einzigen Bild zu überlagern.</string>
 </resources>

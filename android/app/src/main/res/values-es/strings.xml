@@ -535,4 +535,18 @@
     <string name="stack_nightscape">Paisaje Nocturno</string>
     <string name="stack_nightscape_done">Paisaje nocturno guardado (horizonte en fila %1$d).</string>
     <string name="stack_no_horizon">No se detectó un horizonte claro. Paisaje Nocturno necesita un fotograma de primer plano más brillante en la parte inferior — el fotograma extra de Auto Astro funciona mejor.</string>
+    <string name="tag_captured_with">Capturado con: %1$s</string>
+    <string name="tag_auto_astro">Auto Astro</string>
+    <string name="tag_storm">Tormenta</string>
+    <string name="tag_trails">Estelas Estelares</string>
+    <string name="tag_fireworks">Fuegos</string>
+    <string name="tag_manual">Manual</string>
+    <string name="mode_info_auto_title">Auto Astro</string>
+    <string name="mode_info_auto_body">20 fotogramas con estrellas nítidas usando la regla NPF de tu lente, más un fotograma extra de 30 segundos con ISO bajo para el primer plano. Procesa la secuencia después como Paisaje Nocturno (cielo + suelo) o Media (cielo limpio, sin ruido).</string>
+    <string name="mode_info_storm_title">Tormenta / Rayos</string>
+    <string name="mode_info_storm_body">300 exposiciones de 4 segundos sin pausa, ISO 400. Diseñado para capturar rayos durante una tormenta. Usa Componer Rayos después para seleccionar automáticamente los fotogramas ganadores en una imagen.</string>
+    <string name="mode_info_trails_title">Estelas Estelares</string>
+    <string name="mode_info_trails_body">120 exposiciones de 30 segundos consecutivas a ISO 800. Procesa con Apilar (Lighten) para fusionar las estrellas en movimiento en arcos concéntricos icónicos alrededor del polo celeste.</string>
+    <string name="mode_info_fireworks_title">Fuegos Artificiales</string>
+    <string name="mode_info_fireworks_body">200 exposiciones de 4 segundos sin pausa, ISO bajo para preservar las altas luces. Procesa con Apilar (Lighten) para superponer cada explosión del espectáculo en una sola imagen.</string>
 </resources>
