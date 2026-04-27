@@ -138,13 +138,6 @@ class PhoneCameraManager(private val context: Context) {
     private val _manualFocusDist = MutableStateFlow<Float?>(null)  // null = auto, 0 = infinity
     val manualFocusDist: StateFlow<Float?> = _manualFocusDist
 
-    // ── Star focus state ─────────────────────────────────────────────────
-    private val _starFocusRunning = MutableStateFlow(false)
-    val starFocusRunning: StateFlow<Boolean> = _starFocusRunning
-
-    private val _starFocusProgress = MutableStateFlow(0f)
-    val starFocusProgress: StateFlow<Float> = _starFocusProgress
-
     private var boundCamera: Camera? = null
 
     /** Guard against concurrent bind operations (e.g. rapid lens switch during init). */
@@ -188,17 +181,6 @@ class PhoneCameraManager(private val context: Context) {
         applyManualSettings()
     }
 
-    // ── Exposure Simulation ─────────────────────────────────────────────
-    // When ON: preview shows manual ISO/shutter effect (WYSIWYG).
-    // When OFF: preview stays auto-exposed; manual settings only apply to captures.
-    private val _expSimEnabled = MutableStateFlow(true)  // default on
-    val expSimEnabled: StateFlow<Boolean> = _expSimEnabled
-
-    fun setExpSimEnabled(enabled: Boolean) {
-        _expSimEnabled.value = enabled
-        applyManualSettings()
-    }
-
     fun setManualIso(iso: Int?) {
         _manualIso.value = iso
         applyManualSettings()
@@ -223,8 +205,9 @@ class PhoneCameraManager(private val context: Context) {
 
         val iso = _manualIso.value
         val expNs = _manualExposureNs.value
-        // When ExpSim is OFF, keep preview auto-exposed — unless actively capturing
-        if (iso != null && expNs != null && (_expSimEnabled.value || captureActive)) {
+        // Manual ISO + exposure flow straight to the preview pipeline — what you
+        // see is what you get. (ExpSim toggle removed; users wanted WYSIWYG.)
+        if (iso != null && expNs != null) {
             builder.setCaptureRequestOption(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
             builder.setCaptureRequestOption(CaptureRequest.SENSOR_SENSITIVITY, iso)
             builder.setCaptureRequestOption(CaptureRequest.SENSOR_EXPOSURE_TIME, expNs)
@@ -257,8 +240,6 @@ class PhoneCameraManager(private val context: Context) {
     private var savedIso: Int? = null
     private var savedExpNs: Long? = null
     private var exposureOverridden = false
-    /** When true, applyManualSettings always applies manual exposure (ignores ExpSim). */
-    private var captureActive = false
 
     /**
      * Configure the sensor exposure time for a capture sequence.
@@ -276,7 +257,6 @@ class PhoneCameraManager(private val context: Context) {
         savedIso = _manualIso.value
         savedExpNs = _manualExposureNs.value
         exposureOverridden = true
-        captureActive = true
 
         val requestedNs = requestedMs * 1_000_000L
         val clampedNs = requestedNs.coerceIn(caps.exposureTimeRange!!.lower, caps.exposureTimeRange!!.upper)
@@ -300,139 +280,11 @@ class PhoneCameraManager(private val context: Context) {
         val iso = savedIso
         val expNs = savedExpNs
         exposureOverridden = false
-        captureActive = false
         savedIso = null
         savedExpNs = null
         _manualIso.value = iso
         _manualExposureNs.value = expNs
         applyManualSettings()
-    }
-
-    /**
-     * Star auto-focus: sweep focus from infinity to near, measuring sharpness at each step.
-     * Locks focus at the distance with maximum sharpness.
-     */
-    suspend fun starAutoFocus() {
-        val lens = _lenses.value.getOrNull(_selectedLens.value) ?: return
-        if (!lens.capabilities.supportsManualFocus) return
-        val maxDist = lens.capabilities.minFocusDistance
-        if (maxDist <= 0f) return
-
-        _starFocusRunning.value = true
-        _starFocusProgress.value = 0f
-
-        val steps = 20
-        var bestSharpness = -1.0
-        var bestDist = 0f  // start at infinity
-
-        try {
-            for (i in 0..steps) {
-                val dist = (maxDist * i.toFloat() / steps)
-                _starFocusProgress.value = i.toFloat() / steps
-
-                // Set focus distance
-                setManualFocusDist(dist)
-                // Let the camera settle
-                delay(300)
-
-                // Measure sharpness from preview
-                val sharpness = measureSharpness()
-                Log.d(TAG, "Star focus: dist=%.3f sharpness=%.1f".format(dist, sharpness))
-
-                if (sharpness > bestSharpness) {
-                    bestSharpness = sharpness
-                    bestDist = dist
-                }
-            }
-
-            // Lock at best focus distance
-            Log.i(TAG, "Star focus: best distance=%.3f sharpness=%.1f".format(bestDist, bestSharpness))
-            setManualFocusDist(bestDist)
-            _starFocusProgress.value = 1f
-        } finally {
-            _starFocusRunning.value = false
-        }
-    }
-
-    /**
-     * Measure image sharpness using Laplacian variance on the current preview frame.
-     * Higher values = sharper image (stars in focus are sharp point sources).
-     */
-    private suspend fun measureSharpness(): Double = suspendCancellableCoroutine { cont ->
-        val capture = imageCapture
-        if (capture == null) {
-            cont.resume(0.0)
-            return@suspendCancellableCoroutine
-        }
-
-        // Use ImageAnalysis to grab a frame for sharpness measurement
-        // Since we may not have ImageAnalysis bound, we'll use a lightweight approach:
-        // take a quick capture to memory and analyze it
-        capture.takePicture(
-            ContextCompat.getMainExecutor(context),
-            object : ImageCapture.OnImageCapturedCallback() {
-                override fun onCaptureSuccess(image: ImageProxy) {
-                    val sharpness = computeLaplacianVariance(image)
-                    image.close()
-                    if (cont.isActive) cont.resume(sharpness)
-                }
-
-                override fun onError(exception: ImageCaptureException) {
-                    Log.w(TAG, "Sharpness capture failed", exception)
-                    if (cont.isActive) cont.resume(0.0)
-                }
-            },
-        )
-    }
-
-    /** Compute Laplacian variance as a sharpness metric on an ImageProxy. */
-    private fun computeLaplacianVariance(image: ImageProxy): Double {
-        if (image.planes.isEmpty()) return 0.0
-        val plane = image.planes[0]
-        val buffer = plane.buffer
-        val width = image.width
-        val height = image.height
-        val rowStride = plane.rowStride
-        val pixelStride = plane.pixelStride
-
-        // Sample a center crop for speed (quarter resolution)
-        val cropSize = minOf(width, height) / 2
-        val startX = (width - cropSize) / 2
-        val startY = (height - cropSize) / 2
-
-        var sum = 0.0
-        var sumSq = 0.0
-        var count = 0
-
-        // Laplacian kernel: center pixel * 4 - four neighbors
-        for (y in (startY + 1) until (startY + cropSize - 1) step 2) {
-            for (x in (startX + 1) until (startX + cropSize - 1) step 2) {
-                val center = getPixelLuminance(buffer, x, y, rowStride, pixelStride)
-                val top = getPixelLuminance(buffer, x, y - 1, rowStride, pixelStride)
-                val bottom = getPixelLuminance(buffer, x, y + 1, rowStride, pixelStride)
-                val left = getPixelLuminance(buffer, x - 1, y, rowStride, pixelStride)
-                val right = getPixelLuminance(buffer, x + 1, y, rowStride, pixelStride)
-                val laplacian = (4 * center - top - bottom - left - right).toDouble()
-                sum += laplacian
-                sumSq += laplacian * laplacian
-                count++
-            }
-        }
-
-        if (count == 0) return 0.0
-        val mean = sum / count
-        return sumSq / count - mean * mean  // variance
-    }
-
-    private fun getPixelLuminance(
-        buffer: java.nio.ByteBuffer,
-        x: Int,
-        y: Int,
-        rowStride: Int,
-        pixelStride: Int,
-    ): Int {
-        val offset = y * rowStride + x * pixelStride
-        return if (offset < buffer.capacity()) buffer.get(offset).toInt() and 0xFF else 0
     }
 
     /** Enumerate physical cameras with Camera2 metadata. */
@@ -880,16 +732,6 @@ class PhoneCameraManager(private val context: Context) {
         _isCapturing.value = true
         _lastError.value = null
 
-        // ExpSim off but user has manual ISO + speed: force-apply for the still,
-        // then restore preview to auto on completion.
-        val needsManualOverride = !_expSimEnabled.value
-            && _manualIso.value != null
-            && _manualExposureNs.value != null
-        if (needsManualOverride) {
-            captureActive = true
-            applyManualSettings()
-        }
-
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
             .format(System.currentTimeMillis())
 
@@ -916,20 +758,12 @@ class PhoneCameraManager(private val context: Context) {
                     _photoCount.value += 1
                     output.savedUri?.let { _lastSavedUri.value = it }
                     Log.i(TAG, "Photo saved: ${output.savedUri}")
-                    if (needsManualOverride) {
-                        captureActive = false
-                        applyManualSettings()
-                    }
                 }
 
                 override fun onError(exception: ImageCaptureException) {
                     _isCapturing.value = false
                     _lastError.value = exception.message
                     Log.e(TAG, "Capture failed", exception)
-                    if (needsManualOverride) {
-                        captureActive = false
-                        applyManualSettings()
-                    }
                 }
             },
         )

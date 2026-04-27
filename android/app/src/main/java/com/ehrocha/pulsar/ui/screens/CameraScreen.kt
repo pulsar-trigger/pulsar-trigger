@@ -24,6 +24,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,7 +32,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Celebration
 import androidx.compose.material.icons.filled.Loop
@@ -446,7 +446,6 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
             if (!isRunning) {
                 val saveAsRaw by cameraManager.saveAsRaw.collectAsState()
                 val oisEnabled by cameraManager.oisEnabled.collectAsState()
-                val expSimEnabled by cameraManager.expSimEnabled.collectAsState()
 
                 CameraSettingsStrip(
                     cameraManager = cameraManager,
@@ -473,8 +472,6 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                     supportsOis = caps.supportsOis,
                     oisEnabled = oisEnabled,
                     onOisToggle = { cameraManager.setOisEnabled(it) },
-                    expSimEnabled = expSimEnabled,
-                    onExpSimToggle = { cameraManager.setExpSimEnabled(it) },
                     onOpenGallery = {
                         val savedUri = cameraManager.lastSavedUri.value
                         val intent = if (savedUri != null) {
@@ -1188,8 +1185,6 @@ private fun CameraSettingsStrip(
     supportsOis: Boolean = false,
     oisEnabled: Boolean = true,
     onOisToggle: (Boolean) -> Unit = {},
-    expSimEnabled: Boolean = true,
-    onExpSimToggle: (Boolean) -> Unit = {},
     onOpenGallery: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -1277,17 +1272,6 @@ private fun CameraSettingsStrip(
                         active = !oisEnabled,  // highlight when OFF (tripod mode)
                         onClick = { onOisToggle(!oisEnabled) },
                         tooltip = stringResource(R.string.tooltip_ois),
-                    )
-                }
-
-                // Exposure Simulation toggle (only when manual exposure is available)
-                if (caps.supportsManualExposure) {
-                    ControlIconButton(
-                        icon = Icons.Default.Visibility,
-                        label = if (expSimEnabled) "ExpSim" else "Off",
-                        active = expSimEnabled,
-                        onClick = { onExpSimToggle(!expSimEnabled) },
-                        tooltip = stringResource(R.string.tooltip_expsim),
                     )
                 }
 
@@ -1579,12 +1563,40 @@ private fun StartIconButton(onClick: () -> Unit) {
 }
 
 private fun formatExposureLabel(ms: Long): String {
-    return when {
-        ms < 1000 -> "${ms}ms"
-        ms % 1000 == 0L -> "${ms / 1000}s"
-        else -> "%.1fs".format(ms / 1000.0)
+    if (ms <= 0L) return "—"
+    if (ms >= 1000L) {
+        return if (ms % 1000L == 0L) "${ms / 1000}s" else "%.1fs".format(ms / 1000.0)
     }
+    // Sub-second values shown as classic shutter denominators (1/15, 1/250, etc.)
+    val denom = (1000.0 / ms).toLong()
+    return "1/$denom"
 }
+
+/**
+ * DSLR-style shutter speed table: full stops from 30 seconds down to 1/4000.
+ * `ms = 0` denominators in the legacy code are gone — every entry is a real
+ * exposure time the sensor can produce.
+ */
+private data class Shutter(val ms: Long, val label: String)
+
+private val SHUTTER_STOPS = listOf(
+    Shutter(30_000L, "30s"),
+    Shutter(15_000L, "15s"),
+    Shutter(8_000L, "8s"),
+    Shutter(4_000L, "4s"),
+    Shutter(2_000L, "2s"),
+    Shutter(1_000L, "1s"),
+    Shutter(500L, "1/2"),
+    Shutter(250L, "1/4"),
+    Shutter(125L, "1/8"),
+    Shutter(67L, "1/15"),
+    Shutter(33L, "1/30"),
+    Shutter(17L, "1/60"),
+    Shutter(8L, "1/125"),
+    Shutter(4L, "1/250"),
+    Shutter(2L, "1/500"),
+    Shutter(1L, "1/1000"),
+)
 
 // ── Expandable panels ──────────────────────────────────────────────────
 
@@ -1709,11 +1721,7 @@ private fun IsoPanel(cameraManager: PhoneCameraManager, caps: LensCapabilities) 
 private fun FocusPanel(cameraManager: PhoneCameraManager, caps: LensCapabilities) {
     val manualFocus by cameraManager.manualFocusDist.collectAsState()
     val isManualFocus = manualFocus != null
-    val starFocusRunning by cameraManager.starFocusRunning.collectAsState()
-    val starFocusProgress by cameraManager.starFocusProgress.collectAsState()
-    val scope = rememberCoroutineScope()
 
-    // Three focus mode buttons: Auto, Manual, Star
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         // Auto focus
         Surface(
@@ -1733,7 +1741,7 @@ private fun FocusPanel(cameraManager: PhoneCameraManager, caps: LensCapabilities
         // Manual focus
         Surface(
             onClick = { if (!isManualFocus) cameraManager.setManualFocusDist(0f) },
-            color = if (isManualFocus && !starFocusRunning) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.15f),
+            color = if (isManualFocus) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.15f),
             shape = RoundedCornerShape(8.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -1743,51 +1751,6 @@ private fun FocusPanel(cameraManager: PhoneCameraManager, caps: LensCapabilities
                 color = Color.White,
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
             )
-        }
-
-        // Star auto-focus
-        if (caps.minFocusDistance > 0f) {
-            Surface(
-                onClick = {
-                    if (!starFocusRunning) {
-                        if (!isManualFocus) cameraManager.setManualFocusDist(0f)
-                        scope.launch { cameraManager.starAutoFocus() }
-                    }
-                },
-                color = if (starFocusRunning) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.15f),
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                ) {
-                    Icon(Icons.Default.AutoFixHigh, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        if (starFocusRunning) stringResource(R.string.star_focus_running)
-                        else stringResource(R.string.star_focus),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White,
-                    )
-                }
-            }
-            if (starFocusRunning) {
-                LinearProgressIndicator(
-                    progress = { starFocusProgress },
-                    color = Color.White,
-                    trackColor = Color.White.copy(alpha = 0.2f),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(3.dp)
-                        .clip(RoundedCornerShape(2.dp)),
-                )
-                Text(
-                    stringResource(R.string.star_focus_hint),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.White.copy(alpha = 0.6f),
-                )
-            }
         }
     }
 
@@ -1830,10 +1793,6 @@ private fun formatFocusDistance(diopters: Float): String {
 // ── Intervalometer panels ───────────────────────────────────────────────
 
 private val SHOT_STEPS = intArrayOf(1, 2, 5, 10, 20, 30, 50, 100, 200, 300, 500)
-private val EXPOSURE_STEPS_MS = longArrayOf(
-    100, 250, 500, 1000, 2000, 3000, 4000, 5000,
-    8000, 10000, 13000, 15000, 20000, 25000, 30000,
-)
 // DSLR-style discrete interval presets — mirrors the menus on common Canon/Nikon
 // intervalometer remotes. 2s minimum gives the camera time to write each file
 // and keeps the sensor from overheating across a long session.
@@ -1887,15 +1846,30 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
                 }
             }
         }
-        val expIdx = EXPOSURE_STEPS_MS.indices.minBy { kotlin.math.abs(EXPOSURE_STEPS_MS[it] - exposureMs) }
-        Slider(
-            value = expIdx.toFloat(),
-            onValueChange = { vm.setExposureMs(EXPOSURE_STEPS_MS[it.roundToInt().coerceIn(0, EXPOSURE_STEPS_MS.lastIndex)]) },
-            valueRange = 0f..(EXPOSURE_STEPS_MS.lastIndex).toFloat(),
-            steps = (EXPOSURE_STEPS_MS.size - 2).coerceAtLeast(0),
-            colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha = 0.3f)),
-            modifier = Modifier.fillMaxWidth(),
-        )
+        // DSLR-style horizontal shutter speed chips — 30s … 1/1000 in full stops.
+        val shutterScroll = rememberScrollState()
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(shutterScroll),
+        ) {
+            SHUTTER_STOPS.forEach { stop ->
+                val selected = exposureMs == stop.ms
+                Surface(
+                    onClick = { vm.setExposureMs(stop.ms) },
+                    color = if (selected) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Text(
+                        stop.label,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    )
+                }
+            }
+        }
 
         // ── Gap (DSLR-style preset chips) ──
         val gapAlpha = if (isNpfAuto) 0.4f else 1f
