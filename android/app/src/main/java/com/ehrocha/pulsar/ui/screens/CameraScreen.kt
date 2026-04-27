@@ -173,62 +173,9 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
         }
     }
 
-    // Grid overlay
+    // Grid overlay — celestial sky overlay was dropped: phone compass is too
+    // unreliable across devices to align a sky grid usefully.
     var gridMode by remember { mutableStateOf(GridMode.OFF) }
-
-    // Device orientation for celestial pole overlay
-    val deviceOrientation = remember { DeviceOrientation(context) }
-    val azimuth by deviceOrientation.azimuth.collectAsState()
-    val pitch by deviceOrientation.pitch.collectAsState()
-    val sensorAccuracy by deviceOrientation.accuracy.collectAsState()
-
-    DisposableEffect(gridMode) {
-        if (gridMode == GridMode.CELESTIAL) deviceOrientation.start()
-        else deviceOrientation.stop()
-        onDispose { deviceOrientation.stop() }
-    }
-
-    // Live location for celestial grid — updates as GPS locks improve
-    var latitude by remember { mutableFloatStateOf(0f) }
-    var longitude by remember { mutableFloatStateOf(0f) }
-    var locationAccuracy by remember { mutableFloatStateOf(Float.MAX_VALUE) }
-    var hasLocation by remember { mutableStateOf(false) }
-
-    DisposableEffect(Unit) {
-        val lm = context.getSystemService(android.content.Context.LOCATION_SERVICE) as LocationManager
-
-        // Seed from cached location immediately
-        try {
-            @Suppress("MissingPermission")
-            val cached = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                ?: lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-            if (cached != null) {
-                latitude = cached.latitude.toFloat()
-                longitude = cached.longitude.toFloat()
-                locationAccuracy = cached.accuracy
-                hasLocation = true
-            }
-        } catch (_: Exception) {}
-
-        // Listen for live updates
-        val listener = object : LocationListener {
-            override fun onLocationChanged(loc: Location) {
-                latitude = loc.latitude.toFloat()
-                longitude = loc.longitude.toFloat()
-                locationAccuracy = loc.accuracy
-                hasLocation = true
-            }
-        }
-
-        try {
-            @Suppress("MissingPermission")
-            lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10_000L, 10f, listener)
-        } catch (_: Exception) {}
-
-        onDispose {
-            lm.removeUpdates(listener)
-        }
-    }
 
     // Keep screen awake
     var keepAwake by remember { mutableStateOf(false) }
@@ -352,46 +299,8 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
             if (gridMode != GridMode.OFF) {
                 GridOverlay(
                     gridMode = gridMode,
-                    azimuth = azimuth,
-                    pitch = pitch,
-                    latitude = latitude,
-                    currentLens = currentLens,
                     modifier = Modifier.fillMaxSize(),
                 )
-            }
-
-            // Calibration warning for celestial grid
-            if (gridMode == GridMode.CELESTIAL) {
-                val compassLow = sensorAccuracy <= SensorManager.SENSOR_STATUS_ACCURACY_LOW
-                val noGps = !hasLocation
-                val gpsInaccurate = hasLocation && locationAccuracy > 100f
-
-                if (compassLow || noGps || gpsInaccurate) {
-                    val warning = buildString {
-                        if (compassLow) append(stringResource(R.string.warning_compass))
-                        if (noGps) {
-                            if (isNotEmpty()) append(" \u2022 ")
-                            append(stringResource(R.string.warning_no_gps))
-                        } else if (gpsInaccurate) {
-                            if (isNotEmpty()) append(" \u2022 ")
-                            append(stringResource(R.string.warning_gps_inaccurate, locationAccuracy.toInt()))
-                        }
-                    }
-                    Surface(
-                        color = Color(0xCC331100),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 80.dp, start = 16.dp, end = 16.dp),
-                    ) {
-                        Text(
-                            warning,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFFFF9800),
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        )
-                    }
-                }
             }
 
             // Back button
@@ -848,35 +757,19 @@ private enum class GridMode(val label: String) {
     OFF("Off"),
     THIRDS("3x3"),
     GRID_4X4("4x4"),
-    CELESTIAL("Sky"),
 }
 
 @Composable
 private fun GridOverlay(
     gridMode: GridMode,
-    azimuth: Float,
-    pitch: Float,
-    latitude: Float,
-    currentLens: com.ehrocha.pulsar.camera.PhoneLens?,
     modifier: Modifier = Modifier,
 ) {
     val gridColor = Color.White.copy(alpha = 0.55f)
-    val poleColor = Color.Red.copy(alpha = 0.85f)
-    val textMeasurer = rememberTextMeasurer()
 
     Canvas(modifier = modifier) {
         when (gridMode) {
             GridMode.THIRDS -> drawGrid(3, 3, gridColor)
             GridMode.GRID_4X4 -> drawGrid(4, 4, gridColor)
-            GridMode.CELESTIAL -> drawCelestialGrid(
-                azimuth = azimuth,
-                pitch = pitch,
-                latitude = latitude,
-                lens = currentLens,
-                poleColor = poleColor,
-                gridColor = gridColor,
-                textMeasurer = textMeasurer,
-            )
             GridMode.OFF -> {}
         }
     }
@@ -896,143 +789,6 @@ private fun DrawScope.drawGrid(cols: Int, rows: Int, color: Color) {
     }
 }
 
-/**
- * Celestial overlay: spherical declination grid centered on the pole, with a
- * crosshair on the pole itself and an off-screen arrow pointing toward it.
- * (Milky-Way-core marker dropped — wasn't reliable enough across hemispheres.)
- *
- * Draws concentric circles at 10° declination intervals from the pole; small
- * near the pole, growing toward the equator (90° away).
- */
-private fun DrawScope.drawCelestialGrid(
-    azimuth: Float,
-    pitch: Float,
-    latitude: Float,
-    lens: com.ehrocha.pulsar.camera.PhoneLens?,
-    poleColor: Color,
-    gridColor: Color,
-    textMeasurer: androidx.compose.ui.text.TextMeasurer,
-) {
-    if (lens == null || lens.focalLength <= 0 || lens.sensorWidth <= 0) return
-
-    val hFovDeg = 2.0 * Math.toDegrees(
-        kotlin.math.atan((lens.sensorWidth / 2.0) / lens.focalLength)
-    )
-    val vFovDeg = 2.0 * Math.toDegrees(
-        kotlin.math.atan((lens.sensorHeight / 2.0) / lens.focalLength)
-    )
-    if (hFovDeg <= 0 || vFovDeg <= 0) return
-
-    val pixPerDeg = ((size.width / hFovDeg + size.height / vFovDeg) / 2.0)
-    val pixPerDegH = size.width / hFovDeg
-    val pixPerDegV = size.height / vFovDeg
-
-    val camAz = azimuth.toDouble()
-    val camAlt = -pitch.toDouble()
-
-    // ── Celestial pole position ──
-    val isNorth = latitude >= 0
-    val poleAz = if (isNorth) 0.0 else 180.0
-    val poleAlt = kotlin.math.abs(latitude).toDouble()
-
-    var deltaAz = poleAz - camAz
-    while (deltaAz > 180) deltaAz -= 360
-    while (deltaAz < -180) deltaAz += 360
-    val deltaAlt = poleAlt - camAlt
-
-    val poleX = (size.width / 2.0 + deltaAz * pixPerDegH).toFloat()
-    val poleY = (size.height / 2.0 - deltaAlt * pixPerDegV).toFloat()
-
-    val dashEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 6f))
-
-    // ── Spherical declination rings at 10° intervals from the pole ──
-    if (latitude != 0f) {
-        for (degFromPole in 10..90 step 10) {
-            val radiusPx = (degFromPole.toDouble() * pixPerDeg).toFloat()
-            val isEquator = degFromPole == 90
-            val strokeW = if (isEquator) 1.5f else 0.8f
-            val ringAlpha = if (isEquator) 0.4f else 0.2f
-
-            drawCircle(
-                color = gridColor.copy(alpha = ringAlpha),
-                radius = radiusPx,
-                center = Offset(poleX, poleY),
-                style = Stroke(strokeW, pathEffect = if (!isEquator) dashEffect else null),
-            )
-        }
-
-        // ── Pole crosshair ──
-        val crossSize = 25f
-        drawLine(poleColor, Offset(poleX - crossSize, poleY), Offset(poleX + crossSize, poleY), 2f)
-        drawLine(poleColor, Offset(poleX, poleY - crossSize), Offset(poleX, poleY + crossSize), 2f)
-
-        // Inner 1° circle
-        val r1 = pixPerDeg.toFloat()
-        drawCircle(poleColor, r1, Offset(poleX, poleY), style = Stroke(1.5f))
-
-        // Pole label
-        val poleLabel = if (isNorth) "NCP" else "SCP"
-        val poleLabelResult = textMeasurer.measure(
-            poleLabel,
-            style = TextStyle(color = poleColor, fontSize = 12.sp, fontWeight = FontWeight.Bold),
-        )
-        drawText(poleLabelResult, topLeft = Offset(poleX + crossSize + 4f, poleY - poleLabelResult.size.height / 2f))
-    }
-
-    // ── Pole off-screen arrow ──
-    if (latitude != 0f) {
-        val poleMargin = 40f
-        val poleOnScreen = poleX in -poleMargin..size.width + poleMargin &&
-            poleY in -poleMargin..size.height + poleMargin
-
-        if (!poleOnScreen) {
-            val edgePadding = 50f
-            val cx = size.width / 2f
-            val cy = size.height / 2f
-            val dx = poleX - cx
-            val dy = poleY - cy
-            val angle = kotlin.math.atan2(dy.toDouble(), dx.toDouble())
-
-            val edgeX = (cx + (size.width / 2f - edgePadding) * kotlin.math.cos(angle)).toFloat()
-                .coerceIn(edgePadding, size.width - edgePadding)
-            val edgeY = (cy + (size.height / 2f - edgePadding) * kotlin.math.sin(angle)).toFloat()
-                .coerceIn(edgePadding, size.height - edgePadding)
-
-            val arrowSize = 12f
-            val cos = kotlin.math.cos(angle).toFloat()
-            val sin = kotlin.math.sin(angle).toFloat()
-
-            val tip = Offset(edgeX + arrowSize * cos, edgeY + arrowSize * sin)
-            val left = Offset(
-                edgeX - arrowSize * cos + arrowSize * 0.6f * -sin,
-                edgeY - arrowSize * sin + arrowSize * 0.6f * cos,
-            )
-            val right = Offset(
-                edgeX - arrowSize * cos - arrowSize * 0.6f * -sin,
-                edgeY - arrowSize * sin - arrowSize * 0.6f * cos,
-            )
-
-            val arrowPath = Path().apply {
-                moveTo(tip.x, tip.y)
-                lineTo(left.x, left.y)
-                lineTo(right.x, right.y)
-                close()
-            }
-            drawPath(arrowPath, color = poleColor)
-
-            val poleLabel = if (isNorth) "NCP" else "SCP"
-            val poleLabelResult = textMeasurer.measure(
-                poleLabel,
-                style = TextStyle(color = poleColor, fontSize = 10.sp, fontWeight = FontWeight.Bold),
-            )
-            val labelOffsetX = if (edgeX > cx) -poleLabelResult.size.width - arrowSize else arrowSize
-            drawText(
-                poleLabelResult,
-                topLeft = Offset(edgeX + labelOffsetX, edgeY - poleLabelResult.size.height / 2f),
-            )
-        }
-    }
-}
 
 // ── Camera panel enum ───────────────────────────────────────────────────
 
