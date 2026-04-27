@@ -7,6 +7,8 @@ package com.ehrocha.pulsar.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,7 +16,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -26,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.stacking.SequenceFolder
+import com.ehrocha.pulsar.stacking.SequenceLabels
 import com.ehrocha.pulsar.stacking.SequenceRepository
 import com.ehrocha.pulsar.stacking.Stacker
 import kotlinx.coroutines.Dispatchers
@@ -34,6 +40,9 @@ import kotlinx.coroutines.withContext
 import java.text.DateFormat
 import java.util.Date
 
+private enum class SortMode { NEWEST, OLDEST, NAME }
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SequencesScreen(
     onBack: () -> Unit,
@@ -42,11 +51,27 @@ fun SequencesScreen(
     val context = LocalContext.current
     var folders by remember { mutableStateOf<List<SequenceFolder>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
+    var sortMode by remember { mutableStateOf(SortMode.NEWEST) }
+    var sortMenuOpen by remember { mutableStateOf(false) }
+    var actionTarget by remember { mutableStateOf<SequenceFolder?>(null) }
+    var renameTarget by remember { mutableStateOf<SequenceFolder?>(null) }
+    var deleteTarget by remember { mutableStateOf<SequenceFolder?>(null) }
+    val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
+    suspend fun reload() {
         loading = true
         folders = withContext(Dispatchers.IO) { SequenceRepository.list(context) }
         loading = false
+    }
+
+    LaunchedEffect(Unit) { reload() }
+
+    val displayFolders = remember(folders, sortMode) {
+        when (sortMode) {
+            SortMode.NEWEST -> folders.sortedByDescending { it.mostRecentMs }
+            SortMode.OLDEST -> folders.sortedBy { it.mostRecentMs }
+            SortMode.NAME -> folders.sortedBy { SequenceLabels.get(context, it.path) ?: it.name }
+        }
     }
 
     Column(
@@ -61,7 +86,37 @@ fun SequencesScreen(
                 stringResource(R.string.sequences_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
             )
+            // Sort menu
+            Box {
+                TextButton(onClick = { sortMenuOpen = true }) {
+                    Icon(Icons.Default.Sort, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        when (sortMode) {
+                            SortMode.NEWEST -> stringResource(R.string.sort_newest)
+                            SortMode.OLDEST -> stringResource(R.string.sort_oldest)
+                            SortMode.NAME -> stringResource(R.string.sort_name)
+                        },
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                }
+                DropdownMenu(expanded = sortMenuOpen, onDismissRequest = { sortMenuOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.sort_newest)) },
+                        onClick = { sortMode = SortMode.NEWEST; sortMenuOpen = false },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.sort_oldest)) },
+                        onClick = { sortMode = SortMode.OLDEST; sortMenuOpen = false },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.sort_name)) },
+                        onClick = { sortMode = SortMode.NAME; sortMenuOpen = false },
+                    )
+                }
+            }
         }
         Spacer(Modifier.height(12.dp))
 
@@ -71,7 +126,7 @@ fun SequencesScreen(
                     CircularProgressIndicator()
                 }
             }
-            folders.isEmpty() -> {
+            displayFolders.isEmpty() -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
                         stringResource(R.string.sequences_empty),
@@ -82,26 +137,127 @@ fun SequencesScreen(
             }
             else -> {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(folders, key = { it.path }) { folder ->
-                        SequenceFolderRow(folder, onClick = { onOpenSequence(folder.path) })
+                    items(displayFolders, key = { it.path }) { folder ->
+                        SequenceFolderRow(
+                            folder = folder,
+                            onClick = { onOpenSequence(folder.path) },
+                            onLongPress = { actionTarget = folder },
+                        )
                     }
                 }
             }
         }
     }
+
+    // Action sheet (rename / delete)
+    if (actionTarget != null) {
+        val target = actionTarget!!
+        AlertDialog(
+            onDismissRequest = { actionTarget = null },
+            title = { Text(SequenceLabels.get(context, target.path) ?: target.name) },
+            text = { Text(stringResource(R.string.sequences_action_prompt)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    actionTarget = null
+                    renameTarget = target
+                }) {
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(stringResource(R.string.action_rename))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    actionTarget = null
+                    deleteTarget = target
+                }) {
+                    Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
+                }
+            },
+        )
+    }
+
+    if (renameTarget != null) {
+        val target = renameTarget!!
+        var label by remember(target.path) {
+            mutableStateOf(SequenceLabels.get(context, target.path) ?: target.name)
+        }
+        AlertDialog(
+            onDismissRequest = { renameTarget = null },
+            title = { Text(stringResource(R.string.dialog_rename_sequence)) },
+            text = {
+                OutlinedTextField(
+                    value = label,
+                    onValueChange = { label = it },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    SequenceLabels.set(context, target.path, label)
+                    renameTarget = null
+                    scope.launch { reload() }
+                }) { Text(stringResource(R.string.save)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { renameTarget = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (deleteTarget != null) {
+        val target = deleteTarget!!
+        AlertDialog(
+            onDismissRequest = { deleteTarget = null },
+            title = { Text(stringResource(R.string.dialog_delete_sequence)) },
+            text = {
+                Text(stringResource(R.string.dialog_delete_sequence_msg, target.frames.size,
+                    SequenceLabels.get(context, target.path) ?: target.name))
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    deleteTarget = null
+                    scope.launch {
+                        withContext(Dispatchers.IO) { SequenceRepository.deleteSequence(context, target) }
+                        reload()
+                    }
+                }) {
+                    Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteTarget = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SequenceFolderRow(folder: SequenceFolder, onClick: () -> Unit) {
+private fun SequenceFolderRow(
+    folder: SequenceFolder,
+    onClick: () -> Unit,
+    onLongPress: () -> Unit,
+) {
+    val context = LocalContext.current
+    val customLabel = SequenceLabels.get(context, folder.path)
     val date = remember(folder.mostRecentMs) {
         DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
             .format(Date(folder.mostRecentMs))
     }
     Surface(
-        onClick = onClick,
         shape = RoundedCornerShape(12.dp),
         tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(onClick = onClick, onLongClick = onLongPress),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -115,7 +271,7 @@ private fun SequenceFolderRow(folder: SequenceFolder, onClick: () -> Unit) {
             )
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(folder.name, style = MaterialTheme.typography.bodyLarge)
+                Text(customLabel ?: folder.name, style = MaterialTheme.typography.bodyLarge)
                 Text(
                     stringResource(R.string.sequences_frame_count, folder.frames.size, date),
                     style = MaterialTheme.typography.bodySmall,
@@ -231,8 +387,9 @@ fun SequenceDetailScreen(
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
             }
             Spacer(Modifier.width(4.dp))
+            val headerName = folder?.let { SequenceLabels.get(context, it.path) ?: it.name }
             Text(
-                folder?.name ?: stringResource(R.string.sequences_title),
+                headerName ?: stringResource(R.string.sequences_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,

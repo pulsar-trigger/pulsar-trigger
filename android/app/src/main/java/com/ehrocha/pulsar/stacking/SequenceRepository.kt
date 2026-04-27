@@ -81,4 +81,22 @@ object SequenceRepository {
     /** Just one folder by path (re-queries to keep current). */
     fun get(context: Context, path: String): SequenceFolder? =
         list(context).firstOrNull { it.path == path }
+
+    /** Delete every frame (and any saved stack output) in the given folder.
+     *  Returns the count successfully deleted. */
+    fun deleteSequence(context: Context, folder: SequenceFolder): Int {
+        val resolver = context.contentResolver
+        var deleted = 0
+        for (uri in folder.frames) {
+            try {
+                deleted += resolver.delete(uri, null, null)
+            } catch (_: Exception) {
+                // Skip frames we don't have permission to delete; user can clean
+                // them up via the system file manager.
+            }
+        }
+        // Also drop any custom label we'd stored for this path.
+        SequenceLabels.set(context, folder.path, null)
+        return deleted
+    }
 }

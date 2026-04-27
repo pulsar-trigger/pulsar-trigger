@@ -649,6 +649,15 @@
     <string name="stack_lightning">Lightning Composite</string>
     <string name="stack_strikes_found">%1$d strikes found in %2$d frames — composite saved.</string>
     <string name="stack_no_strikes">No lightning detected across %1$d frames.</string>
+    <string name="sort_newest">Newest</string>
+    <string name="sort_oldest">Oldest</string>
+    <string name="sort_name">Name</string>
+    <string name="sequences_action_prompt">Long-press menu — choose an action</string>
+    <string name="action_rename">Rename</string>
+    <string name="action_delete">Delete</string>
+    <string name="dialog_rename_sequence">Rename sequence</string>
+    <string name="dialog_delete_sequence">Delete sequence?</string>
+    <string name="dialog_delete_sequence_msg">Permanently delete %1$d frames in “%2$s”? This cannot be undone.</string>
 
     <!-- About: tribute to Jocelyn Bell Burnell -->
     <string name="about_tribute_heading">In honor of</string>
