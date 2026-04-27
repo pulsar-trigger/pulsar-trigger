@@ -355,7 +355,6 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                     azimuth = azimuth,
                     pitch = pitch,
                     latitude = latitude,
-                    longitude = longitude,
                     currentLens = currentLens,
                     modifier = Modifier.fillMaxSize(),
                 )
@@ -858,13 +857,11 @@ private fun GridOverlay(
     azimuth: Float,
     pitch: Float,
     latitude: Float,
-    longitude: Float,
     currentLens: com.ehrocha.pulsar.camera.PhoneLens?,
     modifier: Modifier = Modifier,
 ) {
-    val gridColor = Color.White.copy(alpha = 0.4f)
-    val poleColor = Color.Red.copy(alpha = 0.8f)
-    val mwColor = Color(0xFFFF9800) // Orange for MW core
+    val gridColor = Color.White.copy(alpha = 0.55f)
+    val poleColor = Color.Red.copy(alpha = 0.85f)
     val textMeasurer = rememberTextMeasurer()
 
     Canvas(modifier = modifier) {
@@ -875,10 +872,8 @@ private fun GridOverlay(
                 azimuth = azimuth,
                 pitch = pitch,
                 latitude = latitude,
-                longitude = longitude,
                 lens = currentLens,
                 poleColor = poleColor,
-                mwColor = mwColor,
                 gridColor = gridColor,
                 textMeasurer = textMeasurer,
             )
@@ -888,7 +883,7 @@ private fun GridOverlay(
 }
 
 private fun DrawScope.drawGrid(cols: Int, rows: Int, color: Color) {
-    val strokeWidth = 1f
+    val strokeWidth = 2.5f
     // Vertical lines
     for (i in 1 until cols) {
         val x = size.width * i / cols
@@ -902,20 +897,19 @@ private fun DrawScope.drawGrid(cols: Int, rows: Int, color: Color) {
 }
 
 /**
- * Unified celestial overlay: spherical declination grid centered on the pole
- * (like PhotoPills) plus a Milky Way core marker.
+ * Celestial overlay: spherical declination grid centered on the pole, with a
+ * crosshair on the pole itself and an off-screen arrow pointing toward it.
+ * (Milky-Way-core marker dropped — wasn't reliable enough across hemispheres.)
  *
- * Draws concentric circles at 10° declination intervals from the pole.
- * Small circles near the pole, growing toward the equator (90° away).
+ * Draws concentric circles at 10° declination intervals from the pole; small
+ * near the pole, growing toward the equator (90° away).
  */
 private fun DrawScope.drawCelestialGrid(
     azimuth: Float,
     pitch: Float,
     latitude: Float,
-    longitude: Float,
     lens: com.ehrocha.pulsar.camera.PhoneLens?,
     poleColor: Color,
-    mwColor: Color,
     gridColor: Color,
     textMeasurer: androidx.compose.ui.text.TextMeasurer,
 ) {
@@ -985,96 +979,6 @@ private fun DrawScope.drawCelestialGrid(
         drawText(poleLabelResult, topLeft = Offset(poleX + crossSize + 4f, poleY - poleLabelResult.size.height / 2f))
     }
 
-    // ── Milky Way core ──
-    if (latitude != 0f || longitude != 0f) {
-        val lst = localSiderealTimeDeg(longitude.toDouble())
-        val (gcAlt, gcAz) = raDecToAltAz(GC_RA_DEG, GC_DEC_DEG, latitude.toDouble(), lst)
-
-        var mwDeltaAz = gcAz - camAz
-        while (mwDeltaAz > 180) mwDeltaAz -= 360
-        while (mwDeltaAz < -180) mwDeltaAz += 360
-        val mwDeltaAlt = gcAlt - camAlt
-
-        val mwX = (size.width / 2.0 + mwDeltaAz * pixPerDegH).toFloat()
-        val mwY = (size.height / 2.0 - mwDeltaAlt * pixPerDegV).toFloat()
-
-        val belowHorizon = gcAlt < 0
-        val drawColor = if (belowHorizon) mwColor.copy(alpha = 0.3f) else mwColor
-
-        val margin = 40f
-        val onScreen = mwX in -margin..size.width + margin &&
-            mwY in -margin..size.height + margin
-
-        if (onScreen) {
-            // Draw crosshair + circle when visible
-            val mwCross = 20f
-            drawLine(drawColor, Offset(mwX - mwCross, mwY), Offset(mwX + mwCross, mwY), 2f)
-            drawLine(drawColor, Offset(mwX, mwY - mwCross), Offset(mwX, mwY + mwCross), 2f)
-
-            val mwR = (2.0 * pixPerDeg).toFloat()
-            drawCircle(drawColor, mwR, Offset(mwX, mwY), style = Stroke(1.5f))
-
-            val mwLabel = if (belowHorizon) "MW \u2193" else "MW"
-            val mwLabelResult = textMeasurer.measure(
-                mwLabel,
-                style = TextStyle(color = drawColor, fontSize = 11.sp, fontWeight = FontWeight.Bold),
-            )
-            drawText(mwLabelResult, topLeft = Offset(mwX + mwCross + 4f, mwY - mwLabelResult.size.height / 2f))
-        } else {
-            // Off-screen: draw an arrow at the edge pointing toward the MW core
-            val edgePadding = 50f
-            val cx = size.width / 2f
-            val cy = size.height / 2f
-
-            // Direction from center to MW position
-            val dx = mwX - cx
-            val dy = mwY - cy
-            val angle = kotlin.math.atan2(dy.toDouble(), dx.toDouble())
-
-            // Clamp to screen edge with padding
-            val edgeX = (cx + (size.width / 2f - edgePadding) * kotlin.math.cos(angle)).toFloat()
-                .coerceIn(edgePadding, size.width - edgePadding)
-            val edgeY = (cy + (size.height / 2f - edgePadding) * kotlin.math.sin(angle)).toFloat()
-                .coerceIn(edgePadding, size.height - edgePadding)
-
-            // Arrow triangle pointing in the direction of the MW core
-            val arrowSize = 14f
-            val cos = kotlin.math.cos(angle).toFloat()
-            val sin = kotlin.math.sin(angle).toFloat()
-
-            val tip = Offset(edgeX + arrowSize * cos, edgeY + arrowSize * sin)
-            val left = Offset(
-                edgeX - arrowSize * cos + arrowSize * 0.6f * -sin,
-                edgeY - arrowSize * sin + arrowSize * 0.6f * cos,
-            )
-            val right = Offset(
-                edgeX - arrowSize * cos - arrowSize * 0.6f * -sin,
-                edgeY - arrowSize * sin - arrowSize * 0.6f * cos,
-            )
-
-            val arrowPath = Path().apply {
-                moveTo(tip.x, tip.y)
-                lineTo(left.x, left.y)
-                lineTo(right.x, right.y)
-                close()
-            }
-            drawPath(arrowPath, color = drawColor)
-
-            // Label next to arrow
-            val mwLabel = if (belowHorizon) "MW \u2193" else "MW"
-            val mwLabelResult = textMeasurer.measure(
-                mwLabel,
-                style = TextStyle(color = drawColor, fontSize = 11.sp, fontWeight = FontWeight.Bold),
-            )
-            // Position label offset from arrow, away from center
-            val labelOffsetX = if (edgeX > cx) -mwLabelResult.size.width - arrowSize else arrowSize
-            drawText(
-                mwLabelResult,
-                topLeft = Offset(edgeX + labelOffsetX, edgeY - mwLabelResult.size.height / 2f),
-            )
-        }
-    }
-
     // ── Pole off-screen arrow ──
     if (latitude != 0f) {
         val poleMargin = 40f
@@ -1128,35 +1032,6 @@ private fun DrawScope.drawCelestialGrid(
             )
         }
     }
-}
-
-// ── Celestial helpers ─────────────────────────────────────────────────
-
-/** Galactic center: RA 17h 45m 40s = 266.417°, Dec -29.008° */
-private const val GC_RA_DEG = 266.417
-private const val GC_DEC_DEG = -29.008
-
-private fun localSiderealTimeDeg(longitudeDeg: Double): Double {
-    val now = System.currentTimeMillis()
-    val j2000Ms = 946728000000L
-    val daysSinceJ2000 = (now - j2000Ms) / 86400000.0
-    val gmst = (280.46061837 + 360.98564736629 * daysSinceJ2000) % 360.0
-    val lst = (gmst + longitudeDeg) % 360.0
-    return if (lst < 0) lst + 360.0 else lst
-}
-
-private fun raDecToAltAz(raDeg: Double, decDeg: Double, latDeg: Double, lstDeg: Double): Pair<Double, Double> {
-    val ha = Math.toRadians(lstDeg - raDeg)
-    val dec = Math.toRadians(decDeg)
-    val lat = Math.toRadians(latDeg)
-    val sinAlt = kotlin.math.sin(dec) * kotlin.math.sin(lat) +
-        kotlin.math.cos(dec) * kotlin.math.cos(lat) * kotlin.math.cos(ha)
-    val alt = Math.toDegrees(kotlin.math.asin(sinAlt.coerceIn(-1.0, 1.0)))
-    val cosA = (kotlin.math.sin(dec) - kotlin.math.sin(lat) * sinAlt) /
-        (kotlin.math.cos(lat) * kotlin.math.cos(Math.toRadians(alt)))
-    var az = Math.toDegrees(kotlin.math.acos(cosA.coerceIn(-1.0, 1.0)))
-    if (kotlin.math.sin(ha) > 0) az = 360.0 - az
-    return Pair(alt, az)
 }
 
 // ── Camera panel enum ───────────────────────────────────────────────────
@@ -1846,7 +1721,16 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
                 }
             }
         }
-        // DSLR-style horizontal shutter speed chips — 30s … 1/1000 in full stops.
+        // DSLR-style horizontal shutter speed chips, filtered to what this lens
+        // can physically produce (SENSOR_INFO_EXPOSURE_TIME_RANGE from Camera2).
+        val supportedShutters = remember(currentLens) {
+            val range = currentLens?.capabilities?.exposureTimeRange
+            if (range == null) SHUTTER_STOPS
+            else SHUTTER_STOPS.filter { stop ->
+                val ns = stop.ms * 1_000_000L
+                ns in range.lower..range.upper
+            }
+        }
         val shutterScroll = rememberScrollState()
         Row(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -1854,7 +1738,7 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
                 .fillMaxWidth()
                 .horizontalScroll(shutterScroll),
         ) {
-            SHUTTER_STOPS.forEach { stop ->
+            supportedShutters.forEach { stop ->
                 val selected = exposureMs == stop.ms
                 Surface(
                     onClick = { vm.setExposureMs(stop.ms) },
