@@ -534,4 +534,7 @@
     <string name="dialog_rename_sequence">Sequenz umbenennen</string>
     <string name="dialog_delete_sequence">Sequenz löschen?</string>
     <string name="dialog_delete_sequence_msg">%1$d Frames in „%2$s“ dauerhaft löschen? Diese Aktion kann nicht rückgängig gemacht werden.</string>
+    <string name="stack_nightscape">Nachtlandschaft</string>
+    <string name="stack_nightscape_done">Nachtlandschaft gespeichert (Horizont in Zeile %1$d).</string>
+    <string name="stack_no_horizon">Kein klarer Horizont erkannt. Nachtlandschaft benötigt ein helleres Vordergrundbild am unteren Rand der Szene — das Bonus-Bild von Auto Astro funktioniert am besten.</string>
 </resources>

@@ -532,4 +532,7 @@
     <string name="dialog_rename_sequence">Renombrar secuencia</string>
     <string name="dialog_delete_sequence">¿Eliminar secuencia?</string>
     <string name="dialog_delete_sequence_msg">¿Eliminar permanentemente %1$d fotogramas en “%2$s”? Esta acción no se puede deshacer.</string>
+    <string name="stack_nightscape">Paisaje Nocturno</string>
+    <string name="stack_nightscape_done">Paisaje nocturno guardado (horizonte en fila %1$d).</string>
+    <string name="stack_no_horizon">No se detectó un horizonte claro. Paisaje Nocturno necesita un fotograma de primer plano más brillante en la parte inferior — el fotograma extra de Auto Astro funciona mejor.</string>
 </resources>

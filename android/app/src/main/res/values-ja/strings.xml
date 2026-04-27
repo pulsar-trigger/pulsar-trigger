@@ -534,4 +534,7 @@
     <string name="dialog_rename_sequence">シーケンスの名前を変更</string>
     <string name="dialog_delete_sequence">シーケンスを削除しますか？</string>
     <string name="dialog_delete_sequence_msg">「%2$s」内の %1$d 個のフレームを完全に削除しますか？この操作は取り消せません。</string>
+    <string name="stack_nightscape">ナイトスケープ</string>
+    <string name="stack_nightscape_done">ナイトスケープを保存しました（地平線は行 %1$d）。</string>
+    <string name="stack_no_horizon">明確な地平線を検出できませんでした。ナイトスケープには、シーンの下部に明るい前景フレームが必要です — オートアストロのボーナスフレームが最適です。</string>
 </resources>

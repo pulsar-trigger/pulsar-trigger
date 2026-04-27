@@ -534,4 +534,7 @@
     <string name="dialog_rename_sequence">Renomear sequência</string>
     <string name="dialog_delete_sequence">Excluir sequência?</string>
     <string name="dialog_delete_sequence_msg">Excluir permanentemente %1$d quadros em “%2$s”? Esta ação não pode ser desfeita.</string>
+    <string name="stack_nightscape">Paisagem Noturna</string>
+    <string name="stack_nightscape_done">Paisagem noturna salva (horizonte na linha %1$d).</string>
+    <string name="stack_no_horizon">Nenhum horizonte claro detectado. Paisagem Noturna precisa de um quadro de primeiro plano mais brilhante na parte inferior da cena — o quadro extra do Auto Astro funciona melhor.</string>
 </resources>

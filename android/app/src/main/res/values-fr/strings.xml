@@ -534,4 +534,7 @@
     <string name="dialog_rename_sequence">Renommer la séquence</string>
     <string name="dialog_delete_sequence">Supprimer la séquence ?</string>
     <string name="dialog_delete_sequence_msg">Supprimer définitivement %1$d images dans « %2$s » ? Action irréversible.</string>
+    <string name="stack_nightscape">Paysage Nocturne</string>
+    <string name="stack_nightscape_done">Paysage nocturne enregistré (horizon à la ligne %1$d).</string>
+    <string name="stack_no_horizon">Aucun horizon clair détecté. Le Paysage Nocturne nécessite une image de premier plan plus lumineuse en bas de la scène — l\'image bonus d\'Auto Astro fonctionne le mieux.</string>
 </resources>

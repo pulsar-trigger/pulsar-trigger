@@ -658,6 +658,9 @@
     <string name="dialog_rename_sequence">Rename sequence</string>
     <string name="dialog_delete_sequence">Delete sequence?</string>
     <string name="dialog_delete_sequence_msg">Permanently delete %1$d frames in “%2$s”? This cannot be undone.</string>
+    <string name="stack_nightscape">Nightscape</string>
+    <string name="stack_nightscape_done">Nightscape composite saved (horizon at row %1$d).</string>
+    <string name="stack_no_horizon">No clear horizon detected. Nightscape needs a brighter foreground frame at the bottom of the scene — Auto Astro\'s bonus frame works best.</string>
 
     <!-- About: tribute to Jocelyn Bell Burnell -->
     <string name="about_tribute_heading">In honor of</string>

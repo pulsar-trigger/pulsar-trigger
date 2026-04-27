@@ -33,12 +33,19 @@ object Stacker {
         LIGHTEN("lighten"),
         MEAN("mean"),
         LIGHTNING("lightning"),
+        NIGHTSCAPE("nightscape"),
     }
 
     /** Result of a lightning auto-cull pass. */
     data class LightningResult(
         val totalFrames: Int,
         val winnerIndices: List<Int>,
+        val composite: Bitmap?,
+    )
+
+    /** Result of a nightscape composite pass. */
+    data class NightscapeResult(
+        val horizonRow: Int,        // -1 when no horizon was detected
         val composite: Bitmap?,
     )
 
@@ -167,6 +174,130 @@ object Stacker {
         } catch (_: Exception) {
             null
         }
+    }
+
+    /**
+     * Nightscape composite. Assumes the last frame in the sequence is the bonus
+     * foreground (Auto Astro convention: 30s low-ISO ground frame at the end of
+     * the flow). Steps:
+     *
+     *  1. Mean-stack all but the last frame → clean sky.
+     *  2. Decode the last frame full-res → foreground.
+     *  3. Auto-detect horizon row by smoothing per-row luminance and finding the
+     *     largest dark→bright gradient in the foreground.
+     *  4. Blend stacked sky above the horizon with the foreground frame below,
+     *     feathered across ~50 px to hide the seam.
+     *
+     * Returns `horizonRow = -1` when no clear horizon was found (e.g. a sequence
+     * with no foreground frame, or one where sky and ground brightness are too
+     * similar). Caller surfaces a friendly message in that case.
+     */
+    fun nightscapeCompose(
+        context: Context,
+        frames: List<Uri>,
+        progress: ProgressCallback,
+    ): NightscapeResult? {
+        if (frames.size < 2) return null
+        val skyUris = frames.dropLast(1)
+        val foregroundUri = frames.last()
+
+        val totalSteps = frames.size + 2
+
+        // 1. Mean-stack sky frames.
+        val skyBitmap = meanStack(context, skyUris) { current, _ ->
+            progress.onProgress(current, totalSteps)
+        } ?: return null
+        val w = skyBitmap.width
+        val h = skyBitmap.height
+
+        // 2. Decode foreground.
+        val foregroundBitmap = decode(context, foregroundUri)
+        if (foregroundBitmap == null ||
+            foregroundBitmap.width != w || foregroundBitmap.height != h) {
+            skyBitmap.recycle()
+            foregroundBitmap?.recycle()
+            return null
+        }
+        progress.onProgress(skyUris.size + 1, totalSteps)
+
+        val skyPx = IntArray(w * h)
+        skyBitmap.getPixels(skyPx, 0, w, 0, 0, w, h)
+        skyBitmap.recycle()
+        val fgPx = IntArray(w * h)
+        foregroundBitmap.getPixels(fgPx, 0, w, 0, 0, w, h)
+        foregroundBitmap.recycle()
+
+        // 3. Per-row luminance, smoothed, then largest gradient = horizon.
+        val rowLum = DoubleArray(h)
+        for (y in 0 until h) {
+            var sum = 0L
+            val rowStart = y * w
+            for (x in 0 until w) {
+                val p = fgPx[rowStart + x]
+                sum += ((p shr 16) and 0xff) + ((p shr 8) and 0xff) + (p and 0xff)
+            }
+            rowLum[y] = sum.toDouble() / w
+        }
+        val smoothed = DoubleArray(h)
+        val window = 10
+        for (y in 0 until h) {
+            var s = 0.0
+            var n = 0
+            for (k in (y - window).coerceAtLeast(0)..(y + window).coerceAtMost(h - 1)) {
+                s += rowLum[k]; n++
+            }
+            smoothed[y] = s / n
+        }
+        var horizonRow = -1
+        var maxGradient = 0.0
+        val skipBorder = h / 10
+        val gradWindow = 30
+        for (y in skipBorder until h - skipBorder - gradWindow) {
+            val grad = smoothed[y + gradWindow] - smoothed[y]
+            if (grad > maxGradient) {
+                maxGradient = grad
+                horizonRow = y + gradWindow / 2
+            }
+        }
+        // Sum-of-channels gradient must clear ~50 to avoid false positives in flat scenes.
+        if (horizonRow < 0 || maxGradient < 50.0) {
+            return NightscapeResult(horizonRow = -1, composite = null)
+        }
+
+        // 4. Feathered blend across the horizon.
+        val feather = 50
+        val blendStart = (horizonRow - feather).coerceAtLeast(0)
+        val blendEnd = (horizonRow + feather).coerceAtMost(h - 1)
+        val blendSpan = (blendEnd - blendStart).coerceAtLeast(1)
+        val out = IntArray(w * h)
+        for (y in 0 until h) {
+            val t = when {
+                y <= blendStart -> 0f
+                y >= blendEnd -> 1f
+                else -> (y - blendStart).toFloat() / blendSpan
+            }
+            val rowStart = y * w
+            if (t == 0f) {
+                System.arraycopy(skyPx, rowStart, out, rowStart, w)
+            } else if (t == 1f) {
+                System.arraycopy(fgPx, rowStart, out, rowStart, w)
+            } else {
+                val inv = 1f - t
+                for (x in 0 until w) {
+                    val s = skyPx[rowStart + x]
+                    val f = fgPx[rowStart + x]
+                    val r = (((s shr 16) and 0xff) * inv + ((f shr 16) and 0xff) * t).toInt()
+                    val g = (((s shr 8) and 0xff) * inv + ((f shr 8) and 0xff) * t).toInt()
+                    val b = ((s and 0xff) * inv + (f and 0xff) * t).toInt()
+                    out[rowStart + x] = (0xff shl 24) or (r shl 16) or (g shl 8) or b
+                }
+            }
+        }
+        progress.onProgress(totalSteps, totalSteps)
+        return NightscapeResult(
+            horizonRow = horizonRow,
+            composite = Bitmap.createBitmap(out, w, h, Bitmap.Config.ARGB_8888),
+        )
     }
 
     private fun decode(context: Context, uri: Uri): Bitmap? = try {

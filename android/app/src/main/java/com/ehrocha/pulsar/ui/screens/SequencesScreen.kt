@@ -348,6 +348,31 @@ fun SequenceDetailScreen(
                             lastError = context.getString(R.string.stack_save_failed)
                         }
                     }
+                } else if (type == Stacker.Type.NIGHTSCAPE) {
+                    val res = withContext(Dispatchers.Default) {
+                        Stacker.nightscapeCompose(context, frames) { current, total ->
+                            processedFrames = current
+                            totalFrames = total
+                        }
+                    }
+                    when {
+                        res == null ->
+                            lastError = context.getString(R.string.stack_decode_failed)
+                        res.composite == null ->
+                            lastInfo = context.getString(R.string.stack_no_horizon)
+                        else -> {
+                            val uri = withContext(Dispatchers.IO) {
+                                Stacker.saveResult(context, res.composite, sequencePath, type)
+                            }
+                            res.composite.recycle()
+                            if (uri != null) {
+                                lastResult = uri
+                                lastInfo = context.getString(R.string.stack_nightscape_done, res.horizonRow)
+                            } else {
+                                lastError = context.getString(R.string.stack_save_failed)
+                            }
+                        }
+                    }
                 } else {
                     val result = withContext(Dispatchers.Default) {
                         val cb = Stacker.ProgressCallback { current, total ->
@@ -358,6 +383,7 @@ fun SequenceDetailScreen(
                             Stacker.Type.LIGHTEN -> Stacker.lightenBlend(context, frames, cb)
                             Stacker.Type.MEAN -> Stacker.meanStack(context, frames, cb)
                             Stacker.Type.LIGHTNING -> null  // handled above
+                            Stacker.Type.NIGHTSCAPE -> null  // handled above
                         }
                     }
                     if (result != null) {
@@ -546,17 +572,31 @@ fun SequenceDetailScreen(
             }
         }
         Spacer(Modifier.height(8.dp))
-        Button(
-            onClick = { runStack(Stacker.Type.LIGHTNING) },
-            enabled = canRun,
-            shape = RoundedCornerShape(28.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.tertiary,
-                contentColor = MaterialTheme.colorScheme.onTertiary,
-            ),
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-        ) {
-            Text(stringResource(R.string.stack_lightning), fontWeight = FontWeight.Bold)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = { runStack(Stacker.Type.LIGHTNING) },
+                enabled = canRun,
+                shape = RoundedCornerShape(28.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.tertiary,
+                    contentColor = MaterialTheme.colorScheme.onTertiary,
+                ),
+                modifier = Modifier.weight(1f).height(56.dp),
+            ) {
+                Text(stringResource(R.string.stack_lightning), fontWeight = FontWeight.Bold)
+            }
+            Button(
+                onClick = { runStack(Stacker.Type.NIGHTSCAPE) },
+                enabled = canRun,
+                shape = RoundedCornerShape(28.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.tertiary,
+                    contentColor = MaterialTheme.colorScheme.onTertiary,
+                ),
+                modifier = Modifier.weight(1f).height(56.dp),
+            ) {
+                Text(stringResource(R.string.stack_nightscape), fontWeight = FontWeight.Bold)
+            }
         }
         Spacer(Modifier.height(4.dp))
         Text(
