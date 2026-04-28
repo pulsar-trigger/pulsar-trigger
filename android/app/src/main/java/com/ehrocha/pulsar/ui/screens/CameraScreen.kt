@@ -792,7 +792,7 @@ private fun DrawScope.drawGrid(cols: Int, rows: Int, color: Color) {
 
 // ── Camera panel enum ───────────────────────────────────────────────────
 
-private enum class CameraPanel { LENS, ISO, FOCUS, INTERVALOMETER, MODE_INFO }
+private enum class CameraPanel { LENS, FOCUS, INTERVALOMETER, MODE_INFO }
 
 // ── Camera settings strip (bottom-left: lens, ISO, focus, grid, awake, RAW) ──
 
@@ -819,7 +819,6 @@ private fun CameraSettingsStrip(
     onOpenGallery: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val manualIso by cameraManager.manualIso.collectAsState()
     val manualFocus by cameraManager.manualFocusDist.collectAsState()
 
     // Only show panel if it belongs to this strip
@@ -847,15 +846,8 @@ private fun CameraSettingsStrip(
                         tooltip = stringResource(R.string.tooltip_lens),
                     )
                 }
-                if (caps.supportsManualExposure) {
-                    ControlIconButton(
-                        icon = Icons.Default.Iso,
-                        label = if (manualIso != null) "$manualIso" else "Auto",
-                        active = activePanel == CameraPanel.ISO,
-                        onClick = { onPanelToggle(CameraPanel.ISO) },
-                        tooltip = stringResource(R.string.tooltip_iso),
-                    )
-                }
+                // ISO moved into Manual mode's params panel — set it alongside
+                // exposure / interval / shots there, not as a separate sub-menu.
                 if (caps.supportsManualFocus) {
                     ControlIconButton(
                         icon = Icons.Default.CenterFocusStrong,
@@ -922,7 +914,6 @@ private fun CameraSettingsStrip(
             ExpandedPanel(activePanel = cameraPanel, paddingStart = true) {
                 when (cameraPanel) {
                     CameraPanel.LENS -> LensPanel(lenses, selectedLens, onLensSelected, onShowDebug)
-                    CameraPanel.ISO -> IsoPanel(cameraManager, caps)
                     CameraPanel.FOCUS -> FocusPanel(cameraManager, caps)
                     else -> {}
                 }
@@ -1034,7 +1025,7 @@ private fun IntervalometerStrip(
 }
 
 // Panel group membership
-private val CAMERA_PANELS = setOf(CameraPanel.LENS, CameraPanel.ISO, CameraPanel.FOCUS)
+private val CAMERA_PANELS = setOf(CameraPanel.LENS, CameraPanel.FOCUS)
 private val INTERVALOMETER_PANELS = setOf(CameraPanel.INTERVALOMETER)
 
 // Capture mode is shared with the stacking package — same enum drives both the
@@ -1099,7 +1090,6 @@ private fun ExpandedPanel(
         ) {
             val panelTitle = when (activePanel) {
                 CameraPanel.LENS -> stringResource(R.string.label_lens)
-                CameraPanel.ISO -> "ISO"
                 CameraPanel.FOCUS -> stringResource(R.string.label_focus_mode)
                 CameraPanel.INTERVALOMETER -> stringResource(R.string.mode_intervalometer)
                 CameraPanel.MODE_INFO -> ""
@@ -1429,26 +1419,43 @@ private val SHOT_STEPS = intArrayOf(1, 2, 5, 10, 20, 30, 50, 100, 200, 300, 500)
 // and keeps the sensor from overheating across a long session.
 private val GAP_PRESETS_MS = longArrayOf(2000, 5000, 10000, 30000)
 
+// Standard ISO stops — full stops from ISO 50 to ISO 12800.
+// Filtered at render time against the lens's reported isoRange.
+private val ISO_STOPS = intArrayOf(50, 100, 200, 400, 800, 1600, 3200, 6400, 12800)
+
 @Composable
 private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pulsar.camera.PhoneLens?) {
     val shotCount by vm.shotCount.collectAsState()
     val exposureMs by vm.exposureMs.collectAsState()
     val intervalMs by vm.intervalMs.collectAsState()
+    val manualIso by vm.phoneCameraManager.manualIso.collectAsState()
     val scrollState = rememberScrollState()
 
-    // NPF auto calculation
-    val npfMs = if (currentLens != null && currentLens.focalLength > 0 && currentLens.sensorWidth > 0) {
+    // Shutter chips, filtered to what the lens sensor can actually do.
+    val supportedShutters = remember(currentLens) {
+        val range = currentLens?.capabilities?.exposureTimeRange
+        if (range == null) SHUTTER_STOPS
+        else SHUTTER_STOPS.filter { stop ->
+            val ns = stop.ms * 1_000_000L
+            ns in range.lower..range.upper
+        }
+    }
+
+    // NPF rule → snap to the nearest chip ≤ NPF (rounding *down* keeps stars sharp).
+    val npfRawMs = if (currentLens != null && currentLens.focalLength > 0 && currentLens.sensorWidth > 0) {
         val cropFactor = 36f / currentLens.sensorWidth
-        val pixelArray = currentLens.megapixels * 1_000_000f
         val sensorWidthUm = currentLens.sensorWidth * 1000f
-        val approxPixelsWide = kotlin.math.sqrt(pixelArray.toDouble() * 4.0 / 3.0)
+        val approxPixelsWide = kotlin.math.sqrt(currentLens.megapixels.toDouble() * 1_000_000.0 * 4.0 / 3.0)
         val pixelPitchUm = sensorWidthUm / approxPixelsWide
         val aperture = if (currentLens.aperture > 0) currentLens.aperture.toDouble() else 2.8
         val exposureS = (35.0 * aperture + 30.0 * pixelPitchUm) / (currentLens.focalLength * cropFactor)
         (exposureS * 1000).toLong().coerceAtLeast(1000)
     } else null
-
-    val isNpfAuto = npfMs != null && exposureMs == npfMs
+    val npfSnappedMs = npfRawMs?.let { raw ->
+        supportedShutters.filter { it.ms <= raw }.maxByOrNull { it.ms }?.ms
+            ?: supportedShutters.minByOrNull { it.ms }?.ms
+    }
+    val isNpfAuto = npfSnappedMs != null && exposureMs == npfSnappedMs
 
     Column(
         modifier = Modifier.verticalScroll(scrollState),
@@ -1461,9 +1468,9 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
             color = Color.White,
             fontWeight = FontWeight.Medium,
         )
-        if (npfMs != null) {
+        if (npfSnappedMs != null && npfRawMs != null) {
             Surface(
-                onClick = { vm.setExposureMs(npfMs) },
+                onClick = { vm.setExposureMs(npfSnappedMs) },
                 color = if (isNpfAuto) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.15f),
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -1473,18 +1480,15 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text("NPF Auto", style = MaterialTheme.typography.labelSmall, color = Color.White, modifier = Modifier.weight(1f))
-                    Text(formatExposureLabel(npfMs), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
+                    Text(
+                        // Show the raw NPF and the chip it snaps to so the user
+                        // sees both the math and the actual setting.
+                        if (npfRawMs == npfSnappedMs) formatExposureLabel(npfSnappedMs)
+                        else "${formatExposureLabel(npfRawMs)} → ${formatExposureLabel(npfSnappedMs)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.7f),
+                    )
                 }
-            }
-        }
-        // DSLR-style horizontal shutter speed chips, filtered to what this lens
-        // can physically produce (SENSOR_INFO_EXPOSURE_TIME_RANGE from Camera2).
-        val supportedShutters = remember(currentLens) {
-            val range = currentLens?.capabilities?.exposureTimeRange
-            if (range == null) SHUTTER_STOPS
-            else SHUTTER_STOPS.filter { stop ->
-                val ns = stop.ms * 1_000_000L
-                ns in range.lower..range.upper
             }
         }
         val shutterScroll = rememberScrollState()
@@ -1511,12 +1515,58 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
             }
         }
 
-        // ── Gap (DSLR-style preset chips) ──
-        val gapAlpha = if (isNpfAuto) 0.4f else 1f
+        // ── ISO (DSLR-style stops, filtered to the lens's range) ──
+        val isoRange = currentLens?.capabilities?.isoRange
+        if (isoRange != null) {
+            Spacer(Modifier.height(2.dp))
+            Text(
+                if (manualIso != null) "ISO ${manualIso}" else "ISO Auto",
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White,
+                fontWeight = FontWeight.Medium,
+            )
+            val isoScroll = rememberScrollState()
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.fillMaxWidth().horizontalScroll(isoScroll),
+            ) {
+                // Auto chip
+                val autoSelected = manualIso == null
+                Surface(
+                    onClick = { vm.phoneCameraManager.setManualIso(null) },
+                    color = if (autoSelected) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Text(
+                        "Auto",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    )
+                }
+                ISO_STOPS.filter { it in isoRange.lower..isoRange.upper }.forEach { iso ->
+                    val selected = manualIso == iso
+                    Surface(
+                        onClick = { vm.phoneCameraManager.setManualIso(iso) },
+                        color = if (selected) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(8.dp),
+                    ) {
+                        Text(
+                            "$iso",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        )
+                    }
+                }
+            }
+        }
+
+        // ── Interval (DSLR-style preset chips) ──
         Text(
             stringResource(R.string.camera_gap_label),
             style = MaterialTheme.typography.labelMedium,
-            color = Color.White.copy(alpha = gapAlpha),
+            color = Color.White,
             fontWeight = FontWeight.Medium,
         )
         Row(
@@ -1526,8 +1576,7 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
             GAP_PRESETS_MS.forEach { ms ->
                 val selected = intervalMs == ms
                 Surface(
-                    onClick = { if (!isNpfAuto) vm.setIntervalMs(ms) },
-                    enabled = !isNpfAuto,
+                    onClick = { vm.setIntervalMs(ms) },
                     color = if (selected) Color.White.copy(alpha = 0.3f)
                             else Color.White.copy(alpha = 0.1f),
                     shape = RoundedCornerShape(8.dp),
@@ -1536,7 +1585,7 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
                     Text(
                         text = "${ms / 1000}s",
                         style = MaterialTheme.typography.labelMedium,
-                        color = Color.White.copy(alpha = gapAlpha),
+                        color = Color.White,
                         textAlign = TextAlign.Center,
                         modifier = Modifier
                             .fillMaxWidth()

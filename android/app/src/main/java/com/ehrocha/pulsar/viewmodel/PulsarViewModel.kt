@@ -494,19 +494,41 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         val lens = phoneCameraManager.lenses.value
             .getOrNull(phoneCameraManager.selectedLens.value) ?: return
 
-        val expMs = computePhoneNpfExposureMs(lens)
+        // Sensor max exposure caps everything — phones can't actually do 30s on
+        // every lens. We compensate by bumping ISO so total light reaching the
+        // sensor matches the photographic intent.
+        val sensorMaxMs = lens.capabilities.exposureTimeRange?.upper?.div(1_000_000L) ?: 30_000L
         val isoRange = lens.capabilities.isoRange
-        val skyIso = isoRange?.let { 1600.coerceIn(it.lower, it.upper) }
-        val groundIso = isoRange?.let { 200.coerceIn(it.lower, it.upper) }
 
-        // Two-step flow: bonus long-exposure low-ISO foreground FIRST so users who
-        // stop the session early still have it; then 20 sharp-star sky frames.
-        // Both land in the same sequence folder; Nightscape compositor reads the
-        // foreground from the first frame.
+        // Sky: NPF dictates exposure; ISO 1600 is the target unless we have to
+        // raise it to compensate for a clamped exposure.
+        val skyIntendedMs = computePhoneNpfExposureMs(lens)
+        val skyExpMs = skyIntendedMs.coerceAtMost(sensorMaxMs)
+        val skyIntendedIso = 1600
+        val skyIso = isoRange?.let {
+            // ISO ∝ 1 / exposure, so when exposure is clamped down, ISO scales up.
+            val compensated = ((skyIntendedIso.toLong() * skyIntendedMs) / skyExpMs.coerceAtLeast(1L)).toInt()
+            compensated.coerceIn(it.lower, it.upper)
+        }
+
+        // Ground: 30s × ISO 200 is the photographic target. Phones with shorter
+        // sensor max get a shorter exposure + proportionally higher ISO so the
+        // foreground comes out properly exposed regardless.
+        val groundIntendedMs = 30_000L
+        val groundIntendedIso = 200
+        val groundExpMs = groundIntendedMs.coerceAtMost(sensorMaxMs)
+        val groundIso = isoRange?.let {
+            val compensated = ((groundIntendedIso.toLong() * groundIntendedMs) / groundExpMs.coerceAtLeast(1L)).toInt()
+            compensated.coerceIn(it.lower, it.upper)
+        }
+
+        // Two-step flow: bonus foreground FIRST so users who stop early still
+        // have it; then 20 sharp-star sky frames. Both land in the same sequence
+        // folder; Nightscape compositor reads the foreground from the first frame.
         val ground = com.ehrocha.pulsar.model.FlowStep(
             type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
             intervalMs = 2_000L,
-            exposureMs = 30_000L,
+            exposureMs = groundExpMs,
             shotCount = 1,
             delayMs = 0L,
             isoOverride = groundIso,
@@ -514,7 +536,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         val sky = com.ehrocha.pulsar.model.FlowStep(
             type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
             intervalMs = 4_000L,
-            exposureMs = expMs,
+            exposureMs = skyExpMs,
             shotCount = 20,
             delayMs = 0L,
             isoOverride = skyIso,
