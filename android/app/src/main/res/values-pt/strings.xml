@@ -551,4 +551,7 @@
     <string name="mode_info_trails_body">120 exposições de 30 segundos consecutivas a ISO 800. Processe com Lighten Stack para mesclar as estrelas em movimento em arcos concêntricos icônicos ao redor do polo celeste.</string>
     <string name="mode_info_fireworks_title">Fogos</string>
     <string name="mode_info_fireworks_body">200 exposições de 4 segundos sem intervalo, ISO baixo para preservar os realces. Processe com Lighten Stack para sobrepor cada explosão do show em uma única imagem.</string>
+    <string name="camera_limits_title">Capacidades da câmera</string>
+    <string name="camera_limits_body">Todos os tempos de exposição e valores de ISO que você pode selecionar são limitados pelo que a câmera informa através da API Camera2 do Android. O controle deslizante vai do mínimo ao máximo real do sensor — qualquer valor fora dessa faixa simplesmente não está disponível nesta lente.</string>
+    <string name="camera_limits_dont_show_again">Não mostrar novamente</string>
 </resources>

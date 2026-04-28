@@ -551,4 +551,7 @@
     <string name="mode_info_trails_body">30秒露光×120枚、連続撮影、ISO 800。ライトンスタックで処理すると、移動する星々が天の極を中心とする象徴的な同心円弧に融合されます。</string>
     <string name="mode_info_fireworks_title">花火</string>
     <string name="mode_info_fireworks_body">4秒露光×200枚、間隔なし、ハイライトに余裕を持たせるため低ISO。ライトンスタックで処理すると、ショーの全ての花火が1枚の画像に重ね合わされます。</string>
+    <string name="camera_limits_title">カメラの機能範囲</string>
+    <string name="camera_limits_body">選択できる露光時間とISO値はすべて、Android Camera2 APIが報告するカメラの機能によって制限されています。スライダーはセンサーの実際の最小値から最大値までの範囲で動作します — その範囲外の値はこのレンズでは利用できません。</string>
+    <string name="camera_limits_dont_show_again">今後表示しない</string>
 </resources>

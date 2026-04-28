@@ -551,4 +551,7 @@
     <string name="mode_info_trails_body">120 × 30-Sekunden-Belichtungen hintereinander bei ISO 800. Verarbeite mit Stapeln (Aufhellen), um die ziehenden Sterne in ikonische konzentrische Bögen um den Himmelspol zu verschmelzen.</string>
     <string name="mode_info_fireworks_title">Feuerwerk</string>
     <string name="mode_info_fireworks_body">200 × 4-Sekunden-Belichtungen ohne Pause, niedriges ISO für Highlight-Spielraum. Verarbeite mit Stapeln (Aufhellen), um jede Explosion des Spektakels zu einem einzigen Bild zu überlagern.</string>
+    <string name="camera_limits_title">Kamera-Fähigkeitsbereiche</string>
+    <string name="camera_limits_body">Alle Belichtungszeiten und ISO-Werte, die du auswählen kannst, sind durch das begrenzt, was die Kamera über die Android Camera2 API meldet. Der Schieberegler geht vom tatsächlichen Minimum bis zum Maximum des Sensors — alles außerhalb dieses Bereichs ist auf diesem Objektiv schlicht nicht verfügbar.</string>
+    <string name="camera_limits_dont_show_again">Nicht mehr anzeigen</string>
 </resources>

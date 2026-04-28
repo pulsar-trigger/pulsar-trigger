@@ -551,4 +551,7 @@
     <string name="mode_info_trails_body">120 expositions de 30 secondes consécutives à ISO 800. Traitez avec Empiler (Lighten) pour fusionner les étoiles en mouvement en arcs concentriques iconiques autour du pôle céleste.</string>
     <string name="mode_info_fireworks_title">Feux d\'Artifice</string>
     <string name="mode_info_fireworks_body">200 expositions de 4 secondes sans pause, ISO bas pour préserver les hautes lumières. Traitez avec Empiler (Lighten) pour superposer chaque explosion du spectacle en une seule image.</string>
+    <string name="camera_limits_title">Capacités de l\'appareil photo</string>
+    <string name="camera_limits_body">Toutes les durées d\'exposition et valeurs ISO que vous pouvez sélectionner sont limitées par ce que l\'appareil photo signale via l\'API Camera2 d\'Android. Le curseur va du minimum au maximum réel du capteur — toute valeur en dehors de cette plage n\'est tout simplement pas disponible sur cet objectif.</string>
+    <string name="camera_limits_dont_show_again">Ne plus afficher</string>
 </resources>

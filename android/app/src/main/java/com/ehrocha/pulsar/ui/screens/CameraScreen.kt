@@ -218,6 +218,45 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
     var showCameraDebug by remember { mutableStateOf(false) }
     BackHandler(enabled = isRunning) { showExitDialog = true }
 
+    // One-time "values are bounded by what the camera advertises" dialog.
+    val prefsForLimits = remember { context.getSharedPreferences("camera_intro", android.content.Context.MODE_PRIVATE) }
+    var showLimitsDialog by remember {
+        mutableStateOf(!prefsForLimits.getBoolean("limits_dismissed", false))
+    }
+    var limitsDontShowAgain by remember { mutableStateOf(false) }
+    if (showLimitsDialog) {
+        AlertDialog(
+            onDismissRequest = { /* require explicit OK */ },
+            title = { Text(stringResource(R.string.camera_limits_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        stringResource(R.string.camera_limits_body),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = limitsDontShowAgain,
+                            onCheckedChange = { limitsDontShowAgain = it },
+                        )
+                        Text(
+                            stringResource(R.string.camera_limits_dont_show_again),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (limitsDontShowAgain) {
+                        prefsForLimits.edit().putBoolean("limits_dismissed", true).apply()
+                    }
+                    showLimitsDialog = false
+                }) { Text(stringResource(R.string.ok)) }
+            },
+        )
+    }
+
     Column(Modifier.fillMaxSize()) {
         // ── Camera preview (takes all remaining space) ──────────────
         Box(
@@ -1194,30 +1233,26 @@ private fun formatExposureLabel(ms: Long): String {
 }
 
 /**
- * DSLR-style shutter speed table: full stops from 30 seconds down to 1/4000.
- * `ms = 0` denominators in the legacy code are gone — every entry is a real
- * exposure time the sensor can produce.
+ * Anchor shutter speeds — quick-jump chips that the user can tap to skip across
+ * the slider. The slider provides full precision between these; chips just speed
+ * up navigation between distant values.
  */
 private data class Shutter(val ms: Long, val label: String)
 
-private val SHUTTER_STOPS = listOf(
+private val SHUTTER_ANCHORS = listOf(
     Shutter(30_000L, "30s"),
-    Shutter(15_000L, "15s"),
     Shutter(8_000L, "8s"),
-    Shutter(4_000L, "4s"),
     Shutter(2_000L, "2s"),
     Shutter(1_000L, "1s"),
-    Shutter(500L, "1/2"),
-    Shutter(250L, "1/4"),
     Shutter(125L, "1/8"),
-    Shutter(67L, "1/15"),
     Shutter(33L, "1/30"),
-    Shutter(17L, "1/60"),
     Shutter(8L, "1/125"),
-    Shutter(4L, "1/250"),
     Shutter(2L, "1/500"),
     Shutter(1L, "1/1000"),
 )
+
+/** Anchor ISO chips. Slider covers the continuous range; chips skip between stops. */
+private val ISO_ANCHORS = intArrayOf(100, 400, 1600, 6400, 12800)
 
 // ── Expandable panels ──────────────────────────────────────────────────
 
@@ -1419,10 +1454,6 @@ private val SHOT_STEPS = intArrayOf(1, 2, 5, 10, 20, 30, 50, 100, 200, 300, 500)
 // and keeps the sensor from overheating across a long session.
 private val GAP_PRESETS_MS = longArrayOf(2000, 5000, 10000, 30000)
 
-// Standard ISO stops — full stops from ISO 50 to ISO 12800.
-// Filtered at render time against the lens's reported isoRange.
-private val ISO_STOPS = intArrayOf(50, 100, 200, 400, 800, 1600, 3200, 6400, 12800)
-
 @Composable
 private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pulsar.camera.PhoneLens?) {
     val shotCount by vm.shotCount.collectAsState()
@@ -1431,17 +1462,23 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
     val manualIso by vm.phoneCameraManager.manualIso.collectAsState()
     val scrollState = rememberScrollState()
 
-    // Shutter chips, filtered to what the lens sensor can actually do.
-    val supportedShutters = remember(currentLens) {
-        val range = currentLens?.capabilities?.exposureTimeRange
-        if (range == null) SHUTTER_STOPS
-        else SHUTTER_STOPS.filter { stop ->
-            val ns = stop.ms * 1_000_000L
-            ns in range.lower..range.upper
-        }
+    // Sensor's actual exposure range — every value the user can pick lives in here.
+    val expRange = currentLens?.capabilities?.exposureTimeRange
+    val expMinMs = (expRange?.lower ?: 1_000_000L) / 1_000_000L
+    val expMaxMs = (expRange?.upper ?: 30_000_000_000L) / 1_000_000L
+
+    // Log scale — exponential between sensor min and max gives natural feel
+    // (each pixel of slider travel = ~constant stops of exposure change).
+    val expLogMin = kotlin.math.ln(expMinMs.coerceAtLeast(1L).toDouble())
+    val expLogMax = kotlin.math.ln(expMaxMs.coerceAtLeast(2L).toDouble())
+    fun positionToExpMs(pos: Float): Long =
+        kotlin.math.exp(expLogMin + pos * (expLogMax - expLogMin)).toLong().coerceIn(expMinMs, expMaxMs)
+    fun expMsToPosition(ms: Long): Float {
+        val clamped = ms.coerceIn(expMinMs, expMaxMs).toDouble()
+        return ((kotlin.math.ln(clamped) - expLogMin) / (expLogMax - expLogMin)).toFloat()
     }
 
-    // NPF rule → snap to the nearest chip ≤ NPF (rounding *down* keeps stars sharp).
+    // NPF rule (raw) and the same value clamped to sensor range.
     val npfRawMs = if (currentLens != null && currentLens.focalLength > 0 && currentLens.sensorWidth > 0) {
         val cropFactor = 36f / currentLens.sensorWidth
         val sensorWidthUm = currentLens.sensorWidth * 1000f
@@ -1451,11 +1488,18 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
         val exposureS = (35.0 * aperture + 30.0 * pixelPitchUm) / (currentLens.focalLength * cropFactor)
         (exposureS * 1000).toLong().coerceAtLeast(1000)
     } else null
-    val npfSnappedMs = npfRawMs?.let { raw ->
-        supportedShutters.filter { it.ms <= raw }.maxByOrNull { it.ms }?.ms
-            ?: supportedShutters.minByOrNull { it.ms }?.ms
-    }
-    val isNpfAuto = npfSnappedMs != null && exposureMs == npfSnappedMs
+    val npfClampedMs = npfRawMs?.coerceIn(expMinMs, expMaxMs)
+    val isNpfAuto = npfClampedMs != null && exposureMs == npfClampedMs
+
+    val isoRange = currentLens?.capabilities?.isoRange
+    val isoMin = isoRange?.lower ?: 100
+    val isoMax = isoRange?.upper ?: 6400
+    val isoLogMin = kotlin.math.ln(isoMin.coerceAtLeast(1).toDouble())
+    val isoLogMax = kotlin.math.ln(isoMax.coerceAtLeast(2).toDouble())
+    fun positionToIso(pos: Float): Int =
+        kotlin.math.exp(isoLogMin + pos * (isoLogMax - isoLogMin)).toInt().coerceIn(isoMin, isoMax)
+    fun isoToPosition(iso: Int): Float =
+        ((kotlin.math.ln(iso.coerceIn(isoMin, isoMax).toDouble()) - isoLogMin) / (isoLogMax - isoLogMin)).toFloat()
 
     Column(
         modifier = Modifier.verticalScroll(scrollState),
@@ -1468,9 +1512,16 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
             color = Color.White,
             fontWeight = FontWeight.Medium,
         )
-        if (npfSnappedMs != null && npfRawMs != null) {
+        // Astro NPF Auto — sets exposure (NPF, clamped to sensor) AND a sensible
+        // astro ISO (1600, clamped to range) in a single tap.
+        if (npfClampedMs != null && npfRawMs != null) {
             Surface(
-                onClick = { vm.setExposureMs(npfSnappedMs) },
+                onClick = {
+                    vm.setExposureMs(npfClampedMs)
+                    isoRange?.let {
+                        vm.phoneCameraManager.setManualIso(1600.coerceIn(it.lower, it.upper))
+                    }
+                },
                 color = if (isNpfAuto) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.15f),
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -1479,44 +1530,62 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("NPF Auto", style = MaterialTheme.typography.labelSmall, color = Color.White, modifier = Modifier.weight(1f))
                     Text(
-                        // Show the raw NPF and the chip it snaps to so the user
-                        // sees both the math and the actual setting.
-                        if (npfRawMs == npfSnappedMs) formatExposureLabel(npfSnappedMs)
-                        else "${formatExposureLabel(npfRawMs)} → ${formatExposureLabel(npfSnappedMs)}",
+                        "Astro NPF Auto + ISO 1600",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        if (npfRawMs == npfClampedMs) formatExposureLabel(npfClampedMs)
+                        else "${formatExposureLabel(npfRawMs)} → ${formatExposureLabel(npfClampedMs)}",
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.White.copy(alpha = 0.7f),
                     )
                 }
             }
         }
+        // Continuous log-scale slider — sensor min .. sensor max.
+        Slider(
+            value = expMsToPosition(exposureMs),
+            onValueChange = { vm.setExposureMs(positionToExpMs(it)) },
+            valueRange = 0f..1f,
+            colors = SliderDefaults.colors(
+                thumbColor = Color.White,
+                activeTrackColor = Color.White,
+                inactiveTrackColor = Color.White.copy(alpha = 0.3f),
+            ),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        // Quick-jump anchor chips — only ones the sensor can actually do.
         val shutterScroll = rememberScrollState()
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(shutterScroll),
-        ) {
-            supportedShutters.forEach { stop ->
-                val selected = exposureMs == stop.ms
-                Surface(
-                    onClick = { vm.setExposureMs(stop.ms) },
-                    color = if (selected) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.12f),
-                    shape = RoundedCornerShape(8.dp),
-                ) {
-                    Text(
-                        stop.label,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    )
+        val supportedAnchors = SHUTTER_ANCHORS.filter { it.ms in expMinMs..expMaxMs }
+        if (supportedAnchors.isNotEmpty()) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(shutterScroll),
+            ) {
+                supportedAnchors.forEach { stop ->
+                    val selected = exposureMs == stop.ms
+                    Surface(
+                        onClick = { vm.setExposureMs(stop.ms) },
+                        color = if (selected) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(8.dp),
+                    ) {
+                        Text(
+                            stop.label,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        )
+                    }
                 }
             }
         }
 
-        // ── ISO (DSLR-style stops, filtered to the lens's range) ──
-        val isoRange = currentLens?.capabilities?.isoRange
+        // ── ISO ──
         if (isoRange != null) {
             Spacer(Modifier.height(2.dp))
             Text(
@@ -1525,12 +1594,9 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
                 color = Color.White,
                 fontWeight = FontWeight.Medium,
             )
-            val isoScroll = rememberScrollState()
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.fillMaxWidth().horizontalScroll(isoScroll),
-            ) {
-                // Auto chip
+            // Auto + manual slider side-by-side. Manual auto-engages when slider
+            // is touched; tapping Auto restores auto-ISO.
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 val autoSelected = manualIso == null
                 Surface(
                     onClick = { vm.phoneCameraManager.setManualIso(null) },
@@ -1539,24 +1605,45 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
                 ) {
                     Text(
                         "Auto",
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelSmall,
                         color = Color.White,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     )
                 }
-                ISO_STOPS.filter { it in isoRange.lower..isoRange.upper }.forEach { iso ->
-                    val selected = manualIso == iso
-                    Surface(
-                        onClick = { vm.phoneCameraManager.setManualIso(iso) },
-                        color = if (selected) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.12f),
-                        shape = RoundedCornerShape(8.dp),
-                    ) {
-                        Text(
-                            "$iso",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        )
+                Spacer(Modifier.width(6.dp))
+                Slider(
+                    value = isoToPosition(manualIso ?: ((isoMin + isoMax) / 2)),
+                    onValueChange = { vm.phoneCameraManager.setManualIso(positionToIso(it)) },
+                    valueRange = 0f..1f,
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color.White,
+                        activeTrackColor = Color.White,
+                        inactiveTrackColor = Color.White.copy(alpha = 0.3f),
+                    ),
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            val isoScroll = rememberScrollState()
+            val supportedIsoAnchors = ISO_ANCHORS.filter { it in isoMin..isoMax }
+            if (supportedIsoAnchors.isNotEmpty()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(isoScroll),
+                ) {
+                    supportedIsoAnchors.forEach { iso ->
+                        val selected = manualIso == iso
+                        Surface(
+                            onClick = { vm.phoneCameraManager.setManualIso(iso) },
+                            color = if (selected) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.12f),
+                            shape = RoundedCornerShape(8.dp),
+                        ) {
+                            Text(
+                                "$iso",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            )
+                        }
                     }
                 }
             }
