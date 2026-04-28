@@ -690,6 +690,11 @@ class PhoneCameraManager(private val context: Context) {
         _isCapturing.value = true
         _lastError.value = null
 
+        // Re-apply manual ISO + exposure each shot — defensive, in case a long
+        // previous capture left the pipeline in a state where the next request
+        // doesn't pick up our manual values.
+        applyManualSettings()
+
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
             .format(System.currentTimeMillis())
 

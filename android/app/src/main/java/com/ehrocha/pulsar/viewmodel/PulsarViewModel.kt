@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.coroutines.coroutineContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.sqrt
 
 class PulsarViewModel(app: Application) : AndroidViewModel(app) {
@@ -1099,7 +1100,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         timeRemainingMs = remaining,
                     )
                     if (_phoneCameraActive.value) {
-                        phoneCameraManager.captureAndWait()
+                        val captureTimeoutMs = maxOf(30_000L, expMs * 2 + 10_000L)
+                        withTimeoutOrNull(captureTimeoutMs) {
+                            phoneCameraManager.captureAndWait()
+                        }
                     }
                     delay(expMs)
                     // Shot complete — transition to WAITING with updated shot count
@@ -1202,7 +1206,17 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 _status.value = _status.value?.copy(
                     state = DeviceState.RUNNING, shotsTaken = shot - 1, timeRemainingMs = remaining,
                 )
-                phoneCameraManager.captureAndWait()
+                // Timeout = 2× requested exposure + 10s safety margin (or 30s minimum
+                // for short exposures). Long takePicture calls have been observed to
+                // hang on some devices after a previous long shot — this stops the
+                // sequence rather than letting the user have to manually intervene.
+                val captureTimeoutMs = maxOf(30_000L, expMs * 2 + 10_000L)
+                val ok = withTimeoutOrNull(captureTimeoutMs) {
+                    phoneCameraManager.captureAndWait()
+                }
+                if (ok == null) {
+                    Log.w("PulsarVM", "captureAndWait timed out at shot $shot/$totalShots (${expMs}ms requested) — moving on")
+                }
                 if (!sensorHandlesExposure) {
                     delay(expMs)
                 }
