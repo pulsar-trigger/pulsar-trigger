@@ -177,31 +177,33 @@ object Stacker {
     }
 
     /**
-     * Nightscape composite. Assumes the FIRST frame in the sequence is the bonus
-     * foreground (Auto Astro convention: 30s low-ISO ground frame captured at the
-     * start of the flow so users who stop early still have it). Steps:
+     * Nightscape composite. The first [foregroundFrameCount] frames in the
+     * sequence are the bonus foreground (Auto Astro convention: short multi-frame
+     * burst captured at the start so users who stop early still have it, and
+     * because phones can't do a single 30s exposure on most lenses). Steps:
      *
-     *  1. Mean-stack all but the first frame → clean sky.
-     *  2. Decode the first frame full-res → foreground.
+     *  1. Mean-stack the foreground frames → clean noise-reduced ground.
+     *  2. Mean-stack the remaining frames → clean noise-reduced sky.
      *  3. Auto-detect horizon row by smoothing per-row luminance and finding the
      *     largest dark→bright gradient in the foreground.
-     *  4. Blend stacked sky above the horizon with the foreground frame below,
+     *  4. Blend stacked sky above the horizon with the stacked foreground below,
      *     feathered across ~50 px to hide the seam.
      *
-     * Returns `horizonRow = -1` when no clear horizon was found (e.g. a sequence
-     * with no foreground frame, or one where sky and ground brightness are too
-     * similar). Caller surfaces a friendly message in that case.
+     * Returns `horizonRow = -1` when no clear horizon was found.
      */
     fun nightscapeCompose(
         context: Context,
         frames: List<Uri>,
         progress: ProgressCallback,
+        foregroundFrameCount: Int = 1,
     ): NightscapeResult? {
         if (frames.size < 2) return null
-        val foregroundUri = frames.first()
-        val skyUris = frames.drop(1)
+        val fgCount = foregroundFrameCount.coerceIn(1, frames.size - 1)
+        val foregroundUris = frames.take(fgCount)
+        val skyUris = frames.drop(fgCount)
 
-        val totalSteps = frames.size + 2
+        // 1+2 progress slots = sky frames + foreground frames + 1 spare.
+        val totalSteps = frames.size + 1
 
         // 1. Mean-stack sky frames.
         val skyBitmap = meanStack(context, skyUris) { current, _ ->
@@ -210,15 +212,21 @@ object Stacker {
         val w = skyBitmap.width
         val h = skyBitmap.height
 
-        // 2. Decode foreground.
-        val foregroundBitmap = decode(context, foregroundUri)
+        // 2. Mean-stack the foreground frames into one clean ground image.
+        val foregroundBitmap = if (foregroundUris.size == 1) {
+            decode(context, foregroundUris.first())
+        } else {
+            meanStack(context, foregroundUris) { current, _ ->
+                progress.onProgress(skyUris.size + current, totalSteps)
+            }
+        }
         if (foregroundBitmap == null ||
             foregroundBitmap.width != w || foregroundBitmap.height != h) {
             skyBitmap.recycle()
             foregroundBitmap?.recycle()
             return null
         }
-        progress.onProgress(skyUris.size + 1, totalSteps)
+        progress.onProgress(frames.size, totalSteps)
 
         val skyPx = IntArray(w * h)
         skyBitmap.getPixels(skyPx, 0, w, 0, 0, w, h)
