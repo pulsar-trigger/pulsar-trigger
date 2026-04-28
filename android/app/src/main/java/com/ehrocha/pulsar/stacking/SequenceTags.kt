@@ -16,7 +16,7 @@ import androidx.core.content.edit
  * the manual intervalometer panel — we don't know their intent, so all
  * composites are offered.
  */
-enum class CaptureMode { AUTO_ASTRO, STORM, TRAILS, FIREWORKS, MANUAL }
+enum class CaptureMode { AUTO_ASTRO, STORM, TRAILS, FIREWORKS, TIMELAPSE, MANUAL }
 
 /** Prefs-backed `path → CaptureMode` mapping. Set when the sequence starts; read
  *  when the user opens its detail screen. */
@@ -41,6 +41,7 @@ object SequenceTags {
         CaptureMode.STORM -> setOf(Stacker.Type.LIGHTNING, Stacker.Type.LIGHTEN)
         CaptureMode.TRAILS -> setOf(Stacker.Type.LIGHTEN)
         CaptureMode.FIREWORKS -> setOf(Stacker.Type.LIGHTEN)
+        CaptureMode.TIMELAPSE -> setOf(Stacker.Type.LIGHTEN, Stacker.Type.MEAN)
         CaptureMode.MANUAL, null -> setOf(
             Stacker.Type.LIGHTEN, Stacker.Type.MEAN,
             Stacker.Type.LIGHTNING, Stacker.Type.NIGHTSCAPE,

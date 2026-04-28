@@ -34,6 +34,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Celebration
+import androidx.compose.material.icons.filled.Timelapse
 import androidx.compose.material.icons.filled.Loop
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CenterFocusStrong
@@ -479,6 +480,10 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                             CaptureMode.FIREWORKS -> {
                                 keepAwake = true
                                 vm.startFireworks()
+                            }
+                            CaptureMode.TIMELAPSE -> {
+                                keepAwake = true
+                                vm.startTimelapse()
                             }
                         }
                     },
@@ -1056,6 +1061,14 @@ private fun IntervalometerStrip(
                     onClick = { onModeSelected(CaptureMode.FIREWORKS) },
                     tooltip = stringResource(R.string.tooltip_fireworks),
                 )
+                Spacer(Modifier.height(2.dp))
+                ControlIconButton(
+                    icon = Icons.Default.Timelapse,
+                    label = "Timelapse",
+                    active = selectedMode == CaptureMode.TIMELAPSE,
+                    onClick = { onModeSelected(CaptureMode.TIMELAPSE) },
+                    tooltip = stringResource(R.string.tooltip_timelapse),
+                )
                 Spacer(Modifier.height(8.dp))
                 StartIconButton(onClick = onStart)
             }
@@ -1081,6 +1094,7 @@ private fun ModeInfoPanel(mode: CaptureMode) {
         CaptureMode.STORM -> R.string.mode_info_storm_title to R.string.mode_info_storm_body
         CaptureMode.TRAILS -> R.string.mode_info_trails_title to R.string.mode_info_trails_body
         CaptureMode.FIREWORKS -> R.string.mode_info_fireworks_title to R.string.mode_info_fireworks_body
+        CaptureMode.TIMELAPSE -> R.string.mode_info_timelapse_title to R.string.mode_info_timelapse_body
         CaptureMode.MANUAL -> return
     }
     Surface(

@@ -495,6 +495,10 @@
     <string name="tooltip_storm">ストーム — 4秒露光、間隔なし、300枚</string>
     <string name="tooltip_trails">スタートレイル — 30秒露光、間隔なし、120枚</string>
     <string name="tooltip_fireworks">花火 — 4秒露光、間隔なし、200枚、低ISO</string>
+    <string name="tooltip_timelapse">タイムラプス — 1/1000秒露光、10秒間隔、360枚</string>
+    <string name="tag_timelapse">タイムラプス</string>
+    <string name="mode_info_timelapse_title">タイムラプス</string>
+    <string name="mode_info_timelapse_body">1/1000秒の高速露光×360枚、10秒間隔、ISO 200。日中向け — 雲、夕焼け、交通、建設現場など。1セッション約1時間の撮影。後でライトンスタックで処理すると、太陽の軌跡、雲の流れ、車のライトの軌跡を1枚に重ねて記録できます。</string>
     <string name="camera_gap_label">インターバル</string>
     <string name="camera_gap_none">なし</string>
 

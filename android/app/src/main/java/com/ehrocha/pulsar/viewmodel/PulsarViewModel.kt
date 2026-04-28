@@ -497,49 +497,25 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         val lens = phoneCameraManager.lenses.value
             .getOrNull(phoneCameraManager.selectedLens.value) ?: return
 
-        // Standard Camera2 caps single-frame sensor exposure well below 30s on
-        // most phones (e.g. 1/7s on some 14mm lenses). The OS camera app gets
-        // long exposures via vendor Night-mode extensions that aren't on this
-        // path. We get the same effect by taking N short frames at sensor max
-        // and mean-stacking them — Auto Astro's natural workflow.
-        val sensorMaxMs = lens.capabilities.exposureTimeRange?.upper?.div(1_000_000L) ?: 30_000L
         val isoRange = lens.capabilities.isoRange
+        val skyIso = isoRange?.let { 1600.coerceIn(it.lower, it.upper) }
+        val groundIso = isoRange?.let { 200.coerceIn(it.lower, it.upper) }
 
-        // Sky: NPF or sensor max, whichever is shorter. ISO scales up to keep
-        // total light constant when exposure has to drop.
-        val skyIntendedMs = computePhoneNpfExposureMs(lens)
-        val skyExpMs = skyIntendedMs.coerceAtMost(sensorMaxMs)
-        val skyIntendedIso = 1600
-        val skyIso = isoRange?.let {
-            val compensated = ((skyIntendedIso.toLong() * skyIntendedMs) / skyExpMs.coerceAtLeast(1L)).toInt()
-            compensated.coerceIn(it.lower, it.upper)
-        }
-
-        // Foreground: target 30s × ISO 200 of total light. Phones can't do 30s
-        // single-shot, so we take FG_FRAMES short exposures at sensor max with
-        // compensated ISO; Nightscape mean-stacks them into one clean foreground.
-        val groundFrameMs = sensorMaxMs.coerceAtMost(2_000L)
-        val groundIntendedMs = 30_000L
-        val groundIntendedIso = 200
-        val groundIso = isoRange?.let {
-            // Total per-frame light × N ≈ 30s × 200. Mean stack reduces noise by √N.
-            val perFrame = (groundIntendedIso.toLong() * groundIntendedMs) /
-                (FG_FRAMES * groundFrameMs).coerceAtLeast(1L)
-            perFrame.toInt().coerceIn(it.lower, it.upper)
-        }
-
+        // Single 30s low-ISO foreground frame, then 20 NPF sky frames. We pass
+        // the raw photographic intent through — the camera driver decides how
+        // long it can actually integrate (some honor more than they advertise).
         val ground = com.ehrocha.pulsar.model.FlowStep(
             type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
             intervalMs = 2_000L,
-            exposureMs = groundFrameMs,
-            shotCount = FG_FRAMES,
+            exposureMs = 30_000L,
+            shotCount = 1,
             delayMs = 0L,
             isoOverride = groundIso,
         )
         val sky = com.ehrocha.pulsar.model.FlowStep(
             type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
             intervalMs = 4_000L,
-            exposureMs = skyExpMs,
+            exposureMs = computePhoneNpfExposureMs(lens),
             shotCount = 20,
             delayMs = 0L,
             isoOverride = skyIso,
@@ -549,6 +525,33 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         startFlow()
     }
 
+
+    /**
+     * One-tap daytime timelapse. Fast 1/1000s exposures every 10 seconds at low
+     * ISO — built for clouds, sunsets, traffic, construction. 360 shots ≈ one
+     * hour of capture, which renders to ~12 s of 30 fps video.
+     */
+    fun startTimelapse() {
+        if (!_phoneCameraActive.value) return
+        val lens = phoneCameraManager.lenses.value
+            .getOrNull(phoneCameraManager.selectedLens.value) ?: return
+
+        // ISO 200 — low for daylight, clean output.
+        lens.capabilities.isoRange?.let { range ->
+            phoneCameraManager.setManualIso(200.coerceIn(range.lower, range.upper))
+        }
+
+        val step = com.ehrocha.pulsar.model.FlowStep(
+            type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
+            intervalMs = 10_000L,
+            exposureMs = 1L,
+            shotCount = 360,
+            delayMs = 0L,
+        )
+        _flowSteps.value = listOf(step)
+        pendingSequenceMode = com.ehrocha.pulsar.stacking.CaptureMode.TIMELAPSE
+        startFlow()
+    }
 
     /**
      * One-tap fireworks capture. Bursts are very bright, so we use the lowest

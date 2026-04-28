@@ -493,6 +493,10 @@
     <string name="tooltip_storm">Tormenta — exposiciones de 4s, sin pausa, 300 fotos</string>
     <string name="tooltip_trails">Estelas Estelares — exposiciones de 30s, sin pausa, 120 fotos</string>
     <string name="tooltip_fireworks">Fuegos — exposiciones de 4s, sin pausa, 200 fotos, ISO bajo</string>
+    <string name="tooltip_timelapse">Timelapse — exposiciones de 1/1000, intervalo de 10s, 360 fotos</string>
+    <string name="tag_timelapse">Timelapse</string>
+    <string name="mode_info_timelapse_title">Timelapse</string>
+    <string name="mode_info_timelapse_body">360 exposiciones rápidas de 1/1000 segundos, con intervalo de 10 segundos, ISO 200. Diseñado para el día — nubes, atardeceres, tráfico, construcción. Aproximadamente una hora de captura por sesión. Procesa con Apilar (Lighten) para registrar el arco del sol, las estelas de nubes o las luces de vehículos en una sola imagen.</string>
     <string name="camera_gap_label">Intervalo</string>
     <string name="camera_gap_none">Ninguno</string>
 

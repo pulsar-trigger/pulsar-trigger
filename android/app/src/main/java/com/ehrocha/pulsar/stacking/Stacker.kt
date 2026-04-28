@@ -194,8 +194,8 @@ object Stacker {
     fun nightscapeCompose(
         context: Context,
         frames: List<Uri>,
-        progress: ProgressCallback,
         foregroundFrameCount: Int = 1,
+        progress: ProgressCallback,
     ): NightscapeResult? {
         if (frames.size < 2) return null
         val fgCount = foregroundFrameCount.coerceIn(1, frames.size - 1)

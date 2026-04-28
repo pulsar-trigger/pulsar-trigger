@@ -351,23 +351,11 @@ fun SequenceDetailScreen(
                         }
                     }
                 } else if (type == Stacker.Type.NIGHTSCAPE) {
-                    // Auto Astro sequences are structured as N foreground frames
-                    // (multi-frame burst because phones can't do single 30s shots)
-                    // followed by sky frames. Tell Nightscape so it stacks the
-                    // foreground correctly.
-                    val fgCount = if (SequenceTags.get(context, sequencePath) ==
-                            CaptureMode.AUTO_ASTRO)
-                        com.ehrocha.pulsar.viewmodel.PulsarViewModel.FG_FRAMES
-                    else 1
                     val res = withContext(Dispatchers.Default) {
-                        Stacker.nightscapeCompose(
-                            context, frames,
-                            progress = { current, total ->
-                                processedFrames = current
-                                totalFrames = total
-                            },
-                            foregroundFrameCount = fgCount,
-                        )
+                        Stacker.nightscapeCompose(context, frames) { current, total ->
+                            processedFrames = current
+                            totalFrames = total
+                        }
                     }
                     when {
                         res == null ->
@@ -573,6 +561,7 @@ fun SequenceDetailScreen(
             CaptureMode.STORM -> stringResource(R.string.tag_storm)
             CaptureMode.TRAILS -> stringResource(R.string.tag_trails)
             CaptureMode.FIREWORKS -> stringResource(R.string.tag_fireworks)
+            CaptureMode.TIMELAPSE -> stringResource(R.string.tag_timelapse)
             CaptureMode.MANUAL -> stringResource(R.string.tag_manual)
             null -> null
         }

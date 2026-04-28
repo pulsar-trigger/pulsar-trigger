@@ -259,18 +259,23 @@ class PhoneCameraManager(private val context: Context) {
         exposureOverridden = true
 
         val requestedNs = requestedMs * 1_000_000L
-        val clampedNs = requestedNs.coerceIn(caps.exposureTimeRange!!.lower, caps.exposureTimeRange!!.upper)
+        // Don't clamp — many Camera2 implementations honor exposures beyond the
+        // advertised SENSOR_INFO_EXPOSURE_TIME_RANGE (the reported range is the
+        // "guaranteed" range, not necessarily the hard upper bound). Pre-v0.157
+        // builds passed the raw value through and long exposures worked on real
+        // hardware. The driver will silently clamp internally if it has to.
+        val sensorMinNs = caps.exposureTimeRange!!.lower
+        val expNs = requestedNs.coerceAtLeast(sensorMinNs)
 
-        // If user hasn't set manual ISO, use a sensible default for long exposures
         if (_manualIso.value == null) {
             val defaultIso = caps.isoRange!!.lower.coerceAtLeast(400)
                 .coerceAtMost(caps.isoRange!!.upper)
             _manualIso.value = defaultIso
         }
-        _manualExposureNs.value = clampedNs
+        _manualExposureNs.value = expNs
         applyManualSettings()
 
-        return clampedNs
+        return expNs
     }
 
     /** Restore exposure settings to what the user had before the capture sequence. */

@@ -495,6 +495,10 @@
     <string name="tooltip_storm">Orage — expositions 4s, sans pause, 300 photos</string>
     <string name="tooltip_trails">Filés d\'Étoiles — expositions 30s, sans pause, 120 photos</string>
     <string name="tooltip_fireworks">Feux — expositions 4s, sans pause, 200 photos, ISO bas</string>
+    <string name="tooltip_timelapse">Timelapse — expositions 1/1000, intervalle 10s, 360 photos</string>
+    <string name="tag_timelapse">Timelapse</string>
+    <string name="mode_info_timelapse_title">Timelapse</string>
+    <string name="mode_info_timelapse_body">360 expositions rapides de 1/1000 seconde, intervalle de 10 secondes, ISO 200. Conçu pour le jour — nuages, couchers de soleil, trafic, chantiers. Environ une heure de capture par session. Traitez avec Empiler (Lighten) pour superposer l\'arc du soleil, les filés de nuages ou les phares de voitures en une seule image.</string>
     <string name="camera_gap_label">Intervalle</string>
     <string name="camera_gap_none">Aucun</string>
 

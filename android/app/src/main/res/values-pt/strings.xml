@@ -495,6 +495,10 @@
     <string name="tooltip_storm">Tempestade — exposições de 4s, sem intervalo, 300 fotos</string>
     <string name="tooltip_trails">Trilhas Estelares — exposições de 30s, sem intervalo, 120 fotos</string>
     <string name="tooltip_fireworks">Fogos — exposições de 4s, sem intervalo, 200 fotos, ISO baixo</string>
+    <string name="tooltip_timelapse">Timelapse — exposições de 1/1000, intervalo de 10s, 360 fotos</string>
+    <string name="tag_timelapse">Timelapse</string>
+    <string name="mode_info_timelapse_title">Timelapse</string>
+    <string name="mode_info_timelapse_body">360 exposições rápidas de 1/1000 segundos, com intervalo de 10 segundos, ISO 200. Feito para o dia — nuvens, pôr do sol, tráfego, construção. Cerca de uma hora de captura por sessão. Processe com Lighten Stack depois para registrar o arco do sol, rastros de nuvens ou luzes de carros em uma única imagem.</string>
     <string name="camera_gap_label">Intervalo</string>
     <string name="camera_gap_none">Nenhum</string>
 
