@@ -679,8 +679,9 @@
     <string name="mode_info_fireworks_body">200 × 4-second exposures with no gap, low ISO for highlight headroom. Process with Lighten Stack to overlay every burst from the show into a single image.</string>
 
     <string name="camera_limits_title">Camera capability ranges</string>
-    <string name="camera_limits_body">All exposure times and ISO values you can pick are bounded by what your camera reports through the Android Camera2 API. The slider runs from the sensor\'s actual minimum to maximum — anything outside that range simply isn\'t available on this lens.</string>
+    <string name="camera_limits_body">Manual exposure and ISO ranges come from the Android Camera2 API — what each lens physically advertises.\n\nMost phone lenses cap single-shot exposure under 1 second; the OS camera app fakes longer ones via vendor Night-mode extensions we don\'t use. For longer effective exposures, use Auto Astro, Star Trails, Storm or Fireworks — they take many short frames and stack them, which is how phone astrophotography actually works.</string>
     <string name="camera_limits_dont_show_again">Don\'t show again</string>
+    <string name="exposure_exceeds_sensor">Sensor max is %1$s — actual capture will be clamped. Use Auto Astro for true long-exposure stacking.</string>
 
     <!-- About: tribute to Jocelyn Bell Burnell -->
     <string name="about_tribute_heading">In honor of</string>

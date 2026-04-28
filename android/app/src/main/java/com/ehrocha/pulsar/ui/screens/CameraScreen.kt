@@ -1462,15 +1462,17 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
     val manualIso by vm.phoneCameraManager.manualIso.collectAsState()
     val scrollState = rememberScrollState()
 
-    // Sensor's actual exposure range — every value the user can pick lives in here.
+    // Slider range is generous (1 ms … 30 s) regardless of sensor caps — the
+    // user can request any value, the capture pipeline clamps internally on the
+    // way to the sensor. Filtering the UI by sensor caps was hiding values
+    // people legitimately want to set (especially long exposures for stacking).
     val expRange = currentLens?.capabilities?.exposureTimeRange
-    val expMinMs = (expRange?.lower ?: 1_000_000L) / 1_000_000L
-    val expMaxMs = (expRange?.upper ?: 30_000_000_000L) / 1_000_000L
+    val sensorMaxMs = expRange?.upper?.div(1_000_000L) ?: 30_000L
+    val expMinMs = 1L
+    val expMaxMs = 30_000L
 
-    // Log scale — exponential between sensor min and max gives natural feel
-    // (each pixel of slider travel = ~constant stops of exposure change).
-    val expLogMin = kotlin.math.ln(expMinMs.coerceAtLeast(1L).toDouble())
-    val expLogMax = kotlin.math.ln(expMaxMs.coerceAtLeast(2L).toDouble())
+    val expLogMin = kotlin.math.ln(expMinMs.toDouble())
+    val expLogMax = kotlin.math.ln(expMaxMs.toDouble())
     fun positionToExpMs(pos: Float): Long =
         kotlin.math.exp(expLogMin + pos * (expLogMax - expLogMin)).toLong().coerceIn(expMinMs, expMaxMs)
     fun expMsToPosition(ms: Long): Float {
@@ -1512,6 +1514,13 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
             color = Color.White,
             fontWeight = FontWeight.Medium,
         )
+        if (exposureMs > sensorMaxMs) {
+            Text(
+                stringResource(R.string.exposure_exceeds_sensor, formatExposureLabel(sensorMaxMs)),
+                style = MaterialTheme.typography.labelSmall,
+                color = Color(0xFFFFB300),
+            )
+        }
         // Astro NPF Auto — sets exposure (NPF, clamped to sensor) AND a sensible
         // astro ISO (1600, clamped to range) in a single tap.
         if (npfClampedMs != null && npfRawMs != null) {
@@ -1559,7 +1568,9 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
         )
         // Quick-jump anchor chips — only ones the sensor can actually do.
         val shutterScroll = rememberScrollState()
-        val supportedAnchors = SHUTTER_ANCHORS.filter { it.ms in expMinMs..expMaxMs }
+        // Show every standard anchor — internal capture pipeline handles values
+        // beyond what the sensor advertises (clamps + ISO compensates).
+        val supportedAnchors = SHUTTER_ANCHORS
         if (supportedAnchors.isNotEmpty()) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),

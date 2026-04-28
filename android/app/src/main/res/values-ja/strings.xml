@@ -554,4 +554,5 @@
     <string name="camera_limits_title">カメラの機能範囲</string>
     <string name="camera_limits_body">選択できる露光時間とISO値はすべて、Android Camera2 APIが報告するカメラの機能によって制限されています。スライダーはセンサーの実際の最小値から最大値までの範囲で動作します — その範囲外の値はこのレンズでは利用できません。</string>
     <string name="camera_limits_dont_show_again">今後表示しない</string>
+    <string name="exposure_exceeds_sensor">センサー上限: %1$s — 実際の撮影は制限されます。長時間露光のスタッキングにはオートアストロをご利用ください。</string>
 </resources>

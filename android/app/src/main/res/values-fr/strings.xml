@@ -554,4 +554,5 @@
     <string name="camera_limits_title">Capacités de l\'appareil photo</string>
     <string name="camera_limits_body">Toutes les durées d\'exposition et valeurs ISO que vous pouvez sélectionner sont limitées par ce que l\'appareil photo signale via l\'API Camera2 d\'Android. Le curseur va du minimum au maximum réel du capteur — toute valeur en dehors de cette plage n\'est tout simplement pas disponible sur cet objectif.</string>
     <string name="camera_limits_dont_show_again">Ne plus afficher</string>
+    <string name="exposure_exceeds_sensor">Max du capteur : %1$s — la capture réelle sera limitée. Utilisez Auto Astro pour l\'empilage longue pose.</string>
 </resources>

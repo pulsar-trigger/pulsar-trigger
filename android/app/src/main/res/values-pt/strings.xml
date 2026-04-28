@@ -554,4 +554,5 @@
     <string name="camera_limits_title">Capacidades da câmera</string>
     <string name="camera_limits_body">Todos os tempos de exposição e valores de ISO que você pode selecionar são limitados pelo que a câmera informa através da API Camera2 do Android. O controle deslizante vai do mínimo ao máximo real do sensor — qualquer valor fora dessa faixa simplesmente não está disponível nesta lente.</string>
     <string name="camera_limits_dont_show_again">Não mostrar novamente</string>
+    <string name="exposure_exceeds_sensor">Máximo do sensor: %1$s — a captura real será limitada. Use Auto Astro para empilhamento de longa exposição.</string>
 </resources>
