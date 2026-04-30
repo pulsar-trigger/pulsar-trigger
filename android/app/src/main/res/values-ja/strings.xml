@@ -468,9 +468,6 @@
     <string name="label_focus_distance">フォーカス: %s</string>
     <string name="label_exposure_mode">露出</string>
     <string name="label_focus_mode">フォーカス</string>
-    <string name="star_focus">星オートフォーカス</string>
-    <string name="star_focus_running">フォーカス中…</string>
-    <string name="star_focus_hint">スマホを安定させてください — しばらくかかる場合があります</string>
     <string name="label_lens">レンズ</string>
     <string name="camera_shots_fmt">撮影枚数: %d</string>
     <string name="camera_exposure_fmt">露出: %s</string>
@@ -482,7 +479,6 @@
     <string name="tooltip_keep_awake">画面を常時点灯</string>
     <string name="tooltip_raw">RAWまたはJPEGで保存</string>
     <string name="tooltip_ois">光学手ブレ補正 — 三脚使用時はオフに</string>
-    <string name="tooltip_expsim">露出シミュレーション — プレビューにISO/シャッター反映</string>
     <string name="tooltip_intervalometer">インターバル撮影設定</string>
     <string name="warning_compass">コンパス未校正 — 8の字に動かしてください</string>
     <string name="warning_no_gps">GPS信号なし — 位置情報が利用できません</string>
@@ -500,7 +496,6 @@
     <string name="mode_info_timelapse_title">タイムラプス</string>
     <string name="mode_info_timelapse_body">1/1000秒の高速露光×360枚、10秒間隔、ISO 200。日中向け — 雲、夕焼け、交通、建設現場など。1セッション約1時間の撮影。後でライトンスタックで処理すると、太陽の軌跡、雲の流れ、車のライトの軌跡を1枚に重ねて記録できます。</string>
     <string name="camera_gap_label">インターバル</string>
-    <string name="camera_gap_none">なし</string>
 
     <!-- About: tribute -->
     <string name="about_tribute_heading">敬意を込めて</string>

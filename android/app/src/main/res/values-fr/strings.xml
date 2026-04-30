@@ -468,9 +468,6 @@
     <string name="label_focus_distance">Mise au point : %s</string>
     <string name="label_exposure_mode">Exposition</string>
     <string name="label_focus_mode">Mise au point</string>
-    <string name="star_focus">Mise au Point Étoiles</string>
-    <string name="star_focus_running">Mise au point…</string>
-    <string name="star_focus_hint">Gardez le téléphone stable — cela peut prendre un moment</string>
     <string name="label_lens">Objectif</string>
     <string name="camera_shots_fmt">Photos : %d</string>
     <string name="camera_exposure_fmt">Exposition : %s</string>
@@ -482,7 +479,6 @@
     <string name="tooltip_keep_awake">Garder l\'écran allumé</string>
     <string name="tooltip_raw">Enregistrer en RAW ou JPEG</string>
     <string name="tooltip_ois">Stabilisation optique — désactiver pour trépied</string>
-    <string name="tooltip_expsim">Simulation d\'exposition — l\'aperçu reflète ISO/vitesse</string>
     <string name="tooltip_intervalometer">Paramètres de l\'intervallomètre</string>
     <string name="warning_compass">Boussole non calibrée — bougez le téléphone en 8</string>
     <string name="warning_no_gps">Pas de signal GPS — position indisponible</string>
@@ -500,7 +496,6 @@
     <string name="mode_info_timelapse_title">Timelapse</string>
     <string name="mode_info_timelapse_body">360 expositions rapides de 1/1000 seconde, intervalle de 10 secondes, ISO 200. Conçu pour le jour — nuages, couchers de soleil, trafic, chantiers. Environ une heure de capture par session. Traitez avec Empiler (Lighten) pour superposer l\'arc du soleil, les filés de nuages ou les phares de voitures en une seule image.</string>
     <string name="camera_gap_label">Intervalle</string>
-    <string name="camera_gap_none">Aucun</string>
 
     <!-- About: tribute -->
     <string name="about_tribute_heading">En hommage à</string>

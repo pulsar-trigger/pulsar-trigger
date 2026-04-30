@@ -1331,63 +1331,6 @@ private fun LensPanel(
 }
 
 @Composable
-private fun IsoPanel(cameraManager: PhoneCameraManager, caps: LensCapabilities) {
-    val manualIso by cameraManager.manualIso.collectAsState()
-    val isoRange = caps.isoRange ?: return
-    val isManual = manualIso != null
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Text("ISO", style = MaterialTheme.typography.labelMedium, color = Color.White, modifier = Modifier.weight(1f))
-        Surface(
-            onClick = {
-                if (isManual) {
-                    cameraManager.setManualIso(null)
-                    cameraManager.setManualExposureNs(null)
-                } else {
-                    cameraManager.setManualIso((isoRange.lower + isoRange.upper) / 2)
-                    cameraManager.setManualExposureNs(1_000_000_000L)
-                }
-            },
-            color = if (isManual) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.15f),
-            shape = RoundedCornerShape(8.dp),
-        ) {
-            Text(
-                if (isManual) "Manual" else "Auto",
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.White,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-            )
-        }
-    }
-    if (isManual) {
-        Text(
-            "ISO ${manualIso ?: isoRange.lower}",
-            style = MaterialTheme.typography.labelMedium,
-            color = Color.White,
-            fontWeight = FontWeight.Medium,
-        )
-        Slider(
-            value = (manualIso ?: isoRange.lower).toFloat(),
-            onValueChange = { cameraManager.setManualIso(it.roundToInt()) },
-            valueRange = isoRange.lower.toFloat()..isoRange.upper.toFloat(),
-            colors = SliderDefaults.colors(
-                thumbColor = Color.White,
-                activeTrackColor = Color.White,
-                inactiveTrackColor = Color.White.copy(alpha = 0.3f),
-            ),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("${isoRange.lower}", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
-            Text("${isoRange.upper}", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.5f))
-        }
-    }
-}
-
-@Composable
 private fun FocusPanel(cameraManager: PhoneCameraManager, caps: LensCapabilities) {
     val manualFocus by cameraManager.manualFocusDist.collectAsState()
     val isManualFocus = manualFocus != null

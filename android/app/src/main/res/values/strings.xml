@@ -604,15 +604,11 @@
     <string name="label_focus_distance">Focus: %s</string>
     <string name="label_exposure_mode">Exposure</string>
     <string name="label_focus_mode">Focus</string>
-    <string name="star_focus">Star Auto-Focus</string>
-    <string name="star_focus_running">Focusing…</string>
-    <string name="star_focus_hint">Hold the phone steady — this may take a moment</string>
     <string name="label_lens">Lens</string>
     <string name="camera_shots_fmt">Shots: %d</string>
     <string name="camera_exposure_fmt">Exposure: %s</string>
     <string name="camera_gap_fmt">Interval: %s</string>
     <string name="camera_gap_label">Interval</string>
-    <string name="camera_gap_none">None</string>
     <!-- Camera control tooltips -->
     <string name="tooltip_lens">Switch camera lens</string>
     <string name="tooltip_iso">ISO sensitivity</string>
@@ -621,7 +617,6 @@
     <string name="tooltip_keep_awake">Keep screen on</string>
     <string name="tooltip_raw">Save as RAW or JPEG</string>
     <string name="tooltip_ois">Optical image stabilization — disable for tripod</string>
-    <string name="tooltip_expsim">Exposure simulation — preview reflects ISO/shutter settings</string>
     <string name="tooltip_gallery">Open last photo in gallery</string>
     <string name="tooltip_auto_astro">Auto Astro — NPF exposure, 20 shots, 4s gap</string>
     <string name="tooltip_storm">Storm — 4s exposures, no gap, 300 shots</string>

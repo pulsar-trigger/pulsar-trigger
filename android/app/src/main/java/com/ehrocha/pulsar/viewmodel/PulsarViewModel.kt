@@ -46,9 +46,6 @@ import kotlin.math.sqrt
 class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     companion object {
-        /** First N frames of an Auto Astro sequence are foreground (mean-stacked
-         *  by Nightscape); the rest are sky. */
-        const val FG_FRAMES = 10
         private const val TAG = "PulsarVM"
         private const val PREFS_NAME = "pulsar_settings"
         private const val KEY_INTV_INTERVAL = "intv_interval_ms"
@@ -1104,8 +1101,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         withTimeoutOrNull(captureTimeoutMs) {
                             phoneCameraManager.captureAndWait()
                         }
+                    } else {
+                        delay(expMs)
                     }
-                    delay(expMs)
                     // Shot complete — transition to WAITING with updated shot count
                     _status.value = _status.value?.copy(
                         state = DeviceState.WAITING,
@@ -1185,11 +1183,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         startDelayMs: Long,
         isoOverride: Int? = null,
     ) {
+        // Stash ISO before setSensorExposureForCapture — that call may auto-set a
+        // default ISO and would make the savedIso reflect the mutated value instead.
+        val savedIso = phoneCameraManager.manualIso.value
         val actualExpNs = phoneCameraManager.setSensorExposureForCapture(expMs)
         val sensorHandlesExposure = actualExpNs > 0
 
-        // ISO override stash so we can restore on exit
-        val savedIso = phoneCameraManager.manualIso.value
         if (isoOverride != null) phoneCameraManager.setManualIso(isoOverride)
 
         try {

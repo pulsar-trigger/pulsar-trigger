@@ -468,9 +468,6 @@
     <string name="label_focus_distance">Fokus: %s</string>
     <string name="label_exposure_mode">Belichtung</string>
     <string name="label_focus_mode">Fokus</string>
-    <string name="star_focus">Stern-Autofokus</string>
-    <string name="star_focus_running">Fokussierung…</string>
-    <string name="star_focus_hint">Halten Sie das Telefon ruhig — dies kann einen Moment dauern</string>
     <string name="label_lens">Objektiv</string>
     <string name="camera_shots_fmt">Aufnahmen: %d</string>
     <string name="camera_exposure_fmt">Belichtung: %s</string>
@@ -482,7 +479,6 @@
     <string name="tooltip_keep_awake">Bildschirm eingeschaltet lassen</string>
     <string name="tooltip_raw">Als RAW oder JPEG speichern</string>
     <string name="tooltip_ois">Optische Stabilisierung — für Stativ deaktivieren</string>
-    <string name="tooltip_expsim">Belichtungssimulation — Vorschau zeigt ISO/Verschluss</string>
     <string name="tooltip_intervalometer">Intervallometer-Einstellungen</string>
     <string name="warning_compass">Kompass unkalibriert — Telefon in Acht-Form bewegen</string>
     <string name="warning_no_gps">Kein GPS-Signal — Standort nicht verfügbar</string>
@@ -500,7 +496,6 @@
     <string name="mode_info_timelapse_title">Zeitraffer</string>
     <string name="mode_info_timelapse_body">360 schnelle 1/1000-Sekunden-Belichtungen im Abstand von 10 Sekunden, ISO 200. Für den Tag — Wolken, Sonnenuntergänge, Verkehr, Baustellen. Etwa eine Stunde Aufnahme pro Session. Verarbeite anschließend mit Stapeln (Aufhellen), um den Sonnenbogen, Wolkenstreifen oder Lichtspuren von Fahrzeugen in einem einzigen Bild festzuhalten.</string>
     <string name="camera_gap_label">Intervall</string>
-    <string name="camera_gap_none">Kein</string>
 
     <!-- About: tribute -->
     <string name="about_tribute_heading">Zu Ehren von</string>
