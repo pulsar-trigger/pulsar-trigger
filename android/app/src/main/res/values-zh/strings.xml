@@ -20,8 +20,6 @@
     <string name="mode_manual_desc">直接快门控制 — 按住或锁定模式</string>
     <string name="mode_custom_flow">流程和预设</string>
     <string name="mode_custom_flow_desc">创建多步骤流程并保存预设</string>
-    <string name="mode_astro_dashboard">天文仪表盘</string>
-    <string name="mode_astro_dashboard_desc">天气、月相、波特尔等级及天空状况</string>
     <string name="menu_settings">设置</string>
     <string name="disconnect">断开连接</string>
     <string name="back">返回</string>

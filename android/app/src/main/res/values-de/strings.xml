@@ -18,8 +18,6 @@
     <string name="mode_manual_desc">Direkte Auslösersteuerung — Halten oder Sperren</string>
     <string name="mode_custom_flow">Abläufe &amp; Vorlagen</string>
     <string name="mode_custom_flow_desc">Mehrstufige Abläufe erstellen und Vorlagen speichern</string>
-    <string name="mode_astro_dashboard">Astro-Dashboard</string>
-    <string name="mode_astro_dashboard_desc">Wetter, Mondphase, Bortle-Skala &amp; Himmelsbedingungen</string>
     <string name="menu_settings">Einstellungen</string>
     <string name="disconnect">Trennen</string>
     <string name="back">Zurück</string>
@@ -535,7 +533,6 @@
     <string name="sort_newest">Neueste</string>
     <string name="sort_oldest">Älteste</string>
     <string name="sort_name">Name</string>
-    <string name="sequences_action_prompt">Lange drücken, um eine Aktion zu wählen</string>
     <string name="action_rename">Umbenennen</string>
     <string name="action_delete">Löschen</string>
     <string name="dialog_rename_sequence">Sequenz umbenennen</string>

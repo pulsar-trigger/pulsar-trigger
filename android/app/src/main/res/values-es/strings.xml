@@ -18,8 +18,6 @@
     <string name="mode_manual_desc">Control directo del obturador — modo mantener o bloquear</string>
     <string name="mode_custom_flow">Flujos y Presets</string>
     <string name="mode_custom_flow_desc">Crea flujos multi-paso y guarda presets</string>
-    <string name="mode_astro_dashboard">Panel Astro</string>
-    <string name="mode_astro_dashboard_desc">Clima, fase lunar, escala Bortle &amp; condiciones del cielo</string>
     <string name="menu_settings">Ajustes</string>
     <string name="disconnect">Desconectar</string>
     <string name="back">Atrás</string>
@@ -533,7 +531,6 @@
     <string name="sort_newest">Más reciente</string>
     <string name="sort_oldest">Más antiguo</string>
     <string name="sort_name">Nombre</string>
-    <string name="sequences_action_prompt">Mantén pulsado para elegir una acción</string>
     <string name="action_rename">Renombrar</string>
     <string name="action_delete">Eliminar</string>
     <string name="dialog_rename_sequence">Renombrar secuencia</string>

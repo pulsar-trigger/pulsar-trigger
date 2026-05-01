@@ -18,8 +18,6 @@
     <string name="mode_manual_desc">シャッターを直接操作 — ホールドまたはロックモード</string>
     <string name="mode_custom_flow">フロー＆プリセット</string>
     <string name="mode_custom_flow_desc">マルチステップフローを作成し、プリセットとして保存</string>
-    <string name="mode_astro_dashboard">天体ダッシュボード</string>
-    <string name="mode_astro_dashboard_desc">天気、月齢、ボートル・スケール＆空の状態</string>
     <string name="menu_settings">設定</string>
     <string name="disconnect">切断</string>
     <string name="back">戻る</string>
@@ -535,7 +533,6 @@
     <string name="sort_newest">新しい順</string>
     <string name="sort_oldest">古い順</string>
     <string name="sort_name">名前</string>
-    <string name="sequences_action_prompt">長押しでアクションを選択</string>
     <string name="action_rename">名前を変更</string>
     <string name="action_delete">削除</string>
     <string name="dialog_rename_sequence">シーケンスの名前を変更</string>

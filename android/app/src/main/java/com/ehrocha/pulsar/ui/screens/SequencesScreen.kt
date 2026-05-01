@@ -7,15 +7,12 @@ package com.ehrocha.pulsar.ui.screens
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Layers
@@ -46,7 +43,6 @@ import java.util.Date
 
 private enum class SortMode { NEWEST, OLDEST, NAME }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SequencesScreen(
     onBack: () -> Unit,
@@ -57,7 +53,6 @@ fun SequencesScreen(
     var loading by remember { mutableStateOf(true) }
     var sortMode by remember { mutableStateOf(SortMode.NEWEST) }
     var sortMenuOpen by remember { mutableStateOf(false) }
-    var actionTarget by remember { mutableStateOf<SequenceFolder?>(null) }
     var renameTarget by remember { mutableStateOf<SequenceFolder?>(null) }
     var deleteTarget by remember { mutableStateOf<SequenceFolder?>(null) }
     val scope = rememberCoroutineScope()
@@ -145,42 +140,13 @@ fun SequencesScreen(
                         SequenceFolderRow(
                             folder = folder,
                             onClick = { onOpenSequence(folder.path) },
-                            onLongPress = { actionTarget = folder },
+                            onRename = { renameTarget = folder },
+                            onDelete = { deleteTarget = folder },
                         )
                     }
                 }
             }
         }
-    }
-
-    // Action sheet (rename / delete)
-    if (actionTarget != null) {
-        val target = actionTarget!!
-        AlertDialog(
-            onDismissRequest = { actionTarget = null },
-            title = { Text(SequenceLabels.get(context, target.path) ?: target.name) },
-            text = { Text(stringResource(R.string.sequences_action_prompt)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    actionTarget = null
-                    renameTarget = target
-                }) {
-                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(stringResource(R.string.action_rename))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    actionTarget = null
-                    deleteTarget = target
-                }) {
-                    Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
-                }
-            },
-        )
     }
 
     if (renameTarget != null) {
@@ -243,12 +209,12 @@ fun SequencesScreen(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SequenceFolderRow(
     folder: SequenceFolder,
     onClick: () -> Unit,
-    onLongPress: () -> Unit,
+    onRename: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     val context = LocalContext.current
     val customLabel = SequenceLabels.get(context, folder.path)
@@ -257,15 +223,14 @@ private fun SequenceFolderRow(
             .format(Date(folder.mostRecentMs))
     }
     Surface(
+        onClick = onClick,
         shape = RoundedCornerShape(12.dp),
         tonalElevation = 2.dp,
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(onClick = onClick, onLongClick = onLongPress),
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
         ) {
             Icon(
                 Icons.Default.Layers,
@@ -274,7 +239,9 @@ private fun SequenceFolderRow(
                 modifier = Modifier.size(24.dp),
             )
             Spacer(Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier
+                .weight(1f)
+                .padding(vertical = 12.dp)) {
                 Text(customLabel ?: folder.name, style = MaterialTheme.typography.bodyLarge)
                 Text(
                     stringResource(R.string.sequences_frame_count, folder.frames.size, date),
@@ -282,11 +249,22 @@ private fun SequenceFolderRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            // Inline rename / delete — IconButton swallows the click before it
+            // reaches the surrounding Surface so the card's onClick won't fire.
+            IconButton(onClick = onRename) {
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = stringResource(R.string.action_rename),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            IconButton(onClick = onDelete) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = stringResource(R.string.action_delete),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
         }
     }
 }

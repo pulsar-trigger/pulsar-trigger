@@ -355,7 +355,6 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     },
                     onManualSelected = { currentScreen = AppScreen.Mode(TriggerMode.PRESS_HOLD) },
                     onCustomFlowSelected = { currentScreen = AppScreen.CustomFlow() },
-                    onDashboardSelected = { currentScreen = AppScreen.Dashboard },
                     onPlannerSelected = { currentScreen = AppScreen.Planner },
                     onAlignmentSelected = { currentScreen = AppScreen.Alignment },
                     onWhatsUpSelected = { currentScreen = AppScreen.WhatsUp },
@@ -398,13 +397,6 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     vm = vm,
                     onBack = { currentScreen = AppScreen.Menu },
                     quickLaunch = screen.quickLaunch,
-                )
-            }
-            AppScreen.Dashboard -> {
-                BackHandler { currentScreen = AppScreen.Menu }
-                DashboardScreen(
-                    dashboardManager = vm.dashboardManager,
-                    onBack = { currentScreen = AppScreen.Menu },
                 )
             }
             AppScreen.Planner -> {
@@ -536,7 +528,6 @@ private sealed class AppScreen {
     data class Mode(val mode: TriggerMode) : AppScreen()
     data class Settings(val initialSection: SettingsSection? = null) : AppScreen()
     data class CustomFlow(val quickLaunch: Boolean = false) : AppScreen()
-    data object Dashboard : AppScreen()
     data object Planner : AppScreen()
     data class MapPicker(val event: PlannerEvent, val initialLat: Double = 0.0, val initialLon: Double = 0.0) : AppScreen()
     data class EventSessions(val event: PlannerEvent, val mapResult: MapPickerResult? = null) : AppScreen()

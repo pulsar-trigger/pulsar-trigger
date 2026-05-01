@@ -16,6 +16,7 @@
     <!-- MainMenuScreen -->
     <string name="tab_trigger">Trigger</string>
     <string name="tab_tools">Tools</string>
+    <string name="tab_dashboard">Dashboard</string>
     <string name="mode_intervalometer">Intervalometer</string>
     <string name="mode_intervalometer_desc">Automate timelapse sequences with precision timing</string>
     <string name="mode_astro">Astro</string>
@@ -28,8 +29,6 @@
     <string name="mode_ramp_desc">Smoothly transition exposure for holy grail timelapses</string>
     <string name="mode_custom_flow">Flows &amp; Presets</string>
     <string name="mode_custom_flow_desc">Build multi-step flows and save presets</string>
-    <string name="mode_astro_dashboard">Astro Dashboard</string>
-    <string name="mode_astro_dashboard_desc">Weather, moon phase, Bortle scale &amp; sky conditions</string>
     <string name="menu_settings">Settings</string>
     <string name="disconnect">Disconnect</string>
 
@@ -654,7 +653,6 @@
     <string name="sort_newest">Newest</string>
     <string name="sort_oldest">Oldest</string>
     <string name="sort_name">Name</string>
-    <string name="sequences_action_prompt">Long-press menu — choose an action</string>
     <string name="action_rename">Rename</string>
     <string name="action_delete">Delete</string>
     <string name="dialog_rename_sequence">Rename sequence</string>

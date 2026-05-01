@@ -23,7 +23,6 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LensBlur
-import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.Timer
@@ -57,7 +56,6 @@ fun MainMenuScreen(
     onCustomFlowSelected: () -> Unit = {},
     onCameraSelected: () -> Unit = {},
     phoneCameraActive: Boolean = false,
-    onDashboardSelected: () -> Unit = {},
     onPlannerSelected: () -> Unit = {},
     onAlignmentSelected: () -> Unit = {},
     onWhatsUpSelected: () -> Unit = {},
@@ -75,6 +73,7 @@ fun MainMenuScreen(
     val tabs = listOf(
         stringResource(R.string.tab_trigger),
         stringResource(R.string.tab_tools),
+        stringResource(R.string.tab_dashboard),
     )
     val pagerState = rememberPagerState(initialPage = initialTab, pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
@@ -83,10 +82,12 @@ fun MainMenuScreen(
         onTabChanged(pagerState.currentPage)
     }
 
+    // Horizontal padding lives on each page, not on the outer Column — the
+    // Dashboard page wants edge-to-edge so its inner padding doesn't double.
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(vertical = 12.dp),
     ) {
 
         // ── Update banner (non-blocking, dismissible) ────────────────
@@ -94,7 +95,9 @@ fun MainMenuScreen(
             Surface(
                 color = MaterialTheme.colorScheme.primaryContainer,
                 shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -199,13 +202,12 @@ fun MainMenuScreen(
                             },
                         )
                     }
-                    LauncherGrid(triggerItems)
+                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        LauncherGrid(triggerItems)
+                    }
                 }
                 1 -> {
                     val toolItems = listOf(
-                        LauncherItem(R.string.mode_astro_dashboard, Icons.Default.NightsStay) {
-                            onDashboardSelected()
-                        },
                         LauncherItem(R.string.mode_planner, Icons.Default.DateRange) {
                             onPlannerSelected()
                         },
@@ -219,7 +221,17 @@ fun MainMenuScreen(
                             onSequencesSelected()
                         },
                     )
-                    LauncherGrid(toolItems)
+                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        LauncherGrid(toolItems)
+                    }
+                }
+                2 -> {
+                    // Dashboard inline — back button swipes back to Trigger so the
+                    // user always lands on the camera-side of the home screen.
+                    DashboardScreen(
+                        dashboardManager = vm.dashboardManager,
+                        onBack = { scope.launch { pagerState.animateScrollToPage(0) } },
+                    )
                 }
             }
         }

@@ -18,8 +18,6 @@
     <string name="mode_manual_desc">Contrôle direct de l\'obturateur — mode maintien ou verrouillage</string>
     <string name="mode_custom_flow">Flux &amp; Préréglages</string>
     <string name="mode_custom_flow_desc">Créez des flux multi-étapes et sauvegardez des préréglages</string>
-    <string name="mode_astro_dashboard">Tableau de bord Astro</string>
-    <string name="mode_astro_dashboard_desc">Météo, phase lunaire, échelle de Bortle &amp; conditions du ciel</string>
     <string name="menu_settings">Paramètres</string>
     <string name="disconnect">Déconnecter</string>
     <string name="back">Retour</string>
@@ -535,7 +533,6 @@
     <string name="sort_newest">Plus récent</string>
     <string name="sort_oldest">Plus ancien</string>
     <string name="sort_name">Nom</string>
-    <string name="sequences_action_prompt">Appui long pour choisir une action</string>
     <string name="action_rename">Renommer</string>
     <string name="action_delete">Supprimer</string>
     <string name="dialog_rename_sequence">Renommer la séquence</string>
