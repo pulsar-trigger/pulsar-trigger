@@ -648,6 +648,9 @@
     <string name="stack_lightning">Lightning Composite</string>
     <string name="stack_strikes_found">%1$d strikes found in %2$d frames — composite saved.</string>
     <string name="stack_no_strikes">No lightning detected across %1$d frames.</string>
+    <string name="stack_video">Build Video</string>
+    <string name="stack_video_done">Video saved (%1$d frames at 30 fps, 1080p).</string>
+    <string name="stack_video_failed">Could not build video.</string>
     <string name="sort_newest">Newest</string>
     <string name="sort_oldest">Oldest</string>
     <string name="sort_name">Name</string>

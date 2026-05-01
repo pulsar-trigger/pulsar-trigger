@@ -529,6 +529,9 @@
     <string name="stack_unknown_error">Falha no empilhamento.</string>
     <string name="stack_strikes_found">%1$d raios encontrados em %2$d quadros — composição salva.</string>
     <string name="stack_no_strikes">Nenhum raio detectado em %1$d quadros.</string>
+    <string name="stack_video">Gerar Vídeo</string>
+    <string name="stack_video_done">Vídeo salvo (%1$d quadros a 30 fps, 1080p).</string>
+    <string name="stack_video_failed">Não foi possível gerar o vídeo.</string>
     <string name="sort_newest">Mais recente</string>
     <string name="sort_oldest">Mais antigo</string>
     <string name="sort_name">Nome</string>

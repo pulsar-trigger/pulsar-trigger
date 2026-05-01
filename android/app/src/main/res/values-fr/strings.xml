@@ -529,6 +529,9 @@
     <string name="stack_unknown_error">Échec de l\'empilage.</string>
     <string name="stack_strikes_found">%1$d éclairs trouvés dans %2$d images — composition enregistrée.</string>
     <string name="stack_no_strikes">Aucun éclair détecté dans %1$d images.</string>
+    <string name="stack_video">Créer la Vidéo</string>
+    <string name="stack_video_done">Vidéo enregistrée (%1$d images à 30 fps, 1080p).</string>
+    <string name="stack_video_failed">Impossible de créer la vidéo.</string>
     <string name="sort_newest">Plus récent</string>
     <string name="sort_oldest">Plus ancien</string>
     <string name="sort_name">Nom</string>

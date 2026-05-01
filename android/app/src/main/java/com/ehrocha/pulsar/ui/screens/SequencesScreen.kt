@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.*
@@ -36,6 +37,7 @@ import com.ehrocha.pulsar.stacking.SequenceLabels
 import com.ehrocha.pulsar.stacking.SequenceRepository
 import com.ehrocha.pulsar.stacking.SequenceTags
 import com.ehrocha.pulsar.stacking.Stacker
+import com.ehrocha.pulsar.stacking.VideoBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -301,6 +303,7 @@ fun SequenceDetailScreen(
     var processedFrames by remember { mutableIntStateOf(0) }
     var totalFrames by remember { mutableIntStateOf(0) }
     var lastResult by remember { mutableStateOf<Uri?>(null) }
+    var lastResultIsVideo by remember { mutableStateOf(false) }
     var lastError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -319,6 +322,7 @@ fun SequenceDetailScreen(
         processedFrames = 0
         totalFrames = frames.size
         lastResult = null
+        lastResultIsVideo = false
         lastError = null
         lastInfo = null
         scope.launch {
@@ -398,6 +402,41 @@ fun SequenceDetailScreen(
                     } else {
                         lastError = context.getString(R.string.stack_decode_failed)
                     }
+                }
+            } catch (e: OutOfMemoryError) {
+                lastError = context.getString(R.string.stack_out_of_memory)
+            } catch (e: Exception) {
+                lastError = e.message ?: context.getString(R.string.stack_unknown_error)
+            } finally {
+                processing = false
+            }
+        }
+    }
+
+    fun runVideoBuild() {
+        val frames = folder?.frames ?: return
+        if (frames.isEmpty() || processing) return
+        processing = true
+        processedFrames = 0
+        totalFrames = frames.size
+        lastResult = null
+        lastResultIsVideo = false
+        lastError = null
+        lastInfo = null
+        scope.launch {
+            try {
+                val uri = withContext(Dispatchers.Default) {
+                    VideoBuilder.build(context, frames, sequencePath) { current, total ->
+                        processedFrames = current
+                        totalFrames = total
+                    }
+                }
+                if (uri != null) {
+                    lastResult = uri
+                    lastResultIsVideo = true
+                    lastInfo = context.getString(R.string.stack_video_done, frames.size)
+                } else {
+                    lastError = context.getString(R.string.stack_video_failed)
                 }
             } catch (e: OutOfMemoryError) {
                 lastError = context.getString(R.string.stack_out_of_memory)
@@ -515,7 +554,7 @@ fun SequenceDetailScreen(
                     )
                     TextButton(onClick = {
                         val intent = Intent(Intent.ACTION_VIEW).apply {
-                            setDataAndType(resultUri, "image/*")
+                            setDataAndType(resultUri, if (lastResultIsVideo) "video/*" else "image/*")
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
                         try {
@@ -616,6 +655,25 @@ fun SequenceDetailScreen(
             if (topRow.isNotEmpty()) Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 bottomRow.forEach { composeButton(it, Modifier.weight(1f)) }
+            }
+        }
+
+        // Video render — offered for sequences whose intent suits playback as a
+        // moving image. Lightning/Auto-Astro/Trails/Fireworks are still photos
+        // at heart, so we hide it there to keep the action surface focused.
+        val showVideoButton = captureMode == CaptureMode.TIMELAPSE ||
+            captureMode == CaptureMode.MANUAL || captureMode == null
+        if (showVideoButton) {
+            if (topRow.isNotEmpty() || bottomRow.isNotEmpty()) Spacer(Modifier.height(8.dp))
+            Button(
+                onClick = { runVideoBuild() },
+                enabled = canRun,
+                shape = RoundedCornerShape(28.dp),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+            ) {
+                Icon(Icons.Default.Movie, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.stack_video), fontWeight = FontWeight.Bold)
             }
         }
         Spacer(Modifier.height(4.dp))

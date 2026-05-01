@@ -529,6 +529,9 @@
     <string name="stack_unknown_error">Stapeln fehlgeschlagen.</string>
     <string name="stack_strikes_found">%1$d Blitze in %2$d Frames gefunden — Komposition gespeichert.</string>
     <string name="stack_no_strikes">Keine Blitze in %1$d Frames erkannt.</string>
+    <string name="stack_video">Video erstellen</string>
+    <string name="stack_video_done">Video gespeichert (%1$d Frames mit 30 fps, 1080p).</string>
+    <string name="stack_video_failed">Video konnte nicht erstellt werden.</string>
     <string name="sort_newest">Neueste</string>
     <string name="sort_oldest">Älteste</string>
     <string name="sort_name">Name</string>

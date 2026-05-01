@@ -527,6 +527,9 @@
     <string name="stack_unknown_error">Error de apilado.</string>
     <string name="stack_strikes_found">%1$d rayos encontrados en %2$d fotogramas — composición guardada.</string>
     <string name="stack_no_strikes">No se detectaron rayos en %1$d fotogramas.</string>
+    <string name="stack_video">Generar Video</string>
+    <string name="stack_video_done">Video guardado (%1$d fotogramas a 30 fps, 1080p).</string>
+    <string name="stack_video_failed">No se pudo generar el video.</string>
     <string name="sort_newest">Más reciente</string>
     <string name="sort_oldest">Más antiguo</string>
     <string name="sort_name">Nombre</string>

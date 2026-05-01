@@ -529,6 +529,9 @@
     <string name="stack_unknown_error">スタックに失敗しました。</string>
     <string name="stack_strikes_found">%2$d フレーム中に %1$d 件の雷を検出 — コンポジットを保存しました。</string>
     <string name="stack_no_strikes">%1$d フレーム中に雷は検出されませんでした。</string>
+    <string name="stack_video">動画を作成</string>
+    <string name="stack_video_done">動画を保存しました（%1$d フレーム、30 fps、1080p）。</string>
+    <string name="stack_video_failed">動画の作成に失敗しました。</string>
     <string name="sort_newest">新しい順</string>
     <string name="sort_oldest">古い順</string>
     <string name="sort_name">名前</string>
