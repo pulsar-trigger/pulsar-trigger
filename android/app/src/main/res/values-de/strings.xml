@@ -491,10 +491,15 @@
     <string name="tooltip_storm">Sturm — 4s Belichtungen, keine Pause, 300 Aufnahmen</string>
     <string name="tooltip_trails">Sternspuren — 30s Belichtungen, keine Pause, 120 Aufnahmen</string>
     <string name="tooltip_fireworks">Feuerwerk — 4s Belichtungen, keine Pause, 200 Aufnahmen, niedriges ISO</string>
-    <string name="tooltip_timelapse">Zeitraffer — 1/1000 Belichtungen, 10s Intervall, 360 Aufnahmen</string>
+    <string name="tooltip_timelapse">Tageszeitraffer — Standard, Action oder Wolken</string>
+    <string name="timelapse_style_default">Standard</string>
+    <string name="timelapse_style_burst">Action</string>
+    <string name="timelapse_style_cloudscape">Wolken</string>
     <string name="tag_timelapse">Zeitraffer</string>
     <string name="mode_info_timelapse_title">Zeitraffer</string>
     <string name="mode_info_timelapse_body">360 schnelle 1/1000-Sekunden-Belichtungen im Abstand von 10 Sekunden, ISO 200. Für den Tag — Wolken, Sonnenuntergänge, Verkehr, Baustellen. Etwa eine Stunde Aufnahme pro Session. Verarbeite anschließend mit Stapeln (Aufhellen), um den Sonnenbogen, Wolkenstreifen oder Lichtspuren von Fahrzeugen in einem einzigen Bild festzuhalten.</string>
+    <string name="mode_info_timelapse_burst_body">100 schnelle 1/1000-Sekunden-Belichtungen im Abstand von 0,5 Sekunden, ISO 400. Für Action — Sport, Kinder, Haustiere, alles was sich schnell bewegt. Etwa 50 Sekunden Aufnahme; wähle das beste Bild oder stapele mit Aufhellen für einen Geisterspuren-Effekt.</string>
+    <string name="mode_info_timelapse_cloud_body">480 kurze 1/250-Sekunden-Belichtungen im Abstand von 30 Sekunden, ISO 100. Für langsam ziehende Wolken — das längere Intervall gibt ihnen Zeit, sich zwischen den Bildern wirklich zu bewegen. Etwa 4 Stunden Aufnahme, gerendert ~16 s bei 30 fps.</string>
     <string name="camera_gap_label">Intervall</string>
 
     <!-- About: tribute -->

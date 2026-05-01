@@ -491,10 +491,15 @@
     <string name="tooltip_storm">ストーム — 4秒露光、間隔なし、300枚</string>
     <string name="tooltip_trails">スタートレイル — 30秒露光、間隔なし、120枚</string>
     <string name="tooltip_fireworks">花火 — 4秒露光、間隔なし、200枚、低ISO</string>
-    <string name="tooltip_timelapse">タイムラプス — 1/1000秒露光、10秒間隔、360枚</string>
+    <string name="tooltip_timelapse">日中タイムラプス — デフォルト/連写/雲景</string>
+    <string name="timelapse_style_default">標準</string>
+    <string name="timelapse_style_burst">連写</string>
+    <string name="timelapse_style_cloudscape">雲景</string>
     <string name="tag_timelapse">タイムラプス</string>
     <string name="mode_info_timelapse_title">タイムラプス</string>
     <string name="mode_info_timelapse_body">1/1000秒の高速露光×360枚、10秒間隔、ISO 200。日中向け — 雲、夕焼け、交通、建設現場など。1セッション約1時間の撮影。後でライトンスタックで処理すると、太陽の軌跡、雲の流れ、車のライトの軌跡を1枚に重ねて記録できます。</string>
+    <string name="mode_info_timelapse_burst_body">1/1000秒の高速露光×100枚、0.5秒間隔、ISO 400。動きのある被写体向け — スポーツ、子ども、ペットなど。撮影時間は約50秒。ベストショットを選ぶか、ライトンスタックで残像エフェクトを作成できます。</string>
+    <string name="mode_info_timelapse_cloud_body">1/250秒の短時間露光×480枚、30秒間隔、ISO 100。ゆっくり流れる雲向け — 長めの間隔でフレーム間に雲が実際に動く時間を確保します。撮影時間は約4時間で、30 fpsで約16秒の動画になります。</string>
     <string name="camera_gap_label">インターバル</string>
 
     <!-- About: tribute -->

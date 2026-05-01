@@ -209,6 +209,9 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
 
     // Selected capture mode — Start fires whichever is selected
     var selectedCaptureMode by remember { mutableStateOf(CaptureMode.MANUAL) }
+    var selectedTimelapseStyle by remember {
+        mutableStateOf(PulsarViewModel.TimelapseStyle.DEFAULT)
+    }
 
     // Current lens capabilities
     val currentLens = lenses.getOrNull(selectedLens)
@@ -457,6 +460,8 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                     onPanelToggle = { panel ->
                         activePanel = if (activePanel == panel) null else panel
                     },
+                    timelapseStyle = selectedTimelapseStyle,
+                    onTimelapseStyleChange = { selectedTimelapseStyle = it },
                     onStart = {
                         activePanel = null
                         when (selectedCaptureMode) {
@@ -483,7 +488,7 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                             }
                             CaptureMode.TIMELAPSE -> {
                                 keepAwake = true
-                                vm.startTimelapse()
+                                vm.startTimelapse(selectedTimelapseStyle)
                             }
                         }
                     },
@@ -976,6 +981,8 @@ private fun IntervalometerStrip(
     selectedMode: CaptureMode,
     onModeSelected: (CaptureMode) -> Unit,
     onPanelToggle: (CameraPanel) -> Unit,
+    timelapseStyle: PulsarViewModel.TimelapseStyle,
+    onTimelapseStyleChange: (PulsarViewModel.TimelapseStyle) -> Unit,
     onStart: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -1000,7 +1007,11 @@ private fun IntervalometerStrip(
             }
         }
         AnimatedVisibility(visible = activePanel == CameraPanel.MODE_INFO && selectedMode != CaptureMode.MANUAL) {
-            ModeInfoPanel(selectedMode)
+            ModeInfoPanel(
+                mode = selectedMode,
+                timelapseStyle = timelapseStyle,
+                onTimelapseStyleChange = onTimelapseStyleChange,
+            )
         }
 
         // Icon strip
@@ -1086,15 +1097,24 @@ private typealias CaptureMode = com.ehrocha.pulsar.stacking.CaptureMode
 
 /** Brief explanation panel for a non-Manual capture mode. Shows what the mode
  *  captures (e.g. Auto Astro's bonus foreground frame) and which composite to
- *  run on it afterwards, so the user knows what to expect before tapping Start. */
+ *  run on it afterwards, so the user knows what to expect before tapping Start.
+ *  For Timelapse, also shows three sub-style chips and switches the body text. */
 @Composable
-private fun ModeInfoPanel(mode: CaptureMode) {
+private fun ModeInfoPanel(
+    mode: CaptureMode,
+    timelapseStyle: PulsarViewModel.TimelapseStyle,
+    onTimelapseStyleChange: (PulsarViewModel.TimelapseStyle) -> Unit,
+) {
     val (titleRes, bodyRes) = when (mode) {
         CaptureMode.AUTO_ASTRO -> R.string.mode_info_auto_title to R.string.mode_info_auto_body
         CaptureMode.STORM -> R.string.mode_info_storm_title to R.string.mode_info_storm_body
         CaptureMode.TRAILS -> R.string.mode_info_trails_title to R.string.mode_info_trails_body
         CaptureMode.FIREWORKS -> R.string.mode_info_fireworks_title to R.string.mode_info_fireworks_body
-        CaptureMode.TIMELAPSE -> R.string.mode_info_timelapse_title to R.string.mode_info_timelapse_body
+        CaptureMode.TIMELAPSE -> R.string.mode_info_timelapse_title to when (timelapseStyle) {
+            PulsarViewModel.TimelapseStyle.DEFAULT -> R.string.mode_info_timelapse_body
+            PulsarViewModel.TimelapseStyle.ACTION_BURST -> R.string.mode_info_timelapse_burst_body
+            PulsarViewModel.TimelapseStyle.CLOUDSCAPE -> R.string.mode_info_timelapse_cloud_body
+        }
         CaptureMode.MANUAL -> return
     }
     Surface(
@@ -1114,12 +1134,62 @@ private fun ModeInfoPanel(mode: CaptureMode) {
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
             )
+            if (mode == CaptureMode.TIMELAPSE) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    TimelapseStyleChip(
+                        label = stringResource(R.string.timelapse_style_default),
+                        selected = timelapseStyle == PulsarViewModel.TimelapseStyle.DEFAULT,
+                        onClick = { onTimelapseStyleChange(PulsarViewModel.TimelapseStyle.DEFAULT) },
+                        modifier = Modifier.weight(1f),
+                    )
+                    TimelapseStyleChip(
+                        label = stringResource(R.string.timelapse_style_burst),
+                        selected = timelapseStyle == PulsarViewModel.TimelapseStyle.ACTION_BURST,
+                        onClick = { onTimelapseStyleChange(PulsarViewModel.TimelapseStyle.ACTION_BURST) },
+                        modifier = Modifier.weight(1f),
+                    )
+                    TimelapseStyleChip(
+                        label = stringResource(R.string.timelapse_style_cloudscape),
+                        selected = timelapseStyle == PulsarViewModel.TimelapseStyle.CLOUDSCAPE,
+                        onClick = { onTimelapseStyleChange(PulsarViewModel.TimelapseStyle.CLOUDSCAPE) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
             Text(
                 stringResource(bodyRes),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White.copy(alpha = 0.85f),
             )
         }
+    }
+}
+
+@Composable
+private fun TimelapseStyleChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        onClick = onClick,
+        color = if (selected) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.12f),
+        shape = RoundedCornerShape(8.dp),
+        modifier = modifier,
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 6.dp, vertical = 6.dp),
+        )
     }
 }
 

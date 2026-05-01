@@ -524,26 +524,43 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
 
+    /** Sub-styles of the Timelapse mode. All produce TIMELAPSE-tagged sequences
+     *  so the same composites (Lighten / Mean) are offered afterwards. */
+    enum class TimelapseStyle { DEFAULT, ACTION_BURST, CLOUDSCAPE }
+
     /**
-     * One-tap daytime timelapse. Fast 1/1000s exposures every 10 seconds at low
-     * ISO — built for clouds, sunsets, traffic, construction. 360 shots ≈ one
-     * hour of capture, which renders to ~12 s of 30 fps video.
+     * One-tap daytime timelapse. Three sub-styles tuned for different daytime
+     * subjects:
+     *  - DEFAULT:      1/1000s × 10s × 360 (~1h → 12s @30fps). Sunsets, traffic, construction.
+     *  - ACTION_BURST: 1/1000s × 0.5s × 100 (~50s of frames). Sports, kids, pets.
+     *  - CLOUDSCAPE:   1/250s × 30s × 480 (~4h → 16s @30fps). Slowly-drifting clouds.
      */
-    fun startTimelapse() {
+    fun startTimelapse(style: TimelapseStyle = TimelapseStyle.DEFAULT) {
         if (!_phoneCameraActive.value) return
         val lens = phoneCameraManager.lenses.value
             .getOrNull(phoneCameraManager.selectedLens.value) ?: return
 
-        // ISO 200 — low for daylight, clean output.
+        // Lower ISO is fine in daylight; pick per-style and clamp to the lens range.
+        val targetIso = when (style) {
+            TimelapseStyle.DEFAULT -> 200
+            TimelapseStyle.ACTION_BURST -> 400  // shorter shots of moving subjects benefit from a bit more sensitivity
+            TimelapseStyle.CLOUDSCAPE -> 100    // long total run, want clean shadows
+        }
         lens.capabilities.isoRange?.let { range ->
-            phoneCameraManager.setManualIso(200.coerceIn(range.lower, range.upper))
+            phoneCameraManager.setManualIso(targetIso.coerceIn(range.lower, range.upper))
+        }
+
+        val (intervalMs, exposureMs, shotCount) = when (style) {
+            TimelapseStyle.DEFAULT      -> Triple(10_000L, 1L,   360)
+            TimelapseStyle.ACTION_BURST -> Triple(500L,    1L,   100)
+            TimelapseStyle.CLOUDSCAPE   -> Triple(30_000L, 4L,   480)  // 1/250s ≈ 4 ms
         }
 
         val step = com.ehrocha.pulsar.model.FlowStep(
             type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
-            intervalMs = 10_000L,
-            exposureMs = 1L,
-            shotCount = 360,
+            intervalMs = intervalMs,
+            exposureMs = exposureMs,
+            shotCount = shotCount,
             delayMs = 0L,
         )
         _flowSteps.value = listOf(step)

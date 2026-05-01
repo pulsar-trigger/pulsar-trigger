@@ -489,10 +489,15 @@
     <string name="tooltip_storm">Tormenta — exposiciones de 4s, sin pausa, 300 fotos</string>
     <string name="tooltip_trails">Estelas Estelares — exposiciones de 30s, sin pausa, 120 fotos</string>
     <string name="tooltip_fireworks">Fuegos — exposiciones de 4s, sin pausa, 200 fotos, ISO bajo</string>
-    <string name="tooltip_timelapse">Timelapse — exposiciones de 1/1000, intervalo de 10s, 360 fotos</string>
+    <string name="tooltip_timelapse">Timelapse diurno — Predeterminado, Ráfaga o Nubes</string>
+    <string name="timelapse_style_default">Predet.</string>
+    <string name="timelapse_style_burst">Ráfaga</string>
+    <string name="timelapse_style_cloudscape">Nubes</string>
     <string name="tag_timelapse">Timelapse</string>
     <string name="mode_info_timelapse_title">Timelapse</string>
     <string name="mode_info_timelapse_body">360 exposiciones rápidas de 1/1000 segundos, con intervalo de 10 segundos, ISO 200. Diseñado para el día — nubes, atardeceres, tráfico, construcción. Aproximadamente una hora de captura por sesión. Procesa con Apilar (Lighten) para registrar el arco del sol, las estelas de nubes o las luces de vehículos en una sola imagen.</string>
+    <string name="mode_info_timelapse_burst_body">100 exposiciones rápidas de 1/1000 de segundo disparadas cada medio segundo, ISO 400. Diseñado para acción — deportes, niños, mascotas, cualquier cosa que se mueva rápido. Cerca de 50 segundos de captura; elige el mejor cuadro o apila con Lighten para un efecto de estela fantasma.</string>
+    <string name="mode_info_timelapse_cloud_body">480 exposiciones cortas de 1/250 de segundo, con intervalo de 30 segundos, ISO 100. Diseñado para nubes que se desplazan lentamente — el intervalo más largo les da tiempo para moverse realmente entre cuadros. Cerca de 4 horas de captura; renderiza a ~16 s a 30 fps.</string>
     <string name="camera_gap_label">Intervalo</string>
 
     <!-- About: tribute -->

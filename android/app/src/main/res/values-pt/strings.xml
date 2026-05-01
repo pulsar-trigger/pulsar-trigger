@@ -491,10 +491,15 @@
     <string name="tooltip_storm">Tempestade — exposições de 4s, sem intervalo, 300 fotos</string>
     <string name="tooltip_trails">Trilhas Estelares — exposições de 30s, sem intervalo, 120 fotos</string>
     <string name="tooltip_fireworks">Fogos — exposições de 4s, sem intervalo, 200 fotos, ISO baixo</string>
-    <string name="tooltip_timelapse">Timelapse — exposições de 1/1000, intervalo de 10s, 360 fotos</string>
+    <string name="tooltip_timelapse">Timelapse diurno — Padrão, Rajada ou Nuvens</string>
+    <string name="timelapse_style_default">Padrão</string>
+    <string name="timelapse_style_burst">Rajada</string>
+    <string name="timelapse_style_cloudscape">Nuvens</string>
     <string name="tag_timelapse">Timelapse</string>
     <string name="mode_info_timelapse_title">Timelapse</string>
     <string name="mode_info_timelapse_body">360 exposições rápidas de 1/1000 segundos, com intervalo de 10 segundos, ISO 200. Feito para o dia — nuvens, pôr do sol, tráfego, construção. Cerca de uma hora de captura por sessão. Processe com Lighten Stack depois para registrar o arco do sol, rastros de nuvens ou luzes de carros em uma única imagem.</string>
+    <string name="mode_info_timelapse_burst_body">100 exposições rápidas de 1/1000 segundo disparadas a cada meio segundo, ISO 400. Feito para ação — esportes, crianças, animais, qualquer coisa que se mova rápido. Cerca de 50 segundos de captura; escolha o melhor quadro, ou empilhe com Lighten para um efeito de rastro fantasma.</string>
+    <string name="mode_info_timelapse_cloud_body">480 exposições curtas de 1/250 segundo, com intervalo de 30 segundos, ISO 100. Feito para nuvens em deriva lenta — o intervalo maior dá tempo para elas realmente se moverem entre os quadros. Cerca de 4 horas de captura; renderiza em ~16 s a 30 fps.</string>
     <string name="camera_gap_label">Intervalo</string>
 
     <!-- About: tribute -->
