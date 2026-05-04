@@ -81,6 +81,8 @@ class PhoneCameraManager(private val context: Context) {
     /** True when the current lens supports vendor Night-mode (multi-frame fusion). */
     val nightModeAvailable: StateFlow<Boolean> = _nightModeAvailable
     @Volatile private var nightModeActive = false
+    /** True while the camera is bound with the vendor NIGHT extension. */
+    val isNightModeActive: Boolean get() = nightModeActive
 
     // Stored from initialize() so we can rebind for Night-mode without the UI
     // having to pass them through again.

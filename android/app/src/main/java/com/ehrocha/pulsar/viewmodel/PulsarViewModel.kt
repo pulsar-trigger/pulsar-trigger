@@ -1295,11 +1295,30 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         // AE off→on→off between steps was hanging the second step on devices
         // that take a while to recover after a long capture (e.g. Auto Astro's
         // 30 s foreground frame followed by NPF sky frames).
+
+        // Auto-route long requests through Night-mode. Phones cap single-frame
+        // sensor exposure at ~1–2 s; asking for more makes the driver fake the
+        // long shot by stacking shorter ones, which roughly doubles wall-clock
+        // per shot. Vendor Night-mode does the multi-frame fusion properly.
+        // Skip this if the caller (e.g. Auto Astro) already enabled night mode
+        // — we don't want to disable it on step exit and reopen for the next.
+        val sensorMaxMs = phoneCameraManager.lenses.value
+            .getOrNull(phoneCameraManager.selectedLens.value)
+            ?.capabilities?.exposureTimeRange?.upper?.div(1_000_000L)
+        val locallyEnabledNight = if (
+            !phoneCameraManager.isNightModeActive
+            && sensorMaxMs != null && expMs > sensorMaxMs
+            && phoneCameraManager.nightModeAvailable.value
+        ) {
+            phoneCameraManager.enableNightMode()
+        } else false
+
         val actualExpNs = phoneCameraManager.setSensorExposureForCapture(expMs)
         val sensorHandlesExposure = actualExpNs > 0
 
         if (isoOverride != null) phoneCameraManager.setManualIso(isoOverride)
 
+        try {
         if (startDelayMs > 0) {
             _status.value = _status.value?.copy(
                 state = DeviceState.WAITING, shotsTaken = 0,
@@ -1336,6 +1355,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
+        } finally {
+            // Only tear down if WE turned it on; flow-level callers (Auto Astro)
+            // own the binding for the whole flow.
+            if (locallyEnabledNight) {
+                withContext(NonCancellable) { phoneCameraManager.disableNightMode() }
+            }
+        }
     }
 
     // ── Notification helpers ─────────────────────────────────────────────
