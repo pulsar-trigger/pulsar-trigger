@@ -49,9 +49,11 @@ object AppConfig {
      *  would overlap with exposure time. */
     const val MIN_INTERVAL_MS = 500L
 
-    /** Shortest allowed exposure time (ms). Below this, most cameras cannot
-     *  reliably trigger via the shutter-release cable. */
-    const val MIN_EXPOSURE_MS = 50L
+    /** Shortest allowed exposure time (ms). Phone cameras can resolve down
+     *  to ~1/1000s; BLE-cable cameras get their own floor enforced by the
+     *  firmware (currently 10 ms), so this only needs to be a sane absolute
+     *  minimum that doesn't clamp the manual shutter-speed slider. */
+    const val MIN_EXPOSURE_MS = 1L
 
     /** Minimum shots per run — at least one shot is always required. */
     const val MIN_SHOT_COUNT = 1
