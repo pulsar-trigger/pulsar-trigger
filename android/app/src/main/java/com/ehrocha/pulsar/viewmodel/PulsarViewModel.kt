@@ -503,6 +503,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         val lens = phoneCameraManager.lenses.value
             .getOrNull(phoneCameraManager.selectedLens.value) ?: return
 
+        // Pin focus at infinity for the run. CameraX's takePicture pre-capture
+        // sequence runs an AF lock, and CONTINUOUS_PICTURE on a starry sky
+        // never converges — every frame stalls until the per-shot timeout.
+        // startFlow restores the user's previous focus when the sequence ends.
+        if (lens.capabilities.supportsManualFocus) {
+            phoneCameraManager.setManualFocusDist(0f)
+        }
+
         val isoRange = lens.capabilities.isoRange
         val skyIso = isoRange?.let { 1600.coerceIn(it.lower, it.upper) }
         val groundIso = isoRange?.let { 200.coerceIn(it.lower, it.upper) }
@@ -779,11 +787,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 pendingSequenceMode = null
             }
-            // Snapshot the user's manual ISO before any step mutates it, so we
-            // can restore it once at the end. Per-step restore was thrashing
+            // Snapshot the user's manual ISO + focus before any step mutates them
+            // so we can restore once at the end. Per-step restore was thrashing
             // AE on→off between steps and stalling the second step on devices
             // recovering from a long capture (Auto Astro foreground + sky).
             val savedIso = if (_phoneCameraActive.value) phoneCameraManager.manualIso.value else null
+            val savedFocus = if (_phoneCameraActive.value) phoneCameraManager.manualFocusDist.value else null
             try {
                 for (i in steps.indices) {
                     _flowCurrentStep.value = i
@@ -795,6 +804,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     if (_phoneCameraActive.value) {
                         phoneCameraManager.restoreExposureSettings()
                         phoneCameraManager.setManualIso(savedIso)
+                        phoneCameraManager.setManualFocusDist(savedFocus)
                         phoneCameraManager.endSequenceFolder()
                     }
                 }
