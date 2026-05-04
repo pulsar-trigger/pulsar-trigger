@@ -572,7 +572,7 @@ class PhoneCameraManager(private val context: Context) {
             if (lensList.isNotEmpty()) {
                 provider.unbindAll()
                 imageCapture = ImageCapture.Builder()
-                    .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+                    .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
                     .build()
                 try {
                     boundCamera = provider.bindToLifecycle(lifecycleOwner, lensList[0].selector, imageCapture!!)
@@ -632,8 +632,13 @@ class PhoneCameraManager(private val context: Context) {
         _selectedLens.value = index
         val provider = cameraProvider ?: return
         provider.unbindAll()
+        // MINIMIZE_LATENCY skips CameraX's AE/AWB precapture-convergence step.
+        // With manual ISO + exposure locked there's nothing to converge to, and
+        // for long exposures the precapture frame runs at the manual exposure
+        // time — doubling each shot's wall-clock time. The captured frame still
+        // uses the locked sensor settings, so quality is unchanged in manual.
         imageCapture = ImageCapture.Builder()
-            .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+            .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
             .build()
         try {
             boundCamera = provider.bindToLifecycle(lifecycleOwner, lensList[index].selector, imageCapture!!)
@@ -668,8 +673,13 @@ class PhoneCameraManager(private val context: Context) {
             it.surfaceProvider = previewView.surfaceProvider
         }
 
+        // MINIMIZE_LATENCY skips CameraX's AE/AWB precapture-convergence step.
+        // With manual ISO + exposure locked there's nothing to converge to, and
+        // for long exposures the precapture frame runs at the manual exposure
+        // time — doubling each shot's wall-clock time. The captured frame still
+        // uses the locked sensor settings, so quality is unchanged in manual.
         imageCapture = ImageCapture.Builder()
-            .setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY)
+            .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
             .build()
 
         try {
