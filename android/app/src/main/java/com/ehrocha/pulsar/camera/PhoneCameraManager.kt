@@ -22,6 +22,8 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
+import androidx.camera.extensions.ExtensionMode
+import androidx.camera.extensions.ExtensionsManager
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
@@ -71,6 +73,19 @@ class PhoneCameraManager(private val context: Context) {
     private var imageCapture: ImageCapture? = null
     private var preview: Preview? = null
     private val camera2Manager = context.getSystemService(Context.CAMERA_SERVICE) as Camera2Manager
+
+    // Vendor Night-mode extension. Initialised alongside cameraProvider; null
+    // until the async load completes (or if the device has no extensions).
+    private var extensionsManager: ExtensionsManager? = null
+    private val _nightModeAvailable = MutableStateFlow(false)
+    /** True when the current lens supports vendor Night-mode (multi-frame fusion). */
+    val nightModeAvailable: StateFlow<Boolean> = _nightModeAvailable
+    @Volatile private var nightModeActive = false
+
+    // Stored from initialize() so we can rebind for Night-mode without the UI
+    // having to pass them through again.
+    private var lifecycleOwnerRef: LifecycleOwner? = null
+    private var previewViewRef: PreviewView? = null
 
     /** True if the device has at least one usable camera. */
     val isAvailable: Boolean
@@ -198,6 +213,9 @@ class PhoneCameraManager(private val context: Context) {
 
     @androidx.annotation.OptIn(androidx.camera.camera2.interop.ExperimentalCamera2Interop::class)
     private fun applyManualSettings() {
+        // Night-mode extension owns the sensor pipeline — Camera2Interop options
+        // either get ignored or interfere with the multi-frame fusion path.
+        if (nightModeActive) return
         val camera = boundCamera ?: return
         val ctrl = camera.cameraControl
 
@@ -593,6 +611,8 @@ class PhoneCameraManager(private val context: Context) {
         previewView: PreviewView,
         onReady: () -> Unit = {},
     ) {
+        lifecycleOwnerRef = lifecycleOwner
+        previewViewRef = previewView
         val future = ProcessCameraProvider.getInstance(context)
         future.addListener({
             val provider = try {
@@ -610,8 +630,30 @@ class PhoneCameraManager(private val context: Context) {
             if (lensList.isNotEmpty()) {
                 bindCamera(provider, lifecycleOwner, previewView, lensList[0].selector)
             }
+
+            // Probe vendor extensions in the background. NIGHT availability is
+            // reported per-lens via [nightModeAvailable]; a missing extensions
+            // module just leaves it false and Auto Astro falls back to manual.
+            val extFuture = ExtensionsManager.getInstanceAsync(context, provider)
+            extFuture.addListener({
+                extensionsManager = try {
+                    extFuture.get()
+                } catch (e: Exception) {
+                    Log.w(TAG, "Extensions unavailable: ${e.message}")
+                    null
+                }
+                refreshNightModeAvailability()
+            }, ContextCompat.getMainExecutor(context))
+
             onReady()
         }, ContextCompat.getMainExecutor(context))
+    }
+
+    private fun refreshNightModeAvailability() {
+        val em = extensionsManager
+        val lens = _lenses.value.getOrNull(_selectedLens.value)
+        _nightModeAvailable.value = em != null && lens != null
+            && em.isExtensionAvailable(lens.selector, ExtensionMode.NIGHT)
     }
 
     fun selectLens(index: Int, lifecycleOwner: LifecycleOwner, previewView: PreviewView) {
@@ -620,8 +662,11 @@ class PhoneCameraManager(private val context: Context) {
         // Reset state that's lens-specific
         resetLensState()
         _selectedLens.value = index
+        lifecycleOwnerRef = lifecycleOwner
+        previewViewRef = previewView
         val provider = cameraProvider ?: return
         bindCamera(provider, lifecycleOwner, previewView, lensList[index].selector)
+        refreshNightModeAvailability()
     }
 
     /** Select lens without preview — for headless mode. */
@@ -693,6 +738,56 @@ class PhoneCameraManager(private val context: Context) {
         } finally {
             binding = false
         }
+    }
+
+    /**
+     * Rebind the camera with the vendor NIGHT extension enabled. Each subsequent
+     * [captureAndWait] becomes a multi-frame fused capture (slow per shot, but
+     * clean — phones can't deliver a single long exposure without the driver
+     * faking it via internal stacking, which is what triggers the multi-second
+     * stalls Auto Astro was hitting).
+     *
+     * Returns true on success; false if extensions are unavailable, the lens
+     * doesn't expose NIGHT, or the rebind throws. Manual ISO/exposure are
+     * suppressed while active — the extension drives the sensor.
+     */
+    fun enableNightMode(): Boolean {
+        val em = extensionsManager ?: return false
+        val provider = cameraProvider ?: return false
+        val lo = lifecycleOwnerRef ?: return false
+        val pv = previewViewRef ?: return false
+        val lens = _lenses.value.getOrNull(_selectedLens.value) ?: return false
+        if (!em.isExtensionAvailable(lens.selector, ExtensionMode.NIGHT)) return false
+
+        val nightSelector = em.getExtensionEnabledCameraSelector(lens.selector, ExtensionMode.NIGHT)
+        return try {
+            provider.unbindAll()
+            preview = Preview.Builder().build().also { it.surfaceProvider = pv.surfaceProvider }
+            // CAPTURE_MODE isn't honored by extensions — the night algorithm
+            // has its own multi-frame strategy. Builder defaults are fine.
+            imageCapture = ImageCapture.Builder().build()
+            boundCamera = provider.bindToLifecycle(lo, nightSelector, preview, imageCapture)
+            nightModeActive = true
+            _lastError.value = null
+            Log.i(TAG, "Night-mode bound: ${lens.label}")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to bind night mode", e)
+            _lastError.value = e.message
+            nightModeActive = false
+            false
+        }
+    }
+
+    /** Rebind the camera back to its standard selector after [enableNightMode]. */
+    fun disableNightMode() {
+        if (!nightModeActive) return
+        nightModeActive = false
+        val provider = cameraProvider ?: return
+        val lo = lifecycleOwnerRef ?: return
+        val pv = previewViewRef ?: return
+        val lens = _lenses.value.getOrNull(_selectedLens.value) ?: return
+        bindCamera(provider, lo, pv, lens.selector)
     }
 
     /** Fire a single capture and suspend until the photo is saved (or fails). */

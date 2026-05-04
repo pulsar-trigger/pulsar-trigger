@@ -511,11 +511,28 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             phoneCameraManager.setManualFocusDist(0f)
         }
 
-        // Clamp every requested exposure to what the sensor advertises. Phones
-        // typically max out at 1–2 s; asking for a 5 s NPF frame makes the
-        // driver internally stack shorter exposures, which roughly doubles each
-        // shot's wall-clock time. ISO is bumped proportionally so total light
-        // matches the photographic intent of the unclamped value.
+        // Preferred path: vendor Night-mode extension. Each capture is a
+        // multi-frame fused frame — clean and exposure-correct without the
+        // long-exposure-fake stalls. Style/foreground inputs don't apply once
+        // the extension drives the sensor; we just ask for fewer cleaner shots.
+        if (phoneCameraManager.enableNightMode()) {
+            val sky = com.ehrocha.pulsar.model.FlowStep(
+                type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
+                intervalMs = 1_000L,
+                exposureMs = 1L,                // ignored by night extension
+                shotCount = 5,                  // each shot is already an internal stack
+                delayMs = 0L,
+                isoOverride = null,             // extension auto-handles ISO
+            )
+            _flowSteps.value = listOf(sky)
+            pendingSequenceMode = com.ehrocha.pulsar.stacking.CaptureMode.AUTO_ASTRO
+            startFlow()
+            return
+        }
+
+        // Fallback: no Night-mode on this device. Clamp the requested exposure
+        // to what the sensor advertises (phones max out around 1–2 s) and bump
+        // ISO proportionally to keep total light aligned with the picked rule.
         val sensorMaxMs = lens.capabilities.exposureTimeRange?.upper?.div(1_000_000L) ?: 30_000L
         val isoRange = lens.capabilities.isoRange
 
@@ -820,6 +837,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             } finally {
                 withContext(NonCancellable) {
                     if (_phoneCameraActive.value) {
+                        // Drop Night-mode binding (no-op if it was never enabled)
+                        // before re-applying user-controlled settings — restoring
+                        // exposure/iso/focus only makes sense on the standard
+                        // binding where Camera2Interop options are honored.
+                        phoneCameraManager.disableNightMode()
                         phoneCameraManager.restoreExposureSettings()
                         phoneCameraManager.setManualIso(savedIso)
                         phoneCameraManager.setManualFocusDist(savedFocus)
