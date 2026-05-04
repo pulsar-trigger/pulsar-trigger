@@ -493,6 +493,12 @@
     <string name="timelapse_style_default">Standard</string>
     <string name="timelapse_style_burst">Action</string>
     <string name="timelapse_style_cloudscape">Wolken</string>
+    <string name="auto_astro_rule_npf">NPF</string>
+    <string name="auto_astro_rule_400">400</string>
+    <string name="auto_astro_rule_500">500</string>
+    <string name="auto_astro_foreground_on">Vordergrund: Ein (30 s, niedriger ISO)</string>
+    <string name="auto_astro_foreground_off">Vordergrund: Aus</string>
+    <string name="iso_auto">ISO Auto</string>
     <string name="tag_timelapse">Zeitraffer</string>
     <string name="mode_info_timelapse_title">Zeitraffer</string>
     <string name="mode_info_timelapse_body">360 schnelle 1/1000-Sekunden-Belichtungen im Abstand von 10 Sekunden, ISO 200. Für den Tag — Wolken, Sonnenuntergänge, Verkehr, Baustellen. Etwa eine Stunde Aufnahme pro Session. Verarbeite anschließend mit Stapeln (Aufhellen), um den Sonnenbogen, Wolkenstreifen oder Lichtspuren von Fahrzeugen in einem einzigen Bild festzuhalten.</string>

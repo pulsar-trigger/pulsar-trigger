@@ -485,12 +485,20 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         saveFlowSteps(listOf(step))
     }
 
+    /** Sky-exposure rule for Auto Astro. NPF accounts for pixel pitch; the 400
+     *  and 500 rules are the classic focal-length-only divisors. */
+    enum class AutoAstroStyle { NPF, RULE_400, RULE_500 }
+
     /**
-     * One-tap astrophotography for phone camera. Computes NPF-rule exposure from
-     * the active lens's metadata, picks a sensible high ISO, then fires a 20-shot
-     * sequence with 4s gaps. Stacking later turns these into a single image.
+     * One-tap astrophotography for phone camera. Sky exposure derives from the
+     * picked rule (NPF / 400 / 500) for the active lens; ISO 1600 is target.
+     * Optional 30 s low-ISO foreground frame is captured first when
+     * [includeForeground] is true (default).
      */
-    fun startAutoAstro() {
+    fun startAutoAstro(
+        style: AutoAstroStyle = AutoAstroStyle.NPF,
+        includeForeground: Boolean = true,
+    ) {
         if (!_phoneCameraActive.value) return
         val lens = phoneCameraManager.lenses.value
             .getOrNull(phoneCameraManager.selectedLens.value) ?: return
@@ -499,26 +507,30 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         val skyIso = isoRange?.let { 1600.coerceIn(it.lower, it.upper) }
         val groundIso = isoRange?.let { 200.coerceIn(it.lower, it.upper) }
 
-        // Single 30s low-ISO foreground frame, then 20 NPF sky frames. We pass
-        // the raw photographic intent through — the camera driver decides how
-        // long it can actually integrate (some honor more than they advertise).
-        val ground = com.ehrocha.pulsar.model.FlowStep(
-            type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
-            intervalMs = 2_000L,
-            exposureMs = 30_000L,
-            shotCount = 1,
-            delayMs = 0L,
-            isoOverride = groundIso,
-        )
         val sky = com.ehrocha.pulsar.model.FlowStep(
             type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
             intervalMs = 4_000L,
-            exposureMs = computePhoneNpfExposureMs(lens),
+            exposureMs = computePhoneSkyExposureMs(lens, style),
             shotCount = 20,
             delayMs = 0L,
             isoOverride = skyIso,
         )
-        _flowSteps.value = listOf(ground, sky)
+
+        // Foreground (when requested): single 30s low-ISO frame captured FIRST
+        // so users who stop early still have it. Driver may silently clamp.
+        _flowSteps.value = if (includeForeground) {
+            val ground = com.ehrocha.pulsar.model.FlowStep(
+                type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
+                intervalMs = 2_000L,
+                exposureMs = 30_000L,
+                shotCount = 1,
+                delayMs = 0L,
+                isoOverride = groundIso,
+            )
+            listOf(ground, sky)
+        } else {
+            listOf(sky)
+        }
         pendingSequenceMode = com.ehrocha.pulsar.stacking.CaptureMode.AUTO_ASTRO
         startFlow()
     }
@@ -667,6 +679,26 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         return (expS * 1000).toLong().coerceAtLeast(AppConfig.MIN_ASTRO_EXPOSURE_MS)
     }
 
+    /** Max sky exposure for the picked Auto Astro style. */
+    private fun computePhoneSkyExposureMs(
+        lens: com.ehrocha.pulsar.camera.PhoneLens,
+        style: AutoAstroStyle,
+    ): Long = when (style) {
+        AutoAstroStyle.NPF -> computePhoneNpfExposureMs(lens)
+        AutoAstroStyle.RULE_400 -> phoneRuleExposureMs(lens, 400)
+        AutoAstroStyle.RULE_500 -> phoneRuleExposureMs(lens, 500)
+    }
+
+    /** Classic N-rule: divisor / (focal × cropFactor). Falls back to safe defaults
+     *  when lens metadata is missing. */
+    private fun phoneRuleExposureMs(lens: com.ehrocha.pulsar.camera.PhoneLens, divisor: Int): Long {
+        val focal = if (lens.focalLength > 0f) lens.focalLength else 5f
+        val sensorWidth = if (lens.sensorWidth > 0f) lens.sensorWidth else 6f
+        val cropFactor = (36f / sensorWidth).coerceAtLeast(1f)
+        val expS = divisor.toDouble() / (focal * cropFactor)
+        return (expS * 1000).toLong().coerceAtLeast(AppConfig.MIN_ASTRO_EXPOSURE_MS)
+    }
+
     fun saveFlowSteps(steps: List<FlowStep>) {
         _flowSteps.value = steps
         prefs.edit().putString(KEY_FLOW_STEPS, FlowStep.serializeList(steps)).apply()
@@ -747,6 +779,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 pendingSequenceMode = null
             }
+            // Snapshot the user's manual ISO before any step mutates it, so we
+            // can restore it once at the end. Per-step restore was thrashing
+            // AE on→off between steps and stalling the second step on devices
+            // recovering from a long capture (Auto Astro foreground + sky).
+            val savedIso = if (_phoneCameraActive.value) phoneCameraManager.manualIso.value else null
             try {
                 for (i in steps.indices) {
                     _flowCurrentStep.value = i
@@ -755,7 +792,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 // All steps complete
             } finally {
                 withContext(NonCancellable) {
-                    if (_phoneCameraActive.value) phoneCameraManager.endSequenceFolder()
+                    if (_phoneCameraActive.value) {
+                        phoneCameraManager.restoreExposureSettings()
+                        phoneCameraManager.setManualIso(savedIso)
+                        phoneCameraManager.endSequenceFolder()
+                    }
                 }
                 _flowRunning.value = false
                 _flowPaused.value = false
@@ -1200,57 +1241,51 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         startDelayMs: Long,
         isoOverride: Int? = null,
     ) {
-        // Stash ISO before setSensorExposureForCapture — that call may auto-set a
-        // default ISO and would make the savedIso reflect the mutated value instead.
-        val savedIso = phoneCameraManager.manualIso.value
+        // Restore is deferred to the surrounding flow (see startFlow): toggling
+        // AE off→on→off between steps was hanging the second step on devices
+        // that take a while to recover after a long capture (e.g. Auto Astro's
+        // 30 s foreground frame followed by NPF sky frames).
         val actualExpNs = phoneCameraManager.setSensorExposureForCapture(expMs)
         val sensorHandlesExposure = actualExpNs > 0
 
         if (isoOverride != null) phoneCameraManager.setManualIso(isoOverride)
 
-        try {
-            if (startDelayMs > 0) {
-                _status.value = _status.value?.copy(
-                    state = DeviceState.WAITING, shotsTaken = 0,
-                    timeRemainingMs = startDelayMs + totalShots * (expMs + gapMs) - gapMs,
-                )
-                delay(startDelayMs)
+        if (startDelayMs > 0) {
+            _status.value = _status.value?.copy(
+                state = DeviceState.WAITING, shotsTaken = 0,
+                timeRemainingMs = startDelayMs + totalShots * (expMs + gapMs) - gapMs,
+            )
+            delay(startDelayMs)
+        }
+        for (shot in 1..totalShots) {
+            coroutineContext.ensureActive()
+            val remaining = (totalShots - shot + 1) * (expMs + gapMs) - gapMs
+            _status.value = _status.value?.copy(
+                state = DeviceState.RUNNING, shotsTaken = shot - 1, timeRemainingMs = remaining,
+            )
+            // Timeout = 2× requested exposure + 10s safety margin (or 30s minimum
+            // for short exposures). Long takePicture calls have been observed to
+            // hang on some devices after a previous long shot — this stops the
+            // sequence rather than letting the user have to manually intervene.
+            val captureTimeoutMs = maxOf(30_000L, expMs * 2 + 10_000L)
+            val ok = withTimeoutOrNull(captureTimeoutMs) {
+                phoneCameraManager.captureAndWait()
             }
-            for (shot in 1..totalShots) {
-                coroutineContext.ensureActive()
-                val remaining = (totalShots - shot + 1) * (expMs + gapMs) - gapMs
-                _status.value = _status.value?.copy(
-                    state = DeviceState.RUNNING, shotsTaken = shot - 1, timeRemainingMs = remaining,
-                )
-                // Timeout = 2× requested exposure + 10s safety margin (or 30s minimum
-                // for short exposures). Long takePicture calls have been observed to
-                // hang on some devices after a previous long shot — this stops the
-                // sequence rather than letting the user have to manually intervene.
-                val captureTimeoutMs = maxOf(30_000L, expMs * 2 + 10_000L)
-                val ok = withTimeoutOrNull(captureTimeoutMs) {
-                    phoneCameraManager.captureAndWait()
-                }
-                if (ok == null) {
-                    Log.w("PulsarVM", "captureAndWait timed out at shot $shot/$totalShots (${expMs}ms requested) — moving on")
-                }
-                if (!sensorHandlesExposure) {
-                    delay(expMs)
-                }
-                _status.value = _status.value?.copy(
-                    state = DeviceState.WAITING, shotsTaken = shot,
-                    timeRemainingMs = (remaining - expMs).coerceAtLeast(0),
-                )
-                if (shot < totalShots) {
-                    delay(gapMs)
-                }
+            if (ok == null) {
+                Log.w("PulsarVM", "captureAndWait timed out at shot $shot/$totalShots (${expMs}ms requested) — moving on")
             }
-            _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
-        } finally {
-            withContext(NonCancellable) {
-                phoneCameraManager.restoreExposureSettings()
-                if (isoOverride != null) phoneCameraManager.setManualIso(savedIso)
+            if (!sensorHandlesExposure) {
+                delay(expMs)
+            }
+            _status.value = _status.value?.copy(
+                state = DeviceState.WAITING, shotsTaken = shot,
+                timeRemainingMs = (remaining - expMs).coerceAtLeast(0),
+            )
+            if (shot < totalShots) {
+                delay(gapMs)
             }
         }
+        _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
     }
 
     // ── Notification helpers ─────────────────────────────────────────────

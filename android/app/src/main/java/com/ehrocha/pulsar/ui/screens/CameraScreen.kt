@@ -91,7 +91,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
-import kotlin.math.roundToInt
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -212,6 +211,10 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
     var selectedTimelapseStyle by remember {
         mutableStateOf(PulsarViewModel.TimelapseStyle.DEFAULT)
     }
+    var selectedAutoAstroStyle by remember {
+        mutableStateOf(PulsarViewModel.AutoAstroStyle.NPF)
+    }
+    var autoAstroForeground by remember { mutableStateOf(true) }
 
     // Current lens capabilities
     val currentLens = lenses.getOrNull(selectedLens)
@@ -462,6 +465,10 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                     },
                     timelapseStyle = selectedTimelapseStyle,
                     onTimelapseStyleChange = { selectedTimelapseStyle = it },
+                    autoAstroStyle = selectedAutoAstroStyle,
+                    onAutoAstroStyleChange = { selectedAutoAstroStyle = it },
+                    autoAstroForeground = autoAstroForeground,
+                    onAutoAstroForegroundChange = { autoAstroForeground = it },
                     onStart = {
                         activePanel = null
                         when (selectedCaptureMode) {
@@ -472,7 +479,10 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
                             }
                             CaptureMode.AUTO_ASTRO -> {
                                 keepAwake = true
-                                vm.startAutoAstro()
+                                vm.startAutoAstro(
+                                    style = selectedAutoAstroStyle,
+                                    includeForeground = autoAstroForeground,
+                                )
                             }
                             CaptureMode.STORM -> {
                                 keepAwake = true
@@ -983,6 +993,10 @@ private fun IntervalometerStrip(
     onPanelToggle: (CameraPanel) -> Unit,
     timelapseStyle: PulsarViewModel.TimelapseStyle,
     onTimelapseStyleChange: (PulsarViewModel.TimelapseStyle) -> Unit,
+    autoAstroStyle: PulsarViewModel.AutoAstroStyle,
+    onAutoAstroStyleChange: (PulsarViewModel.AutoAstroStyle) -> Unit,
+    autoAstroForeground: Boolean,
+    onAutoAstroForegroundChange: (Boolean) -> Unit,
     onStart: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -1011,6 +1025,10 @@ private fun IntervalometerStrip(
                 mode = selectedMode,
                 timelapseStyle = timelapseStyle,
                 onTimelapseStyleChange = onTimelapseStyleChange,
+                autoAstroStyle = autoAstroStyle,
+                onAutoAstroStyleChange = onAutoAstroStyleChange,
+                autoAstroForeground = autoAstroForeground,
+                onAutoAstroForegroundChange = onAutoAstroForegroundChange,
             )
         }
 
@@ -1104,6 +1122,10 @@ private fun ModeInfoPanel(
     mode: CaptureMode,
     timelapseStyle: PulsarViewModel.TimelapseStyle,
     onTimelapseStyleChange: (PulsarViewModel.TimelapseStyle) -> Unit,
+    autoAstroStyle: PulsarViewModel.AutoAstroStyle,
+    onAutoAstroStyleChange: (PulsarViewModel.AutoAstroStyle) -> Unit,
+    autoAstroForeground: Boolean,
+    onAutoAstroForegroundChange: (Boolean) -> Unit,
 ) {
     val (titleRes, bodyRes) = when (mode) {
         CaptureMode.AUTO_ASTRO -> R.string.mode_info_auto_title to R.string.mode_info_auto_body
@@ -1159,10 +1181,85 @@ private fun ModeInfoPanel(
                     )
                 }
             }
+            if (mode == CaptureMode.AUTO_ASTRO) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    TimelapseStyleChip(
+                        label = stringResource(R.string.auto_astro_rule_npf),
+                        selected = autoAstroStyle == PulsarViewModel.AutoAstroStyle.NPF,
+                        onClick = { onAutoAstroStyleChange(PulsarViewModel.AutoAstroStyle.NPF) },
+                        modifier = Modifier.weight(1f),
+                    )
+                    TimelapseStyleChip(
+                        label = stringResource(R.string.auto_astro_rule_400),
+                        selected = autoAstroStyle == PulsarViewModel.AutoAstroStyle.RULE_400,
+                        onClick = { onAutoAstroStyleChange(PulsarViewModel.AutoAstroStyle.RULE_400) },
+                        modifier = Modifier.weight(1f),
+                    )
+                    TimelapseStyleChip(
+                        label = stringResource(R.string.auto_astro_rule_500),
+                        selected = autoAstroStyle == PulsarViewModel.AutoAstroStyle.RULE_500,
+                        onClick = { onAutoAstroStyleChange(PulsarViewModel.AutoAstroStyle.RULE_500) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                TimelapseStyleChip(
+                    label = stringResource(
+                        if (autoAstroForeground) R.string.auto_astro_foreground_on
+                        else R.string.auto_astro_foreground_off
+                    ),
+                    selected = autoAstroForeground,
+                    onClick = { onAutoAstroForegroundChange(!autoAstroForeground) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
             Text(
                 stringResource(bodyRes),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White.copy(alpha = 0.85f),
+            )
+        }
+    }
+}
+
+/** Two-line chip used by Manual mode's astro rule picker (NPF / 400 / 500).
+ *  Top line is the rule name, bottom line shows the resulting exposure. */
+@Composable
+private fun AstroRuleChip(
+    label: String,
+    sub: String?,
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val tint = if (!enabled) Color.White.copy(alpha = 0.06f)
+        else if (selected) Color.White.copy(alpha = 0.3f)
+        else Color.White.copy(alpha = 0.15f)
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        color = tint,
+        shape = RoundedCornerShape(8.dp),
+        modifier = modifier,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 6.dp, vertical = 6.dp),
+        ) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White,
+            )
+            Text(
+                sub ?: "—",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.7f),
             )
         }
     }
@@ -1507,18 +1604,25 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
         return ((kotlin.math.ln(clamped) - expLogMin) / (expLogMax - expLogMin)).toFloat()
     }
 
-    // NPF rule (raw) and the same value clamped to sensor range.
-    val npfRawMs = if (currentLens != null && currentLens.focalLength > 0 && currentLens.sensorWidth > 0) {
-        val cropFactor = 36f / currentLens.sensorWidth
+    // Sky-rule presets (raw + sensor-clamped). NPF accounts for pixel pitch;
+    // 400 and 500 rules are the classic focal-length-only divisors.
+    val effectiveCropFactor =
+        if (currentLens != null && currentLens.sensorWidth > 0) 36f / currentLens.sensorWidth else null
+    val npfRawMs = if (currentLens != null && currentLens.focalLength > 0 && effectiveCropFactor != null) {
         val sensorWidthUm = currentLens.sensorWidth * 1000f
         val approxPixelsWide = kotlin.math.sqrt(currentLens.megapixels.toDouble() * 1_000_000.0 * 4.0 / 3.0)
         val pixelPitchUm = sensorWidthUm / approxPixelsWide
         val aperture = if (currentLens.aperture > 0) currentLens.aperture.toDouble() else 2.8
-        val exposureS = (35.0 * aperture + 30.0 * pixelPitchUm) / (currentLens.focalLength * cropFactor)
+        val exposureS = (35.0 * aperture + 30.0 * pixelPitchUm) / (currentLens.focalLength * effectiveCropFactor)
         (exposureS * 1000).toLong().coerceAtLeast(1000)
     } else null
-    val npfClampedMs = npfRawMs?.coerceIn(expMinMs, expMaxMs)
-    val isNpfAuto = npfClampedMs != null && exposureMs == npfClampedMs
+    fun ruleExposureMs(divisor: Int): Long? {
+        if (currentLens == null || currentLens.focalLength <= 0 || effectiveCropFactor == null) return null
+        val expS = divisor.toDouble() / (currentLens.focalLength * effectiveCropFactor)
+        return (expS * 1000).toLong().coerceAtLeast(1000)
+    }
+    val rule400RawMs = ruleExposureMs(400)
+    val rule500RawMs = ruleExposureMs(500)
 
     val isoRange = currentLens?.capabilities?.isoRange
     val isoMin = isoRange?.lower ?: 100
@@ -1548,37 +1652,43 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
                 color = Color(0xFFFFB300),
             )
         }
-        // Astro NPF Auto — sets exposure (NPF, clamped to sensor) AND a sensible
-        // astro ISO (1600, clamped to range) in a single tap.
-        if (npfClampedMs != null && npfRawMs != null) {
-            Surface(
-                onClick = {
-                    vm.setExposureMs(npfClampedMs)
-                    isoRange?.let {
-                        vm.phoneCameraManager.setManualIso(1600.coerceIn(it.lower, it.upper))
-                    }
-                },
-                color = if (isNpfAuto) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.15f),
-                shape = RoundedCornerShape(8.dp),
+        // Astro auto chips — pick a sky rule (NPF / 400 / 500). Tapping any one
+        // sets exposure (clamped to slider range) and ISO 1600 in a single tap.
+        if (npfRawMs != null || rule400RawMs != null || rule500RawMs != null) {
+            fun applyRule(rawMs: Long) {
+                vm.setExposureMs(rawMs.coerceIn(expMinMs, expMaxMs))
+                isoRange?.let {
+                    vm.phoneCameraManager.setManualIso(1600.coerceIn(it.lower, it.upper))
+                }
+            }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        "Astro NPF Auto + ISO 1600",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text(
-                        if (npfRawMs == npfClampedMs) formatExposureLabel(npfClampedMs)
-                        else "${formatExposureLabel(npfRawMs)} → ${formatExposureLabel(npfClampedMs)}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.7f),
-                    )
-                }
+                AstroRuleChip(
+                    label = stringResource(R.string.auto_astro_rule_npf),
+                    sub = npfRawMs?.let { formatExposureLabel(it.coerceIn(expMinMs, expMaxMs)) },
+                    selected = npfRawMs != null && exposureMs == npfRawMs.coerceIn(expMinMs, expMaxMs),
+                    enabled = npfRawMs != null,
+                    onClick = { npfRawMs?.let(::applyRule) },
+                    modifier = Modifier.weight(1f),
+                )
+                AstroRuleChip(
+                    label = stringResource(R.string.auto_astro_rule_400),
+                    sub = rule400RawMs?.let { formatExposureLabel(it.coerceIn(expMinMs, expMaxMs)) },
+                    selected = rule400RawMs != null && exposureMs == rule400RawMs.coerceIn(expMinMs, expMaxMs),
+                    enabled = rule400RawMs != null,
+                    onClick = { rule400RawMs?.let(::applyRule) },
+                    modifier = Modifier.weight(1f),
+                )
+                AstroRuleChip(
+                    label = stringResource(R.string.auto_astro_rule_500),
+                    sub = rule500RawMs?.let { formatExposureLabel(it.coerceIn(expMinMs, expMaxMs)) },
+                    selected = rule500RawMs != null && exposureMs == rule500RawMs.coerceIn(expMinMs, expMaxMs),
+                    enabled = rule500RawMs != null,
+                    onClick = { rule500RawMs?.let(::applyRule) },
+                    modifier = Modifier.weight(1f),
+                )
             }
         }
         // Continuous log-scale slider — sensor min .. sensor max.
@@ -1632,35 +1742,36 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
                 color = Color.White,
                 fontWeight = FontWeight.Medium,
             )
-            // Auto + manual slider side-by-side. Manual auto-engages when slider
-            // is touched; tapping Auto restores auto-ISO.
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val autoSelected = manualIso == null
-                Surface(
-                    onClick = { vm.phoneCameraManager.setManualIso(null) },
-                    color = if (autoSelected) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.12f),
-                    shape = RoundedCornerShape(8.dp),
-                ) {
-                    Text(
-                        "Auto",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    )
-                }
-                Spacer(Modifier.width(6.dp))
-                Slider(
-                    value = isoToPosition(manualIso ?: ((isoMin + isoMax) / 2)),
-                    onValueChange = { vm.phoneCameraManager.setManualIso(positionToIso(it)) },
-                    valueRange = 0f..1f,
-                    colors = SliderDefaults.colors(
-                        thumbColor = Color.White,
-                        activeTrackColor = Color.White,
-                        inactiveTrackColor = Color.White.copy(alpha = 0.3f),
-                    ),
-                    modifier = Modifier.weight(1f),
+            // ISO Auto tile (matches the rule chips above the exposure slider so
+            // both sliders end up the same width). Tap to restore auto-ISO.
+            val autoSelected = manualIso == null
+            Surface(
+                onClick = { vm.phoneCameraManager.setManualIso(null) },
+                color = if (autoSelected) Color.White.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    stringResource(R.string.iso_auto),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
                 )
             }
+            Slider(
+                value = isoToPosition(manualIso ?: ((isoMin + isoMax) / 2)),
+                onValueChange = { vm.phoneCameraManager.setManualIso(positionToIso(it)) },
+                valueRange = 0f..1f,
+                colors = SliderDefaults.colors(
+                    thumbColor = Color.White,
+                    activeTrackColor = Color.White,
+                    inactiveTrackColor = Color.White.copy(alpha = 0.3f),
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            )
             val isoScroll = rememberScrollState()
             val supportedIsoAnchors = ISO_ANCHORS.filter { it in isoMin..isoMax }
             if (supportedIsoAnchors.isNotEmpty()) {
@@ -1721,7 +1832,16 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
         }
 
         // ── Shots ──
-        val shotIdx = SHOT_STEPS.indices.minBy { kotlin.math.abs(SHOT_STEPS[it] - shotCount) }
+        // Continuous log-scale matches the exposure / ISO sliders. SHOT_STEPS
+        // still drives the anchor chips below for quick jumps.
+        val shotsMin = SHOT_STEPS.first()
+        val shotsMax = SHOT_STEPS.last()
+        val shotsLogMin = kotlin.math.ln(shotsMin.toDouble())
+        val shotsLogMax = kotlin.math.ln(shotsMax.toDouble())
+        fun positionToShots(pos: Float): Int =
+            kotlin.math.exp(shotsLogMin + pos * (shotsLogMax - shotsLogMin)).toInt().coerceIn(shotsMin, shotsMax)
+        fun shotsToPosition(n: Int): Float =
+            ((kotlin.math.ln(n.coerceIn(shotsMin, shotsMax).toDouble()) - shotsLogMin) / (shotsLogMax - shotsLogMin)).toFloat()
         Text(
             stringResource(R.string.camera_shots_fmt, shotCount),
             style = MaterialTheme.typography.labelMedium,
@@ -1729,11 +1849,14 @@ private fun IntervalometerPanel(vm: PulsarViewModel, currentLens: com.ehrocha.pu
             fontWeight = FontWeight.Medium,
         )
         Slider(
-            value = shotIdx.toFloat(),
-            onValueChange = { vm.setShotCount(SHOT_STEPS[it.roundToInt().coerceIn(0, SHOT_STEPS.lastIndex)]) },
-            valueRange = 0f..(SHOT_STEPS.lastIndex).toFloat(),
-            steps = (SHOT_STEPS.size - 2).coerceAtLeast(0),
-            colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.White, inactiveTrackColor = Color.White.copy(alpha = 0.3f)),
+            value = shotsToPosition(shotCount),
+            onValueChange = { vm.setShotCount(positionToShots(it)) },
+            valueRange = 0f..1f,
+            colors = SliderDefaults.colors(
+                thumbColor = Color.White,
+                activeTrackColor = Color.White,
+                inactiveTrackColor = Color.White.copy(alpha = 0.3f),
+            ),
             modifier = Modifier.fillMaxWidth(),
         )
     }

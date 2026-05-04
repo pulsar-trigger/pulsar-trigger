@@ -493,6 +493,12 @@
     <string name="timelapse_style_default">Défaut</string>
     <string name="timelapse_style_burst">Rafale</string>
     <string name="timelapse_style_cloudscape">Nuages</string>
+    <string name="auto_astro_rule_npf">NPF</string>
+    <string name="auto_astro_rule_400">400</string>
+    <string name="auto_astro_rule_500">500</string>
+    <string name="auto_astro_foreground_on">Premier plan : Activé (30 s, ISO bas)</string>
+    <string name="auto_astro_foreground_off">Premier plan : Désactivé</string>
+    <string name="iso_auto">ISO Auto</string>
     <string name="tag_timelapse">Timelapse</string>
     <string name="mode_info_timelapse_title">Timelapse</string>
     <string name="mode_info_timelapse_body">360 expositions rapides de 1/1000 seconde, intervalle de 10 secondes, ISO 200. Conçu pour le jour — nuages, couchers de soleil, trafic, chantiers. Environ une heure de capture par session. Traitez avec Empiler (Lighten) pour superposer l\'arc du soleil, les filés de nuages ou les phares de voitures en une seule image.</string>

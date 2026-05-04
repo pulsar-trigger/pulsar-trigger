@@ -493,6 +493,12 @@
     <string name="timelapse_style_default">標準</string>
     <string name="timelapse_style_burst">連写</string>
     <string name="timelapse_style_cloudscape">雲景</string>
+    <string name="auto_astro_rule_npf">NPF</string>
+    <string name="auto_astro_rule_400">400</string>
+    <string name="auto_astro_rule_500">500</string>
+    <string name="auto_astro_foreground_on">前景フレーム：オン（30秒、低ISO）</string>
+    <string name="auto_astro_foreground_off">前景フレーム：オフ</string>
+    <string name="iso_auto">ISO 自動</string>
     <string name="tag_timelapse">タイムラプス</string>
     <string name="mode_info_timelapse_title">タイムラプス</string>
     <string name="mode_info_timelapse_body">1/1000秒の高速露光×360枚、10秒間隔、ISO 200。日中向け — 雲、夕焼け、交通、建設現場など。1セッション約1時間の撮影。後でライトンスタックで処理すると、太陽の軌跡、雲の流れ、車のライトの軌跡を1枚に重ねて記録できます。</string>

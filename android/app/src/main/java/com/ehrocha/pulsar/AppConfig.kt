@@ -34,7 +34,7 @@ object AppConfig {
     const val DEFAULT_EXPOSURE_MS = 200L
 
     /** Number of shots in a single intervalometer run. */
-    const val DEFAULT_SHOT_COUNT = 1
+    const val DEFAULT_SHOT_COUNT = 10
 
     /** Countdown before the first shot fires (ms). */
     const val DEFAULT_DELAY_MS = 0L

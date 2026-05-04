@@ -16,7 +16,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -46,7 +45,6 @@ import java.util.Locale
 @Composable
 fun DashboardScreen(
     dashboardManager: AstroDashboardManager,
-    onBack: () -> Unit,
 ) {
     val state by dashboardManager.state.collectAsState()
     val scope = rememberCoroutineScope()
@@ -92,19 +90,14 @@ fun DashboardScreen(
             .fillMaxSize()
             .padding(horizontal = 16.dp),
     ) {
-        // ── Top bar ──────────────────────────────────────────────────
+        // Tab-embedded — no back arrow or title (the tab strip already labels it).
+        // Refresh stays available aligned to the right of the date selector below.
         Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(vertical = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.End,
         ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-            }
-            PanelHelpHeader(
-                title = stringResource(R.string.dashboard_title),
-                helpText = stringResource(R.string.dashboard_help),
-            )
-            Spacer(Modifier.weight(1f))
             IconButton(onClick = { scope.launch { dashboardManager.refresh(state.selectedDate) } }) {
                 Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.refresh))
             }

@@ -481,4 +481,10 @@
     <string name="warning_compass">指南针未校准 — 将手机画8字形</string>
     <string name="warning_no_gps">无GPS信号 — 位置不可用</string>
     <string name="warning_gps_inaccurate">GPS精度: ±%dm</string>
+    <string name="auto_astro_rule_npf">NPF</string>
+    <string name="auto_astro_rule_400">400</string>
+    <string name="auto_astro_rule_500">500</string>
+    <string name="auto_astro_foreground_on">前景帧：开启（30秒，低ISO）</string>
+    <string name="auto_astro_foreground_off">前景帧：关闭</string>
+    <string name="iso_auto">ISO 自动</string>
 </resources>

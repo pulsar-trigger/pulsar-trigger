@@ -493,6 +493,12 @@
     <string name="timelapse_style_default">Padrão</string>
     <string name="timelapse_style_burst">Rajada</string>
     <string name="timelapse_style_cloudscape">Nuvens</string>
+    <string name="auto_astro_rule_npf">NPF</string>
+    <string name="auto_astro_rule_400">400</string>
+    <string name="auto_astro_rule_500">500</string>
+    <string name="auto_astro_foreground_on">Quadro do plano: Ligado (30 s, ISO baixo)</string>
+    <string name="auto_astro_foreground_off">Quadro do plano: Desligado</string>
+    <string name="iso_auto">ISO Auto</string>
     <string name="tag_timelapse">Timelapse</string>
     <string name="mode_info_timelapse_title">Timelapse</string>
     <string name="mode_info_timelapse_body">360 exposições rápidas de 1/1000 segundos, com intervalo de 10 segundos, ISO 200. Feito para o dia — nuvens, pôr do sol, tráfego, construção. Cerca de uma hora de captura por sessão. Processe com Lighten Stack depois para registrar o arco do sol, rastros de nuvens ou luzes de carros em uma única imagem.</string>

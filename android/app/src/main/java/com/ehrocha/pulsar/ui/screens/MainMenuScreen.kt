@@ -49,7 +49,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainMenuScreen(
     vm: PulsarViewModel,
-    initialTab: Int = 0,
+    initialTab: Int = TAB_TRIGGER,
     onTabChanged: (Int) -> Unit = {},
     onQuickFlow: (FlowStepType) -> Unit,
     onManualSelected: () -> Unit,
@@ -70,10 +70,13 @@ fun MainMenuScreen(
     val hasAppUpdate = appState == com.ehrocha.pulsar.update.AppUpdateState.AVAILABLE && appRelease != null
     var bannerDismissed by remember { mutableStateOf(false) }
 
+    // Dashboard sits to the LEFT of Trigger so a left-swipe from the default
+    // Trigger tab reveals the astro dashboard. Trigger is the default landing
+    // tab — the one users open the app for.
     val tabs = listOf(
+        stringResource(R.string.tab_dashboard),
         stringResource(R.string.tab_trigger),
         stringResource(R.string.tab_tools),
-        stringResource(R.string.tab_dashboard),
     )
     val pagerState = rememberPagerState(initialPage = initialTab, pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
@@ -173,7 +176,10 @@ fun MainMenuScreen(
             modifier = Modifier.weight(1f),
         ) { page ->
             when (page) {
-                0 -> {
+                TAB_DASHBOARD -> {
+                    DashboardScreen(dashboardManager = vm.dashboardManager)
+                }
+                TAB_TRIGGER -> {
                     val triggerItems = if (phoneCameraActive) {
                         listOf(
                             LauncherItem(R.string.mode_camera, Icons.Default.CameraAlt) {
@@ -206,7 +212,7 @@ fun MainMenuScreen(
                         LauncherGrid(triggerItems)
                     }
                 }
-                1 -> {
+                TAB_TOOLS -> {
                     val toolItems = listOf(
                         LauncherItem(R.string.mode_planner, Icons.Default.DateRange) {
                             onPlannerSelected()
@@ -225,19 +231,15 @@ fun MainMenuScreen(
                         LauncherGrid(toolItems)
                     }
                 }
-                2 -> {
-                    // Dashboard inline — back button swipes back to Trigger so the
-                    // user always lands on the camera-side of the home screen.
-                    DashboardScreen(
-                        dashboardManager = vm.dashboardManager,
-                        onBack = { scope.launch { pagerState.animateScrollToPage(0) } },
-                    )
-                }
             }
         }
 
     }
 }
+
+const val TAB_DASHBOARD = 0
+const val TAB_TRIGGER = 1
+const val TAB_TOOLS = 2
 
 private data class LauncherItem(
     val labelRes: Int,

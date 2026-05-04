@@ -218,7 +218,7 @@ private fun PermissionsRequiredScreen(onRequestAgain: () -> Unit) {
 @Composable
 fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null) {
     var currentScreen by remember { mutableStateOf<AppScreen>(AppScreen.Scan) }
-    var menuTab by remember { mutableIntStateOf(0) }
+    var menuTab by remember { mutableIntStateOf(com.ehrocha.pulsar.ui.screens.TAB_TRIGGER) }
     val connected by vm.connected.collectAsState()
     val phoneCameraActive by vm.phoneCameraActive.collectAsState()
 

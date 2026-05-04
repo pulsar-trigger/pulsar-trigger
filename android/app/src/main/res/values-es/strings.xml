@@ -491,6 +491,12 @@
     <string name="timelapse_style_default">Predet.</string>
     <string name="timelapse_style_burst">Ráfaga</string>
     <string name="timelapse_style_cloudscape">Nubes</string>
+    <string name="auto_astro_rule_npf">NPF</string>
+    <string name="auto_astro_rule_400">400</string>
+    <string name="auto_astro_rule_500">500</string>
+    <string name="auto_astro_foreground_on">Plano: Activado (30 s, ISO bajo)</string>
+    <string name="auto_astro_foreground_off">Plano: Desactivado</string>
+    <string name="iso_auto">ISO Auto</string>
     <string name="tag_timelapse">Timelapse</string>
     <string name="mode_info_timelapse_title">Timelapse</string>
     <string name="mode_info_timelapse_body">360 exposiciones rápidas de 1/1000 segundos, con intervalo de 10 segundos, ISO 200. Diseñado para el día — nubes, atardeceres, tráfico, construcción. Aproximadamente una hora de captura por sesión. Procesa con Apilar (Lighten) para registrar el arco del sol, las estelas de nubes o las luces de vehículos en una sola imagen.</string>

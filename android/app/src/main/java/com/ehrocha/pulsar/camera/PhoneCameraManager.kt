@@ -253,10 +253,16 @@ class PhoneCameraManager(private val context: Context) {
             return 0L
         }
 
-        // Save current state so we can restore after the sequence
-        savedIso = _manualIso.value
-        savedExpNs = _manualExposureNs.value
-        exposureOverridden = true
+        // Save current state so we can restore after the sequence. Idempotent
+        // across repeated calls within a single flow — only the *first* call's
+        // savedIso/savedExpNs reflect what the user actually had; later calls
+        // (subsequent flow steps) would otherwise stash the previous step's
+        // overridden values.
+        if (!exposureOverridden) {
+            savedIso = _manualIso.value
+            savedExpNs = _manualExposureNs.value
+            exposureOverridden = true
+        }
 
         val requestedNs = requestedMs * 1_000_000L
         // Don't clamp — many Camera2 implementations honor exposures beyond the
