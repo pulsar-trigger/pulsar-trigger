@@ -214,7 +214,7 @@ private fun CameraContent(vm: PulsarViewModel, onBack: () -> Unit) {
     var selectedAutoAstroStyle by remember {
         mutableStateOf(PulsarViewModel.AutoAstroStyle.NPF)
     }
-    var autoAstroForeground by remember { mutableStateOf(true) }
+    var autoAstroForeground by remember { mutableStateOf(false) }
 
     // Current lens capabilities
     val currentLens = lenses.getOrNull(selectedLens)
