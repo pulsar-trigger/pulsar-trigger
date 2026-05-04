@@ -211,20 +211,6 @@ class PhoneCameraManager(private val context: Context) {
             builder.setCaptureRequestOption(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
             builder.setCaptureRequestOption(CaptureRequest.SENSOR_SENSITIVITY, iso)
             builder.setCaptureRequestOption(CaptureRequest.SENSOR_EXPOSURE_TIME, expNs)
-            // Disable Multi-Frame Noise Reduction. Phones default to HIGH_QUALITY,
-            // which after the exposure captures several additional frames at the
-            // same exposure time and stacks them internally — adding ~exposure ×
-            // (N-1) of post-capture wall-clock time per shot (≈ 20 s extra on a
-            // 5 s NPF frame). With manually locked sensor settings we want the
-            // single frame the user asked for, not a multi-frame stack.
-            builder.setCaptureRequestOption(
-                CaptureRequest.NOISE_REDUCTION_MODE,
-                CaptureRequest.NOISE_REDUCTION_MODE_OFF,
-            )
-            builder.setCaptureRequestOption(
-                CaptureRequest.EDGE_MODE,
-                CaptureRequest.EDGE_MODE_OFF,
-            )
         } else {
             builder.setCaptureRequestOption(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
         }

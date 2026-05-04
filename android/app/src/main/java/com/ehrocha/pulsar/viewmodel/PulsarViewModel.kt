@@ -511,26 +511,44 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             phoneCameraManager.setManualFocusDist(0f)
         }
 
+        // Clamp every requested exposure to what the sensor advertises. Phones
+        // typically max out at 1–2 s; asking for a 5 s NPF frame makes the
+        // driver internally stack shorter exposures, which roughly doubles each
+        // shot's wall-clock time. ISO is bumped proportionally so total light
+        // matches the photographic intent of the unclamped value.
+        val sensorMaxMs = lens.capabilities.exposureTimeRange?.upper?.div(1_000_000L) ?: 30_000L
         val isoRange = lens.capabilities.isoRange
-        val skyIso = isoRange?.let { 1600.coerceIn(it.lower, it.upper) }
-        val groundIso = isoRange?.let { 200.coerceIn(it.lower, it.upper) }
+
+        val skyIntendedMs = computePhoneSkyExposureMs(lens, style)
+        val skyExpMs = skyIntendedMs.coerceAtMost(sensorMaxMs)
+        val skyIso = isoRange?.let {
+            val compensated = ((1600L * skyIntendedMs) / skyExpMs.coerceAtLeast(1L)).toInt()
+            compensated.coerceIn(it.lower, it.upper)
+        }
 
         val sky = com.ehrocha.pulsar.model.FlowStep(
             type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
             intervalMs = 4_000L,
-            exposureMs = computePhoneSkyExposureMs(lens, style),
+            exposureMs = skyExpMs,
             shotCount = 20,
             delayMs = 0L,
             isoOverride = skyIso,
         )
 
-        // Foreground (when requested): single 30s low-ISO frame captured FIRST
-        // so users who stop early still have it. Driver may silently clamp.
+        // Foreground (when requested): one 30 s-equivalent low-ISO frame, also
+        // clamped to sensor max with ISO compensation. Captured FIRST so the
+        // user gets the foreground even if they stop the sequence early.
         _flowSteps.value = if (includeForeground) {
+            val groundIntendedMs = 30_000L
+            val groundExpMs = groundIntendedMs.coerceAtMost(sensorMaxMs)
+            val groundIso = isoRange?.let {
+                val compensated = ((200L * groundIntendedMs) / groundExpMs.coerceAtLeast(1L)).toInt()
+                compensated.coerceIn(it.lower, it.upper)
+            }
             val ground = com.ehrocha.pulsar.model.FlowStep(
                 type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
                 intervalMs = 2_000L,
-                exposureMs = 30_000L,
+                exposureMs = groundExpMs,
                 shotCount = 1,
                 delayMs = 0L,
                 isoOverride = groundIso,
