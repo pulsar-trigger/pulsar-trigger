@@ -8,14 +8,8 @@ package com.ehrocha.pulsar.viewmodel
 import android.annotation.SuppressLint
 import android.app.Application
 import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothManager
-import android.bluetooth.le.ScanCallback
-import android.bluetooth.le.ScanFilter
-import android.bluetooth.le.ScanResult
-import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.content.Intent
-import android.os.ParcelUuid
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -65,7 +59,27 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     private val prefs = app.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    private val bleManager = PulsarBleManager(app)
+    // ── BLE (scan + connection) ─────────────────────────────────────────
+    val bleController = com.ehrocha.pulsar.ble.BleController(app)
+    private val bleManager get() = bleController.bleManager
+
+    val scanning: StateFlow<Boolean> = bleController.scanning
+    val devices: StateFlow<List<BluetoothDevice>> = bleController.devices
+
+    // Connection-side flows. [status] is multiplexed below — BLE updates flow
+    // in, but the simulator can write directly when it's running.
+    private val _connected = MutableStateFlow(false)
+    val connected: StateFlow<Boolean> = _connected
+
+    private val _status = MutableStateFlow<StatusFrame?>(null)
+    val status: StateFlow<StatusFrame?> = _status
+
+    val deviceInfo: StateFlow<DeviceInfo?> = bleController.deviceInfo
+    val rssi: StateFlow<Int?> = bleController.rssi
+
+    val safeOutputPins: StateFlow<List<Int>> = bleController.deviceInfo
+        .map { AppConfig.safeOutputPinsForChip(it?.chipModel) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, AppConfig.SAFE_OUTPUT_PINS)
 
     // ── Astro dashboard ──────────────────────────────────────────────
     val dashboardManager = com.ehrocha.pulsar.astro.AstroDashboardManager(app)
@@ -78,28 +92,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     // ── App self-update ──────────────────────────────────────────────
     val appUpdateManager = com.ehrocha.pulsar.update.AppUpdateManager(app, viewModelScope)
-
-    // ── Scan state ───────────────────────────────────────────────────────
-    private val _scanning = MutableStateFlow(false)
-    val scanning: StateFlow<Boolean> = _scanning
-
-    private val _devices = MutableStateFlow<List<BluetoothDevice>>(emptyList())
-    val devices: StateFlow<List<BluetoothDevice>> = _devices
-
-    // ── Connection state ─────────────────────────────────────────────────
-    private val _connected = MutableStateFlow(false)
-    val connected: StateFlow<Boolean> = _connected
-
-    private val _status = MutableStateFlow<StatusFrame?>(null)
-    val status: StateFlow<StatusFrame?> = _status
-
-    val deviceInfo: StateFlow<DeviceInfo?> = bleManager.deviceInfo
-
-    val safeOutputPins: StateFlow<List<Int>> = bleManager.deviceInfo
-        .map { AppConfig.safeOutputPinsForChip(it?.chipModel) }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, AppConfig.SAFE_OUTPUT_PINS)
-
-    val rssi: StateFlow<Int?> = bleManager.rssi
 
     // ── Simulator ────────────────────────────────────────────────────────
     private val _simulatorActive = MutableStateFlow(false)
@@ -244,16 +236,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val flowCurrentStep: StateFlow<Int> = _flowCurrentStep
     private var flowJob: Job? = null
 
-    // ── BLE Scan ─────────────────────────────────────────────────────────
-    private val btManager = app.getSystemService(BluetoothManager::class.java)
-    // Resolved lazily — must not be cached at init time because Bluetooth
-    // permissions may not yet be granted when the ViewModel is created.
-    private val scanner get() = btManager?.adapter?.bluetoothLeScanner
-
     init {
-        // Forward BLE manager state to ViewModel flows
+        // Forward BLE controller state into the viewmodel's writable flows.
+        // [_status] is multiplexed — BLE updates land here, and the simulator
+        // also writes to it directly while it's running.
         viewModelScope.launch {
-            bleManager.connectionState.collect {
+            bleController.connected.collect {
                 _connected.value = it
                 if (it) {
                     sendAutoOff()
@@ -263,7 +251,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         viewModelScope.launch {
-            bleManager.status.collect { _status.value = it }
+            bleController.status.collect {
+                if (!_simulatorActive.value) _status.value = it
+            }
         }
 
         // Load persisted intervalometer defaults
@@ -327,62 +317,19 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private val scanCallback = object : ScanCallback() {
-        override fun onScanResult(callbackType: Int, result: ScanResult) {
-            val dev = result.device
-            if (_devices.value.none { it.address == dev.address }) {
-                _devices.value = _devices.value + dev
-            }
-        }
-    }
-
     fun requestDeviceInfo() {
         if (!_simulatorActive.value) {
-            bleManager.sendCommand(CommandBuilder.deviceInfoRequest())
+            bleController.sendCommand(CommandBuilder.deviceInfoRequest())
         }
     }
 
-    fun startScan() {
-        _devices.value = emptyList()
-        _scanning.value = true
-
-        val s = scanner
-        if (s == null) {
-            Log.w(TAG, "BLE scanner unavailable — Bluetooth off or permissions not granted")
-            _scanning.value = false
-            return
-        }
-
-        val filter = ScanFilter.Builder()
-            .setServiceUuid(ParcelUuid(PulsarUuids.SERVICE))
-            .build()
-        val settings = ScanSettings.Builder()
-            .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
-            .build()
-
-        try {
-            s.startScan(listOf(filter), settings, scanCallback)
-            Log.i(TAG, "BLE scan started")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to start BLE scan", e)
-            _scanning.value = false
-        }
-    }
-
-    fun stopScan() {
-        try {
-            scanner?.stopScan(scanCallback)
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to stop BLE scan", e)
-        }
-        _scanning.value = false
-    }
+    fun startScan() = bleController.startScan()
+    fun stopScan() = bleController.stopScan()
 
     @SuppressLint("MissingPermission")
     fun connectTo(device: BluetoothDevice) {
-        stopScan()
         _deviceName.value = device.name ?: "Pulsar"
-        bleManager.connectDevice(device)
+        bleController.connect(device)
     }
 
     fun disconnect() {
@@ -401,9 +348,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             _flowRunning.value = false
             _flowPaused.value = false
             _flowCurrentStep.value = -1
-            bleManager.sendCommand(CommandBuilder.stop())
+            bleController.sendCommand(CommandBuilder.stop())
         }
-        bleManager.disconnectDevice()
+        bleController.disconnect()
     }
 
 
@@ -479,12 +426,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun sendPins() {
         if (_simulatorActive.value) return
-        bleManager.sendCommand(CommandBuilder.setPins(_pinShutter.value, _pinFocus.value))
+        bleController.sendCommand(CommandBuilder.setPins(_pinShutter.value, _pinFocus.value))
     }
 
     private fun sendAutoOff() {
         if (_simulatorActive.value) return
-        bleManager.sendCommand(CommandBuilder.setAutoOff(_autoOffMinutes.value))
+        bleController.sendCommand(CommandBuilder.setAutoOff(_autoOffMinutes.value))
     }
 
     // ── Custom Flow management ───────────────────────────────────────────
@@ -605,7 +552,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         flowJob?.cancel()
         flowJob = null
         if (!_simulatorActive.value) {
-            bleManager.sendCommand(CommandBuilder.stop())
+            bleController.sendCommand(CommandBuilder.stop())
         }
         _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
         _flowRunning.value = false
@@ -710,8 +657,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun sendModeCommand(packet: ByteArray) {
-        bleManager.sendCommand(packet)
-        bleManager.sendCommand(CommandBuilder.start())
+        bleController.sendCommand(packet)
+        bleController.sendCommand(CommandBuilder.start())
     }
 
     /** Wait for firmware to go back to IDLE (modes with built-in completion). */
@@ -798,7 +745,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             TriggerMode.CUSTOM_FLOW -> return  // app-orchestrated, no single command
             TriggerMode.TRACKER -> return      // IMU streaming, no config needed
         }
-        bleManager.sendCommand(packet)
+        bleController.sendCommand(packet)
     }
 
     fun start() {
@@ -807,7 +754,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         sendConfig()
-        bleManager.sendCommand(CommandBuilder.start())
+        bleController.sendCommand(CommandBuilder.start())
     }
 
     fun stop() {
@@ -819,13 +766,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             stopSimulatorRun()
             return
         }
-        bleManager.sendCommand(CommandBuilder.stop())
+        bleController.sendCommand(CommandBuilder.stop())
     }
 
     fun renameDevice(suffix: String) {
         if (!_simulatorActive.value) {
-            bleManager.requestCacheRefresh()
-            bleManager.sendCommand(CommandBuilder.setName(suffix))
+            bleController.requestCacheRefresh()
+            bleController.sendCommand(CommandBuilder.setName(suffix))
         }
         _deviceName.value = if (suffix.isNotEmpty()) "Pulsar-$suffix" else "Pulsar"
     }
@@ -834,7 +781,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         _autoOffMinutes.value = minutes
         prefs.edit().putInt(KEY_AUTO_OFF, minutes).apply()
         if (!_simulatorActive.value) {
-            bleManager.sendCommand(CommandBuilder.setAutoOff(minutes))
+            bleController.sendCommand(CommandBuilder.setAutoOff(minutes))
         }
     }
 
@@ -845,7 +792,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         sendConfig()
-        bleManager.sendCommand(CommandBuilder.start())
+        bleController.sendCommand(CommandBuilder.start())
     }
 
     /** Press & Hold: shutter close on up */
@@ -854,7 +801,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             _status.value = _status.value?.copy(state = DeviceState.IDLE)
             return
         }
-        bleManager.sendCommand(CommandBuilder.stop())
+        bleController.sendCommand(CommandBuilder.stop())
     }
 
     // ── Simulator ────────────────────────────────────────────────────────
@@ -992,8 +939,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 it == DeviceState.RUNNING || it == DeviceState.WAITING
             }) {
             flowJob?.cancel()
-            bleManager.sendCommand(CommandBuilder.stop())
+            bleController.sendCommand(CommandBuilder.stop())
         }
-        bleManager.disconnectDevice()
+        bleController.disconnect()
     }
 }
