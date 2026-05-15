@@ -5,104 +5,115 @@
 
 package com.ehrocha.pulsar.ble
 
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import com.ehrocha.pulsar.AppConfig
 
-/** Builds BLE command packets ([AppConfig.BLE_FRAME_SIZE]-byte frames). */
+/**
+ * Builds BLE command packets in protocol v2 (TLV).
+ * Frame layout: `[opcode][ver][payload_len][TLV bytes]`. See
+ * `docs/ble-protocol-v2.md`.
+ */
 object CommandBuilder {
 
-    private fun frame(cmd: Byte, payload: ByteArray = ByteArray(0)): ByteArray {
-        val buf = ByteArray(AppConfig.BLE_FRAME_SIZE)
-        buf[0] = cmd
-        payload.copyInto(buf, destinationOffset = 1, endIndex = minOf(payload.size, AppConfig.BLE_PAYLOAD_MAX))
-        return buf
+    // ── Internal frame builder ─────────────────────────────────────────────
+    private class Builder(opcode: Byte) {
+        private val out = ArrayList<Byte>(32).apply {
+            add(opcode)
+            add(ProtoV2.VERSION)
+            add(0)  // payload length, patched on toByteArray()
+        }
+
+        fun u8(tag: Byte, value: Int): Builder = apply {
+            out.add(tag); out.add(1); out.add((value and 0xFF).toByte())
+        }
+        fun u16(tag: Byte, value: Int): Builder = apply {
+            out.add(tag); out.add(2)
+            out.add((value and 0xFF).toByte())
+            out.add(((value shr 8) and 0xFF).toByte())
+        }
+        fun u32(tag: Byte, value: Long): Builder = apply {
+            out.add(tag); out.add(4)
+            out.add((value and 0xFF).toByte())
+            out.add(((value shr 8) and 0xFF).toByte())
+            out.add(((value shr 16) and 0xFF).toByte())
+            out.add(((value shr 24) and 0xFF).toByte())
+        }
+        fun bytes(tag: Byte, value: ByteArray): Builder = apply {
+            out.add(tag); out.add(value.size.toByte())
+            value.forEach { out.add(it) }
+        }
+        fun toByteArray(): ByteArray {
+            val payloadLen = out.size - 3
+            out[2] = payloadLen.toByte()
+            return ByteArray(out.size) { out[it] }
+        }
     }
 
-    fun start(): ByteArray = frame(Cmd.START)
-    fun stop(): ByteArray = frame(Cmd.STOP)
-    fun shutter(): ByteArray = frame(Cmd.SHUTTER)
-    fun statusRequest(): ByteArray = frame(Cmd.STATUS_REQ)
-    fun deviceInfoRequest(): ByteArray = frame(Cmd.DEVICE_INFO)
+    private fun simple(opcode: Byte): ByteArray =
+        Builder(opcode).toByteArray()
+
+    private fun setInterval(opcode: Byte, intervalMs: Long, exposureMs: Long,
+                            count: Int, delayMs: Long): ByteArray =
+        Builder(opcode)
+            .u32(Tag.INTERVAL_MS, intervalMs)
+            .u32(Tag.EXPOSURE_MS, exposureMs)
+            .u16(Tag.SHOT_COUNT, count)
+            .u32(Tag.DELAY_MS, delayMs)
+            .toByteArray()
+
+    // ── Control commands ───────────────────────────────────────────────────
+    fun start(): ByteArray = simple(Op.START)
+    fun stop(): ByteArray = simple(Op.STOP)
+    fun shutter(): ByteArray = simple(Op.SHUTTER)
+    fun statusRequest(): ByteArray = simple(Op.STATUS_REQ)
+    fun deviceInfoRequest(): ByteArray = simple(Op.DEVICE_INFO_REQ)
+
+    // ── Mode setters ───────────────────────────────────────────────────────
+    fun setIntervalometer(intervalMs: Long, exposureMs: Long, count: Int = 0, delayMs: Long = 0): ByteArray =
+        setInterval(Op.SET_INTERVALOMETER, intervalMs, exposureMs, count, delayMs)
+
+    fun setAstro(intervalMs: Long, exposureMs: Long, count: Int = 0, delayMs: Long = 0): ByteArray =
+        setInterval(Op.SET_ASTRO, intervalMs, exposureMs, count, delayMs)
+
+    fun setDarkFrame(intervalMs: Long, exposureMs: Long, count: Int = 0, delayMs: Long = 0): ByteArray =
+        setInterval(Op.SET_DARK_FRAME, intervalMs, exposureMs, count, delayMs)
+
+    fun setRamp(intervalMs: Long, exposureMs: Long, count: Int = 0, delayMs: Long = 0): ByteArray =
+        setInterval(Op.SET_RAMP, intervalMs, exposureMs, count, delayMs)
+
+    fun setPressHold(): ByteArray = simple(Op.SET_PRESS_HOLD)
+    fun setPressLock(): ByteArray = simple(Op.SET_PRESS_LOCK)
+    fun setTracker(): ByteArray = simple(Op.SET_TRACKER)
+
+    // ── Configuration ──────────────────────────────────────────────────────
+    fun setFocus(ms: Int): ByteArray =
+        Builder(Op.SET_FOCUS).u16(Tag.FOCUS_MS, ms).toByteArray()
+
+    fun setPins(shutterPin: Int, focusPin: Int): ByteArray =
+        Builder(Op.SET_PINS)
+            .u8(Tag.SHUTTER_PIN, shutterPin)
+            .u8(Tag.FOCUS_PIN, focusPin)
+            .toByteArray()
+
+    fun setAutoOff(minutes: Int): ByteArray =
+        Builder(Op.SET_AUTO_OFF).u16(Tag.AUTO_OFF_MIN, minutes).toByteArray()
 
     fun setName(suffix: String): ByteArray {
         val bytes = suffix.toByteArray(Charsets.UTF_8)
         val trimmed = bytes.copyOf(minOf(bytes.size, AppConfig.BLE_DEVICE_NAME_MAX))
-        return frame(Cmd.SET_NAME, trimmed)
+        return Builder(Op.SET_NAME).bytes(Tag.NAME_UTF8, trimmed).toByteArray()
     }
 
-    fun setFocus(ms: Int): ByteArray {
-        val payload = ByteBuffer.allocate(2).order(ByteOrder.LITTLE_ENDIAN).putShort(ms.toShort()).array()
-        return frame(Cmd.SET_FOCUS, payload)
-    }
-
-    private fun setIntervalMode(
-        mode: TriggerMode,
-        intervalMs: Long,
-        exposureMs: Long,
-        count: Int = 0,
-        delayMs: Long = 0,
-    ): ByteArray {
-        val payload = ByteBuffer.allocate(15).order(ByteOrder.LITTLE_ENDIAN)
-            .put(mode.id)
-            .putInt(intervalMs.toInt())
-            .putInt(exposureMs.toInt())
-            .putShort(count.toShort())
-            .putInt(delayMs.toInt())
-            .array()
-        return frame(Cmd.SET_MODE, payload)
-    }
-
-    fun setIntervalometer(
-        intervalMs: Long, exposureMs: Long, count: Int = 0, delayMs: Long = 0,
-    ): ByteArray = setIntervalMode(TriggerMode.INTERVALOMETER, intervalMs, exposureMs, count, delayMs)
-
-    fun setAstro(
-        intervalMs: Long, exposureMs: Long, count: Int = 0, delayMs: Long = 0,
-    ): ByteArray = setIntervalMode(TriggerMode.ASTRO, intervalMs, exposureMs, count, delayMs)
-
-    fun setDarkFrame(
-        intervalMs: Long, exposureMs: Long, count: Int = 0, delayMs: Long = 0,
-    ): ByteArray = setIntervalMode(TriggerMode.DARK_FRAME, intervalMs, exposureMs, count, delayMs)
-
-    fun setRamp(
-        intervalMs: Long, exposureMs: Long, count: Int = 0, delayMs: Long = 0,
-    ): ByteArray = setIntervalMode(TriggerMode.RAMP, intervalMs, exposureMs, count, delayMs)
-
-    fun setPressHold(): ByteArray {
-        return frame(Cmd.SET_MODE, byteArrayOf(TriggerMode.PRESS_HOLD.id))
-    }
-
-    fun setPressLock(): ByteArray {
-        return frame(Cmd.SET_MODE, byteArrayOf(TriggerMode.PRESS_LOCK.id))
-    }
-
-    fun setTracker(): ByteArray {
-        return frame(Cmd.SET_MODE, byteArrayOf(TriggerMode.TRACKER.id))
-    }
-
-    fun setAutoOff(minutes: Int): ByteArray {
-        val payload = ByteBuffer.allocate(2).order(ByteOrder.LITTLE_ENDIAN)
-            .putShort(minutes.toShort()).array()
-        return frame(Cmd.SET_AUTO_OFF, payload)
-    }
-
-    fun setPins(shutterPin: Int, focusPin: Int): ByteArray {
-        val payload = byteArrayOf(shutterPin.toByte(), focusPin.toByte())
-        return frame(Cmd.SET_PINS, payload)
-    }
-
-    // ── OTA control commands ─────────────────────────────────────────────
-
+    // ── OTA control commands (unchanged from v1 — separate characteristic) ─
     fun otaBegin(totalSize: Int): ByteArray {
-        val payload = ByteBuffer.allocate(5).order(ByteOrder.LITTLE_ENDIAN)
-            .put(OtaCmd.BEGIN)
-            .putInt(totalSize)
-            .array()
-        return payload  // sent to OTA_CONTROL characteristic, not normal CMD
+        val payload = ByteArray(5)
+        payload[0] = OtaCmd.BEGIN
+        payload[1] = (totalSize and 0xFF).toByte()
+        payload[2] = ((totalSize shr 8) and 0xFF).toByte()
+        payload[3] = ((totalSize shr 16) and 0xFF).toByte()
+        payload[4] = ((totalSize shr 24) and 0xFF).toByte()
+        return payload
     }
 
     fun otaEnd(): ByteArray = byteArrayOf(OtaCmd.END)
-
     fun otaAbort(): ByteArray = byteArrayOf(OtaCmd.ABORT)
 }

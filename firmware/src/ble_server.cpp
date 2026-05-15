@@ -6,6 +6,7 @@
 #include "ble_server.h"
 #include "config.h"
 #include "protocol.h"
+#include "protocol_v2.h"
 #include "triggers.h"
 #include "status.h"
 #include "camera.h"
@@ -92,56 +93,161 @@ static bool save_device_name(const char* suffix) {
     return ok;
 }
 
-// ── Command characteristic callback ─────────────────────────────────────────
+// Forward decl — v2 device-info sender, defined below.
+static void send_device_info_v2();
+
+// ── TLV → IntervalParams adapter ───────────────────────────────────────────
+// Drains a TLV iterator into the legacy IntervalParams struct so we can keep
+// calling triggers_set_mode() without changing its signature.
+static void tlv_to_interval(v2::FrameReader& rdr, IntervalParams& out) {
+    out = {};
+    uint8_t tag, tlen;
+    const uint8_t* v;
+    while (rdr.next(tag, tlen, v)) {
+        switch (tag) {
+            case v2::TAG_INTERVAL_MS:
+                if (tlen == 4) out.interval_ms = v2::FrameReader::readU32(v);
+                break;
+            case v2::TAG_EXPOSURE_MS:
+                if (tlen == 4) out.exposure_ms = v2::FrameReader::readU32(v);
+                break;
+            case v2::TAG_SHOT_COUNT:
+                if (tlen == 2) out.count = v2::FrameReader::readU16(v);
+                break;
+            case v2::TAG_DELAY_MS:
+                if (tlen == 4) out.delay_ms = v2::FrameReader::readU32(v);
+                break;
+            default:
+                // Unknown TLV — ignored per v2 protocol rules.
+                break;
+        }
+    }
+}
+
+// ── ACK helper ─────────────────────────────────────────────────────────────
+// Optional notify acknowledging a command. ERROR_CODE 0 = ok; non-zero is
+// caller-defined (e.g. opcode unsupported, validation rejection).
+static void send_ack(uint8_t opcode, uint8_t err) {
+    uint8_t buf[12];
+    v2::FrameWriter w(buf, sizeof(buf));
+    if (!w.begin(v2::NOTIFY_ACK)) return;
+    w.putU8(v2::TAG_OPCODE, opcode);
+    w.putU8(v2::TAG_ERROR_CODE, err);
+    size_t n = w.finish();
+    if (n > 0) ble_notify(buf, n);
+}
+
+// ── Command characteristic callback (v2) ───────────────────────────────────
 class CmdCharCB : public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic* c) override {
         const uint8_t* data = c->getData();
         size_t len = c->getLength();
         if (len < 1) return;
 
-        uint8_t cmd = data[0];
+        // Reject v1 frames (CMD bytes 0x01–0x0F) — v0.180+ firmware is v2-only.
+        // Clients still on v1 won't be parsed; the app surfaces a clear
+        // "firmware too old / app too old" mismatch on connect.
+        if (data[0] < 0x10) {
+            ESP_LOGW(TAG, "Legacy v1 frame ignored (first byte=%02X)", data[0]);
+            return;
+        }
 
-        switch (cmd) {
-            case CMD_SET_MODE: {
-                if (len < 2) return;
-                Mode mode = static_cast<Mode>(data[1]);
-                triggers_set_mode(mode, data + 2, len - 2);
-                ESP_LOGI(TAG, "SET_MODE %02X", mode);
+        v2::FrameReader rdr(data, len);
+        uint8_t opcode, payload_len;
+        if (!rdr.parseEnvelope(opcode, payload_len)) {
+            ESP_LOGW(TAG, "Bad v2 envelope or version mismatch (byte0=%02X)", data[0]);
+            return;
+        }
+
+        switch (opcode) {
+            case v2::OP_SET_INTERVALOMETER:
+            case v2::OP_SET_ASTRO:
+            case v2::OP_SET_DARK_FRAME:
+            case v2::OP_SET_RAMP: {
+                IntervalParams p;
+                tlv_to_interval(rdr, p);
+                // Opcode → legacy Mode for triggers_set_mode().
+                Mode mode = MODE_INTERVALOMETER;
+                switch (opcode) {
+                    case v2::OP_SET_ASTRO:      mode = MODE_ASTRO;      break;
+                    case v2::OP_SET_DARK_FRAME: mode = MODE_DARK_FRAME; break;
+                    case v2::OP_SET_RAMP:       mode = MODE_RAMP;       break;
+                    default: break;
+                }
+                triggers_set_mode(mode, reinterpret_cast<const uint8_t*>(&p), sizeof(p));
+                ESP_LOGI(TAG, "SET mode=%02X intv=%u exp=%u n=%u delay=%u",
+                         mode, (unsigned)p.interval_ms, (unsigned)p.exposure_ms,
+                         (unsigned)p.count, (unsigned)p.delay_ms);
+                send_ack(opcode, 0);
                 break;
             }
-            case CMD_START:
+            case v2::OP_SET_PRESS_HOLD:
+                triggers_set_mode(MODE_PRESS_HOLD, nullptr, 0);
+                send_ack(opcode, 0);
+                ESP_LOGI(TAG, "SET PRESS_HOLD");
+                break;
+            case v2::OP_SET_PRESS_LOCK:
+                triggers_set_mode(MODE_PRESS_LOCK, nullptr, 0);
+                send_ack(opcode, 0);
+                ESP_LOGI(TAG, "SET PRESS_LOCK");
+                break;
+            case v2::OP_SET_TRACKER:
+                triggers_set_mode(MODE_TRACKER, nullptr, 0);
+                send_ack(opcode, 0);
+                ESP_LOGI(TAG, "SET TRACKER");
+                break;
+
+            case v2::OP_START:
                 triggers_start();
                 ESP_LOGI(TAG, "START");
+                send_ack(opcode, 0);
                 break;
-            case CMD_STOP:
+            case v2::OP_STOP:
                 triggers_stop();
                 ESP_LOGI(TAG, "STOP");
+                send_ack(opcode, 0);
                 break;
-            case CMD_SHUTTER:
+            case v2::OP_SHUTTER:
                 triggers_single_shot();
                 ESP_LOGI(TAG, "SHUTTER");
+                send_ack(opcode, 0);
                 break;
-            case CMD_STATUS_REQ:
+            case v2::OP_STATUS_REQ:
                 status_send(triggers_current_state(), triggers_current_mode(), 0, 0);
                 break;
-            case CMD_SET_FOCUS: {
-                if (len >= 3) {
-                    uint16_t ms = data[1] | (data[2] << 8);
-                    triggers_set_focus(ms);
-                    ESP_LOGI(TAG, "SET_FOCUS %u ms", ms);
+            case v2::OP_DEVICE_INFO_REQ:
+                send_device_info_v2();
+                ESP_LOGI(TAG, "DEVICE_INFO sent");
+                break;
+
+            case v2::OP_SET_FOCUS: {
+                uint8_t tag, tlen; const uint8_t* v;
+                while (rdr.next(tag, tlen, v)) {
+                    if (tag == v2::TAG_FOCUS_MS && tlen == 2) {
+                        uint16_t ms = v2::FrameReader::readU16(v);
+                        triggers_set_focus(ms);
+                        ESP_LOGI(TAG, "SET_FOCUS %u ms", ms);
+                    }
                 }
+                send_ack(opcode, 0);
                 break;
             }
-            case CMD_SET_PINS: {
-                if (len < 3) return;
-                uint8_t shutter = data[1];
-                uint8_t focus   = data[2];
-                if (!is_safe_output_pin(shutter) || !is_safe_output_pin(focus)) {
-                    ESP_LOGW(TAG, "SET_PINS rejected: shutter=%u focus=%u", shutter, focus);
+            case v2::OP_SET_PINS: {
+                uint8_t shutter = 0, focus = 0;
+                bool haveShutter = false, haveFocus = false;
+                uint8_t tag, tlen; const uint8_t* v;
+                while (rdr.next(tag, tlen, v)) {
+                    if (tag == v2::TAG_SHUTTER_PIN && tlen == 1) { shutter = v[0]; haveShutter = true; }
+                    if (tag == v2::TAG_FOCUS_PIN   && tlen == 1) { focus   = v[0]; haveFocus   = true; }
+                }
+                if (!haveShutter || !haveFocus) {
+                    ESP_LOGW(TAG, "SET_PINS missing TLVs");
+                    send_ack(opcode, 1);
                     return;
                 }
-                if (shutter == focus) {
-                    ESP_LOGW(TAG, "SET_PINS rejected: shutter == focus");
+                if (!is_safe_output_pin(shutter) || !is_safe_output_pin(focus) || shutter == focus) {
+                    ESP_LOGW(TAG, "SET_PINS rejected: shutter=%u focus=%u", shutter, focus);
+                    send_ack(opcode, 2);
                     return;
                 }
                 _prefs.begin("pulsar", false);
@@ -150,17 +256,37 @@ class CmdCharCB : public BLECharacteristicCallbacks {
                 _prefs.end();
                 camera_init_pins(shutter, focus);
                 ESP_LOGI(TAG, "SET_PINS shutter=%u focus=%u", shutter, focus);
+                send_ack(opcode, 0);
                 break;
             }
-            case CMD_SET_NAME: {
-                if (len < 2) return;
-                // Bytes 1..N are the UTF-8 suffix (no "Pulsar-" prefix)
-                size_t suffixLen = len - 1;
+            case v2::OP_SET_AUTO_OFF: {
+                uint8_t tag, tlen; const uint8_t* v;
+                while (rdr.next(tag, tlen, v)) {
+                    if (tag == v2::TAG_AUTO_OFF_MIN && tlen == 2) {
+                        uint16_t minutes = v2::FrameReader::readU16(v);
+                        _auto_off_minutes = minutes;
+                        _prefs.begin("pulsar", false);
+                        _prefs.putUShort("auto_off", minutes);
+                        _prefs.end();
+                        ESP_LOGI(TAG, "SET_AUTO_OFF %u min", minutes);
+                    }
+                }
+                send_ack(opcode, 0);
+                break;
+            }
+            case v2::OP_SET_NAME: {
+                uint8_t tag, tlen; const uint8_t* v;
+                const uint8_t* nameBytes = nullptr;
+                uint8_t nameLen = 0;
+                while (rdr.next(tag, tlen, v)) {
+                    if (tag == v2::TAG_NAME_UTF8) { nameBytes = v; nameLen = tlen; }
+                }
+                if (!nameBytes) { send_ack(opcode, 1); return; }
+                size_t suffixLen = nameLen;
                 if (suffixLen > BLE_NAME_SUFFIX_MAX) suffixLen = BLE_NAME_SUFFIX_MAX;
                 char suffix[BLE_NAME_SUFFIX_MAX + 1] = {};
-                memcpy(suffix, data + 1, suffixLen);
+                memcpy(suffix, nameBytes, suffixLen);
                 suffix[suffixLen] = '\0';
-
                 // Sanitise: keep only printable ASCII (0x20-0x7E)
                 size_t clean = 0;
                 for (size_t i = 0; i < suffixLen; i++) {
@@ -170,9 +296,7 @@ class CmdCharCB : public BLECharacteristicCallbacks {
                 }
                 suffix[clean] = '\0';
                 suffixLen = clean;
-
                 if (suffixLen == 0) {
-                    // Empty suffix → reset to default "Pulsar"
                     save_device_name("");
                     strncpy(_deviceName, BLE_DEVICE_NAME, sizeof(_deviceName));
                 } else {
@@ -183,54 +307,52 @@ class CmdCharCB : public BLECharacteristicCallbacks {
                 // Defer BLE reinit to main loop (unsafe from callback context)
                 _pendingReinit = true;
                 ESP_LOGI(TAG, "SET_NAME → '%s' (reinit pending)", _deviceName);
+                send_ack(opcode, 0);
                 break;
             }
-            case CMD_DEVICE_INFO: {
-                DeviceInfoFrame info = {};
-                info.marker = 0xFF;
 
-                esp_chip_info_t chip;
-                esp_chip_info(&chip);
-                switch (chip.model) {
-                    case CHIP_ESP32:   info.chip_model = 1; break;
-                    case CHIP_ESP32S2: info.chip_model = 2; break;
-                    case CHIP_ESP32S3: info.chip_model = 3; break;
-                    case CHIP_ESP32C3: info.chip_model = 4; break;
-                    default:           info.chip_model = 0; break;
-                }
-                info.chip_revision = chip.revision;
-                info.cpu_freq_mhz = (uint8_t)(getCpuFrequencyMhz());
-                info.flash_size_kb = (uint32_t)(spi_flash_get_chip_size() / 1024);
-                info.free_heap_kb = (uint32_t)(esp_get_free_heap_size() / 1024);
-                #if CONFIG_SPIRAM
-                info.psram_kb = (uint16_t)(esp_spiram_get_size() / 1024);
-                #else
-                info.psram_kb = 0;
-                #endif
-                info.gpio_count = (uint8_t)GPIO_NUM_MAX;
-                info.safe_output_count = SAFE_OUTPUT_PIN_COUNT;
-                info.uptime_minutes = (uint16_t)(millis() / 60000UL);
-
-                ble_notify(reinterpret_cast<const uint8_t*>(&info), sizeof(info));
-                ESP_LOGI(TAG, "DEVICE_INFO sent");
-                break;
-            }
-            case CMD_SET_AUTO_OFF: {
-                if (len < 3) return;
-                uint16_t minutes = data[1] | (data[2] << 8);
-                _auto_off_minutes = minutes;
-                _prefs.begin("pulsar", false);
-                _prefs.putUShort("auto_off", minutes);
-                _prefs.end();
-                ESP_LOGI(TAG, "SET_AUTO_OFF %u min", minutes);
-                break;
-            }
             default:
-                ESP_LOGW(TAG, "Unknown CMD %02X", cmd);
+                ESP_LOGW(TAG, "Unknown v2 opcode %02X", opcode);
+                send_ack(opcode, 0xFF);  // UNSUPPORTED_OPCODE
                 break;
         }
     }
 };
+
+// ── v2 device-info notify ──────────────────────────────────────────────────
+static void send_device_info_v2() {
+    uint8_t buf[64];
+    v2::FrameWriter w(buf, sizeof(buf));
+    if (!w.begin(v2::NOTIFY_DEVICE_INFO)) return;
+
+    esp_chip_info_t chip;
+    esp_chip_info(&chip);
+    uint8_t chip_model = 0;
+    switch (chip.model) {
+        case CHIP_ESP32:   chip_model = 1; break;
+        case CHIP_ESP32S2: chip_model = 2; break;
+        case CHIP_ESP32S3: chip_model = 3; break;
+        case CHIP_ESP32C3: chip_model = 4; break;
+        default:           chip_model = 0; break;
+    }
+    uint32_t psram_kb = 0;
+    #if CONFIG_SPIRAM
+    psram_kb = (uint32_t)(esp_spiram_get_size() / 1024);
+    #endif
+
+    w.putU8 (v2::TAG_CHIP_MODEL,     chip_model);
+    w.putU8 (v2::TAG_CHIP_REVISION,  (uint8_t)chip.revision);
+    w.putU8 (v2::TAG_CPU_FREQ_MHZ,   (uint8_t)getCpuFrequencyMhz());
+    w.putU32(v2::TAG_FLASH_SIZE_KB,  (uint32_t)(spi_flash_get_chip_size() / 1024));
+    w.putU32(v2::TAG_FREE_HEAP_KB,   (uint32_t)(esp_get_free_heap_size() / 1024));
+    w.putU16(v2::TAG_PSRAM_KB,       (uint16_t)psram_kb);
+    w.putU8 (v2::TAG_GPIO_COUNT,     (uint8_t)GPIO_NUM_MAX);
+    w.putU8 (v2::TAG_SAFE_OUT_COUNT, (uint8_t)SAFE_OUTPUT_PIN_COUNT);
+    w.putU16(v2::TAG_UPTIME_MIN,     (uint16_t)(millis() / 60000UL));
+
+    size_t n = w.finish();
+    if (n > 0) ble_notify(buf, n);
+}
 
 // ── OTA characteristic callbacks ─────────────────────────────────────────────
 class OtaCtrlCB : public BLECharacteristicCallbacks {

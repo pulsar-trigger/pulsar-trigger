@@ -81,11 +81,17 @@ class PulsarBleManager(context: Context) : BleManager(context) {
 
         setNotificationCallback(statusChar).with { _, data ->
             data.value?.let { bytes ->
-                // DeviceInfoFrame has marker 0xFF in byte 0
-                if (bytes.isNotEmpty() && (bytes[0].toInt() and 0xFF) == 0xFF) {
-                    DeviceInfo.parse(bytes)?.let { _deviceInfo.value = it }
-                } else {
-                    StatusFrame.parse(bytes)?.let { _status.value = it }
+                if (bytes.isEmpty()) return@with
+                // Dispatch on v2 notify opcode. Unknown opcodes (including
+                // any legacy v1 STATE bytes from old firmware) are dropped —
+                // the app version-mismatch UX surfaces that case separately.
+                when (bytes[0]) {
+                    NotifyOp.STATUS      -> StatusFrame.parse(bytes)?.let { _status.value = it }
+                    NotifyOp.DEVICE_INFO -> DeviceInfo.parse(bytes)?.let { _deviceInfo.value = it }
+                    NotifyOp.ACK         -> {
+                        // Optional: surface ACK errors via a flow if/when the
+                        // UI needs them. For now just log via the Nordic stack.
+                    }
                 }
             }
         }

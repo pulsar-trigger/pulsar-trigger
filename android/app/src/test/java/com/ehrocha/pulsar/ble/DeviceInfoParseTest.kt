@@ -3,9 +3,10 @@ package com.ehrocha.pulsar.ble
 import org.junit.Assert.*
 import org.junit.Test
 
+/** v2 DeviceInfo round-trip tests. */
 class DeviceInfoParseTest {
 
-    /** Build a 20-byte DeviceInfoFrame with the 0xFF marker. */
+    /** Build a v2 NOTIFY_DEVICE_INFO frame with the supplied TLVs. */
     private fun infoFrame(
         chipModel: Int = 1,
         chipRevision: Int = 1,
@@ -17,76 +18,72 @@ class DeviceInfoParseTest {
         safeOutputCount: Int = 13,
         uptimeMinutes: Int = 120,
     ): ByteArray {
-        val buf = ByteArray(20)
-        buf[0] = 0xFF.toByte()  // marker
-        buf[1] = chipModel.toByte()
-        buf[2] = chipRevision.toByte()
-        buf[3] = cpuFreqMhz.toByte()
-        // flashSizeKb LE at offset 4
-        buf[4] = (flashSizeKb and 0xFF).toByte()
-        buf[5] = ((flashSizeKb shr 8) and 0xFF).toByte()
-        buf[6] = ((flashSizeKb shr 16) and 0xFF).toByte()
-        buf[7] = ((flashSizeKb shr 24) and 0xFF).toByte()
-        // freeHeapKb LE at offset 8
-        buf[8] = (freeHeapKb and 0xFF).toByte()
-        buf[9] = ((freeHeapKb shr 8) and 0xFF).toByte()
-        buf[10] = ((freeHeapKb shr 16) and 0xFF).toByte()
-        buf[11] = ((freeHeapKb shr 24) and 0xFF).toByte()
-        // psramKb LE at offset 12
-        buf[12] = (psramKb and 0xFF).toByte()
-        buf[13] = ((psramKb shr 8) and 0xFF).toByte()
-        buf[14] = gpioCount.toByte()
-        buf[15] = safeOutputCount.toByte()
-        // uptimeMinutes LE at offset 16
-        buf[16] = (uptimeMinutes and 0xFF).toByte()
-        buf[17] = ((uptimeMinutes shr 8) and 0xFF).toByte()
-        return buf
+        val tlvs = ArrayList<Byte>()
+        fun addU8(tag: Byte, v: Int) { tlvs += tag; tlvs += 1; tlvs += (v and 0xFF).toByte() }
+        fun addU16(tag: Byte, v: Int) {
+            tlvs += tag; tlvs += 2
+            tlvs += (v and 0xFF).toByte(); tlvs += ((v shr 8) and 0xFF).toByte()
+        }
+        fun addU32(tag: Byte, v: Long) {
+            tlvs += tag; tlvs += 4
+            tlvs += (v and 0xFF).toByte()
+            tlvs += ((v shr 8) and 0xFF).toByte()
+            tlvs += ((v shr 16) and 0xFF).toByte()
+            tlvs += ((v shr 24) and 0xFF).toByte()
+        }
+        addU8(Tag.CHIP_MODEL, chipModel)
+        addU8(Tag.CHIP_REVISION, chipRevision)
+        addU8(Tag.CPU_FREQ_MHZ, cpuFreqMhz)
+        addU32(Tag.FLASH_SIZE_KB, flashSizeKb)
+        addU32(Tag.FREE_HEAP_KB, freeHeapKb)
+        addU16(Tag.PSRAM_KB, psramKb)
+        addU8(Tag.GPIO_COUNT, gpioCount)
+        addU8(Tag.SAFE_OUT_COUNT, safeOutputCount)
+        addU16(Tag.UPTIME_MIN, uptimeMinutes)
+
+        val frame = ByteArray(3 + tlvs.size)
+        frame[0] = NotifyOp.DEVICE_INFO
+        frame[1] = ProtoV2.VERSION
+        frame[2] = tlvs.size.toByte()
+        tlvs.forEachIndexed { i, b -> frame[3 + i] = b }
+        return frame
     }
 
-    @Test
-    fun `parse returns null for short array`() {
-        assertNull(DeviceInfo.parse(ByteArray(17)))
+    @Test fun `parse returns null on short frame`() {
+        assertNull(DeviceInfo.parse(ByteArray(2)))
     }
 
-    @Test
-    fun `parse returns null without 0xFF marker`() {
-        val data = infoFrame()
-        data[0] = 0x00  // not the marker
-        assertNull(DeviceInfo.parse(data))
+    @Test fun `parse returns null on wrong opcode`() {
+        val frame = byteArrayOf(NotifyOp.STATUS, ProtoV2.VERSION, 0)
+        assertNull(DeviceInfo.parse(frame))
     }
 
-    @Test
-    fun `parse ESP32 chip model`() {
-        val info = DeviceInfo.parse(infoFrame(chipModel = 1))!!
-        assertEquals("ESP32", info.chipModel)
+    @Test fun `parse returns null on version mismatch`() {
+        val frame = byteArrayOf(NotifyOp.DEVICE_INFO, 0x99.toByte(), 0)
+        assertNull(DeviceInfo.parse(frame))
     }
 
-    @Test
-    fun `parse ESP32-S2 chip model`() {
-        val info = DeviceInfo.parse(infoFrame(chipModel = 2))!!
-        assertEquals("ESP32-S2", info.chipModel)
+    @Test fun `parse ESP32 chip model`() {
+        assertEquals("ESP32", DeviceInfo.parse(infoFrame(chipModel = 1))!!.chipModel)
     }
 
-    @Test
-    fun `parse ESP32-S3 chip model`() {
-        val info = DeviceInfo.parse(infoFrame(chipModel = 3))!!
-        assertEquals("ESP32-S3", info.chipModel)
+    @Test fun `parse ESP32-S2 chip model`() {
+        assertEquals("ESP32-S2", DeviceInfo.parse(infoFrame(chipModel = 2))!!.chipModel)
     }
 
-    @Test
-    fun `parse ESP32-C3 chip model`() {
-        val info = DeviceInfo.parse(infoFrame(chipModel = 4))!!
-        assertEquals("ESP32-C3", info.chipModel)
+    @Test fun `parse ESP32-S3 chip model`() {
+        assertEquals("ESP32-S3", DeviceInfo.parse(infoFrame(chipModel = 3))!!.chipModel)
     }
 
-    @Test
-    fun `parse unknown chip model`() {
-        val info = DeviceInfo.parse(infoFrame(chipModel = 99))!!
-        assertEquals("Unknown", info.chipModel)
+    @Test fun `parse ESP32-C3 chip model`() {
+        assertEquals("ESP32-C3", DeviceInfo.parse(infoFrame(chipModel = 4))!!.chipModel)
     }
 
-    @Test
-    fun `parse all numeric fields`() {
+    @Test fun `parse unknown chip model`() {
+        assertEquals("Unknown", DeviceInfo.parse(infoFrame(chipModel = 99))!!.chipModel)
+    }
+
+    @Test fun `parse all numeric fields`() {
         val info = DeviceInfo.parse(infoFrame(
             chipRevision = 3,
             cpuFreqMhz = 240,
@@ -107,8 +104,7 @@ class DeviceInfoParseTest {
         assertEquals(1500, info.uptimeMinutes)
     }
 
-    @Test
-    fun `parse zero PSRAM`() {
+    @Test fun `parse zero PSRAM`() {
         val info = DeviceInfo.parse(infoFrame(psramKb = 0))!!
         assertEquals(0, info.psramKb)
     }
