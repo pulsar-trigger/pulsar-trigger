@@ -6,12 +6,15 @@
 package com.ehrocha.pulsar.model
 
 import android.content.Context
+import com.ehrocha.pulsar.AppConfig
+import com.ehrocha.pulsar.R
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
-import com.ehrocha.pulsar.AppConfig
-import com.ehrocha.pulsar.R
 
+/** Discriminator for picker/icon/label lookups. Each enum corresponds to
+ *  exactly one [FlowStep] subtype; use the subtype directly when operating
+ *  on a step's content. */
 enum class FlowStepType {
     INTERVALOMETER,
     ASTRO,
@@ -20,83 +23,179 @@ enum class FlowStepType {
     RAMP,
 }
 
-data class FlowStep(
-    val id: String = UUID.randomUUID().toString(),
-    val type: FlowStepType = FlowStepType.PAUSE,
-    // Intervalometer / Astro shared params
-    val intervalMs: Long = AppConfig.DEFAULT_INTERVAL_MS,
-    val exposureMs: Long = AppConfig.DEFAULT_EXPOSURE_MS,
-    val shotCount: Int = 10,
-    val delayMs: Long = AppConfig.DEFAULT_DELAY_MS,
-    // Astro-specific
-    val focalLength: Int = AppConfig.DEFAULT_FOCAL_LENGTH,
-    val cropFactor: Float = AppConfig.DEFAULT_CROP_FACTOR,
-    val ruleDivisor: Int = AppConfig.DEFAULT_RULE_DIVISOR,
-    val gapMs: Long = AppConfig.DEFAULT_ASTRO_GAP_MS,
-    // Dark Frame
-    val darkFrameCount: Int = 10,
-    val darkFrameExposureMs: Long = AppConfig.DEFAULT_EXPOSURE_MS,
-    val darkFrameGapMs: Long = AppConfig.DEFAULT_ASTRO_GAP_MS,
-    // Ramp (Holy Grail timelapse)
-    val rampStartExposureMs: Long = 500L,
-    val rampEndExposureMs: Long = 10000L,
-    val rampSteps: Int = 50,
-    val rampIntervalMs: Long = AppConfig.DEFAULT_INTERVAL_MS,
-    // Pause
-    val pauseLabel: String = "Adjust camera settings",
-    /** When true, the screen wakes and vibrates when this pause step is reached. */
-    val wakeOnPause: Boolean = true,
-    /** Phone-camera-only: if non-null, lock the manual ISO to this value for the
-     *  duration of the step (e.g. low ISO for a long-exposure foreground frame). */
-    val isoOverride: Int? = null,
-) {
+/**
+ * One step in a flow. Variants carry only the fields they actually use —
+ * unlike the prior union-struct layout where every field lived on every
+ * step. Consumers operate on a step via an exhaustive `when (step)` block.
+ *
+ * On-disk JSON keeps a `"type"` discriminator key; per-variant fields are
+ * written and read in their matching branch only. Files written before
+ * this refactor (every field stored as a sibling) still load — extra keys
+ * are ignored, missing ones default. New saves are leaner.
+ */
+sealed class FlowStep {
+    abstract val id: String
+    abstract val type: FlowStepType
+
+    data class Intervalometer(
+        override val id: String = UUID.randomUUID().toString(),
+        val intervalMs: Long = AppConfig.DEFAULT_INTERVAL_MS,
+        val exposureMs: Long = AppConfig.DEFAULT_EXPOSURE_MS,
+        val shotCount: Int = AppConfig.DEFAULT_SHOT_COUNT,
+        val delayMs: Long = AppConfig.DEFAULT_DELAY_MS,
+    ) : FlowStep() {
+        override val type get() = FlowStepType.INTERVALOMETER
+    }
+
+    data class Astro(
+        override val id: String = UUID.randomUUID().toString(),
+        val focalLength: Int = AppConfig.DEFAULT_FOCAL_LENGTH,
+        val cropFactor: Float = AppConfig.DEFAULT_CROP_FACTOR,
+        val ruleDivisor: Int = AppConfig.DEFAULT_RULE_DIVISOR,
+        val gapMs: Long = AppConfig.DEFAULT_ASTRO_GAP_MS,
+        val shotCount: Int = AppConfig.DEFAULT_SHOT_COUNT,
+        val delayMs: Long = AppConfig.DEFAULT_ASTRO_DELAY_MS,
+    ) : FlowStep() {
+        override val type get() = FlowStepType.ASTRO
+    }
+
+    data class DarkFrame(
+        override val id: String = UUID.randomUUID().toString(),
+        val exposureMs: Long = AppConfig.DEFAULT_EXPOSURE_MS,
+        val shotCount: Int = 10,
+        val gapMs: Long = AppConfig.DEFAULT_ASTRO_GAP_MS,
+    ) : FlowStep() {
+        override val type get() = FlowStepType.DARK_FRAME
+    }
+
+    data class Ramp(
+        override val id: String = UUID.randomUUID().toString(),
+        val startExposureMs: Long = 500L,
+        val endExposureMs: Long = 10_000L,
+        val steps: Int = 50,
+        val intervalMs: Long = AppConfig.DEFAULT_INTERVAL_MS,
+    ) : FlowStep() {
+        override val type get() = FlowStepType.RAMP
+    }
+
+    data class Pause(
+        override val id: String = UUID.randomUUID().toString(),
+        val label: String = "Adjust camera settings",
+        val wakeOnPause: Boolean = true,
+    ) : FlowStep() {
+        override val type get() = FlowStepType.PAUSE
+    }
+
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
         put("type", type.name)
-        put("intervalMs", intervalMs)
-        put("exposureMs", exposureMs)
-        put("shotCount", shotCount)
-        put("delayMs", delayMs)
-        put("focalLength", focalLength)
-        put("cropFactor", cropFactor.toDouble())
-        put("ruleDivisor", ruleDivisor)
-        put("gapMs", gapMs)
-        put("darkFrameCount", darkFrameCount)
-        put("darkFrameExposureMs", darkFrameExposureMs)
-        put("darkFrameGapMs", darkFrameGapMs)
-        put("rampStartExposureMs", rampStartExposureMs)
-        put("rampEndExposureMs", rampEndExposureMs)
-        put("rampSteps", rampSteps)
-        put("rampIntervalMs", rampIntervalMs)
-        put("pauseLabel", pauseLabel)
-        put("wakeOnPause", wakeOnPause)
-        if (isoOverride != null) put("isoOverride", isoOverride)
+        when (val s = this@FlowStep) {
+            is Intervalometer -> {
+                put("intervalMs", s.intervalMs)
+                put("exposureMs", s.exposureMs)
+                put("shotCount", s.shotCount)
+                put("delayMs", s.delayMs)
+            }
+            is Astro -> {
+                put("focalLength", s.focalLength)
+                put("cropFactor", s.cropFactor.toDouble())
+                put("ruleDivisor", s.ruleDivisor)
+                put("gapMs", s.gapMs)
+                put("shotCount", s.shotCount)
+                put("delayMs", s.delayMs)
+            }
+            is DarkFrame -> {
+                put("exposureMs", s.exposureMs)
+                put("shotCount", s.shotCount)
+                put("gapMs", s.gapMs)
+            }
+            is Ramp -> {
+                put("startExposureMs", s.startExposureMs)
+                put("endExposureMs", s.endExposureMs)
+                put("steps", s.steps)
+                put("intervalMs", s.intervalMs)
+            }
+            is Pause -> {
+                put("label", s.label)
+                put("wakeOnPause", s.wakeOnPause)
+            }
+        }
     }
 
     companion object {
-        fun fromJson(json: JSONObject): FlowStep = FlowStep(
-            id = json.optString("id", UUID.randomUUID().toString()),
-            type = FlowStepType.entries.firstOrNull { it.name == json.optString("type") }
-                ?: FlowStepType.PAUSE,
-            intervalMs = json.optLong("intervalMs", AppConfig.DEFAULT_INTERVAL_MS),
-            exposureMs = json.optLong("exposureMs", AppConfig.DEFAULT_EXPOSURE_MS),
-            shotCount = json.optInt("shotCount", 10),
-            delayMs = json.optLong("delayMs", AppConfig.DEFAULT_DELAY_MS),
-            focalLength = json.optInt("focalLength", AppConfig.DEFAULT_FOCAL_LENGTH),
-            cropFactor = json.optDouble("cropFactor", AppConfig.DEFAULT_CROP_FACTOR.toDouble()).toFloat(),
-            ruleDivisor = json.optInt("ruleDivisor", AppConfig.DEFAULT_RULE_DIVISOR),
-            gapMs = json.optLong("gapMs", AppConfig.DEFAULT_ASTRO_GAP_MS),
-            darkFrameCount = json.optInt("darkFrameCount", 10),
-            darkFrameExposureMs = json.optLong("darkFrameExposureMs", AppConfig.DEFAULT_EXPOSURE_MS),
-            darkFrameGapMs = json.optLong("darkFrameGapMs", AppConfig.DEFAULT_ASTRO_GAP_MS),
-            rampStartExposureMs = json.optLong("rampStartExposureMs", 500L),
-            rampEndExposureMs = json.optLong("rampEndExposureMs", 10000L),
-            rampSteps = json.optInt("rampSteps", 50),
-            rampIntervalMs = json.optLong("rampIntervalMs", AppConfig.DEFAULT_INTERVAL_MS),
-            pauseLabel = json.optString("pauseLabel", "Adjust camera settings"),
-            wakeOnPause = json.optBoolean("wakeOnPause", true),
-            isoOverride = if (json.has("isoOverride")) json.getInt("isoOverride") else null,
-        )
+        /** Construct a step of the requested type with default field values. */
+        fun forType(type: FlowStepType): FlowStep = when (type) {
+            FlowStepType.INTERVALOMETER -> Intervalometer()
+            FlowStepType.ASTRO -> Astro()
+            FlowStepType.DARK_FRAME -> DarkFrame()
+            FlowStepType.RAMP -> Ramp()
+            FlowStepType.PAUSE -> Pause()
+        }
+
+        fun fromJson(json: JSONObject): FlowStep {
+            val id = json.optString("id").takeIf { it.isNotEmpty() }
+                ?: UUID.randomUUID().toString()
+            val type = FlowStepType.entries.firstOrNull { it.name == json.optString("type") }
+                ?: FlowStepType.PAUSE
+            return when (type) {
+                FlowStepType.INTERVALOMETER -> Intervalometer(
+                    id = id,
+                    intervalMs = json.optLong("intervalMs", AppConfig.DEFAULT_INTERVAL_MS),
+                    exposureMs = json.optLong("exposureMs", AppConfig.DEFAULT_EXPOSURE_MS),
+                    shotCount = json.optInt("shotCount", AppConfig.DEFAULT_SHOT_COUNT),
+                    delayMs = json.optLong("delayMs", AppConfig.DEFAULT_DELAY_MS),
+                )
+                FlowStepType.ASTRO -> Astro(
+                    id = id,
+                    focalLength = json.optInt("focalLength", AppConfig.DEFAULT_FOCAL_LENGTH),
+                    cropFactor = json.optDouble("cropFactor", AppConfig.DEFAULT_CROP_FACTOR.toDouble()).toFloat(),
+                    ruleDivisor = json.optInt("ruleDivisor", AppConfig.DEFAULT_RULE_DIVISOR),
+                    gapMs = json.optLong("gapMs", AppConfig.DEFAULT_ASTRO_GAP_MS),
+                    shotCount = json.optInt("shotCount", AppConfig.DEFAULT_SHOT_COUNT),
+                    delayMs = json.optLong("delayMs", AppConfig.DEFAULT_ASTRO_DELAY_MS),
+                )
+                FlowStepType.DARK_FRAME -> DarkFrame(
+                    id = id,
+                    // Pre-refactor files stored the exposure under "darkFrameExposureMs"
+                    // and the count under "darkFrameCount". Fall back to those keys so
+                    // existing saved flows still load.
+                    exposureMs = json.optLong(
+                        "exposureMs",
+                        json.optLong("darkFrameExposureMs", AppConfig.DEFAULT_EXPOSURE_MS),
+                    ),
+                    shotCount = json.optInt(
+                        "shotCount",
+                        json.optInt("darkFrameCount", 10),
+                    ),
+                    gapMs = json.optLong(
+                        "gapMs",
+                        json.optLong("darkFrameGapMs", AppConfig.DEFAULT_ASTRO_GAP_MS),
+                    ),
+                )
+                FlowStepType.RAMP -> Ramp(
+                    id = id,
+                    startExposureMs = json.optLong(
+                        "startExposureMs",
+                        json.optLong("rampStartExposureMs", 500L),
+                    ),
+                    endExposureMs = json.optLong(
+                        "endExposureMs",
+                        json.optLong("rampEndExposureMs", 10_000L),
+                    ),
+                    steps = json.optInt("steps", json.optInt("rampSteps", 50)),
+                    intervalMs = json.optLong(
+                        "intervalMs",
+                        json.optLong("rampIntervalMs", AppConfig.DEFAULT_INTERVAL_MS),
+                    ),
+                )
+                FlowStepType.PAUSE -> Pause(
+                    id = id,
+                    label = json.optString("label",
+                        json.optString("pauseLabel", "Adjust camera settings")),
+                    wakeOnPause = json.optBoolean("wakeOnPause", true),
+                )
+            }
+        }
 
         fun serializeList(steps: List<FlowStep>): String {
             val arr = JSONArray()
@@ -113,15 +212,15 @@ data class FlowStep(
 }
 
 /** Summary label for a step in the flow builder list. */
-fun FlowStep.summaryLabel(context: Context): String = when (type) {
-    FlowStepType.INTERVALOMETER -> context.getString(R.string.step_summary_intervalometer, shotCount, exposureMs, intervalMs)
-    FlowStepType.ASTRO -> {
+fun FlowStep.summaryLabel(context: Context): String = when (this) {
+    is FlowStep.Intervalometer -> context.getString(R.string.step_summary_intervalometer, shotCount, exposureMs, intervalMs)
+    is FlowStep.Astro -> {
         val expS = AppConfig.astroExposureS(focalLength, cropFactor, ruleDivisor)
-        context.getString(R.string.step_summary_astro, shotCount, String.format("%.1f", expS), focalLength)
+        context.getString(R.string.step_summary_astro, shotCount, "%.1f".format(expS), focalLength)
     }
-    FlowStepType.PAUSE -> pauseLabel
-    FlowStepType.DARK_FRAME -> context.getString(R.string.step_summary_dark_frame, darkFrameCount, darkFrameExposureMs)
-    FlowStepType.RAMP -> context.getString(R.string.step_summary_ramp, rampSteps, rampStartExposureMs, rampEndExposureMs)
+    is FlowStep.Pause -> label
+    is FlowStep.DarkFrame -> context.getString(R.string.step_summary_dark_frame, shotCount, exposureMs)
+    is FlowStep.Ramp -> context.getString(R.string.step_summary_ramp, steps, startExposureMs, endExposureMs)
 }
 
 fun FlowStepType.displayName(context: Context): String = when (this) {
@@ -139,19 +238,16 @@ fun FlowStepType.displayName(context: Context): String = when (this) {
  *  scientifically grounded exposure times based on sensor pixel pitch. */
 object FlowPresets {
     private fun astroPreset(focalLengthMm: Int, cropFactor: Float = 1.0f): SavedFlow {
-        val exposureMs = AppConfig.astroExposureMs(focalLengthMm, cropFactor, AppConfig.NPF_RULE_DIVISOR)
         val label = if (cropFactor == 1.0f) "NPF – ${focalLengthMm}mm FF"
                     else "NPF – ${focalLengthMm}mm (${cropFactor}×)"
         return SavedFlow(
             name = label,
             steps = listOf(
-                FlowStep(
-                    type = FlowStepType.PAUSE,
-                    pauseLabel = "Confirm focus and adjust camera settings",
+                FlowStep.Pause(
+                    label = "Confirm focus and adjust camera settings",
                     wakeOnPause = true,
                 ),
-                FlowStep(
-                    type = FlowStepType.ASTRO,
+                FlowStep.Astro(
                     focalLength = focalLengthMm,
                     cropFactor = cropFactor,
                     ruleDivisor = AppConfig.NPF_RULE_DIVISOR,
@@ -169,16 +265,14 @@ object FlowPresets {
         return SavedFlow(
             name = label,
             steps = listOf(
-                FlowStep(
-                    type = FlowStepType.PAUSE,
-                    pauseLabel = "Put the lens cap on and keep the same temperature",
+                FlowStep.Pause(
+                    label = "Put the lens cap on and keep the same temperature",
                     wakeOnPause = true,
                 ),
-                FlowStep(
-                    type = FlowStepType.DARK_FRAME,
-                    darkFrameCount = count,
-                    darkFrameExposureMs = exposureMs,
-                    darkFrameGapMs = AppConfig.DEFAULT_ASTRO_GAP_MS,
+                FlowStep.DarkFrame(
+                    shotCount = count,
+                    exposureMs = exposureMs,
+                    gapMs = AppConfig.DEFAULT_ASTRO_GAP_MS,
                 ),
             ),
             builtIn = true,
@@ -187,14 +281,12 @@ object FlowPresets {
     }
 
     val ALL: List<SavedFlow> = listOf(
-        // Astro NPF presets — full frame
         astroPreset(14),
         astroPreset(24),
         astroPreset(50),
         astroPreset(85),
         astroPreset(135),
         astroPreset(200),
-        // Dark frame presets — common astro exposure durations
         darkFramePreset(exposureMs = 15_000L, count = 20, label = "Dark Frames – 15s"),
         darkFramePreset(exposureMs = 30_000L, count = 20, label = "Dark Frames – 30s"),
         darkFramePreset(exposureMs = 60_000L, count = 20, label = "Dark Frames – 60s"),

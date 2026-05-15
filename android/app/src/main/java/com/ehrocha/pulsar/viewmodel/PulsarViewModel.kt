@@ -127,16 +127,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     fun runUserMode(mode: com.ehrocha.pulsar.model.UserMode) {
         if (_simulatorActive.value) return
         val body = mode.body
-        val flowType = when (body.fwMode) {
-            TriggerMode.INTERVALOMETER -> com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER
-            TriggerMode.ASTRO -> com.ehrocha.pulsar.model.FlowStepType.ASTRO
-            TriggerMode.DARK_FRAME -> com.ehrocha.pulsar.model.FlowStepType.DARK_FRAME
-            TriggerMode.RAMP -> com.ehrocha.pulsar.model.FlowStepType.RAMP
-            else -> return
-        }
-        val step = when (flowType) {
-            com.ehrocha.pulsar.model.FlowStepType.ASTRO -> com.ehrocha.pulsar.model.FlowStep(
-                type = flowType,
+        val step: com.ehrocha.pulsar.model.FlowStep = when (body.fwMode) {
+            TriggerMode.INTERVALOMETER -> com.ehrocha.pulsar.model.FlowStep.Intervalometer(
+                intervalMs = body.intervalMs,
+                exposureMs = body.exposureMs,
+                shotCount = body.shotCount,
+                delayMs = body.delayMs,
+            )
+            TriggerMode.ASTRO -> com.ehrocha.pulsar.model.FlowStep.Astro(
                 focalLength = body.focalLength,
                 cropFactor = body.cropFactor,
                 ruleDivisor = body.ruleDivisor,
@@ -144,26 +142,18 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 shotCount = body.shotCount,
                 delayMs = body.delayMs,
             )
-            com.ehrocha.pulsar.model.FlowStepType.DARK_FRAME -> com.ehrocha.pulsar.model.FlowStep(
-                type = flowType,
-                darkFrameCount = body.shotCount,
-                darkFrameExposureMs = body.exposureMs,
-                darkFrameGapMs = body.intervalMs,
-            )
-            com.ehrocha.pulsar.model.FlowStepType.RAMP -> com.ehrocha.pulsar.model.FlowStep(
-                type = flowType,
-                rampStartExposureMs = body.rampStartExposureMs,
-                rampEndExposureMs = body.rampEndExposureMs,
-                rampSteps = body.rampSteps,
-                rampIntervalMs = body.intervalMs,
-            )
-            else -> com.ehrocha.pulsar.model.FlowStep(
-                type = flowType,
-                intervalMs = body.intervalMs,
-                exposureMs = body.exposureMs,
+            TriggerMode.DARK_FRAME -> com.ehrocha.pulsar.model.FlowStep.DarkFrame(
                 shotCount = body.shotCount,
-                delayMs = body.delayMs,
+                exposureMs = body.exposureMs,
+                gapMs = body.intervalMs,
             )
+            TriggerMode.RAMP -> com.ehrocha.pulsar.model.FlowStep.Ramp(
+                startExposureMs = body.rampStartExposureMs,
+                endExposureMs = body.rampEndExposureMs,
+                steps = body.rampSteps,
+                intervalMs = body.intervalMs,
+            )
+            else -> return
         }
         _flowSteps.value = listOf(step)
         startFlow()
@@ -501,16 +491,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Load a single-step flow pre-filled with the user's current working settings. */
     fun loadQuickMode(type: FlowStepType) {
-        val step = when (type) {
-            FlowStepType.INTERVALOMETER -> FlowStep(
-                type = FlowStepType.INTERVALOMETER,
+        val step: FlowStep = when (type) {
+            FlowStepType.INTERVALOMETER -> FlowStep.Intervalometer(
                 intervalMs = _intervalMs.value,
                 exposureMs = _exposureMs.value,
                 shotCount = _shotCount.value,
                 delayMs = _delayMs.value,
             )
-            FlowStepType.ASTRO -> FlowStep(
-                type = FlowStepType.ASTRO,
+            FlowStepType.ASTRO -> FlowStep.Astro(
                 focalLength = _astroFocalLength.value,
                 cropFactor = _astroCropFactor.value,
                 ruleDivisor = _astroRuleDivisor.value,
@@ -518,19 +506,17 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 shotCount = _astroShotCount.value,
                 delayMs = _astroDelayMs.value,
             )
-            FlowStepType.PAUSE -> FlowStep(type = FlowStepType.PAUSE)
-            FlowStepType.DARK_FRAME -> FlowStep(
-                type = FlowStepType.DARK_FRAME,
-                darkFrameCount = _darkFrameCount.value,
-                darkFrameExposureMs = _darkFrameExposureMs.value,
-                darkFrameGapMs = _darkFrameGapMs.value,
+            FlowStepType.PAUSE -> FlowStep.Pause()
+            FlowStepType.DARK_FRAME -> FlowStep.DarkFrame(
+                shotCount = _darkFrameCount.value,
+                exposureMs = _darkFrameExposureMs.value,
+                gapMs = _darkFrameGapMs.value,
             )
-            FlowStepType.RAMP -> FlowStep(
-                type = FlowStepType.RAMP,
-                rampStartExposureMs = _rampStartExposureMs.value,
-                rampEndExposureMs = _rampEndExposureMs.value,
-                rampSteps = _rampSteps.value,
-                rampIntervalMs = _rampIntervalMs.value,
+            FlowStepType.RAMP -> FlowStep.Ramp(
+                startExposureMs = _rampStartExposureMs.value,
+                endExposureMs = _rampEndExposureMs.value,
+                steps = _rampSteps.value,
+                intervalMs = _rampIntervalMs.value,
             )
         }
         saveFlowSteps(listOf(step))
@@ -628,19 +614,18 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private suspend fun executeFlowStep(step: FlowStep) {
-        when (step.type) {
-            FlowStepType.PAUSE -> {
+        when (step) {
+            is FlowStep.Pause -> {
                 _flowPaused.value = true
                 if (step.wakeOnPause) {
                     wakeScreen()
                 }
-                // Wait until user taps Continue
                 while (_flowPaused.value) {
                     coroutineContext.ensureActive()
                     delay(100)
                 }
             }
-            FlowStepType.INTERVALOMETER -> {
+            is FlowStep.Intervalometer -> {
                 if (_simulatorActive.value) {
                     simulateShots(step.shotCount, step.exposureMs, step.intervalMs, step.delayMs)
                 } else {
@@ -652,7 +637,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     waitForCompletion(step.shotCount)
                 }
             }
-            FlowStepType.ASTRO -> {
+            is FlowStep.Astro -> {
                 val expMs = AppConfig.astroExposureMs(step.focalLength, step.cropFactor, step.ruleDivisor)
                 if (_simulatorActive.value) {
                     simulateShots(step.shotCount, expMs, step.gapMs, step.delayMs)
@@ -663,30 +648,30 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     waitForCompletion(step.shotCount)
                 }
             }
-            FlowStepType.DARK_FRAME -> {
+            is FlowStep.DarkFrame -> {
                 if (_simulatorActive.value) {
-                    simulateShots(step.darkFrameCount, step.darkFrameExposureMs, step.darkFrameGapMs, 0L)
+                    simulateShots(step.shotCount, step.exposureMs, step.gapMs, 0L)
                 } else {
                     sendModeCommand(
                         CommandBuilder.setDarkFrame(
-                            step.darkFrameGapMs, step.darkFrameExposureMs, step.darkFrameCount, 0L,
+                            step.gapMs, step.exposureMs, step.shotCount, 0L,
                         )
                     )
-                    waitForCompletion(step.darkFrameCount)
+                    waitForCompletion(step.shotCount)
                 }
             }
-            FlowStepType.RAMP -> {
-                val steps = step.rampSteps.coerceAtLeast(2)
-                for (i in 0 until steps) {
+            is FlowStep.Ramp -> {
+                val rampSteps = step.steps.coerceAtLeast(2)
+                for (i in 0 until rampSteps) {
                     coroutineContext.ensureActive()
-                    val fraction = i.toDouble() / (steps - 1)
-                    val expMs = (step.rampStartExposureMs +
-                        fraction * (step.rampEndExposureMs - step.rampStartExposureMs)).toLong()
+                    val fraction = i.toDouble() / (rampSteps - 1)
+                    val expMs = (step.startExposureMs +
+                        fraction * (step.endExposureMs - step.startExposureMs)).toLong()
                     if (_simulatorActive.value) {
-                        simulateShots(1, expMs, step.rampIntervalMs, 0L)
+                        simulateShots(1, expMs, step.intervalMs, 0L)
                     } else {
                         sendModeCommand(
-                            CommandBuilder.setRamp(step.rampIntervalMs, expMs, 1, 0L)
+                            CommandBuilder.setRamp(step.intervalMs, expMs, 1, 0L)
                         )
                         waitForCompletion(1)
                     }
