@@ -146,18 +146,23 @@ fun IntScrubField(
                     .fillMaxWidth()
                     .pointerInput(enabled, value, range) {
                         if (!enabled) return@pointerInput
+                        // displayedValue captured here is stale (snapshotted
+                        // with dragPx=0); compute fresh inside callbacks so the
+                        // committed value reflects the actual drag distance.
+                        fun current(): Int =
+                            (value + (dragPx / pxPerStep).roundToInt()).coerceIn(range)
                         detectHorizontalDragGestures(
                             onDragStart = { dragPx = 0f },
                             onDragEnd = {
-                                if (displayedValue != value) onValueChange(displayedValue)
+                                val committed = current()
+                                if (committed != value) onValueChange(committed)
                                 dragPx = 0f
                             },
                             onDragCancel = { dragPx = 0f },
                             onHorizontalDrag = { _, delta ->
-                                val before = displayedValue
+                                val before = current()
                                 dragPx += delta
-                                val after = (value + (dragPx / pxPerStep).roundToInt())
-                                    .coerceIn(range)
+                                val after = current()
                                 if (after != before) {
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 }
@@ -242,17 +247,23 @@ private fun ScrubDigit(
         modifier = modifier
             .pointerInput(enabled, value, range) {
                 if (!enabled) return@pointerInput
+                // displayedValue captured here is stale (snapshotted with
+                // dragPx=0); compute fresh inside callbacks so the committed
+                // value reflects the actual drag distance.
+                fun current(): Int =
+                    (value + (dragPx / pxPerStep).roundToInt()).coerceIn(range)
                 detectHorizontalDragGestures(
                     onDragStart = { dragPx = 0f },
                     onDragEnd = {
-                        if (displayedValue != value) onChange(displayedValue)
+                        val committed = current()
+                        if (committed != value) onChange(committed)
                         dragPx = 0f
                     },
                     onDragCancel = { dragPx = 0f },
                     onHorizontalDrag = { _, delta ->
-                        val before = displayedValue
+                        val before = current()
                         dragPx += delta
-                        val after = (value + (dragPx / pxPerStep).roundToInt()).coerceIn(range)
+                        val after = current()
                         if (after != before) {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         }
