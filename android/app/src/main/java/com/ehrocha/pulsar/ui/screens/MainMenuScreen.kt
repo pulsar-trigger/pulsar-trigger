@@ -17,16 +17,15 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.LensBlur
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.automirrored.filled.ViewList
@@ -54,12 +53,10 @@ fun MainMenuScreen(
     onQuickFlow: (FlowStepType) -> Unit,
     onManualSelected: () -> Unit,
     onCustomFlowSelected: () -> Unit = {},
-    onCameraSelected: () -> Unit = {},
-    phoneCameraActive: Boolean = false,
     onPlannerSelected: () -> Unit = {},
     onAlignmentSelected: () -> Unit = {},
     onWhatsUpSelected: () -> Unit = {},
-    onSequencesSelected: () -> Unit = {},
+    onModesSelected: () -> Unit = {},
     onSettingsSelected: () -> Unit = {},
 ) {
     val fwState by vm.firmwareManager.state.collectAsState()
@@ -180,34 +177,26 @@ fun MainMenuScreen(
                     DashboardScreen(dashboardManager = vm.dashboardManager)
                 }
                 TAB_TRIGGER -> {
-                    val triggerItems = if (phoneCameraActive) {
-                        listOf(
-                            LauncherItem(R.string.mode_camera, Icons.Default.CameraAlt) {
-                                onCameraSelected()
-                            },
-                        )
-                    } else {
-                        listOf(
-                            LauncherItem(R.string.mode_intervalometer, Icons.Default.Timer) {
-                                onQuickFlow(FlowStepType.INTERVALOMETER)
-                            },
-                            LauncherItem(R.string.mode_astro, Icons.Default.Stars) {
-                                onQuickFlow(FlowStepType.ASTRO)
-                            },
-                            LauncherItem(R.string.mode_dark_frame, Icons.Default.LensBlur) {
-                                onQuickFlow(FlowStepType.DARK_FRAME)
-                            },
-                            LauncherItem(R.string.mode_ramp, Icons.AutoMirrored.Filled.TrendingUp) {
-                                onQuickFlow(FlowStepType.RAMP)
-                            },
-                            LauncherItem(R.string.mode_manual, Icons.Default.TouchApp) {
-                                onManualSelected()
-                            },
-                            LauncherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList) {
-                                onCustomFlowSelected()
-                            },
-                        )
-                    }
+                    val triggerItems = listOf(
+                        LauncherItem(R.string.mode_intervalometer, Icons.Default.Timer) {
+                            onQuickFlow(FlowStepType.INTERVALOMETER)
+                        },
+                        LauncherItem(R.string.mode_astro, Icons.Default.Stars) {
+                            onQuickFlow(FlowStepType.ASTRO)
+                        },
+                        LauncherItem(R.string.mode_dark_frame, Icons.Default.LensBlur) {
+                            onQuickFlow(FlowStepType.DARK_FRAME)
+                        },
+                        LauncherItem(R.string.mode_ramp, Icons.AutoMirrored.Filled.TrendingUp) {
+                            onQuickFlow(FlowStepType.RAMP)
+                        },
+                        LauncherItem(R.string.mode_manual, Icons.Default.TouchApp) {
+                            onManualSelected()
+                        },
+                        LauncherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList) {
+                            onCustomFlowSelected()
+                        },
+                    )
                     Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                         LauncherGrid(triggerItems)
                     }
@@ -223,8 +212,8 @@ fun MainMenuScreen(
                         LauncherItem(R.string.mode_whats_up, Icons.Default.Visibility) {
                             onWhatsUpSelected()
                         },
-                        LauncherItem(R.string.mode_sequences, Icons.Default.Layers) {
-                            onSequencesSelected()
+                        LauncherItem(R.string.modes_title, Icons.Default.Tune) {
+                            onModesSelected()
                         },
                     )
                     Box(modifier = Modifier.padding(horizontal = 16.dp)) {

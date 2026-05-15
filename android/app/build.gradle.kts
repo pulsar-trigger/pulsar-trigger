@@ -20,8 +20,8 @@ android {
         applicationId = "com.ehrocha.pulsar"
         minSdk = 26
         targetSdk = 35
-        versionCode = 185
-        versionName = "0.174.0"
+        versionCode = 186
+        versionName = "0.175.0"
     }
 
     signingConfigs {
@@ -87,17 +87,6 @@ dependencies {
 
     // WorkManager — periodic background update checks
     implementation("androidx.work:work-runtime-ktx:2.9.1")
-
-    // CameraX
-    val cameraXVersion = "1.4.1"
-    implementation("androidx.camera:camera-core:$cameraXVersion")
-    implementation("androidx.camera:camera-camera2:$cameraXVersion")
-    implementation("androidx.camera:camera-lifecycle:$cameraXVersion")
-    implementation("androidx.camera:camera-view:$cameraXVersion")
-    // Vendor Night-mode (multi-frame fusion) — used by Auto Astro to get clean
-    // long-exposure-equivalent frames without going through the slow driver
-    // path that fakes long exposures by stacking shorter ones.
-    implementation("androidx.camera:camera-extensions:$cameraXVersion")
 
     // MapLibre — map-based location picker
     implementation("org.maplibre.gl:android-sdk:11.8.0")

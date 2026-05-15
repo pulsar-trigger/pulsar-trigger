@@ -41,7 +41,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.math.sqrt
 
 class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -107,10 +106,68 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val simulatorActive: StateFlow<Boolean> = _simulatorActive
     private var simulatorJob: Job? = null
 
-    // ── Phone Camera ─────────────────────────────────────────────────────
-    private val _phoneCameraActive = MutableStateFlow(false)
-    val phoneCameraActive: StateFlow<Boolean> = _phoneCameraActive
-    val phoneCameraManager = com.ehrocha.pulsar.camera.PhoneCameraManager(app)
+    // ── User-authored modes ──────────────────────────────────────────────
+    private val userModeRepo = com.ehrocha.pulsar.model.UserModeRepository(app)
+    private val _userModes = MutableStateFlow(userModeRepo.load())
+    val userModes: StateFlow<List<com.ehrocha.pulsar.model.UserMode>> = _userModes
+
+    fun upsertUserMode(mode: com.ehrocha.pulsar.model.UserMode) {
+        _userModes.value = userModeRepo.upsert(mode)
+    }
+
+    fun removeUserMode(id: String) {
+        _userModes.value = userModeRepo.remove(id)
+    }
+
+    fun reorderUserModes(ids: List<String>) {
+        _userModes.value = userModeRepo.reorder(ids)
+    }
+
+    /** Run a user trigger mode through the firmware path via the flow runner. */
+    fun runUserMode(mode: com.ehrocha.pulsar.model.UserMode) {
+        if (_simulatorActive.value) return
+        val body = mode.body
+        val flowType = when (body.fwMode) {
+            TriggerMode.INTERVALOMETER -> com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER
+            TriggerMode.ASTRO -> com.ehrocha.pulsar.model.FlowStepType.ASTRO
+            TriggerMode.DARK_FRAME -> com.ehrocha.pulsar.model.FlowStepType.DARK_FRAME
+            TriggerMode.RAMP -> com.ehrocha.pulsar.model.FlowStepType.RAMP
+            else -> return
+        }
+        val step = when (flowType) {
+            com.ehrocha.pulsar.model.FlowStepType.ASTRO -> com.ehrocha.pulsar.model.FlowStep(
+                type = flowType,
+                focalLength = body.focalLength,
+                cropFactor = body.cropFactor,
+                ruleDivisor = body.ruleDivisor,
+                gapMs = body.intervalMs,
+                shotCount = body.shotCount,
+                delayMs = body.delayMs,
+            )
+            com.ehrocha.pulsar.model.FlowStepType.DARK_FRAME -> com.ehrocha.pulsar.model.FlowStep(
+                type = flowType,
+                darkFrameCount = body.shotCount,
+                darkFrameExposureMs = body.exposureMs,
+                darkFrameGapMs = body.intervalMs,
+            )
+            com.ehrocha.pulsar.model.FlowStepType.RAMP -> com.ehrocha.pulsar.model.FlowStep(
+                type = flowType,
+                rampStartExposureMs = body.rampStartExposureMs,
+                rampEndExposureMs = body.rampEndExposureMs,
+                rampSteps = body.rampSteps,
+                rampIntervalMs = body.intervalMs,
+            )
+            else -> com.ehrocha.pulsar.model.FlowStep(
+                type = flowType,
+                intervalMs = body.intervalMs,
+                exposureMs = body.exposureMs,
+                shotCount = body.shotCount,
+                delayMs = body.delayMs,
+            )
+        }
+        _flowSteps.value = listOf(step)
+        startFlow()
+    }
 
     private val _deviceName = MutableStateFlow("Pulsar")
     val deviceName: StateFlow<String> = _deviceName
@@ -290,7 +347,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun requestDeviceInfo() {
-        if (!_simulatorActive.value && !_phoneCameraActive.value) {
+        if (!_simulatorActive.value) {
             bleManager.sendCommand(CommandBuilder.deviceInfoRequest())
         }
     }
@@ -343,10 +400,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             disconnectSimulator()
             return
         }
-        if (_phoneCameraActive.value) {
-            disconnectPhoneCamera()
-            return
-        }
         // Stop any running job on the device before disconnecting so the
         // firmware doesn't keep firing after the BLE link drops.
         val running = _status.value?.state.let {
@@ -366,9 +419,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     // ── Field setters (encapsulation) ────────────────────────────────────
     fun setIntervalMs(v: Long) {
-        // Phone camera can shoot back-to-back (gap=0); BLE device needs minimum gap
-        val min = if (_phoneCameraActive.value) 0L else AppConfig.MIN_INTERVAL_MS
-        _intervalMs.value = v.coerceAtLeast(min)
+        _intervalMs.value = v.coerceAtLeast(AppConfig.MIN_INTERVAL_MS)
     }
     fun setExposureMs(v: Long) { _exposureMs.value = v.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS) }
     fun setShotCount(v: Int) { _shotCount.value = v.coerceAtLeast(AppConfig.MIN_SHOT_COUNT) }
@@ -437,12 +488,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun sendPins() {
-        if (_simulatorActive.value || _phoneCameraActive.value) return
+        if (_simulatorActive.value) return
         bleManager.sendCommand(CommandBuilder.setPins(_pinShutter.value, _pinFocus.value))
     }
 
     private fun sendAutoOff() {
-        if (_simulatorActive.value || _phoneCameraActive.value) return
+        if (_simulatorActive.value) return
         bleManager.sendCommand(CommandBuilder.setAutoOff(_autoOffMinutes.value))
     }
 
@@ -483,263 +534,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             )
         }
         saveFlowSteps(listOf(step))
-    }
-
-    /** Sky-exposure rule for Auto Astro. NPF accounts for pixel pitch; the 400
-     *  and 500 rules are the classic focal-length-only divisors. */
-    enum class AutoAstroStyle { NPF, RULE_400, RULE_500 }
-
-    /**
-     * One-tap astrophotography for phone camera. Sky exposure derives from the
-     * picked rule (NPF / 400 / 500) for the active lens; ISO 1600 is target.
-     * Optional 30 s low-ISO foreground frame is captured first when
-     * [includeForeground] is true (default).
-     */
-    fun startAutoAstro(
-        style: AutoAstroStyle = AutoAstroStyle.NPF,
-        includeForeground: Boolean = true,
-    ) {
-        if (!_phoneCameraActive.value) return
-        val lens = phoneCameraManager.lenses.value
-            .getOrNull(phoneCameraManager.selectedLens.value) ?: return
-
-        // Pin focus at infinity for the run. CameraX's takePicture pre-capture
-        // sequence runs an AF lock, and CONTINUOUS_PICTURE on a starry sky
-        // never converges — every frame stalls until the per-shot timeout.
-        // startFlow restores the user's previous focus when the sequence ends.
-        if (lens.capabilities.supportsManualFocus) {
-            phoneCameraManager.setManualFocusDist(0f)
-        }
-
-        // Preferred path: vendor Night-mode extension. Each capture is a
-        // multi-frame fused frame — clean and exposure-correct without the
-        // long-exposure-fake stalls. Style/foreground inputs don't apply once
-        // the extension drives the sensor; we just ask for fewer cleaner shots.
-        if (phoneCameraManager.enableNightMode()) {
-            val sky = com.ehrocha.pulsar.model.FlowStep(
-                type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
-                intervalMs = 1_000L,
-                exposureMs = 1L,                // ignored by night extension
-                shotCount = 5,                  // each shot is already an internal stack
-                delayMs = 0L,
-                isoOverride = null,             // extension auto-handles ISO
-            )
-            _flowSteps.value = listOf(sky)
-            pendingSequenceMode = com.ehrocha.pulsar.stacking.CaptureMode.AUTO_ASTRO
-            startFlow()
-            return
-        }
-
-        // Fallback: no Night-mode on this device. Clamp the requested exposure
-        // to what the sensor advertises (phones max out around 1–2 s) and bump
-        // ISO proportionally to keep total light aligned with the picked rule.
-        val sensorMaxMs = lens.capabilities.exposureTimeRange?.upper?.div(1_000_000L) ?: 30_000L
-        val isoRange = lens.capabilities.isoRange
-
-        val skyIntendedMs = computePhoneSkyExposureMs(lens, style)
-        val skyExpMs = skyIntendedMs.coerceAtMost(sensorMaxMs)
-        val skyIso = isoRange?.let {
-            val compensated = ((1600L * skyIntendedMs) / skyExpMs.coerceAtLeast(1L)).toInt()
-            compensated.coerceIn(it.lower, it.upper)
-        }
-
-        val sky = com.ehrocha.pulsar.model.FlowStep(
-            type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
-            intervalMs = 4_000L,
-            exposureMs = skyExpMs,
-            shotCount = 20,
-            delayMs = 0L,
-            isoOverride = skyIso,
-        )
-
-        // Foreground (when requested): one 30 s-equivalent low-ISO frame, also
-        // clamped to sensor max with ISO compensation. Captured FIRST so the
-        // user gets the foreground even if they stop the sequence early.
-        _flowSteps.value = if (includeForeground) {
-            val groundIntendedMs = 30_000L
-            val groundExpMs = groundIntendedMs.coerceAtMost(sensorMaxMs)
-            val groundIso = isoRange?.let {
-                val compensated = ((200L * groundIntendedMs) / groundExpMs.coerceAtLeast(1L)).toInt()
-                compensated.coerceIn(it.lower, it.upper)
-            }
-            val ground = com.ehrocha.pulsar.model.FlowStep(
-                type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
-                intervalMs = 2_000L,
-                exposureMs = groundExpMs,
-                shotCount = 1,
-                delayMs = 0L,
-                isoOverride = groundIso,
-            )
-            listOf(ground, sky)
-        } else {
-            listOf(sky)
-        }
-        pendingSequenceMode = com.ehrocha.pulsar.stacking.CaptureMode.AUTO_ASTRO
-        startFlow()
-    }
-
-
-    /** Sub-styles of the Timelapse mode. All produce TIMELAPSE-tagged sequences
-     *  so the same composites (Lighten / Mean) are offered afterwards. */
-    enum class TimelapseStyle { DEFAULT, ACTION_BURST, CLOUDSCAPE }
-
-    /**
-     * One-tap daytime timelapse. Three sub-styles tuned for different daytime
-     * subjects:
-     *  - DEFAULT:      1/1000s × 10s × 360 (~1h → 12s @30fps). Sunsets, traffic, construction.
-     *  - ACTION_BURST: 1/1000s × 0.5s × 100 (~50s of frames). Sports, kids, pets.
-     *  - CLOUDSCAPE:   1/250s × 30s × 480 (~4h → 16s @30fps). Slowly-drifting clouds.
-     */
-    fun startTimelapse(style: TimelapseStyle = TimelapseStyle.DEFAULT) {
-        if (!_phoneCameraActive.value) return
-        val lens = phoneCameraManager.lenses.value
-            .getOrNull(phoneCameraManager.selectedLens.value) ?: return
-
-        // Lower ISO is fine in daylight; pick per-style and clamp to the lens range.
-        val targetIso = when (style) {
-            TimelapseStyle.DEFAULT -> 200
-            TimelapseStyle.ACTION_BURST -> 400  // shorter shots of moving subjects benefit from a bit more sensitivity
-            TimelapseStyle.CLOUDSCAPE -> 100    // long total run, want clean shadows
-        }
-        lens.capabilities.isoRange?.let { range ->
-            phoneCameraManager.setManualIso(targetIso.coerceIn(range.lower, range.upper))
-        }
-
-        val (intervalMs, exposureMs, shotCount) = when (style) {
-            TimelapseStyle.DEFAULT      -> Triple(10_000L, 1L,   360)
-            TimelapseStyle.ACTION_BURST -> Triple(500L,    1L,   100)
-            TimelapseStyle.CLOUDSCAPE   -> Triple(30_000L, 4L,   480)  // 1/250s ≈ 4 ms
-        }
-
-        val step = com.ehrocha.pulsar.model.FlowStep(
-            type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
-            intervalMs = intervalMs,
-            exposureMs = exposureMs,
-            shotCount = shotCount,
-            delayMs = 0L,
-        )
-        _flowSteps.value = listOf(step)
-        pendingSequenceMode = com.ehrocha.pulsar.stacking.CaptureMode.TIMELAPSE
-        startFlow()
-    }
-
-    /**
-     * One-tap fireworks capture. Bursts are very bright, so we use the lowest
-     * ISO available and long-enough exposures to capture the full launch+bloom
-     * arc. Zero gap to never miss a burst during a show.
-     */
-    fun startFireworks() {
-        if (!_phoneCameraActive.value) return
-        val lens = phoneCameraManager.lenses.value
-            .getOrNull(phoneCameraManager.selectedLens.value) ?: return
-
-        // Lowest ISO — fireworks are bright; we want highlight headroom.
-        lens.capabilities.isoRange?.let { range ->
-            phoneCameraManager.setManualIso(range.lower.coerceAtMost(200))
-        }
-
-        val step = com.ehrocha.pulsar.model.FlowStep(
-            type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
-            intervalMs = 2_000L,
-            exposureMs = 4_000L,
-            shotCount = 200,
-            delayMs = 0L,
-        )
-        _flowSteps.value = listOf(step)
-        pendingSequenceMode = com.ehrocha.pulsar.stacking.CaptureMode.FIREWORKS
-        startFlow()
-    }
-
-    /**
-     * One-tap star trails capture. Don't fight earth rotation — embrace it. Many
-     * back-to-back medium-long exposures that lighten-blend later into iconic
-     * concentric arcs around the celestial pole.
-     */
-    fun startStarTrails() {
-        if (!_phoneCameraActive.value) return
-        val lens = phoneCameraManager.lenses.value
-            .getOrNull(phoneCameraManager.selectedLens.value) ?: return
-
-        // ISO 800 — moderate; balances per-frame trail brightness against noise.
-        lens.capabilities.isoRange?.let { range ->
-            phoneCameraManager.setManualIso(800.coerceIn(range.lower, range.upper))
-        }
-
-        val step = com.ehrocha.pulsar.model.FlowStep(
-            type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
-            intervalMs = 2_000L,
-            exposureMs = 30_000L,
-            shotCount = 120,
-            delayMs = 0L,
-        )
-        _flowSteps.value = listOf(step)
-        pendingSequenceMode = com.ehrocha.pulsar.stacking.CaptureMode.TRAILS
-        startFlow()
-    }
-
-    /**
-     * One-tap thunderstorm/lightning capture. Long-but-not-too-long exposures with
-     * zero gap to maximize the chance of catching a strike. ISO 400 keeps highlight
-     * headroom for the flash itself. Frames land in their own sequence folder so a
-     * later auto-cull/composite pass can pick out the winners.
-     */
-    fun startStormCapture() {
-        if (!_phoneCameraActive.value) return
-        val lens = phoneCameraManager.lenses.value
-            .getOrNull(phoneCameraManager.selectedLens.value) ?: return
-
-        // Modest ISO — storm sky has ambient light, lightning is bright.
-        lens.capabilities.isoRange?.let { range ->
-            phoneCameraManager.setManualIso(400.coerceIn(range.lower, range.upper))
-        }
-
-        val step = com.ehrocha.pulsar.model.FlowStep(
-            type = com.ehrocha.pulsar.model.FlowStepType.INTERVALOMETER,
-            intervalMs = 2_000L,
-            exposureMs = 4_000L,
-            shotCount = 300,
-            delayMs = 0L,
-        )
-        _flowSteps.value = listOf(step)
-        pendingSequenceMode = com.ehrocha.pulsar.stacking.CaptureMode.STORM
-        startFlow()
-    }
-
-    /** NPF rule applied to phone-camera lens metadata (handles small sensors with sub-2µm pitch). */
-    private fun computePhoneNpfExposureMs(lens: com.ehrocha.pulsar.camera.PhoneLens): Long {
-        val focal = if (lens.focalLength > 0f) lens.focalLength else 5f
-        val sensorWidth = if (lens.sensorWidth > 0f) lens.sensorWidth else 6f
-        val cropFactor = (36f / sensorWidth).coerceAtLeast(1f)
-        val aperture = if (lens.aperture > 0f) lens.aperture else 2.0f
-
-        // Estimate horizontal pixel count from megapixels assuming 4:3 aspect ratio.
-        val mp = if (lens.megapixels > 0f) lens.megapixels else 12f
-        val horizPixels = sqrt(mp.toDouble() * 1_000_000.0 * 4.0 / 3.0)
-        val pixelPitchUm = (sensorWidth.toDouble() / horizPixels) * 1000.0
-
-        // NPF: (35 × aperture + 30 × pixelPitch_um) / (focal × cropFactor)
-        val expS = (35.0 * aperture + 30.0 * pixelPitchUm) / (focal * cropFactor)
-        return (expS * 1000).toLong().coerceAtLeast(AppConfig.MIN_ASTRO_EXPOSURE_MS)
-    }
-
-    /** Max sky exposure for the picked Auto Astro style. */
-    private fun computePhoneSkyExposureMs(
-        lens: com.ehrocha.pulsar.camera.PhoneLens,
-        style: AutoAstroStyle,
-    ): Long = when (style) {
-        AutoAstroStyle.NPF -> computePhoneNpfExposureMs(lens)
-        AutoAstroStyle.RULE_400 -> phoneRuleExposureMs(lens, 400)
-        AutoAstroStyle.RULE_500 -> phoneRuleExposureMs(lens, 500)
-    }
-
-    /** Classic N-rule: divisor / (focal × cropFactor). Falls back to safe defaults
-     *  when lens metadata is missing. */
-    private fun phoneRuleExposureMs(lens: com.ehrocha.pulsar.camera.PhoneLens, divisor: Int): Long {
-        val focal = if (lens.focalLength > 0f) lens.focalLength else 5f
-        val sensorWidth = if (lens.sensorWidth > 0f) lens.sensorWidth else 6f
-        val cropFactor = (36f / sensorWidth).coerceAtLeast(1f)
-        val expS = divisor.toDouble() / (focal * cropFactor)
-        return (expS * 1000).toLong().coerceAtLeast(AppConfig.MIN_ASTRO_EXPOSURE_MS)
     }
 
     fun saveFlowSteps(steps: List<FlowStep>) {
@@ -796,9 +590,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         .map { flows -> flows.flatMap { it.tags }.distinct().sorted() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    /** Capture mode tag to write on the next sequence folder, consumed by [startFlow]. */
-    private var pendingSequenceMode: com.ehrocha.pulsar.stacking.CaptureMode? = null
-
     fun startFlow() {
         val steps = _flowSteps.value
         if (steps.isEmpty()) return
@@ -807,47 +598,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         _flowPaused.value = false
         _flowCurrentStep.value = 0
         flowJob = viewModelScope.launch {
-            // One sequence folder for the whole flow — all steps share a single
-            // DCIM/Pulsar/Sequence_<ts>/ so multi-step captures (e.g. Auto Astro
-            // sky frames + bonus foreground) stack cleanly together.
-            if (_phoneCameraActive.value) {
-                phoneCameraManager.beginSequenceFolder()
-                // Tag the folder with which capture mode produced it so the
-                // Sequences detail screen can offer only composites that fit.
-                val mode = pendingSequenceMode ?: com.ehrocha.pulsar.stacking.CaptureMode.MANUAL
-                phoneCameraManager.activeSequencePath()?.let { path ->
-                    com.ehrocha.pulsar.stacking.SequenceTags.set(
-                        getApplication<Application>(), path, mode,
-                    )
-                }
-                pendingSequenceMode = null
-            }
-            // Snapshot the user's manual ISO + focus before any step mutates them
-            // so we can restore once at the end. Per-step restore was thrashing
-            // AE on→off between steps and stalling the second step on devices
-            // recovering from a long capture (Auto Astro foreground + sky).
-            val savedIso = if (_phoneCameraActive.value) phoneCameraManager.manualIso.value else null
-            val savedFocus = if (_phoneCameraActive.value) phoneCameraManager.manualFocusDist.value else null
             try {
                 for (i in steps.indices) {
                     _flowCurrentStep.value = i
                     executeFlowStep(steps[i])
                 }
-                // All steps complete
             } finally {
-                withContext(NonCancellable) {
-                    if (_phoneCameraActive.value) {
-                        // Drop Night-mode binding (no-op if it was never enabled)
-                        // before re-applying user-controlled settings — restoring
-                        // exposure/iso/focus only makes sense on the standard
-                        // binding where Camera2Interop options are honored.
-                        phoneCameraManager.disableNightMode()
-                        phoneCameraManager.restoreExposureSettings()
-                        phoneCameraManager.setManualIso(savedIso)
-                        phoneCameraManager.setManualFocusDist(savedFocus)
-                        phoneCameraManager.endSequenceFolder()
-                    }
-                }
                 _flowRunning.value = false
                 _flowPaused.value = false
                 _flowCurrentStep.value = -1
@@ -862,11 +618,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     fun stopFlow() {
         flowJob?.cancel()
         flowJob = null
-        // Stop the device if it's running
-        if (!_simulatorActive.value && !_phoneCameraActive.value) {
+        if (!_simulatorActive.value) {
             bleManager.sendCommand(CommandBuilder.stop())
         }
-        // Reset status to IDLE immediately so UI doesn't show stale progress
         _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
         _flowRunning.value = false
         _flowPaused.value = false
@@ -887,13 +641,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             FlowStepType.INTERVALOMETER -> {
-                val expMs = step.exposureMs
-                val gapMs = step.intervalMs
-                val shots = step.shotCount
                 if (_simulatorActive.value) {
-                    simulateShots(shots, expMs, gapMs, step.delayMs)
-                } else if (_phoneCameraActive.value) {
-                    phoneCameraShots(shots, expMs, gapMs, step.delayMs, step.isoOverride)
+                    simulateShots(step.shotCount, step.exposureMs, step.intervalMs, step.delayMs)
                 } else {
                     sendModeCommand(
                         CommandBuilder.setIntervalometer(
@@ -907,8 +656,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 val expMs = AppConfig.astroExposureMs(step.focalLength, step.cropFactor, step.ruleDivisor)
                 if (_simulatorActive.value) {
                     simulateShots(step.shotCount, expMs, step.gapMs, step.delayMs)
-                } else if (_phoneCameraActive.value) {
-                    phoneCameraShots(step.shotCount, expMs, step.gapMs, step.delayMs)
                 } else {
                     sendModeCommand(
                         CommandBuilder.setAstro(step.gapMs, expMs, step.shotCount, step.delayMs)
@@ -919,8 +666,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             FlowStepType.DARK_FRAME -> {
                 if (_simulatorActive.value) {
                     simulateShots(step.darkFrameCount, step.darkFrameExposureMs, step.darkFrameGapMs, 0L)
-                } else if (_phoneCameraActive.value) {
-                    phoneCameraShots(step.darkFrameCount, step.darkFrameExposureMs, step.darkFrameGapMs, 0L)
                 } else {
                     sendModeCommand(
                         CommandBuilder.setDarkFrame(
@@ -939,8 +684,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         fraction * (step.rampEndExposureMs - step.rampStartExposureMs)).toLong()
                     if (_simulatorActive.value) {
                         simulateShots(1, expMs, step.rampIntervalMs, 0L)
-                    } else if (_phoneCameraActive.value) {
-                        phoneCameraShots(1, expMs, step.rampIntervalMs, 0L)
                     } else {
                         sendModeCommand(
                             CommandBuilder.setRamp(step.rampIntervalMs, expMs, 1, 0L)
@@ -1074,7 +817,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun start() {
-        if (_simulatorActive.value || _phoneCameraActive.value) {
+        if (_simulatorActive.value) {
             startSimulatorRun()
             return
         }
@@ -1083,12 +826,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun stop() {
-        // Check flow first — phone camera and simulator both use flows from CameraScreen
         if (_flowRunning.value) {
             stopFlow()
             return
         }
-        if (_simulatorActive.value || _phoneCameraActive.value) {
+        if (_simulatorActive.value) {
             stopSimulatorRun()
             return
         }
@@ -1096,8 +838,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun renameDevice(suffix: String) {
-        if (!_simulatorActive.value && !_phoneCameraActive.value) {
-            // Request GATT cache clear so the new name is picked up on reconnect
+        if (!_simulatorActive.value) {
             bleManager.requestCacheRefresh()
             bleManager.sendCommand(CommandBuilder.setName(suffix))
         }
@@ -1107,18 +848,15 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     fun setAutoOff(minutes: Int) {
         _autoOffMinutes.value = minutes
         prefs.edit().putInt(KEY_AUTO_OFF, minutes).apply()
-        if (!_simulatorActive.value && !_phoneCameraActive.value) {
+        if (!_simulatorActive.value) {
             bleManager.sendCommand(CommandBuilder.setAutoOff(minutes))
         }
     }
 
     /** Press & Hold: shutter open on down */
     fun shutterDown() {
-        if (_simulatorActive.value || _phoneCameraActive.value) {
+        if (_simulatorActive.value) {
             _status.value = _status.value?.copy(state = DeviceState.RUNNING)
-            if (_phoneCameraActive.value) {
-                phoneCameraManager.capture()
-            }
             return
         }
         sendConfig()
@@ -1127,7 +865,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Press & Hold: shutter close on up */
     fun shutterUp() {
-        if (_simulatorActive.value || _phoneCameraActive.value) {
+        if (_simulatorActive.value) {
             _status.value = _status.value?.copy(state = DeviceState.IDLE)
             return
         }
@@ -1185,55 +923,37 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
 
         simulatorJob = viewModelScope.launch {
-            if (_phoneCameraActive.value) phoneCameraManager.beginSequenceFolder()
-            try {
-                if (startDelayMs > 0) {
-                    val totalTimeMs = startDelayMs + totalShots * (expMs + gapMs) - gapMs
-                    _status.value = _status.value?.copy(
-                        state = DeviceState.WAITING, shotsTaken = 0,
-                        timeRemainingMs = totalTimeMs,
-                    )
-                    delay(startDelayMs)
-                }
-
-                for (shot in 1..totalShots) {
-                    val remaining = (totalShots - shot + 1) * (expMs + gapMs) - gapMs
-                    // Exposing
-                    _status.value = _status.value?.copy(
-                        state = DeviceState.RUNNING,
-                        shotsTaken = shot - 1,
-                        timeRemainingMs = remaining,
-                    )
-                    if (_phoneCameraActive.value) {
-                        val captureTimeoutMs = maxOf(30_000L, expMs * 2 + 10_000L)
-                        withTimeoutOrNull(captureTimeoutMs) {
-                            phoneCameraManager.captureAndWait()
-                        }
-                    } else {
-                        delay(expMs)
-                    }
-                    // Shot complete — transition to WAITING with updated shot count
-                    _status.value = _status.value?.copy(
-                        state = DeviceState.WAITING,
-                        shotsTaken = shot,
-                        timeRemainingMs = (remaining - expMs).coerceAtLeast(0),
-                    )
-                    // Gap (except after last shot)
-                    if (shot < totalShots) {
-                        delay(gapMs)
-                    }
-                }
-
-                // Done
+            if (startDelayMs > 0) {
+                val totalTimeMs = startDelayMs + totalShots * (expMs + gapMs) - gapMs
                 _status.value = _status.value?.copy(
-                    state = DeviceState.IDLE,
-                    timeRemainingMs = 0L,
+                    state = DeviceState.WAITING, shotsTaken = 0,
+                    timeRemainingMs = totalTimeMs,
                 )
-            } finally {
-                withContext(NonCancellable) {
-                    if (_phoneCameraActive.value) phoneCameraManager.endSequenceFolder()
+                delay(startDelayMs)
+            }
+
+            for (shot in 1..totalShots) {
+                val remaining = (totalShots - shot + 1) * (expMs + gapMs) - gapMs
+                _status.value = _status.value?.copy(
+                    state = DeviceState.RUNNING,
+                    shotsTaken = shot - 1,
+                    timeRemainingMs = remaining,
+                )
+                delay(expMs)
+                _status.value = _status.value?.copy(
+                    state = DeviceState.WAITING,
+                    shotsTaken = shot,
+                    timeRemainingMs = (remaining - expMs).coerceAtLeast(0),
+                )
+                if (shot < totalShots) {
+                    delay(gapMs)
                 }
             }
+
+            _status.value = _status.value?.copy(
+                state = DeviceState.IDLE,
+                timeRemainingMs = 0L,
+            )
         }
     }
 
@@ -1244,124 +964,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             state = DeviceState.IDLE,
             timeRemainingMs = 0L,
         )
-    }
-
-    // ── Phone Camera ─────────────────────────────────────────────────────
-
-    fun connectPhoneCamera() {
-        stopScan()
-        _phoneCameraActive.value = true
-        _intervalMs.value = 0L  // Phone camera defaults to no gap (back-to-back)
-        _deviceName.value = "Phone Camera"
-        _status.value = StatusFrame(
-            state = DeviceState.IDLE,
-            mode = TriggerMode.INTERVALOMETER.id,
-            shotsTaken = 0,
-            timeRemainingMs = 0L,
-            batteryPct = 100,
-            errorCode = 0,
-        )
-        _connected.value = true
-    }
-
-    fun disconnectPhoneCamera() {
-        simulatorJob?.cancel()
-        simulatorJob = null
-        phoneCameraManager.release()
-        _phoneCameraActive.value = false
-        _connected.value = false
-        _status.value = null
-        _deviceName.value = "Pulsar"
-    }
-
-    /**
-     * Run a shot sequence using the phone camera via CameraX.
-     *
-     * Sequence folder is owned by [startFlow], not this function — multi-step flows
-     * (e.g. Auto Astro sky + bonus foreground) deliberately share one folder.
-     *
-     * @param isoOverride if non-null, manual ISO is locked to this value for the
-     *   duration of the step and restored on exit. Used for the bonus foreground
-     *   frame (low ISO + long exposure).
-     */
-    private suspend fun phoneCameraShots(
-        totalShots: Int,
-        expMs: Long,
-        gapMs: Long,
-        startDelayMs: Long,
-        isoOverride: Int? = null,
-    ) {
-        // Restore is deferred to the surrounding flow (see startFlow): toggling
-        // AE off→on→off between steps was hanging the second step on devices
-        // that take a while to recover after a long capture (e.g. Auto Astro's
-        // 30 s foreground frame followed by NPF sky frames).
-
-        // Auto-route long requests through Night-mode. Phones cap single-frame
-        // sensor exposure at ~1–2 s; asking for more makes the driver fake the
-        // long shot by stacking shorter ones, which roughly doubles wall-clock
-        // per shot. Vendor Night-mode does the multi-frame fusion properly.
-        // Skip this if the caller (e.g. Auto Astro) already enabled night mode
-        // — we don't want to disable it on step exit and reopen for the next.
-        val sensorMaxMs = phoneCameraManager.lenses.value
-            .getOrNull(phoneCameraManager.selectedLens.value)
-            ?.capabilities?.exposureTimeRange?.upper?.div(1_000_000L)
-        val locallyEnabledNight = if (
-            !phoneCameraManager.isNightModeActive
-            && sensorMaxMs != null && expMs > sensorMaxMs
-            && phoneCameraManager.nightModeAvailable.value
-        ) {
-            phoneCameraManager.enableNightMode()
-        } else false
-
-        val actualExpNs = phoneCameraManager.setSensorExposureForCapture(expMs)
-        val sensorHandlesExposure = actualExpNs > 0
-
-        if (isoOverride != null) phoneCameraManager.setManualIso(isoOverride)
-
-        try {
-        if (startDelayMs > 0) {
-            _status.value = _status.value?.copy(
-                state = DeviceState.WAITING, shotsTaken = 0,
-                timeRemainingMs = startDelayMs + totalShots * (expMs + gapMs) - gapMs,
-            )
-            delay(startDelayMs)
-        }
-        for (shot in 1..totalShots) {
-            coroutineContext.ensureActive()
-            val remaining = (totalShots - shot + 1) * (expMs + gapMs) - gapMs
-            _status.value = _status.value?.copy(
-                state = DeviceState.RUNNING, shotsTaken = shot - 1, timeRemainingMs = remaining,
-            )
-            // Timeout = 2× requested exposure + 10s safety margin (or 30s minimum
-            // for short exposures). Long takePicture calls have been observed to
-            // hang on some devices after a previous long shot — this stops the
-            // sequence rather than letting the user have to manually intervene.
-            val captureTimeoutMs = maxOf(30_000L, expMs * 2 + 10_000L)
-            val ok = withTimeoutOrNull(captureTimeoutMs) {
-                phoneCameraManager.captureAndWait()
-            }
-            if (ok == null) {
-                Log.w("PulsarVM", "captureAndWait timed out at shot $shot/$totalShots (${expMs}ms requested) — moving on")
-            }
-            if (!sensorHandlesExposure) {
-                delay(expMs)
-            }
-            _status.value = _status.value?.copy(
-                state = DeviceState.WAITING, shotsTaken = shot,
-                timeRemainingMs = (remaining - expMs).coerceAtLeast(0),
-            )
-            if (shot < totalShots) {
-                delay(gapMs)
-            }
-        }
-        _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
-        } finally {
-            // Only tear down if WE turned it on; flow-level callers (Auto Astro)
-            // own the binding for the whole flow.
-            if (locallyEnabledNight) {
-                withContext(NonCancellable) { phoneCameraManager.disableNightMode() }
-            }
-        }
     }
 
     // ── Notification helpers ─────────────────────────────────────────────
@@ -1400,7 +1002,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         super.onCleared()
         stopScan()
         simulatorJob?.cancel()
-        phoneCameraManager.release()
         // Send stop before tearing down so firmware doesn't keep firing
         if (flowJob != null || _status.value?.state.let {
                 it == DeviceState.RUNNING || it == DeviceState.WAITING

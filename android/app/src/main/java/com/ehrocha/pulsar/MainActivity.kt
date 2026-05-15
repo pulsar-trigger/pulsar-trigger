@@ -61,13 +61,10 @@ import com.ehrocha.pulsar.ui.components.NightModeToggle
 import com.ehrocha.pulsar.ui.screens.MainMenuScreen
 import com.ehrocha.pulsar.ui.screens.ModeScreen
 import com.ehrocha.pulsar.ui.screens.ScanScreen
-import com.ehrocha.pulsar.ui.screens.SequenceDetailScreen
-import com.ehrocha.pulsar.ui.screens.SequencesScreen
 import com.ehrocha.pulsar.ui.screens.SettingsScreen
 import com.ehrocha.pulsar.ui.screens.SettingsSection
 import com.ehrocha.pulsar.ui.screens.CustomFlowScreen
 import com.ehrocha.pulsar.ui.screens.AlignmentScreen
-import com.ehrocha.pulsar.ui.screens.CameraScreen
 import com.ehrocha.pulsar.ui.screens.WhatsUpScreen
 import com.ehrocha.pulsar.ui.screens.DashboardScreen
 import com.ehrocha.pulsar.ui.screens.PlannerScreen
@@ -220,7 +217,6 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
     var currentScreen by remember { mutableStateOf<AppScreen>(AppScreen.Scan) }
     var menuTab by remember { mutableIntStateOf(com.ehrocha.pulsar.ui.screens.TAB_TRIGGER) }
     val connected by vm.connected.collectAsState()
-    val phoneCameraActive by vm.phoneCameraActive.collectAsState()
 
     // ── Update-available dialog ──────────────────────────────────────
     val fwState by vm.firmwareManager.state.collectAsState()
@@ -307,7 +303,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
     ) {
     Column(Modifier.fillMaxSize()) {
         // ── Persistent top bar (hidden on Scan screen) ───────────────
-        if (currentScreen !is AppScreen.Scan && currentScreen !is AppScreen.Camera) {
+        if (currentScreen !is AppScreen.Scan) {
             Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -322,10 +318,8 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                         letterSpacing = 1.sp,
                         modifier = Modifier.weight(1f),
                     )
-                    if (!phoneCameraActive) {
-                        BatteryIndicator()
-                        SignalStrengthIndicator()
-                    }
+                    BatteryIndicator()
+                    SignalStrengthIndicator()
                 }
             }
             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
@@ -335,15 +329,10 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
         when (val screen = currentScreen) {
             AppScreen.Scan -> ScanScreen(vm) { currentScreen = AppScreen.Menu }
             AppScreen.Menu -> {
-                if (phoneCameraActive) {
-                    BackHandler { vm.disconnect() }
-                }
                 MainMenuScreen(
                     vm = vm,
                     initialTab = menuTab,
                     onTabChanged = { menuTab = it },
-                    phoneCameraActive = phoneCameraActive,
-                    onCameraSelected = { currentScreen = AppScreen.Camera },
                     onQuickFlow = { type ->
                         when (type) {
                             FlowStepType.INTERVALOMETER -> currentScreen = AppScreen.Mode(TriggerMode.INTERVALOMETER)
@@ -358,7 +347,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     onPlannerSelected = { currentScreen = AppScreen.Planner },
                     onAlignmentSelected = { currentScreen = AppScreen.Alignment },
                     onWhatsUpSelected = { currentScreen = AppScreen.WhatsUp },
-                    onSequencesSelected = { currentScreen = AppScreen.Sequences },
+                    onModesSelected = { currentScreen = AppScreen.Modes },
                     onSettingsSelected = { currentScreen = AppScreen.Settings(SettingsSection.UPDATES) },
                 )
             }
@@ -457,25 +446,20 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     onBack = { currentScreen = AppScreen.Menu },
                 )
             }
-            AppScreen.Camera -> {
+            AppScreen.Modes -> {
                 BackHandler { currentScreen = AppScreen.Menu }
-                CameraScreen(
+                com.ehrocha.pulsar.ui.screens.ModesScreen(
                     vm = vm,
                     onBack = { currentScreen = AppScreen.Menu },
+                    onEdit = { id -> currentScreen = AppScreen.ModeEditor(id) },
                 )
             }
-            AppScreen.Sequences -> {
-                BackHandler { currentScreen = AppScreen.Menu }
-                SequencesScreen(
-                    onBack = { currentScreen = AppScreen.Menu },
-                    onOpenSequence = { path -> currentScreen = AppScreen.SequenceDetail(path) },
-                )
-            }
-            is AppScreen.SequenceDetail -> {
-                BackHandler { currentScreen = AppScreen.Sequences }
-                SequenceDetailScreen(
-                    sequencePath = screen.path,
-                    onBack = { currentScreen = AppScreen.Sequences },
+            is AppScreen.ModeEditor -> {
+                BackHandler { currentScreen = AppScreen.Modes }
+                com.ehrocha.pulsar.ui.screens.ModeEditorScreen(
+                    vm = vm,
+                    editingId = screen.modeId,
+                    onBack = { currentScreen = AppScreen.Modes },
                 )
             }
         }
@@ -534,7 +518,6 @@ private sealed class AppScreen {
     data class SessionDetail(val session: PlannerSession, val event: PlannerEvent) : AppScreen()
     data object Alignment : AppScreen()
     data object WhatsUp : AppScreen()
-    data object Camera : AppScreen()
-    data object Sequences : AppScreen()
-    data class SequenceDetail(val path: String) : AppScreen()
+    data object Modes : AppScreen()
+    data class ModeEditor(val modeId: String? = null) : AppScreen()
 }

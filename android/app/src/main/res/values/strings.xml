@@ -632,6 +632,34 @@
     <string name="auto_astro_foreground_off">Foreground frame: Off</string>
     <string name="iso_auto">ISO Auto</string>
 
+    <!-- User-authored modes -->
+    <string name="modes_title">User Modes</string>
+    <string name="modes_help">Save up to %1$d recipes you can launch from the camera strip.</string>
+    <string name="modes_empty">No user modes yet — tap + to create one.</string>
+    <string name="modes_add">Add user mode</string>
+    <string name="modes_edit">Edit</string>
+    <string name="modes_delete">Delete</string>
+    <string name="modes_save">Save</string>
+    <string name="modes_new">New mode</string>
+    <string name="modes_edit_title">Edit mode</string>
+    <string name="modes_field_name">Name</string>
+    <string name="modes_field_kind">Kind</string>
+    <string name="modes_kind_camera">Camera</string>
+    <string name="modes_kind_trigger">Trigger</string>
+    <string name="modes_field_tag">Tag (post-capture stacker)</string>
+    <string name="modes_field_fwmode">Firmware mode</string>
+    <string name="modes_field_exposure_kind">Exposure</string>
+    <string name="modes_exp_fixed">Fixed</string>
+    <string name="modes_exp_clamp">Sensor max</string>
+    <string name="modes_field_exposure_ms">Exposure (ms)</string>
+    <string name="modes_field_interval_ms">Interval (ms)</string>
+    <string name="modes_field_shot_count">Shot count</string>
+    <string name="modes_field_delay_ms">Start delay (ms)</string>
+    <string name="modes_field_iso_override">Lock manual ISO</string>
+    <string name="modes_field_prefer_night">Prefer Night-mode (when available)</string>
+    <string name="mode_user">User</string>
+    <string name="modes_slot_empty">Add</string>
+
     <!-- Sequences / stacking -->
     <string name="mode_sequences">Sequences</string>
     <string name="mode_sequences_desc">Stack captured frames into a single image</string>
