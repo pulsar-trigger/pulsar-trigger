@@ -18,6 +18,7 @@ import com.ehrocha.pulsar.ble.*
 import com.ehrocha.pulsar.model.FlowStep
 import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.model.FlowPresets
+import com.ehrocha.pulsar.model.RunState
 import com.ehrocha.pulsar.model.SavedFlow
 import com.ehrocha.pulsar.service.PulsarNotificationService
 import kotlinx.coroutines.Job
@@ -28,6 +29,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -235,6 +237,15 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val _flowCurrentStep = MutableStateFlow(-1)
     val flowCurrentStep: StateFlow<Int> = _flowCurrentStep
     private var flowJob: Job? = null
+
+    /** Single derived run-state — UI consumers should prefer this over the
+     *  individual `status` / `flowRunning` / `flowPaused` / `flowCurrentStep`
+     *  flows. See [RunState] and `docs/refactor-plan.md` Phase 3. */
+    val runState: StateFlow<RunState> = combine(
+        _status, _flowRunning, _flowPaused, _flowCurrentStep, _flowSteps,
+    ) { status, running, paused, currentStep, steps ->
+        RunState.from(status, running, paused, currentStep, steps)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, RunState.Idle)
 
     init {
         // Forward BLE controller state into the viewmodel's writable flows.

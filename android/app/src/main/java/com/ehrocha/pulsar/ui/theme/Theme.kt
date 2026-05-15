@@ -91,6 +91,12 @@ val VerdictPoor = Color(0xFFE65100)
 /** Global device status — available to every composable without parameter threading. */
 val LocalDeviceStatus = compositionLocalOf<StatusFrame?> { null }
 
+/** Canonical run state (Phase 3 of the refactor). Prefer this to
+ *  [LocalDeviceStatus] + flowRunning/flowPaused/flowCurrentStep for new code. */
+val LocalRunState = compositionLocalOf<com.ehrocha.pulsar.model.RunState> {
+    com.ehrocha.pulsar.model.RunState.Idle
+}
+
 /** Global connection flag — true when a BLE device is connected. */
 val LocalDeviceConnected = compositionLocalOf { false }
 

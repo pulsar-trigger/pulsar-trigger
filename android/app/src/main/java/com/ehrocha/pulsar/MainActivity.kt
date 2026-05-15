@@ -79,6 +79,7 @@ import com.ehrocha.pulsar.ui.theme.ThemeMode
 import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
 import com.ehrocha.pulsar.ui.theme.LocalDeviceRssi
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
+import com.ehrocha.pulsar.ui.theme.LocalRunState
 import com.ehrocha.pulsar.ui.theme.LocalNightMode
 import com.ehrocha.pulsar.ui.theme.LocalNightModeLocked
 import com.ehrocha.pulsar.planner.PlannerEvent
@@ -296,8 +297,10 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
     val deviceStatus by vm.status.collectAsState()
     val deviceName by vm.deviceName.collectAsState()
     val deviceRssi by vm.rssi.collectAsState()
+    val runState by vm.runState.collectAsState()
     CompositionLocalProvider(
         LocalDeviceStatus provides deviceStatus,
+        LocalRunState provides runState,
         LocalDeviceConnected provides connected,
         LocalDeviceRssi provides deviceRssi,
     ) {
