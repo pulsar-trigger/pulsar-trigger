@@ -188,12 +188,16 @@ internal fun DefaultActionsContent(
 
 /** Press-and-hold to fire. ~600 ms hold required. Releasing early cancels
  *  with no action; reaching the threshold fires once and resets. A radial
- *  progress sweep fills the button so the user can see how long they've held. */
+ *  progress sweep fills the button so the user can see how long they've held.
+ *  [idleLabelRes] is the resting label; [holdLabelRes] shows once the user
+ *  starts holding. Defaults are the generic Start / "Hold to start" pair. */
 @Composable
 private fun HoldToFireButton(
     onFire: () -> Unit,
     enabled: Boolean,
     holdMs: Int = 600,
+    idleLabelRes: Int = R.string.btn_start,
+    holdLabelRes: Int = R.string.status_hold_to_start,
 ) {
     val haptic = LocalHapticFeedback.current
     var holding by remember { mutableStateOf(false) }
@@ -269,8 +273,7 @@ private fun HoldToFireButton(
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = stringResource(
-                        if (progress > 0.02f) R.string.status_hold_to_start
-                        else R.string.btn_start,
+                        if (progress > 0.02f) holdLabelRes else idleLabelRes,
                     ),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
@@ -428,38 +431,45 @@ internal fun AstroActionsContent(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Button(
-            onClick = { if (isRunning) onStop() else onStart() },
-            enabled = connected,
-            shape = RoundedCornerShape(32.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (isRunning) MaterialTheme.colorScheme.error
-                                 else MaterialTheme.colorScheme.primary
-            ),
-            modifier = Modifier.fillMaxWidth().height(64.dp)
-        ) {
-            Icon(
-                imageVector = if (isRunning) Icons.Default.Stop else Icons.Default.PlayArrow,
-                contentDescription = null,
-                modifier = Modifier.size(28.dp),
-            )
-            Spacer(Modifier.width(8.dp))
+        if (isRunning) {
+            // Stop is single-tap — Astro runs unattended for an hour+; the
+            // user wants stop to be immediate when they need to abort.
+            Button(
+                onClick = onStop,
+                shape = RoundedCornerShape(32.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                ),
+                modifier = Modifier.fillMaxWidth().height(64.dp),
+            ) {
+                Icon(Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(28.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    stringResource(R.string.btn_stop_astro),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
             Text(
-                text = stringResource(if (isRunning) R.string.btn_stop_astro else R.string.btn_start_astro),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        if (!isRunning && estimatedDuration != null) {
-            Text(
-                text = stringResource(R.string.status_estimated_duration, estimatedDuration),
+                stringResource(R.string.status_capturing_stars),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
+            // Astro sequences run unattended for an hour+ — accidental-fire
+            // protection matters here more than anywhere else in the app.
+            HoldToFireButton(
+                onFire = onStart,
+                enabled = connected,
+                idleLabelRes = R.string.btn_start_astro,
+                holdLabelRes = R.string.status_hold_to_start,
+            )
             Text(
-                text = stringResource(if (isRunning) R.string.status_capturing_stars else R.string.status_ready_astro),
+                text = if (estimatedDuration != null) {
+                    stringResource(R.string.status_estimated_duration, estimatedDuration)
+                } else {
+                    stringResource(R.string.status_ready_astro)
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -867,6 +877,7 @@ internal fun AstroPanelContent(
                 totalMs = gapMs,
                 onChanged = { onGapMsChanged(it) },
                 enabled = enabled,
+                presetsMs = com.ehrocha.pulsar.ui.components.ScrubPresets.INTERVAL,
             )
 
             ScrubField(
@@ -874,6 +885,7 @@ internal fun AstroPanelContent(
                 totalMs = delayMs,
                 onChanged = { onDelayMsChanged(it) },
                 enabled = enabled,
+                presetsMs = com.ehrocha.pulsar.ui.components.ScrubPresets.DELAY,
             )
 
             if (onShotCountChanged != null) {
@@ -928,6 +940,10 @@ internal fun DarkFramePanelContent(
     enabled: Boolean = true,
 ) {
     val totalTimeMs = count.toLong() * (exposureMs + gapMs)
+    val batteryPct = LocalDeviceStatus.current?.batteryPct
+    val warning = if (batteryPct != null && batteryPct in 1..19) {
+        stringResource(R.string.warning_battery_low, batteryPct)
+    } else null
 
     Column(verticalArrangement = Arrangement.spacedBy(20.dp), modifier = modifier) {
         HeroSummary(
@@ -935,6 +951,7 @@ internal fun DarkFramePanelContent(
             primaryValue = formatDuration(exposureMs),
             secondaryLabel = stringResource(R.string.label_total_duration),
             secondaryValue = formatDuration(totalTimeMs),
+            warning = warning,
         )
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1002,6 +1019,10 @@ internal fun RampPanelContent(
 ) {
     val avgExpMs = (startExposureMs + endExposureMs) / 2
     val totalTimeMs = steps.toLong() * (avgExpMs + intervalMs)
+    val batteryPct = LocalDeviceStatus.current?.batteryPct
+    val warning = if (batteryPct != null && batteryPct in 1..19) {
+        stringResource(R.string.warning_battery_low, batteryPct)
+    } else null
 
     Column(verticalArrangement = Arrangement.spacedBy(20.dp), modifier = modifier) {
         HeroSummary(
@@ -1009,6 +1030,7 @@ internal fun RampPanelContent(
             primaryValue = "$steps",
             secondaryLabel = stringResource(R.string.label_total_duration),
             secondaryValue = formatDuration(totalTimeMs),
+            warning = warning,
         )
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1018,6 +1040,7 @@ internal fun RampPanelContent(
                 onChanged = { onStartExposureChanged(it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS)) },
                 enabled = enabled,
                 subSecond = true,
+                presetsMs = com.ehrocha.pulsar.ui.components.ScrubPresets.EXPOSURE,
             )
 
             ScrubField(
@@ -1026,6 +1049,7 @@ internal fun RampPanelContent(
                 onChanged = { onEndExposureChanged(it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS)) },
                 enabled = enabled,
                 subSecond = true,
+                presetsMs = com.ehrocha.pulsar.ui.components.ScrubPresets.EXPOSURE,
             )
 
             ScrubField(
@@ -1033,6 +1057,7 @@ internal fun RampPanelContent(
                 totalMs = intervalMs,
                 onChanged = { onIntervalChanged(it.coerceAtLeast(AppConfig.MIN_INTERVAL_MS)) },
                 enabled = enabled,
+                presetsMs = com.ehrocha.pulsar.ui.components.ScrubPresets.INTERVAL,
             )
 
             IntScrubField(

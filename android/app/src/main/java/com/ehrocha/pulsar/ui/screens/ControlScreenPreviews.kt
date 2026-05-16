@@ -653,64 +653,6 @@ fun ManualSettingsPreview() {
 
 // ── ScrollPicker Preview (no edit icon, no unit label) ──────────────────────
 
-@Preview(showBackground = true, widthDp = 200, heightDp = 200, name = "ScrollPicker – Clean")
-@Composable
-private fun ScrollPickerPreview() {
-    MaterialTheme(colorScheme = DarkColorScheme) {
-        var value by remember { mutableIntStateOf(15) }
-        Surface(modifier = Modifier.fillMaxSize()) {
-            Box(contentAlignment = Alignment.Center) {
-                com.ehrocha.pulsar.ui.components.ScrollPicker(
-                    value = value,
-                    range = 0..59,
-                    onValueChange = { value = it },
-                )
-            }
-        }
-    }
-}
-
-// ── TimePicker Preview (hh:mm:ss embedded in title) ─────────────────────────
-
-@Preview(showBackground = true, widthDp = 380, heightDp = 200, name = "TimePicker – Labelled")
-@Composable
-private fun TimePickerPreview() {
-    MaterialTheme(colorScheme = DarkColorScheme) {
-        var ms by remember { mutableLongStateOf(7_500L) }
-        Surface(modifier = Modifier.fillMaxSize()) {
-            com.ehrocha.pulsar.ui.components.TimePicker(
-                totalMs = ms,
-                onChanged = { ms = it },
-                label = "Exposure (hh:mm:ss)",
-                modifier = Modifier.padding(16.dp),
-            )
-        }
-    }
-}
-
-// ── IntStepperField Preview (scrollable chip presets) ────────────────────────
-
-@Preview(showBackground = true, widthDp = 380, heightDp = 250, name = "IntStepper – Chip Presets")
-@Composable
-private fun IntStepperFieldPreview() {
-    MaterialTheme(colorScheme = DarkColorScheme) {
-        var focal by remember { mutableIntStateOf(24) }
-        Surface(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                com.ehrocha.pulsar.ui.components.IntStepperField(
-                    label = "Focal Length",
-                    value = focal,
-                    onValueChange = { focal = it },
-                    min = AppConfig.MIN_FOCAL_LENGTH,
-                    max = AppConfig.MAX_FOCAL_LENGTH,
-                    presets = AppConfig.FOCAL_LENGTH_PRESETS,
-                    presetLabel = { "${it}mm" },
-                )
-            }
-        }
-    }
-}
-
 // ── Sensor Preset Segmented Buttons Preview ─────────────────────────────────
 
 @Preview(showBackground = true, widthDp = 380, heightDp = 150, name = "Sensor Preset – Segmented")

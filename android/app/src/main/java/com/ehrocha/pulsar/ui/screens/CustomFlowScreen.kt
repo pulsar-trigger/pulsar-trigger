@@ -45,8 +45,6 @@ import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.model.SavedFlow
 import com.ehrocha.pulsar.model.displayName
 import com.ehrocha.pulsar.model.summaryLabel
-import com.ehrocha.pulsar.ui.components.IntStepperField
-import com.ehrocha.pulsar.ui.components.TimePicker
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 
 import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
@@ -1589,26 +1587,15 @@ private fun DarkFrameStepEditor(step: FlowStep.DarkFrame, onChange: (FlowStep.Da
         }
     }
     Spacer(Modifier.height(8.dp))
-    IntStepperField(
-        label = stringResource(R.string.label_dark_frame_count),
-        value = step.shotCount,
-        onValueChange = { onChange(step.copy(shotCount = it.coerceAtLeast(1))) },
-        min = 1,
-        max = 999,
-        enabled = true,
-        presets = emptyList(),
-    )
-    TimePicker(
-        totalMs = step.exposureMs,
-        onChanged = { onChange(step.copy(exposureMs = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS))) },
-        label = stringResource(R.string.label_exposure) + " (hh:mm:ss)",
-        enabled = true,
-    )
-    TimePicker(
-        totalMs = step.gapMs,
-        onChanged = { onChange(step.copy(gapMs = it.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS))) },
-        label = stringResource(R.string.label_interval) + " (hh:mm:ss)",
-        enabled = true,
+    // Delegate to the main DarkFrame panel — same scrub-with-presets UX as
+    // when the user enters via the Trigger tab.
+    DarkFramePanelContent(
+        count = step.shotCount,
+        exposureMs = step.exposureMs,
+        gapMs = step.gapMs,
+        onCountChanged = { onChange(step.copy(shotCount = it.coerceAtLeast(1))) },
+        onExposureMsChanged = { onChange(step.copy(exposureMs = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS))) },
+        onGapMsChanged = { onChange(step.copy(gapMs = it.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS))) },
     )
 }
 
@@ -1628,33 +1615,17 @@ private fun RampStepEditor(step: FlowStep.Ramp, onChange: (FlowStep.Ramp) -> Uni
         }
     }
     Spacer(Modifier.height(8.dp))
-    TimePicker(
-        totalMs = step.startExposureMs,
-        onChanged = { onChange(step.copy(startExposureMs = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS))) },
-        label = stringResource(R.string.label_ramp_start_exposure) + " (hh:mm:ss)",
-        enabled = true,
-    )
-    TimePicker(
-        totalMs = step.endExposureMs,
-        onChanged = { onChange(step.copy(endExposureMs = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS))) },
-        label = stringResource(R.string.label_ramp_end_exposure) + " (hh:mm:ss)",
-        enabled = true,
-    )
-    IntStepperField(
-        label = stringResource(R.string.label_ramp_steps),
-        value = step.steps,
-        onValueChange = { onChange(step.copy(steps = it.coerceAtLeast(2))) },
-        min = 2,
-        max = 999,
-        enabled = true,
-        presets = listOf(20, 50, 100, 200),
-        presetLabel = { "$it" },
-    )
-    TimePicker(
-        totalMs = step.intervalMs,
-        onChanged = { onChange(step.copy(intervalMs = it.coerceAtLeast(AppConfig.MIN_INTERVAL_MS))) },
-        label = stringResource(R.string.label_interval) + " (hh:mm:ss)",
-        enabled = true,
+    // Delegate to the main Ramp panel — sub-second start/end exposures with
+    // presets, interval with presets, IntScrubField for steps.
+    RampPanelContent(
+        startExposureMs = step.startExposureMs,
+        endExposureMs = step.endExposureMs,
+        steps = step.steps,
+        intervalMs = step.intervalMs,
+        onStartExposureChanged = { onChange(step.copy(startExposureMs = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS))) },
+        onEndExposureChanged = { onChange(step.copy(endExposureMs = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS))) },
+        onIntervalChanged = { onChange(step.copy(intervalMs = it.coerceAtLeast(AppConfig.MIN_INTERVAL_MS))) },
+        onStepsChanged = { onChange(step.copy(steps = it.coerceAtLeast(2))) },
     )
 }
 
