@@ -6,6 +6,7 @@
 package com.ehrocha.pulsar.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,14 +27,20 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
-import kotlin.math.roundToInt
 
 /**
- * Time field shown as `hh : mm : ss`. Each pair (hours, minutes, seconds) is
- * its own horizontal scrub zone — drag left/right to decrement/increment that
- * segment. Release commits the value. Haptic tick on each step crossed.
+ * Time field. Default layout is `hh : mm : ss` (max 23:59:59). When
+ * [subSecond] is true the hours segment is dropped in favour of a tenths
+ * column — `mm : ss . t` — for sub-second exposures (firmware accepts down
+ * to 10 ms; 100 ms tenths via scrub, finer precision via tap-to-type).
  *
- * Replaces the old +/- button + numpad TimePicker idiom.
+ * Each digit is its own horizontal scrub zone. Tap a digit to open an
+ * in-app numpad for exact entry. A subtle range hint under each unit
+ * label tells the user the per-segment cap.
+ *
+ * Velocity-aware: a quick flick accelerates the step rate so the user can
+ * traverse large value ranges (e.g. 0 → 47 minutes) in one motion.
+ * Hitting a min/max bound delivers a heavier haptic than a tick.
  */
 @Composable
 fun ScrubField(
@@ -43,15 +50,8 @@ fun ScrubField(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     maxHours: Int = 23,
+    subSecond: Boolean = false,
 ) {
-    val hours = ((totalMs / 3_600_000) % (maxHours + 1)).toInt()
-    val minutes = ((totalMs % 3_600_000) / 60_000).toInt()
-    val seconds = ((totalMs % 60_000) / 1_000).toInt()
-    val millis = (totalMs % 1_000).toInt()
-
-    fun recompose(h: Int = hours, m: Int = minutes, s: Int = seconds): Long =
-        h * 3_600_000L + m * 60_000L + s * 1_000L + millis
-
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -65,47 +65,103 @@ fun ScrubField(
             )
             Spacer(Modifier.height(8.dp))
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                ScrubDigit(
-                    value = hours,
-                    range = 0..maxHours,
-                    unitLabel = "h",
-                    onChange = { onChanged(recompose(h = it)) },
-                    enabled = enabled,
-                    modifier = Modifier.weight(1f),
-                )
-                Separator()
-                ScrubDigit(
-                    value = minutes,
-                    range = 0..59,
-                    unitLabel = "m",
-                    onChange = { onChanged(recompose(m = it)) },
-                    enabled = enabled,
-                    modifier = Modifier.weight(1f),
-                )
-                Separator()
-                ScrubDigit(
-                    value = seconds,
-                    range = 0..59,
-                    unitLabel = "s",
-                    onChange = { onChanged(recompose(s = it)) },
-                    enabled = enabled,
-                    modifier = Modifier.weight(1f),
-                )
-            }
+            if (subSecond) SubSecondRow(totalMs, onChanged, enabled)
+            else HoursMinutesSecondsRow(totalMs, onChanged, enabled, maxHours)
         }
     }
 }
 
+@Composable
+private fun HoursMinutesSecondsRow(
+    totalMs: Long,
+    onChanged: (Long) -> Unit,
+    enabled: Boolean,
+    maxHours: Int,
+) {
+    val hours = ((totalMs / 3_600_000) % (maxHours + 1)).toInt()
+    val minutes = ((totalMs % 3_600_000) / 60_000).toInt()
+    val seconds = ((totalMs % 60_000) / 1_000).toInt()
+    val millis = (totalMs % 1_000).toInt()
+
+    fun recompose(h: Int = hours, m: Int = minutes, s: Int = seconds): Long =
+        h * 3_600_000L + m * 60_000L + s * 1_000L + millis
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        ScrubDigit(
+            value = hours, range = 0..maxHours, unitLabel = "h",
+            onChange = { onChanged(recompose(h = it)) },
+            enabled = enabled,
+            modifier = Modifier.weight(1f),
+        )
+        Separator(":")
+        ScrubDigit(
+            value = minutes, range = 0..59, unitLabel = "m",
+            onChange = { onChanged(recompose(m = it)) },
+            enabled = enabled,
+            modifier = Modifier.weight(1f),
+        )
+        Separator(":")
+        ScrubDigit(
+            value = seconds, range = 0..59, unitLabel = "s",
+            onChange = { onChanged(recompose(s = it)) },
+            enabled = enabled,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun SubSecondRow(
+    totalMs: Long,
+    onChanged: (Long) -> Unit,
+    enabled: Boolean,
+) {
+    // Min:Sec.tenths layout — caps naturally at 59m 59.9s (firmware MAX is 1 h).
+    val minutes = ((totalMs / 60_000) % 60).toInt()
+    val seconds = ((totalMs % 60_000) / 1_000).toInt()
+    val tenths = (((totalMs % 1_000) + 50) / 100).toInt().coerceIn(0, 9)
+
+    fun recompose(m: Int = minutes, s: Int = seconds, t: Int = tenths): Long =
+        m * 60_000L + s * 1_000L + t * 100L
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        ScrubDigit(
+            value = minutes, range = 0..59, unitLabel = "m",
+            onChange = { onChanged(recompose(m = it)) },
+            enabled = enabled,
+            modifier = Modifier.weight(1f),
+        )
+        Separator(":")
+        ScrubDigit(
+            value = seconds, range = 0..59, unitLabel = "s",
+            onChange = { onChanged(recompose(s = it)) },
+            enabled = enabled,
+            modifier = Modifier.weight(1f),
+        )
+        Separator(".")
+        ScrubDigit(
+            value = tenths, range = 0..9, unitLabel = "·100ms",
+            onChange = { onChanged(recompose(t = it)) },
+            enabled = enabled,
+            digits = 1,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
 /**
- * Integer scrub field. Big number with horizontal drag to change value.
- * Optional preset chips render below for quick jumps.
+ * Integer scrub field. Big number with horizontal drag to change value;
+ * tap to type. Optional preset chips render below for quick jumps.
  *
- * Replaces +/- stepper buttons + numpad popup.
+ * Velocity-aware and bound-aware (see ScrubField doc).
  */
 @Composable
 fun IntScrubField(
@@ -125,7 +181,20 @@ fun IntScrubField(
 
     var dragPx by remember { mutableFloatStateOf(0f) }
     val isDragging = dragPx != 0f
-    val displayedValue = (value + (dragPx / pxPerStep).roundToInt()).coerceIn(range)
+    val displayedValue = (value + (dragPx / pxPerStep).toInt()).coerceIn(range)
+
+    var showNumPad by remember { mutableStateOf(false) }
+    if (showNumPad) {
+        NumPadDialog(
+            initialValue = value.toString(),
+            onConfirm = { entered ->
+                val v = entered.toIntOrNull()?.coerceIn(range) ?: value
+                if (v != value) onValueChange(v)
+                showNumPad = false
+            },
+            onDismiss = { showNumPad = false },
+        )
+    }
 
     Surface(
         shape = RoundedCornerShape(20.dp),
@@ -144,29 +213,19 @@ fun IntScrubField(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .clickable(enabled = enabled) { showNumPad = true }
                     .pointerInput(enabled, value, range) {
                         if (!enabled) return@pointerInput
-                        // displayedValue captured here is stale (snapshotted
-                        // with dragPx=0); compute fresh inside callbacks so the
-                        // committed value reflects the actual drag distance.
-                        fun current(): Int =
-                            (value + (dragPx / pxPerStep).roundToInt()).coerceIn(range)
-                        detectHorizontalDragGestures(
-                            onDragStart = { dragPx = 0f },
-                            onDragEnd = {
-                                val committed = current()
+                        velocityScrub(
+                            stepPx = pxPerStep,
+                            valueProvider = { value },
+                            range = range,
+                            onDragPxChange = { dragPx = it },
+                            onCommit = { committed ->
                                 if (committed != value) onValueChange(committed)
-                                dragPx = 0f
                             },
-                            onDragCancel = { dragPx = 0f },
-                            onHorizontalDrag = { _, delta ->
-                                val before = current()
-                                dragPx += delta
-                                val after = current()
-                                if (after != before) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                }
-                            },
+                            onTickCrossed = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) },
+                            onBoundHit = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
                         )
                     },
             ) {
@@ -188,7 +247,12 @@ fun IntScrubField(
                         )
                     }
                 }
-                Spacer(Modifier.height(6.dp))
+                Text(
+                    "${range.first}–${range.last}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(4.dp))
                 TickRuler(
                     pixelOffset = if (isDragging) dragPx else 0f,
                     anchorActive = isDragging,
@@ -231,6 +295,7 @@ private fun ScrubDigit(
     unitLabel: String,
     onChange: (Int) -> Unit,
     enabled: Boolean,
+    digits: Int = 2,
     modifier: Modifier = Modifier,
 ) {
     val haptic = LocalHapticFeedback.current
@@ -239,40 +304,43 @@ private fun ScrubDigit(
 
     var dragPx by remember { mutableFloatStateOf(0f) }
     val isDragging = dragPx != 0f
+    val displayedValue = (value + (dragPx / pxPerStep).toInt()).coerceIn(range)
 
-    val displayedValue = (value + (dragPx / pxPerStep).roundToInt()).coerceIn(range)
+    var showNumPad by remember { mutableStateOf(false) }
+    if (showNumPad) {
+        NumPadDialog(
+            initialValue = value.toString(),
+            onConfirm = { entered ->
+                val v = entered.toIntOrNull()?.coerceIn(range) ?: value
+                if (v != value) onChange(v)
+                showNumPad = false
+            },
+            onDismiss = { showNumPad = false },
+            maxDigits = digits.coerceAtLeast(1),
+        )
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
+            .clickable(enabled = enabled) { showNumPad = true }
             .pointerInput(enabled, value, range) {
                 if (!enabled) return@pointerInput
-                // displayedValue captured here is stale (snapshotted with
-                // dragPx=0); compute fresh inside callbacks so the committed
-                // value reflects the actual drag distance.
-                fun current(): Int =
-                    (value + (dragPx / pxPerStep).roundToInt()).coerceIn(range)
-                detectHorizontalDragGestures(
-                    onDragStart = { dragPx = 0f },
-                    onDragEnd = {
-                        val committed = current()
+                velocityScrub(
+                    stepPx = pxPerStep,
+                    valueProvider = { value },
+                    range = range,
+                    onDragPxChange = { dragPx = it },
+                    onCommit = { committed ->
                         if (committed != value) onChange(committed)
-                        dragPx = 0f
                     },
-                    onDragCancel = { dragPx = 0f },
-                    onHorizontalDrag = { _, delta ->
-                        val before = current()
-                        dragPx += delta
-                        val after = current()
-                        if (after != before) {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        }
-                    },
+                    onTickCrossed = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) },
+                    onBoundHit = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
                 )
             },
     ) {
         Text(
-            "%02d".format(displayedValue),
+            "%0${digits}d".format(displayedValue),
             style = MaterialTheme.typography.displaySmall,
             fontWeight = FontWeight.Bold,
             color = if (isDragging) MaterialTheme.colorScheme.primary
@@ -283,7 +351,12 @@ private fun ScrubDigit(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(Modifier.height(6.dp))
+        Text(
+            "${range.first}–${range.last}",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+        )
+        Spacer(Modifier.height(4.dp))
         TickRuler(
             pixelOffset = if (isDragging) dragPx else 0f,
             anchorActive = isDragging,
@@ -294,10 +367,88 @@ private fun ScrubDigit(
     }
 }
 
+/**
+ * Shared velocity-aware drag handler. Pixel-distance scaled by recent
+ * velocity (fast flick = up to 8× the base step rate), so the user can
+ * traverse a 0–999 range in one motion when they fling but still hit
+ * single-unit precision on a slow drag. Bound-hit fires onBoundHit
+ * exactly once per arrival at min or max.
+ */
+private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.velocityScrub(
+    stepPx: Float,
+    valueProvider: () -> Int,
+    range: IntRange,
+    onDragPxChange: (Float) -> Unit,
+    onCommit: (Int) -> Unit,
+    onTickCrossed: () -> Unit,
+    onBoundHit: () -> Unit,
+) {
+    var dragPx = 0f
+    var lastTickValue = valueProvider()
+    var lastDragMs = 0L
+    var atBound = false
+
+    fun currentValue(): Int {
+        val raw = valueProvider() + (dragPx / stepPx).toInt()
+        return raw.coerceIn(range)
+    }
+
+    detectHorizontalDragGestures(
+        onDragStart = {
+            dragPx = 0f
+            onDragPxChange(0f)
+            lastTickValue = valueProvider()
+            lastDragMs = System.currentTimeMillis()
+            atBound = false
+        },
+        onDragEnd = {
+            onCommit(currentValue())
+            dragPx = 0f
+            onDragPxChange(0f)
+        },
+        onDragCancel = {
+            dragPx = 0f
+            onDragPxChange(0f)
+        },
+        onHorizontalDrag = { _, delta ->
+            // Velocity-aware: pixels per millisecond determines a multiplier
+            // in [1, 8]. A leisurely 1 dp/ms drag stays 1×; a fling of
+            // 4+ dp/ms reaches the cap. This is cooperative with the
+            // existing pxPerStep — accelerated motion just covers more
+            // ticks per millimetre of finger travel.
+            val now = System.currentTimeMillis()
+            val dtMs = (now - lastDragMs).coerceAtLeast(1).toInt()
+            lastDragMs = now
+            val pxPerMs = abs(delta) / dtMs
+            val accel = when {
+                pxPerMs >= 4.0f -> 8.0f
+                pxPerMs >= 2.0f -> 4.0f
+                pxPerMs >= 1.0f -> 2.0f
+                else -> 1.0f
+            }
+            dragPx += delta * accel
+            onDragPxChange(dragPx)
+
+            val v = currentValue()
+            if (v != lastTickValue) {
+                onTickCrossed()
+                lastTickValue = v
+            }
+            val hitBound = v == range.first || v == range.last
+            if (hitBound && !atBound) {
+                onBoundHit()
+                atBound = true
+            } else if (!hitBound) {
+                atBound = false
+            }
+        },
+    )
+}
+
 @Composable
-private fun Separator() {
+private fun Separator(symbol: String) {
     Text(
-        ":",
+        symbol,
         style = MaterialTheme.typography.displaySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 4.dp, vertical = 0.dp),

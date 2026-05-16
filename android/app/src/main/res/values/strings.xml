@@ -561,4 +561,6 @@
     <string name="about_tribute_body">Pulsars were discovered in 1967 by Jocelyn Bell Burnell as a graduate student in radio astronomy. This app borrows their name in humble tribute to her discovery and to her enduring championing of science.</string>
     <string name="about_tribute_link">Read on Wikipedia</string>
     <!-- Celestial grid calibration warnings -->
+    <string name="warning_interval_lt_exposure">Interval is shorter than exposure — firmware will clamp</string>
+    <string name="status_hold_to_start">Hold to start</string>
 </resources>

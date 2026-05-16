@@ -12,7 +12,10 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -138,41 +141,142 @@ internal fun DefaultActionsContent(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Button(
-            onClick = { if (isRunning) onStop() else onStart() },
-            enabled = connected,
-            shape = RoundedCornerShape(32.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (isRunning) MaterialTheme.colorScheme.error
-                else MaterialTheme.colorScheme.primary
-            ),
-            modifier = Modifier.fillMaxWidth().height(64.dp)
-        ) {
-            Icon(
-                imageVector = if (isRunning) Icons.Default.Stop else Icons.Default.PlayArrow,
-                contentDescription = null,
-                modifier = Modifier.size(28.dp),
-            )
-            Spacer(Modifier.width(8.dp))
+        if (isRunning) {
+            // Stop is single-tap — pressing Stop quickly matters when something
+            // is going wrong on the rig.
+            Button(
+                onClick = onStop,
+                shape = RoundedCornerShape(32.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                ),
+                modifier = Modifier.fillMaxWidth().height(64.dp),
+            ) {
+                Icon(Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(28.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    stringResource(R.string.btn_stop),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
             Text(
-                text = if (isRunning) stringResource(R.string.btn_stop) else stringResource(R.string.btn_start),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        if (!isRunning && estimatedDuration != null) {
-            Text(
-                text = stringResource(R.string.status_estimated_duration, estimatedDuration),
+                stringResource(R.string.status_sequence_running),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
+            // Start is hold-to-fire — protects against accidental taps when
+            // the phone is resting on a tripod head. The button fills clockwise
+            // while held; releasing before the threshold cancels.
+            HoldToFireButton(
+                onFire = onStart,
+                enabled = connected,
+            )
             Text(
-                text = if (isRunning) stringResource(R.string.status_sequence_running) else stringResource(R.string.status_ready_start),
+                text = if (estimatedDuration != null) {
+                    stringResource(R.string.status_estimated_duration, estimatedDuration)
+                } else {
+                    stringResource(R.string.status_ready_start)
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+/** Press-and-hold to fire. ~600 ms hold required. Releasing early cancels
+ *  with no action; reaching the threshold fires once and resets. A radial
+ *  progress sweep fills the button so the user can see how long they've held. */
+@Composable
+private fun HoldToFireButton(
+    onFire: () -> Unit,
+    enabled: Boolean,
+    holdMs: Int = 600,
+) {
+    val haptic = LocalHapticFeedback.current
+    var holding by remember { mutableStateOf(false) }
+    var progress by remember { mutableFloatStateOf(0f) }
+
+    LaunchedEffect(holding, enabled) {
+        if (!enabled || !holding) {
+            // Drain back to 0 if user lifted before firing.
+            while (progress > 0f) {
+                progress = (progress - 0.08f).coerceAtLeast(0f)
+                kotlinx.coroutines.delay(16)
+            }
+            return@LaunchedEffect
+        }
+        val start = System.currentTimeMillis()
+        while (holding && progress < 1f) {
+            val elapsed = System.currentTimeMillis() - start
+            progress = (elapsed.toFloat() / holdMs).coerceIn(0f, 1f)
+            if (progress >= 1f) {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onFire()
+                holding = false
+                progress = 0f
+                break
+            }
+            kotlinx.coroutines.delay(16)
+        }
+    }
+
+    val containerColor =
+        if (!enabled) MaterialTheme.colorScheme.surfaceVariant
+        else MaterialTheme.colorScheme.primary
+    val contentColor =
+        if (!enabled) MaterialTheme.colorScheme.onSurfaceVariant
+        else MaterialTheme.colorScheme.onPrimary
+
+    Surface(
+        shape = RoundedCornerShape(32.dp),
+        color = containerColor.copy(alpha = if (enabled) 1f else 0.4f),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(64.dp)
+            .pointerInput(enabled) {
+                if (!enabled) return@pointerInput
+                detectTapGestures(
+                    onPress = {
+                        holding = true
+                        // tryAwaitRelease returns true on release before
+                        // cancellation (cancellation only happens if a parent
+                        // gesture wins — uncommon for our full-width button).
+                        tryAwaitRelease()
+                        holding = false
+                    },
+                )
+            },
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+            // Progress bar drawn underneath the label, left-to-right.
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(progress)
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f))
+                    .align(Alignment.CenterStart),
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(28.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = stringResource(
+                        if (progress > 0.02f) R.string.status_hold_to_start
+                        else R.string.btn_start,
+                    ),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = contentColor,
+                )
+            }
         }
     }
 }
@@ -363,51 +467,62 @@ internal fun AstroActionsContent(
     }
 }
 
-/** Glanceable two-column summary for mode panels. */
+/** Glanceable two-column summary for mode panels.
+ *  When [warning] is non-null, a single-line strip below the totals renders
+ *  in `error` colour — used for conflict states like "interval < exposure". */
 @Composable
 private fun HeroSummary(
     primaryLabel: String,
     primaryValue: String,
     secondaryLabel: String,
     secondaryValue: String,
+    warning: String? = null,
 ) {
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    primaryLabel,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        primaryLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        primaryValue,
+                        style = MaterialTheme.typography.displaySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                VerticalDivider(
+                    modifier = Modifier.height(56.dp).padding(horizontal = 12.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant,
                 )
-                Text(
-                    primaryValue,
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        secondaryLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        secondaryValue,
+                        style = MaterialTheme.typography.displaySmall,
+                        fontWeight = FontWeight.Bold,
+                        color = if (warning != null) MaterialTheme.colorScheme.error
+                                else MaterialTheme.colorScheme.onSurface,
+                    )
+                }
             }
-            VerticalDivider(
-                modifier = Modifier.height(56.dp).padding(horizontal = 12.dp),
-                color = MaterialTheme.colorScheme.outlineVariant,
-            )
-            Column(modifier = Modifier.weight(1f)) {
+            if (warning != null) {
+                Spacer(Modifier.height(8.dp))
                 Text(
-                    secondaryLabel,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    secondaryValue,
-                    style = MaterialTheme.typography.displaySmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    warning,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error,
                 )
             }
         }
@@ -449,6 +564,9 @@ internal fun IntervalometerPanelContent(
     enabled: Boolean = true,
 ) {
     val totalSequenceTimeMs = delayMs + shotCount.toLong() * (exposureMs + intervalMs) - intervalMs
+    val conflictWarning = if (exposureMs > 0L && intervalMs < exposureMs) {
+        stringResource(R.string.warning_interval_lt_exposure)
+    } else null
 
     Column(verticalArrangement = Arrangement.spacedBy(20.dp), modifier = modifier) {
         HeroSummary(
@@ -456,6 +574,7 @@ internal fun IntervalometerPanelContent(
             primaryValue = "$shotCount",
             secondaryLabel = stringResource(R.string.label_total_duration),
             secondaryValue = formatDuration(totalSequenceTimeMs),
+            warning = conflictWarning,
         )
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -464,6 +583,7 @@ internal fun IntervalometerPanelContent(
                 totalMs = exposureMs,
                 onChanged = { onExposureChanged(it) },
                 enabled = enabled,
+                subSecond = true,
             )
 
             ScrubField(
@@ -813,6 +933,7 @@ internal fun DarkFramePanelContent(
                 totalMs = exposureMs,
                 onChanged = { onExposureMsChanged(it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS)) },
                 enabled = enabled,
+                subSecond = true,
             )
 
             ScrubField(
@@ -884,6 +1005,7 @@ internal fun RampPanelContent(
                 totalMs = startExposureMs,
                 onChanged = { onStartExposureChanged(it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS)) },
                 enabled = enabled,
+                subSecond = true,
             )
 
             ScrubField(
@@ -891,6 +1013,7 @@ internal fun RampPanelContent(
                 totalMs = endExposureMs,
                 onChanged = { onEndExposureChanged(it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS)) },
                 enabled = enabled,
+                subSecond = true,
             )
 
             ScrubField(

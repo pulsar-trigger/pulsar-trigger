@@ -421,4 +421,6 @@
     <string name="about_tribute_link">Auf Wikipedia lesen</string>
 
     <!-- Sequences / stacking -->
+    <string name="warning_interval_lt_exposure">Intervall kürzer als Belichtung — Firmware begrenzt</string>
+    <string name="status_hold_to_start">Zum Starten halten</string>
 </resources>

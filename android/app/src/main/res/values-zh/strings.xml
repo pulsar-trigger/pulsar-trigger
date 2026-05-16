@@ -413,4 +413,6 @@
     <string name="cd_bluetooth">蓝牙</string>
     <string name="cd_simulator">模拟器</string>
     <string name="btn_navigate">导航</string>
+    <string name="warning_interval_lt_exposure">间隔短于曝光 — 固件将限制为曝光时间</string>
+    <string name="status_hold_to_start">长按以开始</string>
 </resources>

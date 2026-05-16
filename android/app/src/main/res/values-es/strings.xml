@@ -419,4 +419,6 @@
     <string name="about_tribute_link">Leer en Wikipedia</string>
 
     <!-- Sequences / stacking -->
+    <string name="warning_interval_lt_exposure">Intervalo menor que la exposición — el firmware lo limitará</string>
+    <string name="status_hold_to_start">Mantén pulsado para iniciar</string>
 </resources>

@@ -421,4 +421,6 @@
     <string name="about_tribute_link">Wikipediaで読む</string>
 
     <!-- Sequences / stacking -->
+    <string name="warning_interval_lt_exposure">インターバルが露出時間より短いため、ファームウェアでクランプされます</string>
+    <string name="status_hold_to_start">長押しで開始</string>
 </resources>
