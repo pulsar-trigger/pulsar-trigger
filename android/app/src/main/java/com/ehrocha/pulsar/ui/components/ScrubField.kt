@@ -51,6 +51,7 @@ fun ScrubField(
     enabled: Boolean = true,
     maxHours: Int = 23,
     subSecond: Boolean = false,
+    presetsMs: List<Long> = emptyList(),
 ) {
     Surface(
         shape = RoundedCornerShape(20.dp),
@@ -67,8 +68,56 @@ fun ScrubField(
 
             if (subSecond) SubSecondRow(totalMs, onChanged, enabled)
             else HoursMinutesSecondsRow(totalMs, onChanged, enabled, maxHours)
+
+            if (presetsMs.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    presetsMs.forEach { preset ->
+                        val selected = totalMs == preset
+                        AssistChip(
+                            onClick = { if (enabled) onChanged(preset) },
+                            label = {
+                                Text(
+                                    formatPresetMs(preset),
+                                    style = MaterialTheme.typography.labelMedium,
+                                )
+                            },
+                            colors = if (selected) AssistChipDefaults.assistChipColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            ) else AssistChipDefaults.assistChipColors(),
+                            enabled = enabled,
+                        )
+                    }
+                }
+            }
         }
     }
+}
+
+/** Compact label for a time preset chip: "1/250", "1s", "30s", "2m", "1h". */
+private fun formatPresetMs(ms: Long): String = when {
+    ms < 1_000 -> {
+        // Sub-second: photographic denominator like 1/250
+        val denom = (1_000.0 / ms).toInt()
+        if (denom > 1) "1/${denom}" else "${ms}ms"
+    }
+    ms < 60_000 -> "${ms / 1_000}s"
+    ms < 3_600_000 -> "${ms / 60_000}m"
+    else -> "${ms / 3_600_000}h"
+}
+
+/** Common preset sets ready to drop into ScrubField. Tuned for field use. */
+object ScrubPresets {
+    /** Exposure presets — covers 1/250s up to 30s, the photographer's home turf. */
+    val EXPOSURE = listOf(4L, 250L, 1_000L, 5_000L, 30_000L)
+    /** Interval / gap presets — what most intervalometer recipes call for. */
+    val INTERVAL = listOf(2_000L, 5_000L, 30_000L, 60_000L)
+    /** Start-delay presets — defaults the firmware and astro flows tend to want. */
+    val DELAY    = listOf(0L, 5_000L, 30_000L, 60_000L)
 }
 
 @Composable

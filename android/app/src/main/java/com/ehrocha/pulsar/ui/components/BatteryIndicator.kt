@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Nightlight
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -133,7 +134,8 @@ fun NightModeToggle() {
                 onClick = {
                     if (!locked.value) {
                         nightMode.value = when (nightMode.value) {
-                            ThemeMode.Light -> ThemeMode.Dark
+                            ThemeMode.Light -> ThemeMode.Outdoor
+                            ThemeMode.Outdoor -> ThemeMode.Dark
                             ThemeMode.Dark -> ThemeMode.RedLight
                             ThemeMode.RedLight -> ThemeMode.Light
                         }
@@ -148,6 +150,7 @@ fun NightModeToggle() {
         Icon(
             when (nightMode.value) {
                 ThemeMode.Light -> Icons.Default.LightMode
+                ThemeMode.Outdoor -> Icons.Default.WbSunny
                 ThemeMode.Dark -> Icons.Default.Nightlight
                 ThemeMode.RedLight -> Icons.Default.Nightlight
             },
@@ -157,6 +160,7 @@ fun NightModeToggle() {
             modifier = Modifier.size(20.dp),
             tint = when (nightMode.value) {
                 ThemeMode.Light -> MaterialTheme.colorScheme.onSurfaceVariant
+                ThemeMode.Outdoor -> MaterialTheme.colorScheme.primary
                 ThemeMode.Dark -> MaterialTheme.colorScheme.onSurfaceVariant
                 ThemeMode.RedLight -> Color(0xFFCC4444)
             },

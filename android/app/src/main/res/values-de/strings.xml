@@ -423,4 +423,5 @@
     <!-- Sequences / stacking -->
     <string name="warning_interval_lt_exposure">Intervall kürzer als Belichtung — Firmware begrenzt</string>
     <string name="status_hold_to_start">Zum Starten halten</string>
+    <string name="warning_battery_low">Akku schwach (%1$d%%) — Sequenz endet evtl. nicht</string>
 </resources>

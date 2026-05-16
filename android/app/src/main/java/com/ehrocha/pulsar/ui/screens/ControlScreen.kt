@@ -564,9 +564,16 @@ internal fun IntervalometerPanelContent(
     enabled: Boolean = true,
 ) {
     val totalSequenceTimeMs = delayMs + shotCount.toLong() * (exposureMs + intervalMs) - intervalMs
-    val conflictWarning = if (exposureMs > 0L && intervalMs < exposureMs) {
-        stringResource(R.string.warning_interval_lt_exposure)
-    } else null
+    // Conflict warning takes precedence (it's a math problem, not a hardware
+    // constraint). The battery check is a secondary heuristic.
+    val batteryPct = LocalDeviceStatus.current?.batteryPct
+    val warning = when {
+        exposureMs > 0L && intervalMs < exposureMs ->
+            stringResource(R.string.warning_interval_lt_exposure)
+        batteryPct != null && batteryPct in 1..19 ->
+            stringResource(R.string.warning_battery_low, batteryPct)
+        else -> null
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(20.dp), modifier = modifier) {
         HeroSummary(
@@ -574,7 +581,7 @@ internal fun IntervalometerPanelContent(
             primaryValue = "$shotCount",
             secondaryLabel = stringResource(R.string.label_total_duration),
             secondaryValue = formatDuration(totalSequenceTimeMs),
-            warning = conflictWarning,
+            warning = warning,
         )
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -584,6 +591,7 @@ internal fun IntervalometerPanelContent(
                 onChanged = { onExposureChanged(it) },
                 enabled = enabled,
                 subSecond = true,
+                presetsMs = com.ehrocha.pulsar.ui.components.ScrubPresets.EXPOSURE,
             )
 
             ScrubField(
@@ -591,6 +599,7 @@ internal fun IntervalometerPanelContent(
                 totalMs = intervalMs,
                 onChanged = { onIntervalChanged(it) },
                 enabled = enabled,
+                presetsMs = com.ehrocha.pulsar.ui.components.ScrubPresets.INTERVAL,
             )
 
             ScrubField(
@@ -598,6 +607,7 @@ internal fun IntervalometerPanelContent(
                 totalMs = delayMs,
                 onChanged = { onDelayChanged(it) },
                 enabled = enabled,
+                presetsMs = com.ehrocha.pulsar.ui.components.ScrubPresets.DELAY,
             )
 
             if (onShotCountChanged != null) {
@@ -934,6 +944,7 @@ internal fun DarkFramePanelContent(
                 onChanged = { onExposureMsChanged(it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS)) },
                 enabled = enabled,
                 subSecond = true,
+                presetsMs = com.ehrocha.pulsar.ui.components.ScrubPresets.EXPOSURE,
             )
 
             ScrubField(
@@ -941,6 +952,7 @@ internal fun DarkFramePanelContent(
                 totalMs = gapMs,
                 onChanged = { onGapMsChanged(it.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS)) },
                 enabled = enabled,
+                presetsMs = com.ehrocha.pulsar.ui.components.ScrubPresets.INTERVAL,
             )
 
             IntScrubField(

@@ -12,7 +12,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
 import com.ehrocha.pulsar.ble.StatusFrame
 
-enum class ThemeMode { Light, Dark, RedLight }
+enum class ThemeMode { Light, Outdoor, Dark, RedLight }
 
 val PulsarViolet = Color(0xFFB15CFF)
 val PulsarDark = Color(0xFF1C1B1F)
@@ -42,6 +42,33 @@ val DarkColorScheme = darkColorScheme(
     surfaceVariant = PulsarSecondary,
     onSurfaceVariant = Color(0xFFCAC4D0),
     outline = Color(0xFF938F99)
+)
+
+// ── Outdoor / high-contrast mode ───────────────────────────────────────────
+// Maximum perceived contrast for daylight readability. Pure white surfaces,
+// pure-ish black text, saturated accents — survives the brightness ceiling
+// of cheap phones under direct sun.
+
+val OutdoorColorScheme = lightColorScheme(
+    primary = Color(0xFF0050B0),          // saturated blue, visible at low brightness
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFFD8E8FF),
+    onPrimaryContainer = Color(0xFF001A4D),
+    secondary = Color(0xFF005530),
+    onSecondary = Color.White,
+    background = Color(0xFFFFFFFF),
+    onBackground = Color(0xFF000000),
+    surface = Color(0xFFFFFFFF),
+    onSurface = Color(0xFF000000),
+    surfaceVariant = Color(0xFFE0E0E0),
+    onSurfaceVariant = Color(0xFF000000),
+    surfaceContainerHigh = Color(0xFFEAEAEA),
+    outline = Color(0xFF000000),
+    outlineVariant = Color(0xFF555555),
+    error = Color(0xFFB00020),
+    onError = Color.White,
+    errorContainer = Color(0xFFFFD8D8),
+    onErrorContainer = Color(0xFF400000),
 )
 
 // ── Red-light / Night mode ──────────────────────────────────────────────────

@@ -74,6 +74,7 @@ import com.ehrocha.pulsar.ui.screens.MapLocationPicker
 import com.ehrocha.pulsar.ui.screens.MapPickerResult
 import com.ehrocha.pulsar.ui.theme.DarkColorScheme
 import com.ehrocha.pulsar.ui.theme.LightColorScheme
+import com.ehrocha.pulsar.ui.theme.OutdoorColorScheme
 import com.ehrocha.pulsar.ui.theme.RedLightColorScheme
 import com.ehrocha.pulsar.ui.theme.ThemeMode
 import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
@@ -120,6 +121,7 @@ class MainActivity : AppCompatActivity() {
             val nightModeLocked = remember { mutableStateOf(false) }
             val colorScheme = when (nightMode.value) {
                 ThemeMode.Light -> LightColorScheme
+                ThemeMode.Outdoor -> OutdoorColorScheme
                 ThemeMode.Dark -> DarkColorScheme
                 ThemeMode.RedLight -> RedLightColorScheme
             }

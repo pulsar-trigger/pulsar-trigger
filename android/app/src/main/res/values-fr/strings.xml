@@ -423,4 +423,5 @@
     <!-- Sequences / stacking -->
     <string name="warning_interval_lt_exposure">Intervalle plus court que l\'exposition — le firmware va limiter</string>
     <string name="status_hold_to_start">Maintenir pour démarrer</string>
+    <string name="warning_battery_low">Batterie faible (%1$d%%) — la séquence risque de ne pas se terminer</string>
 </resources>

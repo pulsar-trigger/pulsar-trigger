@@ -51,7 +51,10 @@ fun MapLocationPicker(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val isDark = LocalNightMode.current.value != ThemeMode.Light
+    val isDark = when (LocalNightMode.current.value) {
+        ThemeMode.Dark, ThemeMode.RedLight -> true
+        ThemeMode.Light, ThemeMode.Outdoor -> false
+    }
 
     var selectedLat by remember { mutableDoubleStateOf(initialLat) }
     var selectedLon by remember { mutableDoubleStateOf(initialLon) }

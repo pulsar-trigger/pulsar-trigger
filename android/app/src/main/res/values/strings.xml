@@ -563,4 +563,5 @@
     <!-- Celestial grid calibration warnings -->
     <string name="warning_interval_lt_exposure">Interval is shorter than exposure — firmware will clamp</string>
     <string name="status_hold_to_start">Hold to start</string>
+    <string name="warning_battery_low">Battery low (%1$d%%) — may not finish the sequence</string>
 </resources>
