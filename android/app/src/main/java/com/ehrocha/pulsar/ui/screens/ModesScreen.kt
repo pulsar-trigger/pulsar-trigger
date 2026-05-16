@@ -14,6 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,6 +36,7 @@ fun ModesScreen(
     onEdit: (modeId: String?) -> Unit,
 ) {
     val modes by vm.userModes.collectAsState()
+    val connected by vm.connected.collectAsState()
 
     Scaffold(
         topBar = {
@@ -81,6 +83,11 @@ fun ModesScreen(
                 modes.forEach { mode ->
                     UserModeRow(
                         mode = mode,
+                        canRun = connected,
+                        onRun = {
+                            vm.runUserMode(mode)
+                            onBack()
+                        },
                         onEdit = { onEdit(mode.id) },
                         onDelete = { vm.removeUserMode(mode.id) },
                     )
@@ -93,9 +100,14 @@ fun ModesScreen(
 @Composable
 private fun UserModeRow(
     mode: UserMode,
+    canRun: Boolean,
+    onRun: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    // Row body opens the editor (secondary action); the Play icon is the
+    // primary tap target and runs the mode. Disabled when not connected to
+    // a real device — user modes don't run against the simulator path.
     Surface(
         onClick = onEdit,
         shape = RoundedCornerShape(12.dp),
@@ -114,11 +126,17 @@ private fun UserModeRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            IconButton(onClick = onRun, enabled = canRun) {
+                Icon(
+                    Icons.Default.PlayArrow,
+                    contentDescription = stringResource(R.string.btn_start),
+                )
+            }
             IconButton(onClick = onEdit) {
-                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.modes_edit))
+                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit))
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.modes_delete))
+                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete))
             }
         }
     }

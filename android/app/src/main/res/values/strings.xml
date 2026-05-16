@@ -5,12 +5,8 @@
     <string name="app_tagline">BLE Remote Trigger</string>
     <string name="available_devices">Available Devices</string>
     <string name="select_device_prompt">Select your Pulsar trigger to begin control session.</string>
-    <string name="stop_scanning">Stop Scanning</string>
-    <string name="search_for_devices">Search for Devices</string>
     <string name="use_simulator">Use Simulator</string>
     <string name="simulator_description">Explore the app without a real device</string>
-    <string name="use_phone_camera">Use Phone Camera</string>
-    <string name="phone_camera_description">Use your phone as a capture device</string>
     <string name="unknown_device">Unknown Device</string>
 
     <!-- MainMenuScreen -->
@@ -18,17 +14,11 @@
     <string name="tab_tools">Tools</string>
     <string name="tab_dashboard">Dashboard</string>
     <string name="mode_intervalometer">Intervalometer</string>
-    <string name="mode_intervalometer_desc">Automate timelapse sequences with precision timing</string>
     <string name="mode_astro">Astro</string>
-    <string name="mode_astro_desc">Star photography with calculated exposure times</string>
     <string name="mode_manual">Manual</string>
-    <string name="mode_manual_desc">Direct shutter control — hold or lock mode</string>
     <string name="mode_dark_frame">Dark Frames</string>
-    <string name="mode_dark_frame_desc">Capture calibration frames with the lens cap on</string>
     <string name="mode_ramp">Exposure Ramp</string>
-    <string name="mode_ramp_desc">Smoothly transition exposure for holy grail timelapses</string>
     <string name="mode_custom_flow">Flows &amp; Presets</string>
-    <string name="mode_custom_flow_desc">Build multi-step flows and save presets</string>
     <string name="menu_settings">Settings</string>
     <string name="disconnect">Disconnect</string>
 
@@ -89,26 +79,21 @@
     <string name="status_ready_astro">Ready for astro sequence</string>
 
     <!-- IntervalometerPanel -->
-    <string name="panel_intervalometer">Intervalometer</string>
     <string name="panel_intervalometer_help">Automate complex timelapse sequences or burst captures with precision timing.\n\n• Set your camera to Bulb mode so Pulsar controls the shutter.\n• Interval is the time from the start of one shot to the next.\n• Exposure is how long the shutter stays open per shot.\n• Start Delay gives you time to step away before the sequence begins.\n• The Sequence Estimate card shows total duration and duty cycle.</string>
-    <string name="label_sequence_estimate">Sequence Estimate</string>
     <string name="label_shots">Shots</string>
     <string name="label_total_duration">Total Duration</string>
-    <string name="label_duty_cycle">Duty Cycle: %1$d%% active exposure</string>
     <string name="label_interval">Interval</string>
     <string name="label_exposure">Exposure</string>
     <string name="label_start_delay">Start Delay</string>
     <string name="label_number_of_shots">Number of Shots</string>
 
     <!-- ManualPanel -->
-    <string name="panel_manual">Manual Shutter</string>
     <string name="panel_manual_help">Direct manual shutter control with two modes.\n\n• HOLD: The shutter stays open as long as you press the button. Release to close. Ideal for quick bulb shots.\n• LOCK: Tap once to open the shutter, tap again to close. Best for long exposures where you don\u2019t want to hold the button.\n\nSwitch between Hold and Lock using the segmented buttons in the action area.</string>
     <string name="panel_manual_tip">Toggle behaviour using the chips in the action area below.</string>
     <string name="panel_manual_lock_info">LOCK: Tap the center button once to open the shutter, tap again to close. Best for long bulb exposures.</string>
     <string name="panel_manual_hold_info">HOLD: Shutter remains open as long as the center button is pressed. Ideal for quick bursts.</string>
 
     <!-- AstroPanel -->
-    <string name="panel_astro">Astro Mode</string>
     <string name="panel_astro_help">Calculate the longest exposure that keeps stars as sharp points instead of trails.\n\n• Choose your sensor preset (crop factor) and lens focal length.\n• 500 Rule: classic formula, generous — some trailing on modern sensors.\n• 400 Rule: tighter, better for high-resolution sensors.\n• NPF Rule: most accurate — uses pixel pitch and f/2.8 aperture for sharp stars.\n• Formula: Rule ÷ (focal length × crop factor) = max seconds.\n• Gap is the pause between exposures for the camera to write to card.\n• Adjust shot count and delay just like in Intervalometer mode.</string>
     <string name="label_rule_readout">%1$d Rule Readout</string>
     <string name="label_npf_readout">NPF Rule Readout (estimated)</string>
@@ -119,15 +104,11 @@
     <string name="label_effective_focal">%1$smm Effective</string>
     <string name="label_max_exposure">Max Exposure</string>
     <string name="label_astro_formula">Formula: %1$d / (%2$d mm × %3$sx) = %4$ss</string>
-    <string name="label_optics_configuration">Optics Configuration</string>
-    <string name="label_sensor_preset">Sensor Preset</string>
     <string name="preset_full_frame">Full Frame</string>
     <string name="preset_aps_c_canon">APS-C (Canon)</string>
     <string name="preset_aps_c_nikon_sony">APS-C (Nikon/Sony)</string>
     <string name="preset_micro_43">Micro 4/3</string>
     <string name="label_focal_length">Lens Focal Length</string>
-    <string name="label_capture_sequence">Capture Sequence</string>
-
     <!-- SettingsPanel -->
     <string name="section_language">Language</string>
     <string name="lang_system_default">System default</string>
@@ -188,19 +169,7 @@
     <string name="status_update_check_failed">Update check failed</string>
 
     <!-- Default values settings -->
-    <string name="section_default_values">Default Values</string>
-    <string name="default_values_help">Factory defaults for the Intervalometer mode.\n\n• These values are loaded when the app starts or after a reset.\n• Interval is the gap between shots; Exposure is how long the shutter stays open.\n• Adjust shot count and start delay to match your typical workflow.\n• Tap \"Reset to Factory Defaults\" to restore the original values.</string>
-    <string name="label_default_interval">Default Interval (gap)</string>
-    <string name="label_default_exposure">Default Exposure</string>
-    <string name="label_default_start_delay">Default Start Delay</string>
-    <string name="label_default_shot_count">Default Shot Count</string>
-    <string name="range_shot_count">1 – %1$d</string>
-    <string name="label_max_shot_count">Max Shot Count</string>
-    <string name="range_max_shot_count">10 – 9999</string>
-    <string name="btn_reset_defaults">Reset to Factory Defaults</string>
-
     <!-- Device hardware -->
-    <string name="section_device_hardware">Device Hardware</string>
     <string name="hw_simulator_note">Hardware info not available in simulator mode</string>
     <string name="hw_connect_prompt">Connect to a device to see hardware info</string>
     <string name="status_querying_device">Querying device…</string>
@@ -236,13 +205,7 @@
     <string name="status_of_shots">of %1$d shots</string>
     <string name="status_remaining">remaining</string>
     <string name="finishes_at">Finishes at %1$s</string>
-    <string name="stat_finishes_at">Finishes at</string>
-
     <!-- ModeSettingsScreen -->
-    <string name="settings_intervalometer">Intervalometer Settings</string>
-    <string name="settings_astro">Astro Settings</string>
-    <string name="settings_astro_help">Configure your default optics for astrophotography.\n\n• Sensor preset sets the crop factor for your camera body.\n• Focal length determines the maximum safe exposure time.\n• 500/400 Rule: Rule ÷ (focal length × crop) = max seconds.\n• NPF Rule: accounts for pixel size — sharpest results.\n• These defaults are also adjustable directly in the Astro mode screen.</string>
-
     <!-- MainActivity update dialog -->
     <string name="dialog_updates_available">Updates Available</string>
     <string name="update_firmware_available">Firmware v%1$s is available</string>
@@ -250,8 +213,6 @@
     <string name="btn_go_to_settings">Go to Settings</string>
 
     <!-- DashboardScreen -->
-    <string name="dashboard_title">Astro Dashboard</string>
-    <string name="dashboard_help">Real-time sky conditions for your location.\n\n• Weather, cloud cover, and precipitation\n• Moon phase, illumination, and rise/set times\n• Twilight timeline and dark sky windows\n• Bortle scale light pollution estimate\n• Visible planets and Milky Way status\n\nPull down to refresh. Data is fetched from Open-Meteo and calculated locally.</string>
     <string name="status_fetching_data">Fetching location &amp; data…</string>
     <string name="card_summary">Summary</string>
     <string name="location_north">N</string>
@@ -325,8 +286,6 @@
     <string name="flow_help">Create multi-step shooting sequences that chain different modes together.\n\n• Combine intervalometer, astro, dark frames, and pause steps\n• Save flows for reuse across sessions\n• Built-in NPF Rule presets for common focal lengths\n• Add pause steps with wake alerts between sequences\n\nTap + to create a new flow, or select a preset to run immediately.</string>
     <string name="flow_no_saved">No saved flows</string>
     <string name="flow_create_instruction">Create a flow to chain multiple shooting\nmodes, pauses, and presets.</string>
-    <string name="flow_section_presets">NPF Rule Presets</string>
-    <string name="flow_section_custom">My Flows</string>
     <string name="flow_tab_recommended">Out of Box</string>
     <string name="flow_tab_my_flows">My Flows</string>
     <string name="btn_new_flow">New Flow</string>
@@ -359,7 +318,6 @@
     <string name="flow_name_exists">A flow with this name already exists and will be replaced.</string>
     <string name="flow_filter_all">All</string>
     <string name="flow_filter_favorites">Favorites</string>
-    <string name="flow_section_favorites">Favorites</string>
     <string name="label_tags">Tags</string>
     <string name="label_add_tag">Add tag</string>
     <string name="label_new_tag">New tag…</string>
@@ -380,7 +338,6 @@
 
     <!-- Planner -->
     <string name="mode_planner">Session Planner</string>
-    <string name="mode_planner_desc">Save locations &amp; schedule sessions with condition alerts</string>
     <string name="planner_title">Session Planner</string>
     <string name="planner_help">Plan and track astrophotography sessions across multiple locations and dates.\n\n• Create events with date ranges (e.g. a star party weekend)\n• Add sessions with GPS coordinates, dates, and time windows\n• Automatic weather and sky condition checks per session\n• Share events as .pulsar files or calendar entries (.ics)\n• Import shared events from other Pulsar users\n\nLong-press a session to enter bulk selection mode.</string>
     <string name="planner_add">Add</string>
@@ -498,7 +455,6 @@
 
     <!-- Tracker Alignment -->
     <string name="mode_alignment">Tracker Alignment</string>
-    <string name="mode_alignment_desc">Polar-align your star tracker using phone sensors</string>
     <string name="alignment_title">Tracker Alignment</string>
     <string name="alignment_help">Use your phone\'s sensors to polar-align a star tracker mount.\n\n• Shows real-time azimuth and altitude readings\n• Target Polaris (Northern hemisphere) or Sigma Octantis (Southern)\n• Calibrate by placing the phone flat and pressing calibrate\n• Fine-tune with the altitude and azimuth adjustment knobs on your mount\n\nFor best accuracy, keep the phone away from magnetic interference.</string>
     <string name="alignment_no_location">Waiting for GPS location…</string>
@@ -521,11 +477,8 @@
     <string name="label_ramp_steps">Number of Steps</string>
 
     <!-- Astro settings update for NPF -->
-    <string name="settings_astro_help_npf">Configure your default optics for astrophotography.\n\n• Sensor preset sets the crop factor for your camera body.\n• Focal length determines the maximum safe exposure time.\n• 500 Rule: classic, generous — some trailing on modern sensors.\n• 400 Rule: tighter — better for high-resolution sensors.\n• NPF Rule: most accurate — accounts for pixel size and a typical f/2.8 aperture.\n• These defaults are also adjustable directly in the Astro mode screen.</string>
-
     <!-- What's Up Tonight -->
     <string name="mode_whats_up">What\'s Up Tonight</string>
-    <string name="mode_whats_up_desc">See which deep-sky objects are visible right now</string>
     <string name="whats_up_title">What\'s Up Tonight</string>
     <string name="whats_up_help">Shows deep-sky objects (nebulae, galaxies, clusters) that are currently above the horizon at your location.\n\n• Objects are sorted by altitude — higher = better positioned\n• Green icon: well-placed (above 30°), ideal for imaging\n• Grey icon: low in the sky (10–30°), possible but less ideal\n• Best results when used during astronomical darkness\n\nThis catalog includes ~27 popular astrophotography targets.</string>
     <string name="whats_up_visible_count">%1$d targets above the horizon</string>
@@ -585,152 +538,27 @@
     <string name="cd_simulator">Simulator</string>
 
     <!-- Phone Camera -->
-    <string name="mode_camera">Phone Camera</string>
-    <string name="camera_title">Camera</string>
-    <string name="camera_permission_needed">Camera permission is required to use this feature.</string>
-    <string name="camera_grant_permission">Grant Permission</string>
-    <string name="camera_controls">Camera Controls</string>
-    <string name="camera_parameters">Parameters</string>
-    <string name="camera_select_mode">Select Mode</string>
-    <string name="btn_expand">Expand</string>
-    <string name="btn_collapse">Collapse</string>
-    <string name="exposure_auto">Auto</string>
-    <string name="exposure_manual">Manual</string>
-    <string name="focus_auto">Auto</string>
-    <string name="focus_manual">Manual</string>
-    <string name="label_iso">ISO: %d</string>
-    <string name="label_shutter_speed">Shutter: %s</string>
-    <string name="label_focus_distance">Focus: %s</string>
-    <string name="label_exposure_mode">Exposure</string>
-    <string name="label_focus_mode">Focus</string>
-    <string name="label_lens">Lens</string>
-    <string name="camera_shots_fmt">Shots: %d</string>
-    <string name="camera_exposure_fmt">Exposure: %s</string>
-    <string name="camera_gap_fmt">Interval: %s</string>
-    <string name="camera_gap_label">Interval</string>
     <!-- Camera control tooltips -->
-    <string name="tooltip_lens">Switch camera lens</string>
-    <string name="tooltip_iso">ISO sensitivity</string>
-    <string name="tooltip_focus">Manual focus distance</string>
-    <string name="tooltip_grid">Grid overlay</string>
-    <string name="tooltip_keep_awake">Keep screen on</string>
-    <string name="tooltip_raw">Save as RAW or JPEG</string>
-    <string name="tooltip_ois">Optical image stabilization — disable for tripod</string>
-    <string name="tooltip_gallery">Open last photo in gallery</string>
-    <string name="tooltip_auto_astro">Auto Astro — NPF exposure, 20 shots, 4s gap</string>
-    <string name="tooltip_storm">Storm — 4s exposures, no gap, 300 shots</string>
-    <string name="tooltip_trails">Star Trails — 30s exposures, no gap, 120 shots</string>
-    <string name="tooltip_fireworks">Fireworks — 4s exposures, no gap, 200 shots, low ISO</string>
-    <string name="tooltip_timelapse">Daytime timelapse — Default, Action Burst, or Cloudscape</string>
-    <string name="timelapse_style_default">Default</string>
-    <string name="timelapse_style_burst">Action Burst</string>
-    <string name="timelapse_style_cloudscape">Cloudscape</string>
-    <string name="auto_astro_rule_npf">NPF</string>
-    <string name="auto_astro_rule_400">400</string>
-    <string name="auto_astro_rule_500">500</string>
-    <string name="auto_astro_foreground_on">Foreground frame: On (30 s, low ISO)</string>
-    <string name="auto_astro_foreground_off">Foreground frame: Off</string>
-    <string name="iso_auto">ISO Auto</string>
-
     <!-- User-authored modes -->
     <string name="modes_title">User Modes</string>
     <string name="modes_help">Save up to %1$d recipes you can launch from the camera strip.</string>
     <string name="modes_empty">No user modes yet — tap + to create one.</string>
     <string name="modes_add">Add user mode</string>
-    <string name="modes_edit">Edit</string>
-    <string name="modes_delete">Delete</string>
     <string name="modes_save">Save</string>
     <string name="modes_new">New mode</string>
     <string name="modes_edit_title">Edit mode</string>
     <string name="modes_field_name">Name</string>
-    <string name="modes_field_kind">Kind</string>
-    <string name="modes_kind_camera">Camera</string>
-    <string name="modes_kind_trigger">Trigger</string>
-    <string name="modes_field_tag">Tag (post-capture stacker)</string>
     <string name="modes_field_fwmode">Firmware mode</string>
-    <string name="modes_field_exposure_kind">Exposure</string>
-    <string name="modes_exp_fixed">Fixed</string>
-    <string name="modes_exp_clamp">Sensor max</string>
     <string name="modes_field_exposure_ms">Exposure (ms)</string>
     <string name="modes_field_interval_ms">Interval (ms)</string>
     <string name="modes_field_shot_count">Shot count</string>
     <string name="modes_field_delay_ms">Start delay (ms)</string>
-    <string name="modes_field_iso_override">Lock manual ISO</string>
-    <string name="modes_field_prefer_night">Prefer Night-mode (when available)</string>
-    <string name="mode_user">User</string>
-    <string name="modes_slot_empty">Add</string>
-
     <!-- Sequences / stacking -->
-    <string name="mode_sequences">Sequences</string>
-    <string name="mode_sequences_desc">Stack captured frames into a single image</string>
-    <string name="sequences_title">Sequences</string>
-    <string name="sequences_empty">No captured sequences yet. Use any auto mode (Auto, Trails, Storm, Fireworks) to fill this list.</string>
-    <string name="sequences_frame_count">%1$d frames · %2$s</string>
-    <string name="sequences_frames_label">frames</string>
-    <string name="sequences_frames_in">%1$d frames in this sequence</string>
-    <string name="stack_lighten">Lighten Stack</string>
-    <string name="stack_mean">Mean Stack</string>
-    <string name="stack_explanation">Lighten = star trails, fireworks, lightning composite. Mean = noise reduction on tracked subjects.</string>
-    <string name="stack_progress">Stacking %1$d / %2$d</string>
-    <string name="stack_done">Stack saved to this sequence folder.</string>
-    <string name="stack_view">View</string>
-    <string name="stack_save_failed">Could not save stacked image.</string>
-    <string name="stack_decode_failed">Could not read frames.</string>
-    <string name="stack_out_of_memory">Out of memory — too many frames or resolution too high.</string>
-    <string name="stack_unknown_error">Stacking failed.</string>
-    <string name="stack_lightning">Lightning Composite</string>
-    <string name="stack_strikes_found">%1$d strikes found in %2$d frames — composite saved.</string>
-    <string name="stack_no_strikes">No lightning detected across %1$d frames.</string>
-    <string name="stack_video">Build Video</string>
-    <string name="stack_video_done">Video saved (%1$d frames at 30 fps, 1080p).</string>
-    <string name="stack_video_failed">Could not build video.</string>
-    <string name="sort_newest">Newest</string>
-    <string name="sort_oldest">Oldest</string>
-    <string name="sort_name">Name</string>
-    <string name="action_rename">Rename</string>
-    <string name="action_delete">Delete</string>
-    <string name="dialog_rename_sequence">Rename sequence</string>
-    <string name="dialog_delete_sequence">Delete sequence?</string>
-    <string name="dialog_delete_sequence_msg">Permanently delete %1$d frames in “%2$s”? This cannot be undone.</string>
-    <string name="stack_nightscape">Nightscape</string>
-    <string name="stack_nightscape_done">Nightscape composite saved (horizon at row %1$d).</string>
-    <string name="stack_no_horizon">No clear horizon detected. Nightscape needs a brighter foreground frame at the bottom of the scene — Auto Astro\'s bonus frame works best.</string>
-    <string name="tag_captured_with">Captured with: %1$s</string>
-    <string name="tag_auto_astro">Auto Astro</string>
-    <string name="tag_storm">Storm</string>
-    <string name="tag_trails">Star Trails</string>
-    <string name="tag_fireworks">Fireworks</string>
-    <string name="tag_manual">Manual</string>
-    <string name="tag_timelapse">Timelapse</string>
-
     <!-- Camera mode info panels — shown when a non-Manual mode is selected -->
-    <string name="mode_info_auto_title">Auto Astro</string>
-    <string name="mode_info_auto_body">20 sharp-star frames using the NPF rule for your lens, then one bonus 30-second low-ISO foreground frame. Process the sequence later as Nightscape (sky + ground composite) or Mean (clean noise-reduced sky).</string>
-    <string name="mode_info_storm_title">Storm / Lightning</string>
-    <string name="mode_info_storm_body">300 × 4-second exposures with zero gap and ISO 400. Designed to catch lightning during a storm. Use Lightning Composite afterwards to auto-cull the winner frames into one image.</string>
-    <string name="mode_info_trails_title">Star Trails</string>
-    <string name="mode_info_trails_body">120 × 30-second exposures back-to-back at ISO 800. Process with Lighten Stack to merge the moving stars into iconic concentric arcs around the celestial pole.</string>
-    <string name="mode_info_fireworks_title">Fireworks</string>
-    <string name="mode_info_fireworks_body">200 × 4-second exposures with no gap, low ISO for highlight headroom. Process with Lighten Stack to overlay every burst from the show into a single image.</string>
-    <string name="mode_info_timelapse_title">Timelapse</string>
-    <string name="mode_info_timelapse_body">360 fast 1/1000-second exposures spaced 10 seconds apart at ISO 200. Built for daytime — clouds, sunsets, traffic, construction. About one hour of capture per session. Process with Lighten Stack later to capture the sun\'s arc, cloud streaks, or vehicle light trails in a single image.</string>
-    <string name="mode_info_timelapse_burst_body">100 fast 1/1000-second exposures fired half a second apart at ISO 400. Built for action — sports, kids, pets, anything that moves quickly. About 50 seconds of capture; pick the best frame, or stack with Lighten for a ghost-trail effect.</string>
-    <string name="mode_info_timelapse_cloud_body">480 short 1/250-second exposures spaced 30 seconds apart at ISO 100. Built for slowly-drifting clouds — the longer interval gives them time to actually move between frames. About 4 hours of capture, renders to ~16 s at 30 fps.</string>
-
-    <string name="camera_limits_title">Camera capability ranges</string>
-    <string name="camera_limits_body">Manual exposure and ISO ranges come from the Android Camera2 API — what each lens physically advertises.\n\nMost phone lenses cap single-shot exposure under 1 second; the OS camera app fakes longer ones via vendor Night-mode extensions we don\'t use. For longer effective exposures, use Auto Astro, Star Trails, Storm or Fireworks — they take many short frames and stack them, which is how phone astrophotography actually works.</string>
-    <string name="camera_limits_dont_show_again">Don\'t show again</string>
-    <string name="exposure_exceeds_sensor">Sensor max is %1$s — actual capture will be clamped. Use Auto Astro for true long-exposure stacking.</string>
-
     <!-- About: tribute to Jocelyn Bell Burnell -->
     <string name="about_tribute_heading">In honor of</string>
     <string name="about_tribute_name">Dame Jocelyn Bell Burnell</string>
     <string name="about_tribute_body">Pulsars were discovered in 1967 by Jocelyn Bell Burnell as a graduate student in radio astronomy. This app borrows their name in humble tribute to her discovery and to her enduring championing of science.</string>
     <string name="about_tribute_link">Read on Wikipedia</string>
-    <string name="toast_no_gallery_app">No gallery app available</string>
-    <string name="tooltip_intervalometer">Intervalometer settings</string>
     <!-- Celestial grid calibration warnings -->
-    <string name="warning_compass">Compass uncalibrated — wave phone in figure-8</string>
-    <string name="warning_no_gps">No GPS fix — location unavailable</string>
-    <string name="warning_gps_inaccurate">GPS accuracy: ±%dm</string>
 </resources>

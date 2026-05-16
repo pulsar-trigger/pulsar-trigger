@@ -929,56 +929,6 @@ internal fun formatDuration(ms: Long): String {
     }
 }
 
-// ─── Collapsible section ─────────────────────────────────────────────────────
-
-@Composable
-private fun CollapsibleSection(
-    title: String,
-    initiallyExpanded: Boolean = false,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    var expanded by remember { mutableStateOf(initiallyExpanded) }
-
-    Surface(
-        onClick = { expanded = !expanded },
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            ) {
-                Text(
-                    title,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.weight(1f),
-                )
-                Icon(
-                    if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = if (expanded) stringResource(R.string.cd_collapse) else stringResource(R.string.cd_expand),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-
-            AnimatedVisibility(
-                visible = expanded,
-                enter = expandVertically(),
-                exit = shrinkVertically(),
-            ) {
-                Column(
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    content = content,
-                )
-            }
-        }
-    }
-}
-
 // ── Settings section enum & menu ─────────────────────────────────────────────
 
 enum class SettingsSection(val icon: ImageVector, @StringRes val titleRes: Int) {
