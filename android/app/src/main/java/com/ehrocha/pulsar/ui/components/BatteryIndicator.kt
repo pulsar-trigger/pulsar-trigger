@@ -37,6 +37,7 @@ import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
+import com.ehrocha.pulsar.ui.theme.LocalDeviceLatency
 import com.ehrocha.pulsar.ui.theme.LocalDeviceRssi
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 import com.ehrocha.pulsar.ui.theme.LocalNightMode
@@ -226,4 +227,28 @@ fun SignalStrengthIndicator() {
             }
         }
     }
+}
+
+/**
+ * Compact BLE command round-trip latency readout in ms.
+ * Hidden when not connected or before the first ACK is received.
+ */
+@Composable
+fun LatencyIndicator() {
+    val connected = LocalDeviceConnected.current
+    if (!connected) return
+    val ms = LocalDeviceLatency.current ?: return
+
+    val color = when {
+        ms < 80 -> StatusGreen
+        ms < 200 -> StatusOrange
+        else -> StatusRed
+    }
+    Text(
+        text = "${ms}ms",
+        style = MaterialTheme.typography.labelSmall,
+        fontSize = 9.sp,
+        color = color,
+        modifier = Modifier.padding(horizontal = 4.dp),
+    )
 }

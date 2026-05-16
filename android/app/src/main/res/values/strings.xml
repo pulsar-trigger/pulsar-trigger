@@ -82,6 +82,29 @@
     <string name="panel_intervalometer_help">Automate complex timelapse sequences or burst captures with precision timing.\n\n• Set your camera to Bulb mode so Pulsar controls the shutter.\n• Interval is the time from the start of one shot to the next.\n• Exposure is how long the shutter stays open per shot.\n• Start Delay gives you time to step away before the sequence begins.\n• The Sequence Estimate card shows total duration and duty cycle.</string>
     <string name="label_shots">Shots</string>
     <string name="label_total_duration">Total Duration</string>
+    <string name="label_ends_at">Ends at %1$s</string>
+
+    <!-- Ramp curve preview -->
+    <string name="ramp_curve_start">Start: %1$s</string>
+    <string name="ramp_curve_end">End: %1$s</string>
+    <string name="ramp_curve_ascending">Exposure increases over the sequence</string>
+    <string name="ramp_curve_descending">Exposure decreases over the sequence</string>
+
+    <!-- Pairing protocol card (Scan screen, empty state) -->
+    <string name="pairing_protocol_title">PAIRING PROTOCOL</string>
+    <string name="pairing_step_1">Power the Pulsar trigger and check the status LED is blinking.</string>
+    <string name="pairing_step_2">Keep your phone within a few meters and Bluetooth enabled.</string>
+    <string name="pairing_step_3">Pull down to refresh — your device will appear above.</string>
+
+    <!-- Session log -->
+    <string name="shot_log_title">Session History</string>
+    <string name="shot_log_empty">No runs recorded yet. Start a sequence and it will appear here.</string>
+    <string name="shot_log_clear_title">Clear session history?</string>
+    <string name="shot_log_clear_body">All recorded runs will be removed. This cannot be undone.</string>
+    <string name="shot_log_stat_runs">Runs</string>
+    <string name="shot_log_stat_shots">Shots</string>
+    <string name="shot_log_stat_success">Success</string>
+    <string name="shot_log_row_shots">%1$d / %2$d shots</string>
     <string name="label_interval">Interval</string>
     <string name="label_exposure">Exposure</string>
     <string name="label_start_delay">Start Delay</string>

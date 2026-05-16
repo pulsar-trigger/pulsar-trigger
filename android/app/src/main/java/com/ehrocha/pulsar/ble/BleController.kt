@@ -58,6 +58,7 @@ class BleController(private val context: Context) {
     val status: StateFlow<StatusFrame?> = bleManager.status
     val deviceInfo: StateFlow<DeviceInfo?> = bleManager.deviceInfo
     val rssi: StateFlow<Int?> = bleManager.rssi
+    val latencyMs: StateFlow<Int?> = bleManager.latencyMs
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {

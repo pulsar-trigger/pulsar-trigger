@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.BluetoothSearching
 import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.Settings
@@ -56,6 +57,7 @@ import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.update.AppUpdateState
 import com.ehrocha.pulsar.ui.components.BatteryIndicator
+import com.ehrocha.pulsar.ui.components.LatencyIndicator
 import com.ehrocha.pulsar.ui.components.SignalStrengthIndicator
 import com.ehrocha.pulsar.ui.components.NightModeToggle
 import com.ehrocha.pulsar.ui.screens.MainMenuScreen
@@ -78,6 +80,7 @@ import com.ehrocha.pulsar.ui.theme.OutdoorColorScheme
 import com.ehrocha.pulsar.ui.theme.RedLightColorScheme
 import com.ehrocha.pulsar.ui.theme.ThemeMode
 import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
+import com.ehrocha.pulsar.ui.theme.LocalDeviceLatency
 import com.ehrocha.pulsar.ui.theme.LocalDeviceRssi
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 import com.ehrocha.pulsar.ui.theme.LocalRunState
@@ -299,12 +302,14 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
     val deviceStatus by vm.status.collectAsState()
     val deviceName by vm.deviceName.collectAsState()
     val deviceRssi by vm.rssi.collectAsState()
+    val deviceLatency by vm.latencyMs.collectAsState()
     val runState by vm.runState.collectAsState()
     CompositionLocalProvider(
         LocalDeviceStatus provides deviceStatus,
         LocalRunState provides runState,
         LocalDeviceConnected provides connected,
         LocalDeviceRssi provides deviceRssi,
+        LocalDeviceLatency provides deviceLatency,
     ) {
     Column(Modifier.fillMaxSize()) {
         // ── Persistent top bar (hidden on Scan screen) ───────────────
@@ -325,6 +330,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     )
                     BatteryIndicator()
                     SignalStrengthIndicator()
+                    LatencyIndicator()
                 }
             }
             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
@@ -467,6 +473,13 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     onBack = { currentScreen = AppScreen.Modes },
                 )
             }
+            AppScreen.ShotLog -> {
+                BackHandler { currentScreen = AppScreen.Menu }
+                com.ehrocha.pulsar.ui.screens.ShotLogScreen(
+                    vm = vm,
+                    onBack = { currentScreen = AppScreen.Menu },
+                )
+            }
         }
     }
         // ── Bottom bar (Menu screen only) ────────────────────────────
@@ -489,6 +502,13 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                         )
                     }
                     NightModeToggle()
+                    IconButton(onClick = { currentScreen = AppScreen.ShotLog }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ListAlt,
+                            contentDescription = stringResource(R.string.shot_log_title),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     IconButton(onClick = { currentScreen = AppScreen.Settings() }) {
                         BadgedBox(
                             badge = {
@@ -525,4 +545,5 @@ private sealed class AppScreen {
     data object WhatsUp : AppScreen()
     data object Modes : AppScreen()
     data class ModeEditor(val modeId: String? = null) : AppScreen()
+    data object ShotLog : AppScreen()
 }

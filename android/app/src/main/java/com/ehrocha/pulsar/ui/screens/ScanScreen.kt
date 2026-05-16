@@ -166,6 +166,9 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
                 items(devices) { device ->
                     DeviceCard(device) { vm.connectTo(device) }
                 }
+                if (devices.isEmpty()) {
+                    item { PairingProtocolCard() }
+                }
             }
         }
 
@@ -292,6 +295,47 @@ private fun LanguagePickerDialog(onDismiss: () -> Unit) {
             }
         },
     )
+}
+
+@Composable
+private fun PairingProtocolCard() {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(
+                stringResource(R.string.pairing_protocol_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.5.sp,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            PairingStep("01", stringResource(R.string.pairing_step_1))
+            PairingStep("02", stringResource(R.string.pairing_step_2))
+            PairingStep("03", stringResource(R.string.pairing_step_3))
+        }
+    }
+}
+
+@Composable
+private fun PairingStep(number: String, text: String) {
+    Row(verticalAlignment = Alignment.Top) {
+        Text(
+            number,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(end = 12.dp),
+        )
+        Text(
+            text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f),
+        )
+    }
 }
 
 @SuppressLint("MissingPermission")

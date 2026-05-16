@@ -424,4 +424,24 @@
     <string name="warning_interval_lt_exposure">Intervalo menor que a exposição — o firmware vai limitar</string>
     <string name="status_hold_to_start">Mantenha pressionado para iniciar</string>
     <string name="warning_battery_low">Bateria baixa (%1$d%%) — pode não terminar a sequência</string>
+
+    <string name="label_ends_at">Termina às %1$s</string>
+    <string name="ramp_curve_start">Início: %1$s</string>
+    <string name="ramp_curve_end">Fim: %1$s</string>
+    <string name="ramp_curve_ascending">A exposição aumenta ao longo da sequência</string>
+    <string name="ramp_curve_descending">A exposição diminui ao longo da sequência</string>
+
+    <string name="pairing_protocol_title">PROTOCOLO DE PAREAMENTO</string>
+    <string name="pairing_step_1">Ligue o disparador Pulsar e verifique se o LED de status está piscando.</string>
+    <string name="pairing_step_2">Mantenha o celular a poucos metros, com Bluetooth ativado.</string>
+    <string name="pairing_step_3">Puxe para baixo para atualizar — seu dispositivo aparecerá acima.</string>
+
+    <string name="shot_log_title">Histórico de Sessões</string>
+    <string name="shot_log_empty">Nenhuma execução registrada. Inicie uma sequência para aparecer aqui.</string>
+    <string name="shot_log_clear_title">Limpar histórico de sessões?</string>
+    <string name="shot_log_clear_body">Todas as execuções serão removidas. Esta ação não pode ser desfeita.</string>
+    <string name="shot_log_stat_runs">Execuções</string>
+    <string name="shot_log_stat_shots">Disparos</string>
+    <string name="shot_log_stat_success">Sucesso</string>
+    <string name="shot_log_row_shots">%1$d / %2$d disparos</string>
 </resources>

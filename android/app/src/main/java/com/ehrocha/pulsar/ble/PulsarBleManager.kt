@@ -58,6 +58,13 @@ class PulsarBleManager(context: Context) : BleManager(context) {
     private val _rssi = MutableStateFlow<Int?>(null)
     val rssi: StateFlow<Int?> = _rssi
 
+    /** Smoothed BLE round-trip latency in ms, measured from sendCommand() to ACK. */
+    private val _latencyMs = MutableStateFlow<Int?>(null)
+    val latencyMs: StateFlow<Int?> = _latencyMs
+
+    @Volatile
+    private var lastSendNs: Long = 0L
+
     private val rssiScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var rssiJob: Job? = null
 
@@ -89,8 +96,15 @@ class PulsarBleManager(context: Context) : BleManager(context) {
                     NotifyOp.STATUS      -> StatusFrame.parse(bytes)?.let { _status.value = it }
                     NotifyOp.DEVICE_INFO -> DeviceInfo.parse(bytes)?.let { _deviceInfo.value = it }
                     NotifyOp.ACK         -> {
-                        // Optional: surface ACK errors via a flow if/when the
-                        // UI needs them. For now just log via the Nordic stack.
+                        val sentNs = lastSendNs
+                        if (sentNs != 0L) {
+                            val nowNs = System.nanoTime()
+                            val rttMs = ((nowNs - sentNs) / 1_000_000).toInt().coerceIn(0, 9999)
+                            // EMA smoothing so brief spikes don't dominate the readout.
+                            val prev = _latencyMs.value
+                            _latencyMs.value = if (prev == null) rttMs else (prev * 7 + rttMs) / 8
+                            lastSendNs = 0L
+                        }
                     }
                 }
             }
@@ -141,10 +155,13 @@ class PulsarBleManager(context: Context) : BleManager(context) {
         _connectionState.value = false
         rssiJob?.cancel()
         _rssi.value = null
+        _latencyMs.value = null
+        lastSendNs = 0L
     }
 
     fun sendCommand(packet: ByteArray) {
         cmdChar?.let { char ->
+            lastSendNs = System.nanoTime()
             writeCharacteristic(char, packet, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
                 .enqueue()
         } ?: Log.w(TAG, "Command characteristic not available")

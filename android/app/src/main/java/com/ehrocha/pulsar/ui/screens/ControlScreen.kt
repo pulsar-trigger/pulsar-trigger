@@ -487,6 +487,7 @@ private fun HeroSummary(
     secondaryLabel: String,
     secondaryValue: String,
     warning: String? = null,
+    totalDurationMs: Long? = null,
 ) {
     Surface(
         shape = RoundedCornerShape(20.dp),
@@ -527,6 +528,20 @@ private fun HeroSummary(
                     )
                 }
             }
+            if (totalDurationMs != null && totalDurationMs > 0) {
+                Spacer(Modifier.height(6.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.End,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        stringResource(R.string.label_ends_at, formatEndClock(totalDurationMs)),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             if (warning != null) {
                 Spacer(Modifier.height(8.dp))
                 Text(
@@ -537,6 +552,15 @@ private fun HeroSummary(
             }
         }
     }
+}
+
+private fun formatEndClock(durationFromNowMs: Long): String {
+    val end = java.util.Calendar.getInstance().apply {
+        timeInMillis = System.currentTimeMillis() + durationFromNowMs
+    }
+    val h = end.get(java.util.Calendar.HOUR_OF_DAY)
+    val m = end.get(java.util.Calendar.MINUTE)
+    return String.format(java.util.Locale.US, "%02d:%02d", h, m)
 }
 
 @Composable
@@ -592,6 +616,7 @@ internal fun IntervalometerPanelContent(
             secondaryLabel = stringResource(R.string.label_total_duration),
             secondaryValue = formatDuration(totalSequenceTimeMs),
             warning = warning,
+            totalDurationMs = totalSequenceTimeMs,
         )
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -722,6 +747,10 @@ internal fun AstroPanelContent(
     val maxExposureS = AppConfig.astroExposureS(focalLength, cropFactor, ruleDivisor)
     val totalTimeMs = delayMs + shotCount.toLong() * (maxExposureMs + gapMs) - gapMs
 
+    val rule500Ms = AppConfig.astroExposureMs(focalLength, cropFactor, AppConfig.DEFAULT_RULE_DIVISOR)
+    val rule400Ms = AppConfig.astroExposureMs(focalLength, cropFactor, AppConfig.TIGHT_RULE_DIVISOR)
+    val ruleNpfMs = AppConfig.astroExposureMs(focalLength, cropFactor, AppConfig.NPF_RULE_DIVISOR)
+
     Column(verticalArrangement = Arrangement.spacedBy(20.dp), modifier = modifier) {
         Surface(
             shape = RoundedCornerShape(20.dp),
@@ -730,15 +759,10 @@ internal fun AstroPanelContent(
         ) {
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    val ruleLabel = if (ruleDivisor == AppConfig.NPF_RULE_DIVISOR)
-                        stringResource(R.string.label_npf_readout)
-                    else
-                        stringResource(R.string.label_rule_readout, ruleDivisor)
                     Text(
-                        ruleLabel,
+                        stringResource(R.string.label_max_exposure),
                         style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f)
                     )
                     Surface(
@@ -753,18 +777,40 @@ internal fun AstroPanelContent(
                     }
                 }
 
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    RuleCompareCell(
+                        label = stringResource(R.string.chip_500_rule),
+                        value = formatDuration(rule500Ms),
+                        selected = ruleDivisor == AppConfig.DEFAULT_RULE_DIVISOR,
+                        modifier = Modifier.weight(1f),
+                    )
+                    RuleCompareCell(
+                        label = stringResource(R.string.chip_400_rule),
+                        value = formatDuration(rule400Ms),
+                        selected = ruleDivisor == AppConfig.TIGHT_RULE_DIVISOR,
+                        modifier = Modifier.weight(1f),
+                    )
+                    RuleCompareCell(
+                        label = stringResource(R.string.chip_npf_rule),
+                        value = formatDuration(ruleNpfMs),
+                        selected = ruleDivisor == AppConfig.NPF_RULE_DIVISOR,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.label_max_exposure), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(formatDuration(maxExposureMs), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    }
-                    VerticalDivider(
-                        modifier = Modifier.height(56.dp).padding(horizontal = 12.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                    )
-                    Column(modifier = Modifier.weight(1f)) {
                         Text(stringResource(R.string.label_total_duration), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(formatDuration(totalTimeMs), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
+                        Text(formatDuration(totalTimeMs), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    }
+                    if (totalTimeMs > 0) {
+                        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                            Text(
+                                stringResource(R.string.label_ends_at, formatEndClock(totalTimeMs)),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
 
@@ -902,6 +948,50 @@ internal fun AstroPanelContent(
     }
 }
 
+@Composable
+private fun RuleCompareCell(
+    label: String,
+    value: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val border = if (selected) MaterialTheme.colorScheme.primary
+                 else MaterialTheme.colorScheme.outlineVariant
+    val bg = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+             else MaterialTheme.colorScheme.surface
+    val valueColor = if (selected) MaterialTheme.colorScheme.primary
+                     else MaterialTheme.colorScheme.onSurface
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = bg,
+        border = androidx.compose.foundation.BorderStroke(
+            width = if (selected) 1.5.dp else 1.dp,
+            color = border,
+        ),
+        modifier = modifier,
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (selected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+            Text(
+                value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = valueColor,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
 private data class SensorPreset(val labelRes: Int, val shortLabel: String, val crop: Float)
 
 private val SENSOR_PRESETS = listOf(
@@ -952,6 +1042,7 @@ internal fun DarkFramePanelContent(
             secondaryLabel = stringResource(R.string.label_total_duration),
             secondaryValue = formatDuration(totalTimeMs),
             warning = warning,
+            totalDurationMs = totalTimeMs,
         )
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1031,6 +1122,13 @@ internal fun RampPanelContent(
             secondaryLabel = stringResource(R.string.label_total_duration),
             secondaryValue = formatDuration(totalTimeMs),
             warning = warning,
+            totalDurationMs = totalTimeMs,
+        )
+
+        RampCurvePreview(
+            startExposureMs = startExposureMs,
+            endExposureMs = endExposureMs,
+            steps = steps,
         )
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1067,6 +1165,95 @@ internal fun RampPanelContent(
                 onValueChange = { onStepsChanged(it.coerceAtLeast(2)) },
                 enabled = enabled,
                 presets = listOf(20, 50, 100, 200),
+            )
+        }
+    }
+}
+
+@Composable
+private fun RampCurvePreview(
+    startExposureMs: Long,
+    endExposureMs: Long,
+    steps: Int,
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
+    val ascending = endExposureMs >= startExposureMs
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    stringResource(R.string.ramp_curve_start, formatDuration(startExposureMs)),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = onSurfaceVariant,
+                )
+                Text(
+                    stringResource(R.string.ramp_curve_end, formatDuration(endExposureMs)),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = primary,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            androidx.compose.foundation.Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+            ) {
+                val w = size.width
+                val h = size.height
+                val padBottom = 4f
+                val padTop = 4f
+                val drawableH = h - padBottom - padTop
+                val minMs = startExposureMs.coerceAtMost(endExposureMs).toFloat().coerceAtLeast(1f)
+                val maxMs = startExposureMs.coerceAtLeast(endExposureMs).toFloat().coerceAtLeast(minMs + 1f)
+                val span = (maxMs - minMs).coerceAtLeast(1f)
+
+                fun yFor(ms: Float): Float {
+                    val norm = ((ms - minMs) / span).coerceIn(0f, 1f)
+                    return padTop + (1f - norm) * drawableH
+                }
+
+                val n = steps.coerceAtLeast(2)
+                val path = androidx.compose.ui.graphics.Path()
+                for (i in 0 until n) {
+                    val frac = i.toFloat() / (n - 1)
+                    val ms = startExposureMs + frac * (endExposureMs - startExposureMs)
+                    val x = frac * w
+                    val y = yFor(ms.toFloat())
+                    if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                }
+                drawPath(
+                    path = path,
+                    color = primary,
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3f),
+                )
+                // Filled area underneath the curve
+                val areaPath = androidx.compose.ui.graphics.Path().apply {
+                    addPath(path)
+                    lineTo(w, h)
+                    lineTo(0f, h)
+                    close()
+                }
+                drawPath(
+                    path = areaPath,
+                    color = primary.copy(alpha = 0.12f),
+                )
+            }
+            // Direction hint
+            Text(
+                text = if (ascending) stringResource(R.string.ramp_curve_ascending)
+                       else stringResource(R.string.ramp_curve_descending),
+                style = MaterialTheme.typography.labelSmall,
+                color = onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp),
             )
         }
     }

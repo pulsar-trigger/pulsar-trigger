@@ -61,6 +61,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     private val prefs = app.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+    val shotLog = com.ehrocha.pulsar.model.ShotLog(prefs)
+
     // ── BLE (scan + connection) ─────────────────────────────────────────
     val bleController = com.ehrocha.pulsar.ble.BleController(app)
     private val bleManager get() = bleController.bleManager
@@ -78,6 +80,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     val deviceInfo: StateFlow<DeviceInfo?> = bleController.deviceInfo
     val rssi: StateFlow<Int?> = bleController.rssi
+    val latencyMs: StateFlow<Int?> = bleController.latencyMs
 
     val safeOutputPins: StateFlow<List<Int>> = bleController.deviceInfo
         .map { AppConfig.safeOutputPinsForChip(it?.chipModel) }
@@ -511,19 +514,76 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             _flowRunning.value = true
             _flowPaused.value = false
             _flowCurrentStep.value = 0
+            val startedAt = System.currentTimeMillis()
+            val plannedShots = steps.sumOf { plannedShotsFor(it) }
+            val (modeLabel, expMs, intvMs) = summarizeSteps(steps)
+            var threw = false
             flowJob = launch {
                 try {
                     for (i in steps.indices) {
                         _flowCurrentStep.value = i
                         executeFlowStep(steps[i])
                     }
+                } catch (t: Throwable) {
+                    threw = true
+                    throw t
                 } finally {
+                    val endedAt = System.currentTimeMillis()
+                    val completed = _status.value?.shotsTaken ?: 0
+                    val status = when {
+                        threw && completed < plannedShots -> com.ehrocha.pulsar.model.ShotLogStatus.STOPPED
+                        completed >= plannedShots -> com.ehrocha.pulsar.model.ShotLogStatus.COMPLETED
+                        else -> com.ehrocha.pulsar.model.ShotLogStatus.STOPPED
+                    }
+                    shotLog.record(
+                        com.ehrocha.pulsar.model.ShotLogEntry(
+                            id = startedAt,
+                            startedAtMs = startedAt,
+                            endedAtMs = endedAt,
+                            modeLabel = modeLabel,
+                            stepCount = steps.size,
+                            plannedShots = plannedShots,
+                            completedShots = completed,
+                            exposureMs = expMs,
+                            intervalMs = intvMs,
+                            status = status,
+                        )
+                    )
                     _flowRunning.value = false
                     _flowPaused.value = false
                     _flowCurrentStep.value = -1
                 }
             }
         }
+    }
+
+    private fun plannedShotsFor(step: FlowStep): Int = when (step) {
+        is FlowStep.Intervalometer -> step.shotCount
+        is FlowStep.Astro          -> step.shotCount
+        is FlowStep.DarkFrame      -> step.shotCount
+        is FlowStep.Ramp           -> step.steps
+        is FlowStep.Pause          -> 0
+    }
+
+    /** Pick a representative label + exposure/interval triple for the run.
+     *  For single-step flows we use that step; for multi-step we tag as Custom. */
+    private fun summarizeSteps(steps: List<FlowStep>): Triple<String, Long, Long> {
+        if (steps.size == 1) {
+            return when (val s = steps[0]) {
+                is FlowStep.Intervalometer -> Triple("INTERVALOMETER", s.exposureMs, s.intervalMs)
+                is FlowStep.Astro -> Triple(
+                    "ASTRO",
+                    AppConfig.astroExposureMs(s.focalLength, s.cropFactor, s.ruleDivisor),
+                    s.gapMs,
+                )
+                is FlowStep.DarkFrame -> Triple("DARK_FRAME", s.exposureMs, s.gapMs)
+                is FlowStep.Ramp      -> Triple("RAMP", (s.startExposureMs + s.endExposureMs) / 2, s.intervalMs)
+                is FlowStep.Pause     -> Triple("PAUSE", 0L, 0L)
+            }
+        }
+        val firstNonPause = steps.firstOrNull { it !is FlowStep.Pause } ?: steps.first()
+        val (_, exp, intv) = summarizeSteps(listOf(firstNonPause))
+        return Triple("CUSTOM", exp, intv)
     }
 
     fun continueFlow() {

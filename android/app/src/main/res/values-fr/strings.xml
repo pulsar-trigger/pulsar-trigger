@@ -424,4 +424,24 @@
     <string name="warning_interval_lt_exposure">Intervalle plus court que l\'exposition — le firmware va limiter</string>
     <string name="status_hold_to_start">Maintenir pour démarrer</string>
     <string name="warning_battery_low">Batterie faible (%1$d%%) — la séquence risque de ne pas se terminer</string>
+
+    <string name="label_ends_at">Fin à %1$s</string>
+    <string name="ramp_curve_start">Début : %1$s</string>
+    <string name="ramp_curve_end">Fin : %1$s</string>
+    <string name="ramp_curve_ascending">L\'exposition augmente au fil de la séquence</string>
+    <string name="ramp_curve_descending">L\'exposition diminue au fil de la séquence</string>
+
+    <string name="pairing_protocol_title">PROTOCOLE D\'APPAIRAGE</string>
+    <string name="pairing_step_1">Allumez le déclencheur Pulsar et vérifiez que la LED de statut clignote.</string>
+    <string name="pairing_step_2">Gardez le téléphone à quelques mètres, Bluetooth activé.</string>
+    <string name="pairing_step_3">Tirez vers le bas pour actualiser — votre appareil apparaîtra ci-dessus.</string>
+
+    <string name="shot_log_title">Historique des sessions</string>
+    <string name="shot_log_empty">Aucune session enregistrée. Lancez une séquence pour la voir ici.</string>
+    <string name="shot_log_clear_title">Effacer l\'historique des sessions ?</string>
+    <string name="shot_log_clear_body">Toutes les sessions enregistrées seront supprimées. Cette action est irréversible.</string>
+    <string name="shot_log_stat_runs">Sessions</string>
+    <string name="shot_log_stat_shots">Photos</string>
+    <string name="shot_log_stat_success">Réussite</string>
+    <string name="shot_log_row_shots">%1$d / %2$d photos</string>
 </resources>

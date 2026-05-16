@@ -416,4 +416,24 @@
     <string name="warning_interval_lt_exposure">间隔短于曝光 — 固件将限制为曝光时间</string>
     <string name="status_hold_to_start">长按以开始</string>
     <string name="warning_battery_low">电量低 (%1$d%%) — 序列可能无法完成</string>
+
+    <string name="label_ends_at">结束于 %1$s</string>
+    <string name="ramp_curve_start">起始：%1$s</string>
+    <string name="ramp_curve_end">结束：%1$s</string>
+    <string name="ramp_curve_ascending">曝光时间在整个序列中递增</string>
+    <string name="ramp_curve_descending">曝光时间在整个序列中递减</string>
+
+    <string name="pairing_protocol_title">配对步骤</string>
+    <string name="pairing_step_1">为 Pulsar 触发器供电，确认状态 LED 正在闪烁。</string>
+    <string name="pairing_step_2">保持手机距离设备几米以内，并已启用蓝牙。</string>
+    <string name="pairing_step_3">下拉刷新 — 你的设备将出现在上方。</string>
+
+    <string name="shot_log_title">会话记录</string>
+    <string name="shot_log_empty">尚无运行记录。启动一个序列后将显示在此处。</string>
+    <string name="shot_log_clear_title">清空会话记录？</string>
+    <string name="shot_log_clear_body">将删除所有记录的运行。此操作无法撤销。</string>
+    <string name="shot_log_stat_runs">运行</string>
+    <string name="shot_log_stat_shots">拍摄</string>
+    <string name="shot_log_stat_success">成功</string>
+    <string name="shot_log_row_shots">%1$d / %2$d 张</string>
 </resources>

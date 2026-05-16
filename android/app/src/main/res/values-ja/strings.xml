@@ -424,4 +424,24 @@
     <string name="warning_interval_lt_exposure">インターバルが露出時間より短いため、ファームウェアでクランプされます</string>
     <string name="status_hold_to_start">長押しで開始</string>
     <string name="warning_battery_low">バッテリー残量低下 (%1$d%%) — シーケンスを完了できない可能性</string>
+
+    <string name="label_ends_at">終了予定 %1$s</string>
+    <string name="ramp_curve_start">開始: %1$s</string>
+    <string name="ramp_curve_end">終了: %1$s</string>
+    <string name="ramp_curve_ascending">露出はシーケンスを通じて長くなります</string>
+    <string name="ramp_curve_descending">露出はシーケンスを通じて短くなります</string>
+
+    <string name="pairing_protocol_title">ペアリング手順</string>
+    <string name="pairing_step_1">Pulsar トリガーの電源を入れ、ステータス LED が点滅していることを確認してください。</string>
+    <string name="pairing_step_2">スマートフォンを数メートル以内に置き、Bluetooth を有効にしてください。</string>
+    <string name="pairing_step_3">下にスワイプして再スキャン — デバイスが上に表示されます。</string>
+
+    <string name="shot_log_title">セッション履歴</string>
+    <string name="shot_log_empty">記録された実行はありません。シーケンスを開始するとここに表示されます。</string>
+    <string name="shot_log_clear_title">セッション履歴を消去しますか？</string>
+    <string name="shot_log_clear_body">記録されたすべての実行が削除されます。この操作は取り消せません。</string>
+    <string name="shot_log_stat_runs">実行</string>
+    <string name="shot_log_stat_shots">撮影</string>
+    <string name="shot_log_stat_success">成功</string>
+    <string name="shot_log_row_shots">%1$d / %2$d 枚</string>
 </resources>

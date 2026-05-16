@@ -424,4 +424,24 @@
     <string name="warning_interval_lt_exposure">Intervall kürzer als Belichtung — Firmware begrenzt</string>
     <string name="status_hold_to_start">Zum Starten halten</string>
     <string name="warning_battery_low">Akku schwach (%1$d%%) — Sequenz endet evtl. nicht</string>
+
+    <string name="label_ends_at">Endet um %1$s</string>
+    <string name="ramp_curve_start">Start: %1$s</string>
+    <string name="ramp_curve_end">Ende: %1$s</string>
+    <string name="ramp_curve_ascending">Belichtung steigt im Verlauf der Sequenz</string>
+    <string name="ramp_curve_descending">Belichtung sinkt im Verlauf der Sequenz</string>
+
+    <string name="pairing_protocol_title">PAIRING-PROTOKOLL</string>
+    <string name="pairing_step_1">Pulsar-Auslöser einschalten und prüfen, ob die Status-LED blinkt.</string>
+    <string name="pairing_step_2">Handy in wenigen Metern Entfernung halten, Bluetooth aktiv.</string>
+    <string name="pairing_step_3">Zum Aktualisieren nach unten ziehen — dein Gerät erscheint oben.</string>
+
+    <string name="shot_log_title">Sitzungsverlauf</string>
+    <string name="shot_log_empty">Noch keine Läufe aufgezeichnet. Starte eine Sequenz, dann erscheint sie hier.</string>
+    <string name="shot_log_clear_title">Sitzungsverlauf löschen?</string>
+    <string name="shot_log_clear_body">Alle aufgezeichneten Läufe werden entfernt. Dies kann nicht rückgängig gemacht werden.</string>
+    <string name="shot_log_stat_runs">Läufe</string>
+    <string name="shot_log_stat_shots">Aufnahmen</string>
+    <string name="shot_log_stat_success">Erfolg</string>
+    <string name="shot_log_row_shots">%1$d / %2$d Aufnahmen</string>
 </resources>

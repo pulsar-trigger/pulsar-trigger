@@ -129,3 +129,6 @@ val LocalDeviceConnected = compositionLocalOf { false }
 
 /** Global BLE RSSI value — null when not connected or not yet polled. */
 val LocalDeviceRssi = compositionLocalOf<Int?> { null }
+
+/** Smoothed BLE command-to-ACK round-trip latency in ms. */
+val LocalDeviceLatency = compositionLocalOf<Int?> { null }
