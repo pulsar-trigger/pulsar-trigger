@@ -388,39 +388,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     // ── Custom Flow management ───────────────────────────────────────────
 
-    /** Load a single-step flow pre-filled with the user's current working settings. */
-    fun loadQuickMode(type: FlowStepType) {
-        val step: FlowStep = when (type) {
-            FlowStepType.INTERVALOMETER -> FlowStep.Intervalometer(
-                intervalMs = _intervalMs.value,
-                exposureMs = _exposureMs.value,
-                shotCount = _shotCount.value,
-                delayMs = _delayMs.value,
-            )
-            FlowStepType.ASTRO -> FlowStep.Astro(
-                focalLength = _astroFocalLength.value,
-                cropFactor = _astroCropFactor.value,
-                ruleDivisor = _astroRuleDivisor.value,
-                gapMs = _astroGapMs.value,
-                shotCount = _astroShotCount.value,
-                delayMs = _astroDelayMs.value,
-            )
-            FlowStepType.PAUSE -> FlowStep.Pause()
-            FlowStepType.DARK_FRAME -> FlowStep.DarkFrame(
-                shotCount = _darkFrameCount.value,
-                exposureMs = _darkFrameExposureMs.value,
-                gapMs = _darkFrameGapMs.value,
-            )
-            FlowStepType.RAMP -> FlowStep.Ramp(
-                startExposureMs = _rampStartExposureMs.value,
-                endExposureMs = _rampEndExposureMs.value,
-                steps = _rampSteps.value,
-                intervalMs = _rampIntervalMs.value,
-            )
-        }
-        saveFlowSteps(listOf(step))
-    }
-
     fun saveFlowSteps(steps: List<FlowStep>) {
         _flowSteps.value = steps
         prefs.edit().putString(KEY_FLOW_STEPS, FlowStep.serializeList(steps)).apply()

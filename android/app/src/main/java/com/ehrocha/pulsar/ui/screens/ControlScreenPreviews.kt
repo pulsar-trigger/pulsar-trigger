@@ -131,41 +131,6 @@ private fun ManualPanelPreview() {
     }
 }
 
-// ── Default Actions Preview ─────────────────────────────────────────────────
-
-@Preview(showBackground = true, widthDp = 380, heightDp = 150, name = "Default Actions")
-@Composable
-private fun DefaultActionsPreview() {
-    MaterialTheme(colorScheme = DarkColorScheme) {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            DefaultActionsContent(
-                connected = true,
-                isRunning = false,
-                onStart = {},
-                onStop = {},
-                modifier = Modifier.padding(16.dp),
-            )
-        }
-    }
-}
-
-// ── Astro Actions Preview ───────────────────────────────────────────────────
-
-@Preview(showBackground = true, widthDp = 380, heightDp = 150, name = "Astro Actions")
-@Composable
-private fun AstroActionsPreview() {
-    MaterialTheme(colorScheme = DarkColorScheme) {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            AstroActionsContent(
-                connected = true,
-                isRunning = false,
-                onStart = {},
-                onStop = {},
-                modifier = Modifier.padding(16.dp),
-            )
-        }
-    }
-}
 
 // ── Manual Actions Preview ──────────────────────────────────────────────────
 

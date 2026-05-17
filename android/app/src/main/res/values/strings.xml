@@ -22,6 +22,15 @@
     <!-- Wizard camera-mode hints -->
     <string name="cam_hint_bulb">Set camera to BULB — Pulsar controls exposure</string>
     <string name="cam_hint_pulse">Camera handles exposure — set shutter speed on the camera</string>
+
+    <!-- DarkFrame 2 / Ramp 2 wizards -->
+    <string name="df2_set_shots">Set shot count to start</string>
+    <string name="ramp2_tab_start">Start</string>
+    <string name="ramp2_tab_end">End</string>
+    <string name="ramp2_tab_steps">Steps</string>
+    <string name="ramp2_set_start">Set start exposure to start</string>
+    <string name="ramp2_set_end">Set end exposure to start</string>
+    <string name="ramp2_set_steps">Set steps (≥2) to start</string>
     <!-- Astro 2 -->
     <string name="astro2_tab_lens">Lens</string>
     <string name="astro2_max_exposure_label">MAX EXPOSURE</string>

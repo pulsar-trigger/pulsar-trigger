@@ -56,13 +56,17 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.input.pointer.pointerInput
 
+/**
+ * Legacy Mode screen — now only serves Manual mode (PRESS_HOLD / PRESS_LOCK).
+ * Every other capture mode has its own wizard (Iv2 / Astro 2 / DarkFrame2 /
+ * Ramp2 / Timelapse).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModeScreen(
     vm: PulsarViewModel,
     targetMode: TriggerMode,
     onBack: () -> Unit,
-    onStartFlow: (() -> Unit)? = null,
 ) {
     val status = LocalDeviceStatus.current
     val deviceName by vm.deviceName.collectAsState()
@@ -165,155 +169,19 @@ fun ModeScreen(
             tonalElevation = 1.dp,
             modifier = Modifier.weight(1f),
         ) {
-            if (isRunning && targetMode != TriggerMode.PRESS_HOLD) {
-                val totalShots = when (targetMode) {
-                    TriggerMode.INTERVALOMETER -> vm.shotCount.collectAsState().value
-                    TriggerMode.ASTRO -> vm.astroShotCount.collectAsState().value
-                    TriggerMode.DARK_FRAME -> vm.darkFrameCount.collectAsState().value
-                    TriggerMode.RAMP -> vm.rampSteps.collectAsState().value
-                    else -> 0
-                }
-                val exposureMs: Long
-                val gapMs: Long
-                when (targetMode) {
-                    TriggerMode.INTERVALOMETER -> {
-                        gapMs = vm.intervalMs.collectAsState().value
-                        exposureMs = vm.exposureMs.collectAsState().value
-                    }
-                    TriggerMode.ASTRO -> {
-                        gapMs = vm.astroGapMs.collectAsState().value
-                        val fl = vm.astroFocalLength.collectAsState().value
-                        val cf = vm.astroCropFactor.collectAsState().value
-                        val rd = vm.astroRuleDivisor.collectAsState().value
-                        exposureMs = (rd.toDouble() / (fl * cf) * 1000).toLong().coerceAtLeast(AppConfig.MIN_ASTRO_EXPOSURE_MS)
-                    }
-                    TriggerMode.DARK_FRAME -> {
-                        exposureMs = vm.darkFrameExposureMs.collectAsState().value
-                        gapMs = vm.darkFrameGapMs.collectAsState().value
-                    }
-                    TriggerMode.RAMP -> {
-                        val startExp = vm.rampStartExposureMs.collectAsState().value
-                        val endExp = vm.rampEndExposureMs.collectAsState().value
-                        exposureMs = (startExp + endExp) / 2  // average for display
-                        gapMs = vm.rampIntervalMs.collectAsState().value
-                    }
-                    else -> {
-                        exposureMs = 1L
-                        gapMs = 0L
-                    }
-                }
-                RunningStatusContent(
-                    totalShots = totalShots,
-                    exposureMs = exposureMs,
-                    gapMs = gapMs,
-                )
-            } else {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp),
-                ) {
-                    when (targetMode) {
-                        TriggerMode.INTERVALOMETER -> IntervalometerPanel(vm, enabled = !isRunning)
-                        TriggerMode.ASTRO -> AstroPanel(vm, enabled = !isRunning)
-                        TriggerMode.DARK_FRAME -> DarkFramePanel(vm, enabled = !isRunning)
-                        TriggerMode.RAMP -> RampPanel(vm, enabled = !isRunning)
-                        TriggerMode.PRESS_HOLD -> ManualPanel(vm)
-                        else -> {}
-                    }
-                }
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+            ) {
+                ManualPanel(vm)
             }
         }
 
         Spacer(Modifier.height(16.dp))
 
-        if (uiLocked) {
-            SwipeToUnlockBar(onUnlocked = { uiLocked = false })
-        } else {
-            when (targetMode) {
-                TriggerMode.PRESS_HOLD -> ManualActions(vm, mode)
-                TriggerMode.ASTRO -> {
-                    if (onStartFlow != null && !isRunning) {
-                        val connected = LocalDeviceConnected.current
-                        val focalLength by vm.astroFocalLength.collectAsState()
-                        val cropFactor by vm.astroCropFactor.collectAsState()
-                        val ruleDivisor by vm.astroRuleDivisor.collectAsState()
-                        val shotCount by vm.astroShotCount.collectAsState()
-                        val delayMs by vm.astroDelayMs.collectAsState()
-                        val gapMs by vm.astroGapMs.collectAsState()
-                        val expMs = AppConfig.astroExposureMs(focalLength, cropFactor, ruleDivisor)
-                        val totalMs = delayMs + shotCount.toLong() * (expMs + gapMs)
-                        AstroActionsContent(
-                            connected = connected,
-                            isRunning = false,
-                            onStart = onStartFlow,
-                            onStop = { vm.stop() },
-                            estimatedDuration = formatDuration(totalMs),
-                        )
-                    } else {
-                        AstroActions(vm, isRunning)
-                    }
-                }
-                TriggerMode.DARK_FRAME -> {
-                    if (onStartFlow != null && !isRunning) {
-                        val connected = LocalDeviceConnected.current
-                        val dfCount by vm.darkFrameCount.collectAsState()
-                        val dfExposureMs by vm.darkFrameExposureMs.collectAsState()
-                        val dfGapMs by vm.darkFrameGapMs.collectAsState()
-                        val totalMs = dfCount.toLong() * (dfExposureMs + dfGapMs)
-                        DefaultActionsContent(
-                            connected = connected,
-                            isRunning = false,
-                            onStart = onStartFlow,
-                            onStop = { vm.stop() },
-                            estimatedDuration = formatDuration(totalMs),
-                        )
-                    } else {
-                        DefaultActions(vm, isRunning)
-                    }
-                }
-                TriggerMode.RAMP -> {
-                    if (onStartFlow != null && !isRunning) {
-                        val connected = LocalDeviceConnected.current
-                        val rSteps by vm.rampSteps.collectAsState()
-                        val rStartExp by vm.rampStartExposureMs.collectAsState()
-                        val rEndExp by vm.rampEndExposureMs.collectAsState()
-                        val rInterval by vm.rampIntervalMs.collectAsState()
-                        val avgExp = (rStartExp + rEndExp) / 2
-                        val totalMs = rSteps.toLong() * (avgExp + rInterval)
-                        DefaultActionsContent(
-                            connected = connected,
-                            isRunning = false,
-                            onStart = onStartFlow,
-                            onStop = { vm.stop() },
-                            estimatedDuration = formatDuration(totalMs),
-                        )
-                    } else {
-                        DefaultActions(vm, isRunning)
-                    }
-                }
-                else -> {
-                    if (onStartFlow != null && !isRunning) {
-                        val connected = LocalDeviceConnected.current
-                        val intervalMs by vm.intervalMs.collectAsState()
-                        val exposureMs by vm.exposureMs.collectAsState()
-                        val shotCount by vm.shotCount.collectAsState()
-                        val delayMs by vm.delayMs.collectAsState()
-                        val totalMs = delayMs + shotCount.toLong() * (exposureMs + intervalMs)
-                        DefaultActionsContent(
-                            connected = connected,
-                            isRunning = false,
-                            onStart = onStartFlow,
-                            onStop = { vm.stop() },
-                            estimatedDuration = formatDuration(totalMs),
-                        )
-                    } else {
-                        DefaultActions(vm, isRunning)
-                    }
-                }
-            }
-        }
+        ManualActions(vm, mode)
 
         Spacer(Modifier.height(8.dp))
     }

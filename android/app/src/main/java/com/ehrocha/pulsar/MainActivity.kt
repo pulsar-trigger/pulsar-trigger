@@ -360,13 +360,14 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     initialTab = menuTab,
                     onTabChanged = { menuTab = it },
                     onQuickFlow = { type ->
-                        // Intervalometer and Astro now have their own dedicated
-                        // wizard screens (Iv2 / Astro 2). Dark Frame and Ramp
-                        // still ride the legacy Mode screen until they get
-                        // a similar rework.
+                        // All capture modes are now wizard-driven. Anything
+                        // arriving here is a fallback path that should route
+                        // to the preset picker for the matching fwMode.
                         when (type) {
-                            FlowStepType.DARK_FRAME -> currentScreen = AppScreen.Mode(TriggerMode.DARK_FRAME)
-                            FlowStepType.RAMP -> currentScreen = AppScreen.Mode(TriggerMode.RAMP)
+                            FlowStepType.DARK_FRAME ->
+                                currentScreen = AppScreen.PresetPicker(TriggerMode.DARK_FRAME)
+                            FlowStepType.RAMP ->
+                                currentScreen = AppScreen.PresetPicker(TriggerMode.RAMP)
                             else -> return@MainMenuScreen
                         }
                     },
@@ -387,7 +388,9 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                             TriggerMode.INTERVALOMETER -> AppScreen.Intervalometer2(mode.id)
                             TriggerMode.ASTRO -> AppScreen.AstroMode2(mode.id)
                             TriggerMode.TIMELAPSE -> AppScreen.Timelapse(mode.id)
-                            else -> AppScreen.Menu // DF/Ramp wizards not yet wired
+                            TriggerMode.DARK_FRAME -> AppScreen.DarkFrame2(mode.id)
+                            TriggerMode.RAMP -> AppScreen.Ramp2(mode.id)
+                            else -> AppScreen.Menu
                         }
                     },
                     onCustomFlowSelected = { currentScreen = AppScreen.CustomFlow() },
@@ -403,19 +406,6 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     vm = vm,
                     targetMode = screen.mode,
                     onBack = { currentScreen = AppScreen.Menu },
-                    onStartFlow = {
-                        vm.loadQuickMode(
-                            when (screen.mode) {
-                                TriggerMode.INTERVALOMETER -> FlowStepType.INTERVALOMETER
-                                TriggerMode.ASTRO -> FlowStepType.ASTRO
-                                TriggerMode.DARK_FRAME -> FlowStepType.DARK_FRAME
-                                TriggerMode.RAMP -> FlowStepType.RAMP
-                                else -> return@ModeScreen
-                            }
-                        )
-                        vm.startFlow()
-                        currentScreen = AppScreen.CustomFlow(quickLaunch = true)
-                    },
                 )
             }
             is AppScreen.Settings -> {
@@ -510,6 +500,8 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                             TriggerMode.INTERVALOMETER -> AppScreen.Intervalometer2()
                             TriggerMode.ASTRO -> AppScreen.AstroMode2()
                             TriggerMode.TIMELAPSE -> AppScreen.Timelapse()
+                            TriggerMode.DARK_FRAME -> AppScreen.DarkFrame2()
+                            TriggerMode.RAMP -> AppScreen.Ramp2()
                             else -> AppScreen.Menu
                         }
                     },
@@ -518,6 +510,8 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                             TriggerMode.INTERVALOMETER -> AppScreen.Intervalometer2(preset.id)
                             TriggerMode.ASTRO -> AppScreen.AstroMode2(preset.id)
                             TriggerMode.TIMELAPSE -> AppScreen.Timelapse(preset.id)
+                            TriggerMode.DARK_FRAME -> AppScreen.DarkFrame2(preset.id)
+                            TriggerMode.RAMP -> AppScreen.Ramp2(preset.id)
                             else -> AppScreen.Menu
                         }
                     },
@@ -531,6 +525,30 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     vm = vm,
                     onBack = {
                         currentScreen = AppScreen.PresetPicker(TriggerMode.TIMELAPSE)
+                    },
+                    initialPresetId = screen.presetId,
+                )
+            }
+            is AppScreen.DarkFrame2 -> {
+                BackHandler {
+                    currentScreen = AppScreen.PresetPicker(TriggerMode.DARK_FRAME)
+                }
+                com.ehrocha.pulsar.ui.screens.DarkFrame2Screen(
+                    vm = vm,
+                    onBack = {
+                        currentScreen = AppScreen.PresetPicker(TriggerMode.DARK_FRAME)
+                    },
+                    initialPresetId = screen.presetId,
+                )
+            }
+            is AppScreen.Ramp2 -> {
+                BackHandler {
+                    currentScreen = AppScreen.PresetPicker(TriggerMode.RAMP)
+                }
+                com.ehrocha.pulsar.ui.screens.Ramp2Screen(
+                    vm = vm,
+                    onBack = {
+                        currentScreen = AppScreen.PresetPicker(TriggerMode.RAMP)
                     },
                     initialPresetId = screen.presetId,
                 )
@@ -626,5 +644,7 @@ private sealed class AppScreen {
     data class Intervalometer2(val presetId: String? = null) : AppScreen()
     data class AstroMode2(val presetId: String? = null) : AppScreen()
     data class Timelapse(val presetId: String? = null) : AppScreen()
+    data class DarkFrame2(val presetId: String? = null) : AppScreen()
+    data class Ramp2(val presetId: String? = null) : AppScreen()
     data class PresetPicker(val fwMode: TriggerMode) : AppScreen()
 }

@@ -110,179 +110,13 @@ internal fun PanelHelpHeader(title: String, helpText: String) {
     }
 }
 
-@Composable
-internal fun DefaultActions(vm: PulsarViewModel, isRunning: Boolean) {
-    val connected = LocalDeviceConnected.current
-    val intervalMs by vm.intervalMs.collectAsState()
-    val exposureMs by vm.exposureMs.collectAsState()
-    val shotCount by vm.shotCount.collectAsState()
-    val delayMs by vm.delayMs.collectAsState()
-    val totalMs = delayMs + shotCount.toLong() * (exposureMs + intervalMs)
-    DefaultActionsContent(
-        connected = connected,
-        isRunning = isRunning,
-        onStart = { vm.start() },
-        onStop = { vm.stop() },
-        estimatedDuration = formatDuration(totalMs),
-    )
-}
 
-@Composable
-internal fun DefaultActionsContent(
-    connected: Boolean,
-    isRunning: Boolean,
-    onStart: () -> Unit,
-    onStop: () -> Unit,
-    estimatedDuration: String? = null,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        if (isRunning) {
-            // Stop is single-tap — pressing Stop quickly matters when something
-            // is going wrong on the rig.
-            Button(
-                onClick = onStop,
-                shape = RoundedCornerShape(32.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                ),
-                modifier = Modifier.fillMaxWidth().height(64.dp),
-            ) {
-                Icon(Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(28.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    stringResource(R.string.btn_stop),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-            Text(
-                stringResource(R.string.status_sequence_running),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            // Start is hold-to-fire — protects against accidental taps when
-            // the phone is resting on a tripod head. The button fills clockwise
-            // while held; releasing before the threshold cancels.
-            HoldToFireButton(
-                onFire = onStart,
-                enabled = connected,
-            )
-            Text(
-                text = if (estimatedDuration != null) {
-                    stringResource(R.string.status_estimated_duration, estimatedDuration)
-                } else {
-                    stringResource(R.string.status_ready_start)
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
 
 /** Press-and-hold to fire. ~600 ms hold required. Releasing early cancels
  *  with no action; reaching the threshold fires once and resets. A radial
  *  progress sweep fills the button so the user can see how long they've held.
  *  [idleLabelRes] is the resting label; [holdLabelRes] shows once the user
  *  starts holding. Defaults are the generic Start / "Hold to start" pair. */
-@Composable
-private fun HoldToFireButton(
-    onFire: () -> Unit,
-    enabled: Boolean,
-    holdMs: Int = 600,
-    idleLabelRes: Int = R.string.btn_start,
-    holdLabelRes: Int = R.string.status_hold_to_start,
-) {
-    val haptic = LocalHapticFeedback.current
-    var holding by remember { mutableStateOf(false) }
-    var progress by remember { mutableFloatStateOf(0f) }
-
-    LaunchedEffect(holding, enabled) {
-        if (!enabled || !holding) {
-            // Drain back to 0 if user lifted before firing.
-            while (progress > 0f) {
-                progress = (progress - 0.08f).coerceAtLeast(0f)
-                kotlinx.coroutines.delay(16)
-            }
-            return@LaunchedEffect
-        }
-        val start = System.currentTimeMillis()
-        while (holding && progress < 1f) {
-            val elapsed = System.currentTimeMillis() - start
-            progress = (elapsed.toFloat() / holdMs).coerceIn(0f, 1f)
-            if (progress >= 1f) {
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                onFire()
-                holding = false
-                progress = 0f
-                break
-            }
-            kotlinx.coroutines.delay(16)
-        }
-    }
-
-    val containerColor =
-        if (!enabled) MaterialTheme.colorScheme.surfaceVariant
-        else MaterialTheme.colorScheme.primary
-    val contentColor =
-        if (!enabled) MaterialTheme.colorScheme.onSurfaceVariant
-        else MaterialTheme.colorScheme.onPrimary
-
-    Surface(
-        shape = RoundedCornerShape(32.dp),
-        color = containerColor.copy(alpha = if (enabled) 1f else 0.4f),
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(64.dp)
-            .pointerInput(enabled) {
-                if (!enabled) return@pointerInput
-                detectTapGestures(
-                    onPress = {
-                        holding = true
-                        // tryAwaitRelease returns true on release before
-                        // cancellation (cancellation only happens if a parent
-                        // gesture wins — uncommon for our full-width button).
-                        tryAwaitRelease()
-                        holding = false
-                    },
-                )
-            },
-    ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-            // Progress bar drawn underneath the label, left-to-right.
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(progress)
-                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f))
-                    .align(Alignment.CenterStart),
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.PlayArrow,
-                    contentDescription = null,
-                    tint = contentColor,
-                    modifier = Modifier.size(28.dp),
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = stringResource(
-                        if (progress > 0.02f) holdLabelRes else idleLabelRes,
-                    ),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = contentColor,
-                )
-            }
-        }
-    }
-}
 
 @Composable
 internal fun ManualActions(vm: PulsarViewModel, mode: TriggerMode) {
@@ -397,85 +231,7 @@ internal fun ManualActionsContent(
     }
 }
 
-@Composable
-internal fun AstroActions(vm: PulsarViewModel, isRunning: Boolean) {
-    val connected = LocalDeviceConnected.current
-    val focalLength by vm.astroFocalLength.collectAsState()
-    val cropFactor by vm.astroCropFactor.collectAsState()
-    val ruleDivisor by vm.astroRuleDivisor.collectAsState()
-    val shotCount by vm.astroShotCount.collectAsState()
-    val delayMs by vm.astroDelayMs.collectAsState()
-    val gapMs by vm.astroGapMs.collectAsState()
-    val expMs = AppConfig.astroExposureMs(focalLength, cropFactor, ruleDivisor)
-    val totalMs = delayMs + shotCount.toLong() * (expMs + gapMs)
-    AstroActionsContent(
-        connected = connected,
-        isRunning = isRunning,
-        onStart = { vm.start() },
-        onStop = { vm.stop() },
-        estimatedDuration = formatDuration(totalMs),
-    )
-}
 
-@Composable
-internal fun AstroActionsContent(
-    connected: Boolean,
-    isRunning: Boolean,
-    onStart: () -> Unit,
-    onStop: () -> Unit,
-    estimatedDuration: String? = null,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        if (isRunning) {
-            // Stop is single-tap — Astro runs unattended for an hour+; the
-            // user wants stop to be immediate when they need to abort.
-            Button(
-                onClick = onStop,
-                shape = RoundedCornerShape(32.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                ),
-                modifier = Modifier.fillMaxWidth().height(64.dp),
-            ) {
-                Icon(Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(28.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    stringResource(R.string.btn_stop_astro),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-            Text(
-                stringResource(R.string.status_capturing_stars),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            // Astro sequences run unattended for an hour+ — accidental-fire
-            // protection matters here more than anywhere else in the app.
-            HoldToFireButton(
-                onFire = onStart,
-                enabled = connected,
-                idleLabelRes = R.string.btn_start_astro,
-                holdLabelRes = R.string.status_hold_to_start,
-            )
-            Text(
-                text = if (estimatedDuration != null) {
-                    stringResource(R.string.status_estimated_duration, estimatedDuration)
-                } else {
-                    stringResource(R.string.status_ready_astro)
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
 
 /** Glanceable two-column summary for mode panels.
  *  When [warning] is non-null, a single-line strip below the totals renders
@@ -563,25 +319,6 @@ private fun formatEndClock(durationFromNowMs: Long): String {
     return String.format(java.util.Locale.US, "%02d:%02d", h, m)
 }
 
-@Composable
-internal fun IntervalometerPanel(vm: PulsarViewModel, enabled: Boolean = true) {
-    val interval by vm.intervalMs.collectAsState()
-    val exposure by vm.exposureMs.collectAsState()
-    val count by vm.shotCount.collectAsState()
-    val delayVal by vm.delayMs.collectAsState()
-
-    IntervalometerPanelContent(
-        intervalMs = interval,
-        exposureMs = exposure,
-        shotCount = count,
-        delayMs = delayVal,
-        onIntervalChanged = { vm.setIntervalMs(it) },
-        onExposureChanged = { vm.setExposureMs(it) },
-        onDelayChanged = { vm.setDelayMs(it) },
-        onShotCountChanged = { vm.setShotCount(it) },
-        enabled = enabled
-    )
-}
 
 @Composable
 internal fun IntervalometerPanelContent(
@@ -710,31 +447,6 @@ internal fun ManualPanelContent(
     }
 }
 
-@Composable
-internal fun AstroPanel(vm: PulsarViewModel, enabled: Boolean = true) {
-    val focalLength by vm.astroFocalLength.collectAsState()
-    val cropFactor by vm.astroCropFactor.collectAsState()
-    val shotCount by vm.astroShotCount.collectAsState()
-    val delayVal by vm.astroDelayMs.collectAsState()
-    val gapMs by vm.astroGapMs.collectAsState()
-    val ruleDivisor by vm.astroRuleDivisor.collectAsState()
-
-    AstroPanelContent(
-        focalLength = focalLength,
-        cropFactor = cropFactor,
-        shotCount = shotCount,
-        delayMs = delayVal,
-        gapMs = gapMs,
-        ruleDivisor = ruleDivisor,
-        onCropFactorChanged = { vm.setAstroCropFactor(it) },
-        onFocalLengthChanged = { vm.setAstroFocalLength(it) },
-        onGapMsChanged = { vm.setAstroGapMs(it) },
-        onDelayMsChanged = { vm.setAstroDelayMs(it) },
-        onRuleChanged = { vm.setAstroRuleDivisor(it) },
-        onShotCountChanged = { vm.setAstroShotCount(it) },
-        enabled = enabled
-    )
-}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -1013,22 +725,6 @@ private val SENSOR_PRESETS = listOf(
     SensorPreset(R.string.preset_micro_43, "M4/3", 2.0f),
 )
 
-@Composable
-internal fun DarkFramePanel(vm: PulsarViewModel, enabled: Boolean = true) {
-    val count by vm.darkFrameCount.collectAsState()
-    val exposureMs by vm.darkFrameExposureMs.collectAsState()
-    val gapMs by vm.darkFrameGapMs.collectAsState()
-
-    DarkFramePanelContent(
-        count = count,
-        exposureMs = exposureMs,
-        gapMs = gapMs,
-        onCountChanged = { vm.setDarkFrameCount(it) },
-        onExposureMsChanged = { vm.setDarkFrameExposureMs(it) },
-        onGapMsChanged = { vm.setDarkFrameGapMs(it) },
-        enabled = enabled,
-    )
-}
 
 @Composable
 internal fun DarkFramePanelContent(
@@ -1088,25 +784,6 @@ internal fun DarkFramePanelContent(
     }
 }
 
-@Composable
-internal fun RampPanel(vm: PulsarViewModel, enabled: Boolean = true) {
-    val startExp by vm.rampStartExposureMs.collectAsState()
-    val endExp by vm.rampEndExposureMs.collectAsState()
-    val steps by vm.rampSteps.collectAsState()
-    val intervalMs by vm.rampIntervalMs.collectAsState()
-
-    RampPanelContent(
-        startExposureMs = startExp,
-        endExposureMs = endExp,
-        steps = steps,
-        intervalMs = intervalMs,
-        onStartExposureChanged = { vm.setRampStartExposureMs(it) },
-        onEndExposureChanged = { vm.setRampEndExposureMs(it) },
-        onIntervalChanged = { vm.setRampIntervalMs(it) },
-        onStepsChanged = { vm.setRampSteps(it) },
-        enabled = enabled,
-    )
-}
 
 @Composable
 internal fun RampPanelContent(
