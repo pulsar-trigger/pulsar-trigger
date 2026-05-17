@@ -120,40 +120,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         _userModes.value = userModeRepo.reorder(ids)
     }
 
-    /** Run a user trigger mode through the firmware path via the flow runner. */
-    fun runUserMode(mode: com.ehrocha.pulsar.model.UserMode) {
-        if (_simulatorActive.value) return
-        val body = mode.body
-        val step: com.ehrocha.pulsar.model.FlowStep = when (body.fwMode) {
-            TriggerMode.INTERVALOMETER -> com.ehrocha.pulsar.model.FlowStep.Intervalometer(
-                intervalMs = body.intervalMs,
-                exposureMs = body.exposureMs,
-                shotCount = body.shotCount,
-                delayMs = body.delayMs,
-            )
-            TriggerMode.ASTRO -> com.ehrocha.pulsar.model.FlowStep.Astro(
-                focalLength = body.focalLength,
-                cropFactor = body.cropFactor,
-                ruleDivisor = body.ruleDivisor,
-                gapMs = body.intervalMs,
-                shotCount = body.shotCount,
-                delayMs = body.delayMs,
-            )
-            TriggerMode.DARK_FRAME -> com.ehrocha.pulsar.model.FlowStep.DarkFrame(
-                shotCount = body.shotCount,
-                exposureMs = body.exposureMs,
-                gapMs = body.intervalMs,
-            )
-            TriggerMode.RAMP -> com.ehrocha.pulsar.model.FlowStep.Ramp(
-                startExposureMs = body.rampStartExposureMs,
-                endExposureMs = body.rampEndExposureMs,
-                steps = body.rampSteps,
-                intervalMs = body.intervalMs,
-            )
-            else -> return
-        }
-        _flowSteps.value = listOf(step)
-        startFlow()
+    /** Flip the bookmark flag for a user mode by id. Bookmarked modes
+     *  show up as quick-launch tiles in the Trigger tab. */
+    fun toggleUserModeBookmark(id: String) {
+        val existing = _userModes.value.firstOrNull { it.id == id } ?: return
+        upsertUserMode(existing.copy(bookmarked = !existing.bookmarked))
     }
 
     private val _deviceName = MutableStateFlow("Pulsar")

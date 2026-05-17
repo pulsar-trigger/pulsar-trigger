@@ -11,6 +11,10 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -112,13 +116,36 @@ private fun nearestPresetIndex(valueMm: Int, presets: List<Int>): Int {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AstroMode2Screen(vm: PulsarViewModel, onBack: () -> Unit) {
-    var focalLength by rememberSaveable { mutableIntStateOf(0) }
-    var cropFactor by rememberSaveable { mutableFloatStateOf(1.0f) }
-    var ruleDivisor by rememberSaveable { mutableIntStateOf(AppConfig.NPF_RULE_DIVISOR) }
-    var intervalMs by rememberSaveable { mutableLongStateOf(0L) }
-    var delayMs by rememberSaveable { mutableLongStateOf(0L) }
-    var shotCount by rememberSaveable { mutableIntStateOf(0) }
+fun AstroMode2Screen(
+    vm: PulsarViewModel,
+    onBack: () -> Unit,
+    initialPresetId: String? = null,
+) {
+    val allModes by vm.userModes.collectAsState()
+    val loadedPreset = remember(initialPresetId, allModes) {
+        initialPresetId?.let { id -> allModes.firstOrNull { it.id == id } }
+    }
+    var editingPresetId by rememberSaveable { mutableStateOf(initialPresetId) }
+
+    var focalLength by rememberSaveable {
+        mutableIntStateOf(loadedPreset?.body?.focalLength ?: 0)
+    }
+    var cropFactor by rememberSaveable {
+        mutableFloatStateOf(loadedPreset?.body?.cropFactor ?: 1.0f)
+    }
+    var ruleDivisor by rememberSaveable {
+        mutableIntStateOf(loadedPreset?.body?.ruleDivisor ?: AppConfig.NPF_RULE_DIVISOR)
+    }
+    var intervalMs by rememberSaveable {
+        mutableLongStateOf(loadedPreset?.body?.intervalMs ?: 0L)
+    }
+    var delayMs by rememberSaveable {
+        mutableLongStateOf(loadedPreset?.body?.delayMs ?: 0L)
+    }
+    var shotCount by rememberSaveable {
+        mutableIntStateOf(loadedPreset?.body?.shotCount ?: 0)
+    }
+    var showSaveDialog by remember { mutableStateOf(false) }
 
     val runState = LocalRunState.current
     val running = runState !is RunState.Idle
@@ -150,11 +177,46 @@ fun AstroMode2Screen(vm: PulsarViewModel, onBack: () -> Unit) {
         else -> null
     }
 
+    val editingPreset = remember(editingPresetId, allModes) {
+        editingPresetId?.let { id -> allModes.firstOrNull { it.id == id } }
+    }
+    val canSave = focalLength > 0 && intervalMs > 0L
+
     Scaffold(
         topBar = {
             PulsarTopBar(
                 title = stringResource(R.string.mode_astro),
                 onBack = onBack,
+                actions = {
+                    if (editingPreset != null) {
+                        IconButton(onClick = { vm.toggleUserModeBookmark(editingPreset.id) }) {
+                            Icon(
+                                if (editingPreset.bookmarked)
+                                    Icons.Default.Bookmark
+                                else
+                                    Icons.Default.BookmarkBorder,
+                                contentDescription = stringResource(
+                                    if (editingPreset.bookmarked)
+                                        R.string.preset_picker_unbookmark
+                                    else
+                                        R.string.preset_picker_bookmark,
+                                ),
+                                tint = if (editingPreset.bookmarked)
+                                    MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    IconButton(
+                        onClick = { showSaveDialog = true },
+                        enabled = canSave && !running,
+                    ) {
+                        Icon(
+                            Icons.Default.Save,
+                            contentDescription = stringResource(R.string.preset_save_action),
+                        )
+                    }
+                },
             )
         },
         bottomBar = {
@@ -163,25 +225,33 @@ fun AstroMode2Screen(vm: PulsarViewModel, onBack: () -> Unit) {
                 currentTabIdx = tabIdx,
                 tabCount = AstroTab.entries.size,
                 currentTabValid = currentTabValid,
-                canStart = connected && !running && configComplete,
+                // Always clickable when connected — the action routes to
+                // the first missing-field tab if config isn't ready.
+                canStart = connected && !running,
                 hint = if (running) null else bottomHint,
                 hintIsAccent = configComplete && continuous,
                 onPrev = { if (tabIdx > 0) tabIdx-- },
                 onNext = { if (tabIdx < AstroTab.entries.size - 1) tabIdx++ },
                 onStart = {
-                    vm.saveFlowSteps(
-                        listOf(
-                            FlowStep.Astro(
-                                focalLength = focalLength,
-                                cropFactor = cropFactor,
-                                ruleDivisor = ruleDivisor,
-                                gapMs = intervalMs,
-                                shotCount = shotCount,
-                                delayMs = delayMs,
+                    when {
+                        focalLength == 0 -> tabIdx = AstroTab.LENS.ordinal
+                        intervalMs == 0L -> tabIdx = AstroTab.INTERVAL.ordinal
+                        else -> {
+                            vm.saveFlowSteps(
+                                listOf(
+                                    FlowStep.Astro(
+                                        focalLength = focalLength,
+                                        cropFactor = cropFactor,
+                                        ruleDivisor = ruleDivisor,
+                                        gapMs = intervalMs,
+                                        shotCount = shotCount,
+                                        delayMs = delayMs,
+                                    )
+                                )
                             )
-                        )
-                    )
-                    vm.startFlow()
+                            vm.startFlow()
+                        }
+                    }
                 },
                 onStop = { vm.stopFlow() },
             )
@@ -236,6 +306,33 @@ fun AstroMode2Screen(vm: PulsarViewModel, onBack: () -> Unit) {
                 totalMs = totalMs,
             )
         }
+    }
+
+    if (showSaveDialog) {
+        SavePresetDialog(
+            initialName = editingPreset?.name ?: "",
+            isUpdate = editingPreset != null,
+            onConfirm = { name ->
+                val body = com.ehrocha.pulsar.model.UserMode.Body(
+                    fwMode = com.ehrocha.pulsar.ble.TriggerMode.ASTRO,
+                    intervalMs = intervalMs,
+                    shotCount = shotCount,
+                    delayMs = delayMs,
+                    focalLength = focalLength,
+                    cropFactor = cropFactor,
+                    ruleDivisor = ruleDivisor,
+                )
+                val mode = if (editingPreset != null) {
+                    editingPreset.copy(name = name.trim(), body = body)
+                } else {
+                    com.ehrocha.pulsar.model.UserMode(name = name.trim(), body = body)
+                }
+                vm.upsertUserMode(mode)
+                editingPresetId = mode.id
+                showSaveDialog = false
+            },
+            onDismiss = { showSaveDialog = false },
+        )
     }
 }
 

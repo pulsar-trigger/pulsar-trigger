@@ -371,21 +371,25 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                         }
                     },
                     onManualSelected = { currentScreen = AppScreen.Mode(TriggerMode.PRESS_HOLD) },
-                    onIntervalometer2Selected = { currentScreen = AppScreen.Intervalometer2 },
-                    onAstroMode2Selected = { currentScreen = AppScreen.AstroMode2 },
+                    onIntervalometer2Selected = {
+                        currentScreen = AppScreen.PresetPicker(TriggerMode.INTERVALOMETER)
+                    },
+                    onAstroMode2Selected = {
+                        currentScreen = AppScreen.PresetPicker(TriggerMode.ASTRO)
+                    },
                     onUserModeRun = { mode ->
-                        // Push the preset into global params so the mode panel
-                        // reflects what's running, then kick off the flow and
-                        // navigate so the user lands on the live progress view.
-                        applyUserModeParams(vm, mode)
-                        vm.runUserMode(mode)
-                        currentScreen = AppScreen.Mode(mode.body.fwMode)
+                        // Bookmarked tile click: open the wizard for the
+                        // preset's fwMode with that preset's id loaded.
+                        currentScreen = when (mode.body.fwMode) {
+                            TriggerMode.INTERVALOMETER -> AppScreen.Intervalometer2(mode.id)
+                            TriggerMode.ASTRO -> AppScreen.AstroMode2(mode.id)
+                            else -> AppScreen.Menu // DF/Ramp wizards not yet wired
+                        }
                     },
                     onCustomFlowSelected = { currentScreen = AppScreen.CustomFlow() },
                     onPlannerSelected = { currentScreen = AppScreen.Planner },
                     onAlignmentSelected = { currentScreen = AppScreen.Alignment },
                     onWhatsUpSelected = { currentScreen = AppScreen.WhatsUp },
-                    onModesSelected = { currentScreen = AppScreen.Modes },
                     onSettingsSelected = { currentScreen = AppScreen.Settings(SettingsSection.UPDATES) },
                 )
             }
@@ -484,22 +488,6 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     onBack = { currentScreen = AppScreen.Menu },
                 )
             }
-            AppScreen.Modes -> {
-                BackHandler { currentScreen = AppScreen.Menu }
-                com.ehrocha.pulsar.ui.screens.ModesScreen(
-                    vm = vm,
-                    onBack = { currentScreen = AppScreen.Menu },
-                    onEdit = { id -> currentScreen = AppScreen.ModeEditor(id) },
-                )
-            }
-            is AppScreen.ModeEditor -> {
-                BackHandler { currentScreen = AppScreen.Modes }
-                com.ehrocha.pulsar.ui.screens.ModeEditorScreen(
-                    vm = vm,
-                    editingId = screen.modeId,
-                    onBack = { currentScreen = AppScreen.Modes },
-                )
-            }
             AppScreen.ShotLog -> {
                 BackHandler { currentScreen = AppScreen.Menu }
                 com.ehrocha.pulsar.ui.screens.ShotLogScreen(
@@ -507,18 +495,50 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     onBack = { currentScreen = AppScreen.Menu },
                 )
             }
-            AppScreen.Intervalometer2 -> {
+            is AppScreen.PresetPicker -> {
                 BackHandler { currentScreen = AppScreen.Menu }
-                com.ehrocha.pulsar.ui.screens.Intervalometer2Screen(
+                com.ehrocha.pulsar.ui.screens.PresetPickerScreen(
                     vm = vm,
+                    fwMode = screen.fwMode,
                     onBack = { currentScreen = AppScreen.Menu },
+                    onStartFresh = {
+                        currentScreen = when (screen.fwMode) {
+                            TriggerMode.INTERVALOMETER -> AppScreen.Intervalometer2()
+                            TriggerMode.ASTRO -> AppScreen.AstroMode2()
+                            else -> AppScreen.Menu
+                        }
+                    },
+                    onPresetSelected = { preset ->
+                        currentScreen = when (screen.fwMode) {
+                            TriggerMode.INTERVALOMETER -> AppScreen.Intervalometer2(preset.id)
+                            TriggerMode.ASTRO -> AppScreen.AstroMode2(preset.id)
+                            else -> AppScreen.Menu
+                        }
+                    },
                 )
             }
-            AppScreen.AstroMode2 -> {
-                BackHandler { currentScreen = AppScreen.Menu }
+            is AppScreen.Intervalometer2 -> {
+                BackHandler {
+                    currentScreen = AppScreen.PresetPicker(TriggerMode.INTERVALOMETER)
+                }
+                com.ehrocha.pulsar.ui.screens.Intervalometer2Screen(
+                    vm = vm,
+                    onBack = {
+                        currentScreen = AppScreen.PresetPicker(TriggerMode.INTERVALOMETER)
+                    },
+                    initialPresetId = screen.presetId,
+                )
+            }
+            is AppScreen.AstroMode2 -> {
+                BackHandler {
+                    currentScreen = AppScreen.PresetPicker(TriggerMode.ASTRO)
+                }
                 com.ehrocha.pulsar.ui.screens.AstroMode2Screen(
                     vm = vm,
-                    onBack = { currentScreen = AppScreen.Menu },
+                    onBack = {
+                        currentScreen = AppScreen.PresetPicker(TriggerMode.ASTRO)
+                    },
+                    initialPresetId = screen.presetId,
                 )
             }
         }
@@ -572,40 +592,6 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
     }
 }
 
-/** Push a user-mode's saved params into the viewmodel's global state, so the
- *  mode panel shows the same values the run is using. */
-private fun applyUserModeParams(vm: PulsarViewModel, mode: com.ehrocha.pulsar.model.UserMode) {
-    val b = mode.body
-    when (b.fwMode) {
-        TriggerMode.INTERVALOMETER -> {
-            vm.setIntervalMs(b.intervalMs)
-            vm.setExposureMs(b.exposureMs)
-            vm.setShotCount(b.shotCount)
-            vm.setDelayMs(b.delayMs)
-        }
-        TriggerMode.ASTRO -> {
-            vm.setAstroFocalLength(b.focalLength)
-            vm.setAstroCropFactor(b.cropFactor)
-            vm.setAstroRuleDivisor(b.ruleDivisor)
-            vm.setAstroGapMs(b.intervalMs)
-            vm.setAstroShotCount(b.shotCount)
-            vm.setAstroDelayMs(b.delayMs)
-        }
-        TriggerMode.DARK_FRAME -> {
-            vm.setDarkFrameCount(b.shotCount)
-            vm.setDarkFrameExposureMs(b.exposureMs)
-            vm.setDarkFrameGapMs(b.intervalMs)
-        }
-        TriggerMode.RAMP -> {
-            vm.setRampStartExposureMs(b.rampStartExposureMs)
-            vm.setRampEndExposureMs(b.rampEndExposureMs)
-            vm.setRampSteps(b.rampSteps)
-            vm.setRampIntervalMs(b.intervalMs)
-        }
-        else -> {}
-    }
-}
-
 private sealed class AppScreen {
     data object Scan : AppScreen()
     data object Menu : AppScreen()
@@ -618,9 +604,8 @@ private sealed class AppScreen {
     data class SessionDetail(val session: PlannerSession, val event: PlannerEvent) : AppScreen()
     data object Alignment : AppScreen()
     data object WhatsUp : AppScreen()
-    data object Modes : AppScreen()
-    data class ModeEditor(val modeId: String? = null) : AppScreen()
     data object ShotLog : AppScreen()
-    data object Intervalometer2 : AppScreen()
-    data object AstroMode2 : AppScreen()
+    data class Intervalometer2(val presetId: String? = null) : AppScreen()
+    data class AstroMode2(val presetId: String? = null) : AppScreen()
+    data class PresetPicker(val fwMode: TriggerMode) : AppScreen()
 }

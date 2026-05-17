@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TouchApp
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.automirrored.filled.ViewList
@@ -57,7 +56,6 @@ fun MainMenuScreen(
     onPlannerSelected: () -> Unit = {},
     onAlignmentSelected: () -> Unit = {},
     onWhatsUpSelected: () -> Unit = {},
-    onModesSelected: () -> Unit = {},
     onUserModeRun: (com.ehrocha.pulsar.model.UserMode) -> Unit = {},
     onIntervalometer2Selected: () -> Unit = {},
     onAstroMode2Selected: () -> Unit = {},
@@ -202,7 +200,9 @@ fun MainMenuScreen(
                             onCustomFlowSelected()
                         },
                     )
-                    val userTiles = userModes.map { mode ->
+                    // Only bookmarked user modes get quick-launch tiles here.
+                    // Other saved presets live in the preset picker for each mode.
+                    val userTiles = userModes.filter { it.bookmarked }.map { mode ->
                         LauncherItem(
                             key = "user:${mode.id}",
                             label = mode.name,
@@ -224,9 +224,6 @@ fun MainMenuScreen(
                         },
                         launcherItem(R.string.mode_whats_up, Icons.Default.Visibility) {
                             onWhatsUpSelected()
-                        },
-                        launcherItem(R.string.modes_title, Icons.Default.Tune) {
-                            onModesSelected()
                         },
                     )
                     Box(modifier = Modifier.padding(horizontal = 16.dp)) {

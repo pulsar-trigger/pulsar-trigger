@@ -12,7 +12,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -50,14 +53,36 @@ private enum class IvTab(val labelRes: Int, val isTime: Boolean) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Intervalometer2Screen(vm: PulsarViewModel, onBack: () -> Unit) {
-    // Local state — starts at zero each visit. Pro-grade workflow: every
-    // sequence is a deliberate config, not "trust the default". The user
-    // can't press Start until exposure + interval are non-zero.
-    var exposureMs by rememberSaveable { mutableLongStateOf(0L) }
-    var intervalMs by rememberSaveable { mutableLongStateOf(0L) }
-    var shotCount by rememberSaveable { mutableIntStateOf(0) }
-    var delayMs by rememberSaveable { mutableLongStateOf(0L) }
+fun Intervalometer2Screen(
+    vm: PulsarViewModel,
+    onBack: () -> Unit,
+    initialPresetId: String? = null,
+) {
+    // Track which preset (if any) is being edited. null = brand-new config.
+    val allModes by vm.userModes.collectAsState()
+    val loadedPreset = remember(initialPresetId, allModes) {
+        initialPresetId?.let { id -> allModes.firstOrNull { it.id == id } }
+    }
+    var editingPresetId by rememberSaveable { mutableStateOf(initialPresetId) }
+
+    // Local state — defaults to the loaded preset's values, or zero for
+    // "start fresh". rememberSaveable's initializer only runs once, so
+    // changing presets requires navigating away and back.
+    var exposureMs by rememberSaveable {
+        mutableLongStateOf(loadedPreset?.body?.exposureMs ?: 0L)
+    }
+    var intervalMs by rememberSaveable {
+        mutableLongStateOf(loadedPreset?.body?.intervalMs ?: 0L)
+    }
+    var shotCount by rememberSaveable {
+        mutableIntStateOf(loadedPreset?.body?.shotCount ?: 0)
+    }
+    var delayMs by rememberSaveable {
+        mutableLongStateOf(loadedPreset?.body?.delayMs ?: 0L)
+    }
+
+    // Save dialog state
+    var showSaveDialog by remember { mutableStateOf(false) }
 
     val runState = LocalRunState.current
     val running = runState !is RunState.Idle
@@ -92,11 +117,46 @@ fun Intervalometer2Screen(vm: PulsarViewModel, onBack: () -> Unit) {
     }
     val hintIsContinuous = isContinuous && configComplete
 
+    val editingPreset = remember(editingPresetId, allModes) {
+        editingPresetId?.let { id -> allModes.firstOrNull { it.id == id } }
+    }
+    val canSave = exposureMs > 0L && intervalMs > 0L
+
     Scaffold(
         topBar = {
             PulsarTopBar(
                 title = stringResource(R.string.mode_intervalometer),
                 onBack = onBack,
+                actions = {
+                    if (editingPreset != null) {
+                        IconButton(onClick = { vm.toggleUserModeBookmark(editingPreset.id) }) {
+                            Icon(
+                                if (editingPreset.bookmarked)
+                                    Icons.Default.Bookmark
+                                else
+                                    Icons.Default.BookmarkBorder,
+                                contentDescription = stringResource(
+                                    if (editingPreset.bookmarked)
+                                        R.string.preset_picker_unbookmark
+                                    else
+                                        R.string.preset_picker_bookmark,
+                                ),
+                                tint = if (editingPreset.bookmarked)
+                                    MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    IconButton(
+                        onClick = { showSaveDialog = true },
+                        enabled = canSave && !running,
+                    ) {
+                        Icon(
+                            Icons.Default.Save,
+                            contentDescription = stringResource(R.string.preset_save_action),
+                        )
+                    }
+                },
             )
         },
         bottomBar = {
@@ -105,23 +165,32 @@ fun Intervalometer2Screen(vm: PulsarViewModel, onBack: () -> Unit) {
                 currentTabIdx = tabIdx,
                 tabCount = IvTab.entries.size,
                 currentTabValid = currentTabValid,
-                canStart = connected && !running && configComplete,
+                // Start is clickable as long as we have a device — the action
+                // checks config and routes to the first missing-field tab if
+                // not ready, so "nothing happens" is impossible.
+                canStart = connected && !running,
                 hint = if (running) null else bottomHint,
                 hintIsAccent = hintIsContinuous,
                 onPrev = { if (tabIdx > 0) tabIdx-- },
                 onNext = { if (tabIdx < IvTab.entries.size - 1) tabIdx++ },
                 onStart = {
-                    vm.saveFlowSteps(
-                        listOf(
-                            FlowStep.Intervalometer(
-                                intervalMs = intervalMs,
-                                exposureMs = exposureMs,
-                                shotCount = shotCount,
-                                delayMs = delayMs,
+                    when {
+                        exposureMs == 0L -> tabIdx = IvTab.EXPOSURE.ordinal
+                        intervalMs == 0L -> tabIdx = IvTab.INTERVAL.ordinal
+                        else -> {
+                            vm.saveFlowSteps(
+                                listOf(
+                                    FlowStep.Intervalometer(
+                                        intervalMs = intervalMs,
+                                        exposureMs = exposureMs,
+                                        shotCount = shotCount,
+                                        delayMs = delayMs,
+                                    )
+                                )
                             )
-                        )
-                    )
-                    vm.startFlow()
+                            vm.startFlow()
+                        }
+                    }
                 },
                 onStop = { vm.stopFlow() },
             )
@@ -172,6 +241,31 @@ fun Intervalometer2Screen(vm: PulsarViewModel, onBack: () -> Unit) {
                 totalMs = totalMs,
             )
         }
+    }
+
+    if (showSaveDialog) {
+        SavePresetDialog(
+            initialName = editingPreset?.name ?: "",
+            isUpdate = editingPreset != null,
+            onConfirm = { name ->
+                val body = com.ehrocha.pulsar.model.UserMode.Body(
+                    fwMode = com.ehrocha.pulsar.ble.TriggerMode.INTERVALOMETER,
+                    intervalMs = intervalMs,
+                    exposureMs = exposureMs,
+                    shotCount = shotCount,
+                    delayMs = delayMs,
+                )
+                val mode = if (editingPreset != null) {
+                    editingPreset.copy(name = name.trim(), body = body)
+                } else {
+                    com.ehrocha.pulsar.model.UserMode(name = name.trim(), body = body)
+                }
+                vm.upsertUserMode(mode)
+                editingPresetId = mode.id
+                showSaveDialog = false
+            },
+            onDismiss = { showSaveDialog = false },
+        )
     }
 }
 
@@ -516,6 +610,48 @@ internal fun BottomBar(
             }
         }
     }
+}
+
+/**
+ * Save-preset dialog used by both Iv2 and Astro 2 wizards. Asks for a name;
+ * empty names are rejected. When [isUpdate], the title reflects "update
+ * existing" instead of "save new" so the user knows what's about to happen.
+ */
+@Composable
+internal fun SavePresetDialog(
+    initialName: String,
+    isUpdate: Boolean,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var name by remember { mutableStateOf(initialName) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(stringResource(
+                if (isUpdate) R.string.preset_save_update_title
+                else R.string.preset_save_new_title,
+            ))
+        },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text(stringResource(R.string.preset_save_name_label)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(name) },
+                enabled = name.trim().isNotEmpty(),
+            ) { Text(stringResource(R.string.save)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        },
+    )
 }
 
 internal fun iv2FormatHmsPretty(ms: Long): String {

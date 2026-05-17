@@ -23,6 +23,10 @@ data class UserMode(
     val name: String,
     val description: String = "",
     val tags: List<String> = emptyList(),
+    /** When true, the mode appears as a quick-launch tile in the Trigger
+     *  tab next to the built-in modes. Off by default — saving a preset
+     *  doesn't put it on the home screen unless the user explicitly opts in. */
+    val bookmarked: Boolean = false,
     val body: Body,
 ) {
     data class Body(
@@ -47,6 +51,7 @@ data class UserMode(
         put("name", name)
         if (description.isNotEmpty()) put("description", description)
         if (tags.isNotEmpty()) put("tags", JSONArray().apply { tags.forEach { put(it) } })
+        if (bookmarked) put("bookmarked", true)
         put("body", JSONObject().apply {
             put("fwMode", body.fwMode.name)
             put("params", JSONObject().apply {
@@ -105,6 +110,7 @@ data class UserMode(
                 tags = json.optJSONArray("tags")?.let { arr ->
                     (0 until arr.length()).map { arr.getString(it) }
                 } ?: emptyList(),
+                bookmarked = json.optBoolean("bookmarked", false),
                 body = body,
             )
         }

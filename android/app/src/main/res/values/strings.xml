@@ -35,6 +35,20 @@
     <string name="iv2_continuous_warning">∞ Continuous — will run until you press Stop</string>
     <string name="iv2_wizard_prev">Prev</string>
     <string name="iv2_wizard_next">Next</string>
+
+    <!-- Preset picker + save -->
+    <string name="preset_picker_start_fresh">Start fresh</string>
+    <string name="preset_picker_start_fresh_subtitle">New configuration from zero</string>
+    <string name="preset_picker_saved">SAVED PRESETS</string>
+    <string name="preset_picker_empty">No saved presets yet. Configure a new run, then tap save to keep it.</string>
+    <string name="preset_picker_bookmark">Bookmark to Trigger tab</string>
+    <string name="preset_picker_unbookmark">Remove bookmark</string>
+    <string name="preset_picker_delete_title">Delete preset?</string>
+    <string name="preset_picker_delete_body">"%1$s" will be removed. This cannot be undone.</string>
+    <string name="preset_save_action">Save preset</string>
+    <string name="preset_save_new_title">Save preset</string>
+    <string name="preset_save_update_title">Update preset</string>
+    <string name="preset_save_name_label">Name</string>
     <string name="iv2_summary_shots">%1$s shots</string>
     <string name="iv2_summary_continuous">Until stopped</string>
     <string name="iv2_summary_total">%1$s total</string>
@@ -582,15 +596,6 @@
     <!-- Phone Camera -->
     <!-- Camera control tooltips -->
     <!-- User-authored modes -->
-    <string name="modes_title">User Modes</string>
-    <string name="modes_help">Save up to %1$d recipes you can launch from the camera strip.</string>
-    <string name="modes_empty">No user modes yet — tap + to create one.</string>
-    <string name="modes_add">Add user mode</string>
-    <string name="modes_save">Save</string>
-    <string name="modes_new">New mode</string>
-    <string name="modes_edit_title">Edit mode</string>
-    <string name="modes_field_name">Name</string>
-    <string name="modes_field_fwmode">Firmware mode</string>
     <!-- Sequences / stacking -->
     <!-- Camera mode info panels — shown when a non-Manual mode is selected -->
     <!-- About: tribute to Jocelyn Bell Burnell -->
