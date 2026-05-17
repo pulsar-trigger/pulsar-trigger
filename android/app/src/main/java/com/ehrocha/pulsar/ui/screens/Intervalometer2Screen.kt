@@ -50,10 +50,14 @@ private enum class IvTab(val labelRes: Int, val isTime: Boolean) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Intervalometer2Screen(vm: PulsarViewModel, onBack: () -> Unit) {
-    val intervalMs by vm.intervalMs.collectAsState()
-    val exposureMs by vm.exposureMs.collectAsState()
-    val shotCount by vm.shotCount.collectAsState()
-    val delayMs by vm.delayMs.collectAsState()
+    // Local state — starts at zero each visit. Pro-grade workflow: every
+    // sequence is a deliberate config, not "trust the default". The user
+    // can't press Start until exposure + interval are non-zero.
+    var exposureMs by rememberSaveable { mutableLongStateOf(0L) }
+    var intervalMs by rememberSaveable { mutableLongStateOf(0L) }
+    var shotCount by rememberSaveable { mutableIntStateOf(0) }
+    var delayMs by rememberSaveable { mutableLongStateOf(0L) }
+
     val runState = LocalRunState.current
     val running = runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
@@ -65,6 +69,17 @@ fun Intervalometer2Screen(vm: PulsarViewModel, onBack: () -> Unit) {
     val totalMs = if (continuous) 0L
                   else delayMs + shotCount.toLong() * (exposureMs + intervalMs) - intervalMs
 
+    // Validation gate: every time-based parameter that drives the firmware
+    // needs a non-zero value. Delay and shots can legitimately be zero
+    // (no countdown / run-until-stop).
+    val configComplete = exposureMs > 0L && intervalMs > 0L
+    val missingHint = when {
+        exposureMs == 0L && intervalMs == 0L -> stringResource(R.string.iv2_set_exposure_and_interval)
+        exposureMs == 0L -> stringResource(R.string.iv2_set_exposure)
+        intervalMs == 0L -> stringResource(R.string.iv2_set_interval)
+        else -> null
+    }
+
     Scaffold(
         topBar = {
             PulsarTopBar(
@@ -75,7 +90,8 @@ fun Intervalometer2Screen(vm: PulsarViewModel, onBack: () -> Unit) {
         bottomBar = {
             BottomBar(
                 running = running,
-                canStart = connected && !running,
+                canStart = connected && !running && configComplete,
+                hint = if (!running && !configComplete) missingHint else null,
                 onStart = {
                     vm.saveFlowSteps(
                         listOf(
@@ -108,25 +124,25 @@ fun Intervalometer2Screen(vm: PulsarViewModel, onBack: () -> Unit) {
                 when (tab) {
                     IvTab.EXPOSURE -> SegmentedTimeEditor(
                         ms = exposureMs,
-                        onChange = { vm.setExposureMs(it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS)) },
-                        rangeMs = AppConfig.MIN_EXPOSURE_MS..86_400_000L,
+                        onChange = { exposureMs = it },
+                        rangeMs = 0L..86_400_000L,
                         enabled = !running,
                     )
                     IvTab.INTERVAL -> SegmentedTimeEditor(
                         ms = intervalMs,
-                        onChange = { vm.setIntervalMs(it.coerceAtLeast(AppConfig.MIN_INTERVAL_MS)) },
-                        rangeMs = AppConfig.MIN_INTERVAL_MS..3_600_000L,
+                        onChange = { intervalMs = it },
+                        rangeMs = 0L..3_600_000L,
                         enabled = !running,
                     )
                     IvTab.DELAY -> SegmentedTimeEditor(
                         ms = delayMs,
-                        onChange = { vm.setDelayMs(it.coerceAtLeast(0)) },
+                        onChange = { delayMs = it },
                         rangeMs = 0L..3_600_000L,
                         enabled = !running,
                     )
                     IvTab.SHOTS -> ShotsEditor(
                         value = shotCount,
-                        onChange = { vm.setShotCount(it.coerceAtLeast(0)) },
+                        onChange = { shotCount = it },
                         enabled = !running,
                     )
                 }
@@ -388,44 +404,58 @@ private fun SummaryStrip(shotCount: Int, continuous: Boolean, totalMs: Long) {
 private fun BottomBar(
     running: Boolean,
     canStart: Boolean,
+    hint: String?,
     onStart: () -> Unit,
     onStop: () -> Unit,
 ) {
     Surface(tonalElevation = 2.dp) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            IconButton(onClick = { /* TODO: save preset */ }, enabled = !running) {
-                Icon(Icons.Default.Save, contentDescription = stringResource(R.string.save))
+        Column(modifier = Modifier.fillMaxWidth()) {
+            if (hint != null) {
+                Text(
+                    hint,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                )
             }
-            Spacer(Modifier.weight(1f))
-            if (running) {
-                Button(
-                    onClick = onStop,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                    ),
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier.height(56.dp).fillMaxWidth(0.6f),
-                ) {
-                    Icon(Icons.Default.Stop, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.btn_stop), fontWeight = FontWeight.Bold)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                IconButton(onClick = { /* TODO: save preset */ }, enabled = !running) {
+                    Icon(Icons.Default.Save, contentDescription = stringResource(R.string.save))
                 }
-            } else {
-                Button(
-                    onClick = onStart,
-                    enabled = canStart,
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier.height(56.dp).fillMaxWidth(0.6f),
-                ) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.btn_start), fontWeight = FontWeight.Bold)
+                Spacer(Modifier.weight(1f))
+                if (running) {
+                    Button(
+                        onClick = onStop,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                        ),
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier.height(56.dp).fillMaxWidth(0.6f),
+                    ) {
+                        Icon(Icons.Default.Stop, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.btn_stop), fontWeight = FontWeight.Bold)
+                    }
+                } else {
+                    Button(
+                        onClick = onStart,
+                        enabled = canStart,
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier.height(56.dp).fillMaxWidth(0.6f),
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.btn_start), fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
