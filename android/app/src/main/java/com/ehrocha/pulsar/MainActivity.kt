@@ -44,6 +44,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -304,6 +305,20 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
     val deviceRssi by vm.rssi.collectAsState()
     val deviceLatency by vm.latencyMs.collectAsState()
     val runState by vm.runState.collectAsState()
+
+    // Keep the screen awake while a sequence is running — long timelapses /
+    // astro sessions outlast a phone's default sleep timer, and a sleeping
+    // screen means the user can't glance progress without unlocking.
+    val activityForWake = LocalContext.current as? android.app.Activity
+    val runActive = runState !is com.ehrocha.pulsar.model.RunState.Idle
+    DisposableEffect(runActive) {
+        if (runActive) {
+            activityForWake?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        onDispose {
+            activityForWake?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
     CompositionLocalProvider(
         LocalDeviceStatus provides deviceStatus,
         LocalRunState provides runState,
@@ -319,7 +334,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
                 ) {
                     Text(
                         text = deviceName.uppercase(),
@@ -354,6 +369,14 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                         }
                     },
                     onManualSelected = { currentScreen = AppScreen.Mode(TriggerMode.PRESS_HOLD) },
+                    onUserModeRun = { mode ->
+                        // Push the preset into global params so the mode panel
+                        // reflects what's running, then kick off the flow and
+                        // navigate so the user lands on the live progress view.
+                        applyUserModeParams(vm, mode)
+                        vm.runUserMode(mode)
+                        currentScreen = AppScreen.Mode(mode.body.fwMode)
+                    },
                     onCustomFlowSelected = { currentScreen = AppScreen.CustomFlow() },
                     onPlannerSelected = { currentScreen = AppScreen.Planner },
                     onAlignmentSelected = { currentScreen = AppScreen.Alignment },
@@ -528,6 +551,40 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
             }
         }
     }
+    }
+}
+
+/** Push a user-mode's saved params into the viewmodel's global state, so the
+ *  mode panel shows the same values the run is using. */
+private fun applyUserModeParams(vm: PulsarViewModel, mode: com.ehrocha.pulsar.model.UserMode) {
+    val b = mode.body
+    when (b.fwMode) {
+        TriggerMode.INTERVALOMETER -> {
+            vm.setIntervalMs(b.intervalMs)
+            vm.setExposureMs(b.exposureMs)
+            vm.setShotCount(b.shotCount)
+            vm.setDelayMs(b.delayMs)
+        }
+        TriggerMode.ASTRO -> {
+            vm.setAstroFocalLength(b.focalLength)
+            vm.setAstroCropFactor(b.cropFactor)
+            vm.setAstroRuleDivisor(b.ruleDivisor)
+            vm.setAstroGapMs(b.intervalMs)
+            vm.setAstroShotCount(b.shotCount)
+            vm.setAstroDelayMs(b.delayMs)
+        }
+        TriggerMode.DARK_FRAME -> {
+            vm.setDarkFrameCount(b.shotCount)
+            vm.setDarkFrameExposureMs(b.exposureMs)
+            vm.setDarkFrameGapMs(b.intervalMs)
+        }
+        TriggerMode.RAMP -> {
+            vm.setRampStartExposureMs(b.rampStartExposureMs)
+            vm.setRampEndExposureMs(b.rampEndExposureMs)
+            vm.setRampSteps(b.rampSteps)
+            vm.setRampIntervalMs(b.intervalMs)
+        }
+        else -> {}
     }
 }
 

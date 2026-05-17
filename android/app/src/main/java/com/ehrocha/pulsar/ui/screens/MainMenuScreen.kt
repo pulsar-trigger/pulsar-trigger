@@ -17,6 +17,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Explore
@@ -57,6 +58,7 @@ fun MainMenuScreen(
     onAlignmentSelected: () -> Unit = {},
     onWhatsUpSelected: () -> Unit = {},
     onModesSelected: () -> Unit = {},
+    onUserModeRun: (com.ehrocha.pulsar.model.UserMode) -> Unit = {},
     onSettingsSelected: () -> Unit = {},
 ) {
     val fwState by vm.firmwareManager.state.collectAsState()
@@ -177,42 +179,51 @@ fun MainMenuScreen(
                     DashboardScreen(dashboardManager = vm.dashboardManager)
                 }
                 TAB_TRIGGER -> {
-                    val triggerItems = listOf(
-                        LauncherItem(R.string.mode_intervalometer, Icons.Default.Timer) {
+                    val userModes by vm.userModes.collectAsState()
+                    val builtIns = listOf(
+                        launcherItem(R.string.mode_intervalometer, Icons.Default.Timer) {
                             onQuickFlow(FlowStepType.INTERVALOMETER)
                         },
-                        LauncherItem(R.string.mode_astro, Icons.Default.Stars) {
+                        launcherItem(R.string.mode_astro, Icons.Default.Stars) {
                             onQuickFlow(FlowStepType.ASTRO)
                         },
-                        LauncherItem(R.string.mode_dark_frame, Icons.Default.LensBlur) {
+                        launcherItem(R.string.mode_dark_frame, Icons.Default.LensBlur) {
                             onQuickFlow(FlowStepType.DARK_FRAME)
                         },
-                        LauncherItem(R.string.mode_ramp, Icons.AutoMirrored.Filled.TrendingUp) {
+                        launcherItem(R.string.mode_ramp, Icons.AutoMirrored.Filled.TrendingUp) {
                             onQuickFlow(FlowStepType.RAMP)
                         },
-                        LauncherItem(R.string.mode_manual, Icons.Default.TouchApp) {
+                        launcherItem(R.string.mode_manual, Icons.Default.TouchApp) {
                             onManualSelected()
                         },
-                        LauncherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList) {
+                        launcherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList) {
                             onCustomFlowSelected()
                         },
                     )
+                    val userTiles = userModes.map { mode ->
+                        LauncherItem(
+                            key = "user:${mode.id}",
+                            label = mode.name,
+                            icon = Icons.Default.Bookmark,
+                            onClick = { onUserModeRun(mode) },
+                        )
+                    }
                     Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        LauncherGrid(triggerItems)
+                        LauncherGrid(builtIns + userTiles)
                     }
                 }
                 TAB_TOOLS -> {
                     val toolItems = listOf(
-                        LauncherItem(R.string.mode_planner, Icons.Default.DateRange) {
+                        launcherItem(R.string.mode_planner, Icons.Default.DateRange) {
                             onPlannerSelected()
                         },
-                        LauncherItem(R.string.mode_alignment, Icons.Default.Explore) {
+                        launcherItem(R.string.mode_alignment, Icons.Default.Explore) {
                             onAlignmentSelected()
                         },
-                        LauncherItem(R.string.mode_whats_up, Icons.Default.Visibility) {
+                        launcherItem(R.string.mode_whats_up, Icons.Default.Visibility) {
                             onWhatsUpSelected()
                         },
-                        LauncherItem(R.string.modes_title, Icons.Default.Tune) {
+                        launcherItem(R.string.modes_title, Icons.Default.Tune) {
                             onModesSelected()
                         },
                     )
@@ -231,9 +242,22 @@ const val TAB_TRIGGER = 1
 const val TAB_TOOLS = 2
 
 private data class LauncherItem(
-    val labelRes: Int,
+    val key: String,
+    val label: String,
     val icon: ImageVector,
     val onClick: () -> Unit,
+)
+
+@Composable
+private fun launcherItem(
+    labelRes: Int,
+    icon: ImageVector,
+    onClick: () -> Unit,
+): LauncherItem = LauncherItem(
+    key = "res:$labelRes",
+    label = stringResource(labelRes),
+    icon = icon,
+    onClick = onClick,
 )
 
 @Composable
@@ -245,9 +269,9 @@ private fun LauncherGrid(items: List<LauncherItem>) {
         verticalArrangement = Arrangement.spacedBy(10.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
-        items(items, key = { it.labelRes }) { item ->
+        items(items, key = { it.key }) { item ->
             LauncherTile(
-                label = stringResource(item.labelRes),
+                label = item.label,
                 icon = item.icon,
                 onClick = item.onClick,
             )
