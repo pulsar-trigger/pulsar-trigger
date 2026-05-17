@@ -51,6 +51,10 @@ fun ScrubField(
     enabled: Boolean = true,
     maxHours: Int = 23,
     subSecond: Boolean = false,
+    /** Render as a single scrubbable seconds counter (smart-formatted as
+     *  "12s", "1m30s", "2m"). Use for short-range fields like Interval and
+     *  Delay where mm:ss is over-engineered. Max range 0..3600 (1 h). */
+    singleSeconds: Boolean = false,
     presetsMs: List<Long> = emptyList(),
 ) {
     Surface(
@@ -66,8 +70,11 @@ fun ScrubField(
             )
             Spacer(Modifier.height(8.dp))
 
-            if (subSecond) SubSecondRow(totalMs, onChanged, enabled)
-            else HoursMinutesSecondsRow(totalMs, onChanged, enabled, maxHours)
+            when {
+                singleSeconds -> SingleSecondsRow(totalMs, onChanged, enabled)
+                subSecond     -> SubSecondRow(totalMs, onChanged, enabled)
+                else          -> HoursMinutesSecondsRow(totalMs, onChanged, enabled, maxHours)
+            }
 
             if (presetsMs.isNotEmpty()) {
                 Spacer(Modifier.height(10.dp))
@@ -162,6 +169,94 @@ private fun HoursMinutesSecondsRow(
             onChange = { onChanged(recompose(s = it)) },
             enabled = enabled,
             modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+/** Format total seconds for the SingleSecondsRow display.
+ *  Patterns: "0s", "45s", "1m", "1m30s", "5m", "1h". */
+private fun formatSingleSeconds(totalSec: Int): String {
+    if (totalSec < 60) return "${totalSec}s"
+    val mTotal = totalSec / 60
+    val sRem = totalSec % 60
+    if (mTotal < 60) {
+        return if (sRem == 0) "${mTotal}m" else "${mTotal}m${sRem}s"
+    }
+    val h = mTotal / 60
+    val mRem = mTotal % 60
+    return if (mRem == 0 && sRem == 0) "${h}h" else "${h}h${mRem}m"
+}
+
+@Composable
+private fun SingleSecondsRow(
+    totalMs: Long,
+    onChanged: (Long) -> Unit,
+    enabled: Boolean,
+) {
+    val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current
+    val pxPerStep = with(density) { 10.dp.toPx() }
+    val range = 0..3600
+
+    val currentSec = ((totalMs + 500) / 1000).toInt().coerceIn(range)
+
+    var dragPx by remember { mutableFloatStateOf(0f) }
+    val isDragging = dragPx != 0f
+    val displayedSec = (currentSec + (dragPx / pxPerStep).toInt()).coerceIn(range)
+
+    var showNumPad by remember { mutableStateOf(false) }
+    if (showNumPad) {
+        NumPadDialog(
+            initialValue = currentSec.toString(),
+            onConfirm = { entered ->
+                val v = entered.toIntOrNull()?.coerceIn(range) ?: currentSec
+                if (v != currentSec) onChanged(v.toLong() * 1000L)
+                showNumPad = false
+            },
+            onDismiss = { showNumPad = false },
+            maxDigits = 4,
+        )
+    }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled) { showNumPad = true }
+            .pointerInput(enabled, currentSec, range) {
+                if (!enabled) return@pointerInput
+                velocityScrub(
+                    stepPx = pxPerStep,
+                    valueProvider = { currentSec },
+                    range = range,
+                    onDragPxChange = { dragPx = it },
+                    onCommit = { committed ->
+                        if (committed != currentSec) onChanged(committed.toLong() * 1000L)
+                    },
+                    onTickCrossed = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) },
+                    onBoundHit = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) },
+                )
+            },
+    ) {
+        Text(
+            formatSingleSeconds(displayedSec),
+            style = MaterialTheme.typography.displaySmall,
+            fontWeight = FontWeight.Bold,
+            color = if (isDragging) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            "0s–1h",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+        )
+        Spacer(Modifier.height(4.dp))
+        TickRuler(
+            pixelOffset = if (isDragging) dragPx else 0f,
+            anchorActive = isDragging,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(18.dp),
         )
     }
 }

@@ -639,7 +639,7 @@ internal fun IntervalometerPanelContent(
                 totalMs = intervalMs,
                 onChanged = { onIntervalChanged(it) },
                 enabled = enabled,
-                maxHours = 0,
+                singleSeconds = true,
                 presetsMs = com.ehrocha.pulsar.ui.components.ScrubPresets.INTERVAL,
             )
 
@@ -648,7 +648,7 @@ internal fun IntervalometerPanelContent(
                 totalMs = delayMs,
                 onChanged = { onDelayChanged(it) },
                 enabled = enabled,
-                maxHours = 0,
+                singleSeconds = true,
                 presetsMs = com.ehrocha.pulsar.ui.components.ScrubPresets.DELAY,
             )
 
@@ -941,7 +941,7 @@ internal fun AstroPanelContent(
                 totalMs = gapMs,
                 onChanged = { onGapMsChanged(it) },
                 enabled = enabled,
-                maxHours = 0,
+                singleSeconds = true,
                 presetsMs = com.ehrocha.pulsar.ui.components.ScrubPresets.INTERVAL,
             )
 
@@ -950,7 +950,7 @@ internal fun AstroPanelContent(
                 totalMs = delayMs,
                 onChanged = { onDelayMsChanged(it) },
                 enabled = enabled,
-                maxHours = 0,
+                singleSeconds = true,
                 presetsMs = com.ehrocha.pulsar.ui.components.ScrubPresets.DELAY,
             )
 
@@ -1084,7 +1084,7 @@ internal fun DarkFramePanelContent(
                 totalMs = gapMs,
                 onChanged = { onGapMsChanged(it.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS)) },
                 enabled = enabled,
-                maxHours = 0,
+                singleSeconds = true,
                 presetsMs = com.ehrocha.pulsar.ui.components.ScrubPresets.INTERVAL,
             )
 
@@ -1180,7 +1180,7 @@ internal fun RampPanelContent(
                 totalMs = intervalMs,
                 onChanged = { onIntervalChanged(it.coerceAtLeast(AppConfig.MIN_INTERVAL_MS)) },
                 enabled = enabled,
-                maxHours = 0,
+                singleSeconds = true,
                 presetsMs = com.ehrocha.pulsar.ui.components.ScrubPresets.INTERVAL,
             )
 
