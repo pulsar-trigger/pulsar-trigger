@@ -1483,7 +1483,11 @@ internal fun DeviceSectionContent(
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(stringResource(R.string.label_auto_off), style = MaterialTheme.typography.titleSmall)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                @OptIn(ExperimentalLayoutApi::class)
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
                     autoOffOptions.forEach { minutes ->
                         val label = if (minutes == 0) stringResource(R.string.auto_off_disabled)
                                     else stringResource(R.string.auto_off_minutes, minutes)

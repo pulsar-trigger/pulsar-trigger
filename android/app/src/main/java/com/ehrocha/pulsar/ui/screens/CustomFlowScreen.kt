@@ -480,10 +480,11 @@ private fun EditTagsDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(16.dp))
-                FlowLayout(
+                @OptIn(ExperimentalLayoutApi::class)
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalSpacing = 6.dp,
-                    verticalSpacing = 6.dp,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     allTags.forEach { tag ->
                         FilterChip(
@@ -1677,10 +1678,11 @@ private fun SaveFlowDialog(
                 Spacer(Modifier.height(12.dp))
                 Text(stringResource(R.string.label_tags), style = MaterialTheme.typography.labelMedium)
                 Spacer(Modifier.height(6.dp))
-                FlowLayout(
+                @OptIn(ExperimentalLayoutApi::class)
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalSpacing = 6.dp,
-                    verticalSpacing = 6.dp,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     allTags.forEach { tag ->
                         FilterChip(
@@ -1754,43 +1756,6 @@ private fun SaveFlowDialog(
     }
 }
 
-/** Simple flow layout for wrapping chips. */
-@Composable
-private fun FlowLayout(
-    modifier: Modifier = Modifier,
-    horizontalSpacing: androidx.compose.ui.unit.Dp = 0.dp,
-    verticalSpacing: androidx.compose.ui.unit.Dp = 0.dp,
-    content: @Composable () -> Unit,
-) {
-    androidx.compose.ui.layout.Layout(
-        content = content,
-        modifier = modifier,
-    ) { measurables, constraints ->
-        val hSpacingPx = horizontalSpacing.roundToPx()
-        val vSpacingPx = verticalSpacing.roundToPx()
-        val placeables = measurables.map { it.measure(constraints.copy(minWidth = 0)) }
-        var x = 0
-        var y = 0
-        var rowHeight = 0
-        val positions = placeables.map { placeable ->
-            if (x + placeable.width > constraints.maxWidth && x > 0) {
-                x = 0
-                y += rowHeight + vSpacingPx
-                rowHeight = 0
-            }
-            val pos = Pair(x, y)
-            x += placeable.width + hSpacingPx
-            rowHeight = maxOf(rowHeight, placeable.height)
-            pos
-        }
-        val totalHeight = if (placeables.isEmpty()) 0 else y + rowHeight
-        layout(constraints.maxWidth, totalHeight) {
-            placeables.forEachIndexed { i, placeable ->
-                placeable.placeRelative(positions[i].first, positions[i].second)
-            }
-        }
-    }
-}
 
 // ─── Flow Timeline Progress Bar ──────────────────────────────────────────────
 
