@@ -413,7 +413,7 @@
     <string name="cd_bluetooth">蓝牙</string>
     <string name="cd_simulator">模拟器</string>
     <string name="btn_navigate">导航</string>
-    <string name="warning_interval_lt_exposure">间隔短于曝光 — 固件将限制为曝光时间</string>
+    <string name="warning_interval_too_short">间隔小于 1 秒 — 相机可能来不及写入照片</string>
     <string name="status_hold_to_start">长按以开始</string>
     <string name="warning_battery_low">电量低 (%1$d%%) — 序列可能无法完成</string>
 

@@ -79,7 +79,7 @@
     <string name="status_ready_astro">Ready for astro sequence</string>
 
     <!-- IntervalometerPanel -->
-    <string name="panel_intervalometer_help">Automate complex timelapse sequences or burst captures with precision timing.\n\n• Set your camera to Bulb mode so Pulsar controls the shutter.\n• Interval is the time from the start of one shot to the next.\n• Exposure is how long the shutter stays open per shot.\n• Start Delay gives you time to step away before the sequence begins.\n• The Sequence Estimate card shows total duration and duty cycle.</string>
+    <string name="panel_intervalometer_help">Automate complex timelapse sequences or burst captures with precision timing.\n\n• Set your camera to Bulb mode so Pulsar controls the shutter.\n• Interval is the gap between exposures — the wait time after one shot before the next fires.\n• Exposure is how long the shutter stays open per shot.\n• Cycle time per frame = exposure + interval.\n• Start Delay gives you time to step away before the sequence begins.\n• The Sequence Estimate card shows total duration and end time.</string>
     <string name="label_shots">Shots</string>
     <string name="label_total_duration">Total Duration</string>
     <string name="label_ends_at">Ends at %1$s</string>
@@ -584,7 +584,7 @@
     <string name="about_tribute_body">Pulsars were discovered in 1967 by Jocelyn Bell Burnell as a graduate student in radio astronomy. This app borrows their name in humble tribute to her discovery and to her enduring championing of science.</string>
     <string name="about_tribute_link">Read on Wikipedia</string>
     <!-- Celestial grid calibration warnings -->
-    <string name="warning_interval_lt_exposure">Interval is shorter than exposure — firmware will clamp</string>
+    <string name="warning_interval_too_short">Interval below 1 s — your camera may not have time to write the frame</string>
     <string name="status_hold_to_start">Hold to start</string>
     <string name="warning_battery_low">Battery low (%1$d%%) — may not finish the sequence</string>
 </resources>

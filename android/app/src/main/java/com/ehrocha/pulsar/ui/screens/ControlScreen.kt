@@ -479,7 +479,7 @@ internal fun AstroActionsContent(
 
 /** Glanceable two-column summary for mode panels.
  *  When [warning] is non-null, a single-line strip below the totals renders
- *  in `error` colour — used for conflict states like "interval < exposure". */
+ *  in `error` colour — used for conflict states like a too-short interval. */
 @Composable
 private fun HeroSummary(
     primaryLabel: String,
@@ -607,8 +607,8 @@ internal fun IntervalometerPanelContent(
     // constraint). The battery check is a secondary heuristic.
     val batteryPct = LocalDeviceStatus.current?.batteryPct
     val warning = when {
-        exposureMs > 0L && intervalMs < exposureMs ->
-            stringResource(R.string.warning_interval_lt_exposure)
+        intervalMs in 1L until 1000L ->
+            stringResource(R.string.warning_interval_too_short)
         batteryPct != null && batteryPct in 1..19 ->
             stringResource(R.string.warning_battery_low, batteryPct)
         else -> null

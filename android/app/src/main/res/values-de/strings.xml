@@ -421,7 +421,7 @@
     <string name="about_tribute_link">Auf Wikipedia lesen</string>
 
     <!-- Sequences / stacking -->
-    <string name="warning_interval_lt_exposure">Intervall kürzer als Belichtung — Firmware begrenzt</string>
+    <string name="warning_interval_too_short">Intervall unter 1 s — die Kamera hat evtl. nicht genug Zeit zum Speichern</string>
     <string name="status_hold_to_start">Zum Starten halten</string>
     <string name="warning_battery_low">Akku schwach (%1$d%%) — Sequenz endet evtl. nicht</string>
 

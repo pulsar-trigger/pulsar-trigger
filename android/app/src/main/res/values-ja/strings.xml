@@ -421,7 +421,7 @@
     <string name="about_tribute_link">Wikipediaで読む</string>
 
     <!-- Sequences / stacking -->
-    <string name="warning_interval_lt_exposure">インターバルが露出時間より短いため、ファームウェアでクランプされます</string>
+    <string name="warning_interval_too_short">インターバルが 1 秒未満 — カメラがフレームを書き込む時間が足りない可能性があります</string>
     <string name="status_hold_to_start">長押しで開始</string>
     <string name="warning_battery_low">バッテリー残量低下 (%1$d%%) — シーケンスを完了できない可能性</string>
 

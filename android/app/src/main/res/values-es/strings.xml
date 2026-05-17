@@ -419,7 +419,7 @@
     <string name="about_tribute_link">Leer en Wikipedia</string>
 
     <!-- Sequences / stacking -->
-    <string name="warning_interval_lt_exposure">Intervalo menor que la exposición — el firmware lo limitará</string>
+    <string name="warning_interval_too_short">Intervalo inferior a 1 s — tu cámara puede no tener tiempo para escribir el fotograma</string>
     <string name="status_hold_to_start">Mantén pulsado para iniciar</string>
     <string name="warning_battery_low">Batería baja (%1$d%%) — puede no terminar la secuencia</string>
 
