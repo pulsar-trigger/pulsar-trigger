@@ -27,8 +27,11 @@ object AppConfig {
     // "Reset defaults" action. They also serve as SharedPreferences
     // fallbacks when no persisted value exists.
 
-    /** Time between the start of one exposure and the start of the next (ms). */
-    const val DEFAULT_INTERVAL_MS = 5000L
+    /** Time between the start of one exposure and the start of the next (ms).
+     *  2 s gap matches the astro / dark-frame default so users see one consistent
+     *  starting point across modes — long enough for the camera to flush a frame,
+     *  short enough to feel responsive on quick exposures. */
+    const val DEFAULT_INTERVAL_MS = 2000L
 
     /** Shutter-open duration for each shot (ms). */
     const val DEFAULT_EXPOSURE_MS = 200L
