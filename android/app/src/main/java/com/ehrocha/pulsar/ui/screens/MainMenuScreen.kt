@@ -17,6 +17,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AvTimer
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
@@ -59,6 +60,7 @@ fun MainMenuScreen(
     onWhatsUpSelected: () -> Unit = {},
     onModesSelected: () -> Unit = {},
     onUserModeRun: (com.ehrocha.pulsar.model.UserMode) -> Unit = {},
+    onIntervalometer2Selected: () -> Unit = {},
     onSettingsSelected: () -> Unit = {},
 ) {
     val fwState by vm.firmwareManager.state.collectAsState()
@@ -183,6 +185,9 @@ fun MainMenuScreen(
                     val builtIns = listOf(
                         launcherItem(R.string.mode_intervalometer, Icons.Default.Timer) {
                             onQuickFlow(FlowStepType.INTERVALOMETER)
+                        },
+                        launcherItem(R.string.mode_intervalometer_2, Icons.Default.AvTimer) {
+                            onIntervalometer2Selected()
                         },
                         launcherItem(R.string.mode_astro, Icons.Default.Stars) {
                             onQuickFlow(FlowStepType.ASTRO)

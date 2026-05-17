@@ -14,6 +14,18 @@
     <string name="tab_tools">Tools</string>
     <string name="tab_dashboard">Dashboard</string>
     <string name="mode_intervalometer">Intervalometer</string>
+    <string name="mode_intervalometer_2">Intervalometer 2</string>
+
+    <!-- Intervalometer 2 -->
+    <string name="iv2_tab_interval">Interval</string>
+    <string name="iv2_tab_exposure">Exposure</string>
+    <string name="iv2_tab_shots">Shots</string>
+    <string name="iv2_tab_delay">Delay</string>
+    <string name="iv2_tap_to_edit">Tap to edit · swipe to scrub</string>
+    <string name="iv2_summary_shots">%1$s shots</string>
+    <string name="iv2_summary_continuous">Until stopped</string>
+    <string name="iv2_summary_total">%1$s total</string>
+    <string name="iv2_summary_ends">Ends %1$s</string>
     <string name="mode_astro">Astro</string>
     <string name="mode_manual">Manual</string>
     <string name="mode_dark_frame">Dark Frames</string>
