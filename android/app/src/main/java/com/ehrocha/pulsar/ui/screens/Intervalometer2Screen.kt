@@ -73,12 +73,16 @@ fun Intervalometer2Screen(vm: PulsarViewModel, onBack: () -> Unit) {
     // needs a non-zero value. Delay and shots can legitimately be zero
     // (no countdown / run-until-stop).
     val configComplete = exposureMs > 0L && intervalMs > 0L
-    val missingHint = when {
-        exposureMs == 0L && intervalMs == 0L -> stringResource(R.string.iv2_set_exposure_and_interval)
-        exposureMs == 0L -> stringResource(R.string.iv2_set_exposure)
-        intervalMs == 0L -> stringResource(R.string.iv2_set_interval)
+    val isContinuous = configComplete && shotCount == 0
+    val bottomHint = when {
+        !configComplete && exposureMs == 0L && intervalMs == 0L ->
+            stringResource(R.string.iv2_set_exposure_and_interval)
+        !configComplete && exposureMs == 0L -> stringResource(R.string.iv2_set_exposure)
+        !configComplete && intervalMs == 0L -> stringResource(R.string.iv2_set_interval)
+        isContinuous -> stringResource(R.string.iv2_continuous_warning)
         else -> null
     }
+    val hintIsContinuous = isContinuous && configComplete
 
     Scaffold(
         topBar = {
@@ -91,7 +95,8 @@ fun Intervalometer2Screen(vm: PulsarViewModel, onBack: () -> Unit) {
             BottomBar(
                 running = running,
                 canStart = connected && !running && configComplete,
-                hint = if (!running && !configComplete) missingHint else null,
+                hint = if (running) null else bottomHint,
+                hintIsAccent = hintIsContinuous,
                 onStart = {
                     vm.saveFlowSteps(
                         listOf(
@@ -405,6 +410,7 @@ private fun BottomBar(
     running: Boolean,
     canStart: Boolean,
     hint: String?,
+    hintIsAccent: Boolean = false,
     onStart: () -> Unit,
     onStop: () -> Unit,
 ) {
@@ -414,7 +420,9 @@ private fun BottomBar(
                 Text(
                     hint,
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (hintIsAccent) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = if (hintIsAccent) FontWeight.Bold else FontWeight.Normal,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
