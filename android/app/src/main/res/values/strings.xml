@@ -21,7 +21,8 @@
     <string name="iv2_tab_exposure">Exposure</string>
     <string name="iv2_tab_shots">Shots</string>
     <string name="iv2_tab_delay">Delay</string>
-    <string name="iv2_tap_to_edit">Tap to edit · swipe to scrub</string>
+    <string name="iv2_tap_to_edit">Tap any digit to type · swipe up/down to scrub</string>
+    <string name="iv2_shots_hint">0 means continuous — runs until you press Stop</string>
     <string name="iv2_summary_shots">%1$s shots</string>
     <string name="iv2_summary_continuous">Until stopped</string>
     <string name="iv2_summary_total">%1$s total</string>
