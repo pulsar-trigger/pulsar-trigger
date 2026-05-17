@@ -78,8 +78,10 @@ fun ScrubField(
 
             if (presetsMs.isNotEmpty()) {
                 Spacer(Modifier.height(10.dp))
-                Row(
+                @OptIn(ExperimentalLayoutApi::class)
+                FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     presetsMs.forEach { preset ->
@@ -417,8 +419,10 @@ fun IntScrubField(
 
             if (presets.isNotEmpty()) {
                 Spacer(Modifier.height(10.dp))
-                Row(
+                @OptIn(ExperimentalLayoutApi::class)
+                FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     presets.forEach { preset ->

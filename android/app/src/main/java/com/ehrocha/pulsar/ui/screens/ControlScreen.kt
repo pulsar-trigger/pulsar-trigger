@@ -796,18 +796,27 @@ internal fun AstroPanelContent(
                         label = stringResource(R.string.chip_500_rule),
                         value = formatDuration(rule500Ms),
                         selected = ruleDivisor == AppConfig.DEFAULT_RULE_DIVISOR,
+                        onClick = if (onRuleChanged != null)
+                            ({ onRuleChanged(AppConfig.DEFAULT_RULE_DIVISOR) }) else null,
+                        enabled = enabled,
                         modifier = Modifier.weight(1f),
                     )
                     RuleCompareCell(
                         label = stringResource(R.string.chip_400_rule),
                         value = formatDuration(rule400Ms),
                         selected = ruleDivisor == AppConfig.TIGHT_RULE_DIVISOR,
+                        onClick = if (onRuleChanged != null)
+                            ({ onRuleChanged(AppConfig.TIGHT_RULE_DIVISOR) }) else null,
+                        enabled = enabled,
                         modifier = Modifier.weight(1f),
                     )
                     RuleCompareCell(
                         label = stringResource(R.string.chip_npf_rule),
                         value = formatDuration(ruleNpfMs),
                         selected = ruleDivisor == AppConfig.NPF_RULE_DIVISOR,
+                        onClick = if (onRuleChanged != null)
+                            ({ onRuleChanged(AppConfig.NPF_RULE_DIVISOR) }) else null,
+                        enabled = enabled,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -907,34 +916,8 @@ internal fun AstroPanelContent(
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (onRuleChanged != null) {
-                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                    SegmentedButton(
-                        selected = ruleDivisor == AppConfig.DEFAULT_RULE_DIVISOR,
-                        onClick = { onRuleChanged(AppConfig.DEFAULT_RULE_DIVISOR) },
-                        enabled = enabled,
-                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
-                    ) {
-                        Text(stringResource(R.string.chip_500_rule))
-                    }
-                    SegmentedButton(
-                        selected = ruleDivisor == AppConfig.TIGHT_RULE_DIVISOR,
-                        onClick = { onRuleChanged(AppConfig.TIGHT_RULE_DIVISOR) },
-                        enabled = enabled,
-                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
-                    ) {
-                        Text(stringResource(R.string.chip_400_rule))
-                    }
-                    SegmentedButton(
-                        selected = ruleDivisor == AppConfig.NPF_RULE_DIVISOR,
-                        onClick = { onRuleChanged(AppConfig.NPF_RULE_DIVISOR) },
-                        enabled = enabled,
-                        shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
-                    ) {
-                        Text(stringResource(R.string.chip_npf_rule))
-                    }
-                }
-            }
+            // Rule selection happens via the tappable RuleCompareCells in the
+            // hero card above — no separate segmented row needed.
 
             ScrubField(
                 label = stringResource(R.string.label_interval),
@@ -977,6 +960,8 @@ private fun RuleCompareCell(
     label: String,
     value: String,
     selected: Boolean,
+    onClick: (() -> Unit)? = null,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val border = if (selected) MaterialTheme.colorScheme.primary
@@ -985,6 +970,9 @@ private fun RuleCompareCell(
              else MaterialTheme.colorScheme.surface
     val valueColor = if (selected) MaterialTheme.colorScheme.primary
                      else MaterialTheme.colorScheme.onSurface
+    val surfaceMod = if (onClick != null && enabled) {
+        Modifier.clickable { onClick() }
+    } else Modifier
     Surface(
         shape = RoundedCornerShape(10.dp),
         color = bg,
@@ -992,7 +980,7 @@ private fun RuleCompareCell(
             width = if (selected) 1.5.dp else 1.dp,
             color = border,
         ),
-        modifier = modifier,
+        modifier = modifier.then(surfaceMod),
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
