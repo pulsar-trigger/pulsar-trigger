@@ -586,7 +586,7 @@ fun SessionDetailScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(12.dp)
-                            .clip(RoundedCornerShape(6.dp)),
+                            .clip(RoundedCornerShape(8.dp)),
                     ) {
                         colors.forEach { c ->
                             Box(

@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ui.components.PulsarTopBar
 import com.ehrocha.pulsar.ui.theme.StatusGreen
 import com.ehrocha.pulsar.viewmodel.AlignmentViewModel
 import kotlin.math.abs
@@ -83,28 +84,13 @@ fun AlignmentScreen(
         stringResource(R.string.alignment_true_north)
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-    ) {
-        // ── Top bar ──────────────────────────────────────────────────
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(vertical = 8.dp),
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.back),
-                )
-            }
-            PanelHelpHeader(
-                title = stringResource(R.string.alignment_title),
-                helpText = stringResource(R.string.alignment_help),
-            )
-            Spacer(Modifier.weight(1f))
-        }
+    Column(modifier = Modifier.fillMaxSize()) {
+        PulsarTopBar(
+            title = stringResource(R.string.alignment_title),
+            onBack = onBack,
+            helpText = stringResource(R.string.alignment_help),
+        )
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
 
         // ── Location row ─────────────────────────────────────────────
         LocationRow(
@@ -146,6 +132,7 @@ fun AlignmentScreen(
         )
 
         Spacer(Modifier.height(12.dp))
+        } // inner Column (content)
     }
 }
 

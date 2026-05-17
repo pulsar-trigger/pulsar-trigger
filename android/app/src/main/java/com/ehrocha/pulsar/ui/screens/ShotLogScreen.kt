@@ -148,7 +148,7 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
 private fun ShotLogRow(entry: ShotLogEntry) {
     val (icon, tint) = statusIconAndColor(entry.status)
     Surface(
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceContainer,
         border = androidx.compose.foundation.BorderStroke(
             width = 1.dp,

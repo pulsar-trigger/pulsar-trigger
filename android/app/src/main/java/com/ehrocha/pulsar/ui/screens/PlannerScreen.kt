@@ -38,6 +38,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ui.components.PulsarTopBar
 import com.ehrocha.pulsar.ui.theme.VerdictExcellent
 import com.ehrocha.pulsar.ui.theme.VerdictFair
 import com.ehrocha.pulsar.ui.theme.VerdictGood
@@ -224,31 +225,21 @@ fun PlannerScreen(
         )
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-    ) {
-        // ── Top bar ──────────────────────────────────────────────────
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(vertical = 8.dp),
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-            }
-            PanelHelpHeader(
-                title = stringResource(R.string.planner_title),
-                helpText = stringResource(R.string.planner_help),
-            )
-            Spacer(Modifier.weight(1f))
-            IconButton(onClick = { showImportDialog = true }) {
-                Icon(Icons.Default.Download, contentDescription = stringResource(R.string.event_import))
-            }
-            IconButton(onClick = { showAddEvent = true }) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.planner_add))
-            }
-        }
+    Column(modifier = Modifier.fillMaxSize()) {
+        PulsarTopBar(
+            title = stringResource(R.string.planner_title),
+            onBack = onBack,
+            helpText = stringResource(R.string.planner_help),
+            actions = {
+                IconButton(onClick = { showImportDialog = true }) {
+                    Icon(Icons.Default.Download, contentDescription = stringResource(R.string.event_import))
+                }
+                IconButton(onClick = { showAddEvent = true }) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.planner_add))
+                }
+            },
+        )
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
 
         // ── Events list (tabbed: Upcoming / Past) ────────────────────
         val today = LocalDate.now()
@@ -374,6 +365,7 @@ fun PlannerScreen(
                 }
             }
         }
+        } // inner Column (content)
     }
 }
 

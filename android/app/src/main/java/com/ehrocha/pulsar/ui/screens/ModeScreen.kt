@@ -480,7 +480,7 @@ fun SettingsScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Surface(
-                    shape = RoundedCornerShape(24.dp),
+                    shape = RoundedCornerShape(20.dp),
                     tonalElevation = 8.dp,
                     modifier = Modifier
                         .fillMaxWidth(0.85f)

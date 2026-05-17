@@ -689,7 +689,7 @@ private fun SavedFlowCard(
                             )
                         }
                         Surface(
-                            shape = RoundedCornerShape(6.dp),
+                            shape = RoundedCornerShape(8.dp),
                             color = MaterialTheme.colorScheme.surfaceVariant,
                         ) {
                             Row(
@@ -1216,7 +1216,7 @@ private fun FlowStepCard(
                 ) {
                     // State badge with phase countdown
                     Surface(
-                        shape = RoundedCornerShape(6.dp),
+                        shape = RoundedCornerShape(8.dp),
                         color = stateColor.copy(alpha = 0.15f),
                     ) {
                         Row(
@@ -1351,7 +1351,7 @@ private fun FlowStepCard(
 
                 // Pause step gets a "Waiting for user" badge
                 Surface(
-                    shape = RoundedCornerShape(6.dp),
+                    shape = RoundedCornerShape(8.dp),
                     color = StatusOrange.copy(alpha = 0.15f),
                     modifier = Modifier.padding(bottom = 8.dp),
                 ) {
@@ -1399,7 +1399,7 @@ private fun AddStepDialog(
         // Step type picker
         Dialog(onDismissRequest = onDismiss) {
             Surface(
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(20.dp),
                 tonalElevation = 8.dp,
             ) {
                 Column(modifier = Modifier.padding(24.dp)) {

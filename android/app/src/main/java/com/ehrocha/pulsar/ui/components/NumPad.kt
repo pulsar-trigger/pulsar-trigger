@@ -36,7 +36,7 @@ fun NumPadDialog(
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(20.dp),
             tonalElevation = 6.dp,
         ) {
             Column(

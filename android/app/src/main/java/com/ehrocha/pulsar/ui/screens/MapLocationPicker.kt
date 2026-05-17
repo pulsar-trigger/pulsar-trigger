@@ -25,6 +25,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.ehrocha.pulsar.R
 
+import com.ehrocha.pulsar.ui.components.PulsarTopBar
 import com.ehrocha.pulsar.ui.theme.LocalNightMode
 import com.ehrocha.pulsar.ui.theme.ThemeMode
 import kotlinx.coroutines.Dispatchers
@@ -88,31 +89,22 @@ fun MapLocationPicker(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // ── Top bar ──────────────────────────────────────────────────
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-            }
-            Text(
-                stringResource(R.string.planner_pick_on_map),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f),
-            )
-            if (hasSelection) {
-                IconButton(onClick = {
-                    val name = locationName.ifBlank {
-                        String.format(Locale.US, "%.4f, %.4f", selectedLat, selectedLon)
+        PulsarTopBar(
+            title = stringResource(R.string.planner_pick_on_map),
+            onBack = onBack,
+            actions = {
+                if (hasSelection) {
+                    IconButton(onClick = {
+                        val name = locationName.ifBlank {
+                            String.format(Locale.US, "%.4f, %.4f", selectedLat, selectedLon)
+                        }
+                        onConfirm(name, selectedLat, selectedLon)
+                    }) {
+                        Icon(Icons.Default.Check, contentDescription = stringResource(R.string.save))
                     }
-                    onConfirm(name, selectedLat, selectedLon)
-                }) {
-                    Icon(Icons.Default.Check, contentDescription = stringResource(R.string.save))
                 }
-            }
-        }
+            },
+        )
 
         // ── Selection info ───────────────────────────────────────────
         if (hasSelection) {

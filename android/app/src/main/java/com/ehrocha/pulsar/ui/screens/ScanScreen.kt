@@ -181,7 +181,7 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
         Surface(
             onClick = { vm.connectSimulator() },
             shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Row(

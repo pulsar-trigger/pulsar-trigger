@@ -25,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ui.components.PulsarTopBar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.Calendar
@@ -99,25 +100,13 @@ fun WhatsUpScreen(onBack: () -> Unit) {
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-    ) {
-        // ── Top bar ─────────────────────────────────────────────────────
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(vertical = 8.dp),
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-            }
-            PanelHelpHeader(
-                title = stringResource(R.string.whats_up_title),
-                helpText = stringResource(R.string.whats_up_help),
-            )
-            Spacer(Modifier.weight(1f))
-        }
+    Column(modifier = Modifier.fillMaxSize()) {
+        PulsarTopBar(
+            title = stringResource(R.string.whats_up_title),
+            onBack = onBack,
+            helpText = stringResource(R.string.whats_up_help),
+        )
+        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
 
         // ── Location status ─────────────────────────────────────────────
         Row(
@@ -196,6 +185,7 @@ fun WhatsUpScreen(onBack: () -> Unit) {
                 Spacer(Modifier.height(16.dp))
             }
         }
+        } // inner Column (content)
     }
 }
 
@@ -247,7 +237,7 @@ private fun DsoCard(dso: DsoTarget, altitude: Double) {
                     )
                     Spacer(Modifier.width(6.dp))
                     Surface(
-                        shape = RoundedCornerShape(4.dp),
+                        shape = RoundedCornerShape(8.dp),
                         color = MaterialTheme.colorScheme.primaryContainer,
                     ) {
                         Text(

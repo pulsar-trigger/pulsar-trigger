@@ -974,7 +974,7 @@ private fun RuleCompareCell(
         Modifier.clickable { onClick() }
     } else Modifier
     Surface(
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(12.dp),
         color = bg,
         border = androidx.compose.foundation.BorderStroke(
             width = if (selected) 1.5.dp else 1.dp,
