@@ -28,8 +28,6 @@
     <string name="edit">Modifier</string>
     <string name="run">Lancer</string>
     <string name="continue_label">Continuer</string>
-    <string name="cd_decrease">Diminuer</string>
-    <string name="cd_increase">Augmenter</string>
     <string name="cd_collapse">Réduire</string>
     <string name="cd_expand">Développer</string>
     <string name="cd_move_up">Déplacer vers le haut</string>
@@ -63,7 +61,6 @@
     <string name="panel_manual_tip">Changez le comportement à l\'aide des puces dans la zone d\'action ci-dessous.</string>
     <string name="panel_manual_lock_info">VERROUILLAGE : Appuyez une fois sur le bouton central pour ouvrir l\'obturateur, appuyez à nouveau pour le fermer. Idéal pour les longues poses bulb.</string>
     <string name="panel_manual_hold_info">MAINTIEN : L\'obturateur reste ouvert tant que le bouton central est enfoncé. Idéal pour les rafales rapides.</string>
-    <string name="label_rule_readout">Résultat règle des %1$d</string>
     <string name="label_effective_focal">%1$smm effectif</string>
     <string name="label_max_exposure">Exposition max</string>
     <string name="label_astro_formula">Formule : %1$d / (%2$d mm × %3$sx) = %4$ss</string>
@@ -406,8 +403,6 @@
     <string name="ota_notif_complete">Firmware mis à jour</string>
     <string name="ota_notif_complete_detail">Mise à jour terminée</string>
     <string name="ota_notif_failed">Échec de la mise à jour du firmware</string>
-    <string name="cd_arrow_up">Augmenter</string>
-    <string name="cd_arrow_down">Diminuer</string>
     <string name="cd_backspace">Effacer</string>
     <string name="cd_confirm">Confirmer</string>
     <string name="cd_bluetooth">Bluetooth</string>

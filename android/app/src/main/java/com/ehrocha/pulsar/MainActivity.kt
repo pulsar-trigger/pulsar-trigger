@@ -360,9 +360,11 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     initialTab = menuTab,
                     onTabChanged = { menuTab = it },
                     onQuickFlow = { type ->
+                        // Intervalometer and Astro now have their own dedicated
+                        // wizard screens (Iv2 / Astro 2). Dark Frame and Ramp
+                        // still ride the legacy Mode screen until they get
+                        // a similar rework.
                         when (type) {
-                            FlowStepType.INTERVALOMETER -> currentScreen = AppScreen.Mode(TriggerMode.INTERVALOMETER)
-                            FlowStepType.ASTRO -> currentScreen = AppScreen.Mode(TriggerMode.ASTRO)
                             FlowStepType.DARK_FRAME -> currentScreen = AppScreen.Mode(TriggerMode.DARK_FRAME)
                             FlowStepType.RAMP -> currentScreen = AppScreen.Mode(TriggerMode.RAMP)
                             else -> return@MainMenuScreen

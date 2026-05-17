@@ -28,8 +28,6 @@
     <string name="edit">編集</string>
     <string name="run">実行</string>
     <string name="continue_label">続行</string>
-    <string name="cd_decrease">減少</string>
-    <string name="cd_increase">増加</string>
     <string name="cd_collapse">折りたたむ</string>
     <string name="cd_expand">展開</string>
     <string name="cd_move_up">上に移動</string>
@@ -63,7 +61,6 @@
     <string name="panel_manual_tip">下のアクションエリアのチップで動作を切り替えます。</string>
     <string name="panel_manual_lock_info">ロック: 中央ボタンを一度タップしてシャッターを開き、もう一度タップして閉じます。長時間バルブ露出に最適です。</string>
     <string name="panel_manual_hold_info">ホールド: 中央ボタンを押している間、シャッターが開きます。素早い連続撮影に最適です。</string>
-    <string name="label_rule_readout">%1$d ルール表示</string>
     <string name="label_effective_focal">有効焦点距離 %1$smm</string>
     <string name="label_max_exposure">最大露出時間</string>
     <string name="label_astro_formula">計算式: %1$d / (%2$d mm × %3$sx) = %4$ss</string>
@@ -406,8 +403,6 @@
     <string name="ota_notif_complete">ファームウェアが更新されました</string>
     <string name="ota_notif_complete_detail">アップデート完了</string>
     <string name="ota_notif_failed">ファームウェアの更新に失敗しました</string>
-    <string name="cd_arrow_up">増加</string>
-    <string name="cd_arrow_down">減少</string>
     <string name="cd_backspace">削除</string>
     <string name="cd_confirm">確認</string>
     <string name="cd_bluetooth">Bluetooth</string>

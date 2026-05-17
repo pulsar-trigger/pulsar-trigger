@@ -30,8 +30,6 @@
     <string name="edit">编辑</string>
     <string name="run">运行</string>
     <string name="continue_label">继续</string>
-    <string name="cd_decrease">减少</string>
-    <string name="cd_increase">增加</string>
     <string name="cd_collapse">折叠</string>
     <string name="cd_expand">展开</string>
     <string name="cd_move_up">上移</string>
@@ -65,7 +63,6 @@
     <string name="panel_manual_tip">使用下方操作区域中的标签切换行为模式。</string>
     <string name="panel_manual_lock_info">锁定：点按中央按钮一次打开快门，再点按一次关闭。适合长时间B门曝光。</string>
     <string name="panel_manual_hold_info">按住：按住中央按钮时快门保持打开。适合快速连拍。</string>
-    <string name="label_rule_readout">%1$d 法则读数</string>
     <string name="label_effective_focal">%1$smm 等效焦距</string>
     <string name="label_max_exposure">最大曝光</string>
     <string name="label_astro_formula">公式：%1$d / (%2$d mm × %3$sx) = %4$ss</string>
@@ -406,8 +403,6 @@
     <string name="ota_notif_complete">固件已更新</string>
     <string name="ota_notif_complete_detail">更新完成</string>
     <string name="ota_notif_failed">固件更新失败</string>
-    <string name="cd_arrow_up">增加</string>
-    <string name="cd_arrow_down">减少</string>
     <string name="cd_backspace">退格</string>
     <string name="cd_confirm">确认</string>
     <string name="cd_bluetooth">蓝牙</string>

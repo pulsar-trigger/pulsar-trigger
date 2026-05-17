@@ -28,8 +28,6 @@
     <string name="edit">Bearbeiten</string>
     <string name="run">Ausführen</string>
     <string name="continue_label">Weiter</string>
-    <string name="cd_decrease">Verringern</string>
-    <string name="cd_increase">Erhöhen</string>
     <string name="cd_collapse">Einklappen</string>
     <string name="cd_expand">Ausklappen</string>
     <string name="cd_move_up">Nach oben</string>
@@ -63,7 +61,6 @@
     <string name="panel_manual_tip">Wechsle das Verhalten über die Chips im Aktionsbereich unten.</string>
     <string name="panel_manual_lock_info">SPERREN: Tippe einmal auf die mittlere Taste, um den Verschluss zu öffnen, und erneut, um ihn zu schließen. Ideal für lange Bulb-Belichtungen.</string>
     <string name="panel_manual_hold_info">HALTEN: Der Verschluss bleibt offen, solange die mittlere Taste gedrückt wird. Ideal für schnelle Serienaufnahmen.</string>
-    <string name="label_rule_readout">%1$d-Regel Ergebnis</string>
     <string name="label_effective_focal">%1$smm Effektiv</string>
     <string name="label_max_exposure">Max. belichtung</string>
     <string name="label_astro_formula">Formel: %1$d / (%2$d mm × %3$sx) = %4$ss</string>
@@ -406,8 +403,6 @@
     <string name="ota_notif_complete">Firmware aktualisiert</string>
     <string name="ota_notif_complete_detail">Aktualisierung abgeschlossen</string>
     <string name="ota_notif_failed">Firmware-Aktualisierung fehlgeschlagen</string>
-    <string name="cd_arrow_up">Erhöhen</string>
-    <string name="cd_arrow_down">Verringern</string>
     <string name="cd_backspace">Löschen</string>
     <string name="cd_confirm">Bestätigen</string>
     <string name="cd_bluetooth">Bluetooth</string>
