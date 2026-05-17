@@ -127,7 +127,8 @@ private fun HoursMinutesSecondsRow(
     enabled: Boolean,
     maxHours: Int,
 ) {
-    val hours = ((totalMs / 3_600_000) % (maxHours + 1)).toInt()
+    val showHours = maxHours > 0
+    val hours = if (showHours) ((totalMs / 3_600_000) % (maxHours + 1)).toInt() else 0
     val minutes = ((totalMs % 3_600_000) / 60_000).toInt()
     val seconds = ((totalMs % 60_000) / 1_000).toInt()
     val millis = (totalMs % 1_000).toInt()
@@ -140,13 +141,15 @@ private fun HoursMinutesSecondsRow(
         horizontalArrangement = Arrangement.Center,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        ScrubDigit(
-            value = hours, range = 0..maxHours, unitLabel = "h",
-            onChange = { onChanged(recompose(h = it)) },
-            enabled = enabled,
-            modifier = Modifier.weight(1f),
-        )
-        Separator(":")
+        if (showHours) {
+            ScrubDigit(
+                value = hours, range = 0..maxHours, unitLabel = "h",
+                onChange = { onChanged(recompose(h = it)) },
+                enabled = enabled,
+                modifier = Modifier.weight(1f),
+            )
+            Separator(":")
+        }
         ScrubDigit(
             value = minutes, range = 0..59, unitLabel = "m",
             onChange = { onChanged(recompose(m = it)) },
