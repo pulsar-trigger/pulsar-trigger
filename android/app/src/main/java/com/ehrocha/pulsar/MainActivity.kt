@@ -370,6 +370,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     },
                     onManualSelected = { currentScreen = AppScreen.Mode(TriggerMode.PRESS_HOLD) },
                     onIntervalometer2Selected = { currentScreen = AppScreen.Intervalometer2 },
+                    onAstroMode2Selected = { currentScreen = AppScreen.AstroMode2 },
                     onUserModeRun = { mode ->
                         // Push the preset into global params so the mode panel
                         // reflects what's running, then kick off the flow and
@@ -511,6 +512,13 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     onBack = { currentScreen = AppScreen.Menu },
                 )
             }
+            AppScreen.AstroMode2 -> {
+                BackHandler { currentScreen = AppScreen.Menu }
+                com.ehrocha.pulsar.ui.screens.AstroMode2Screen(
+                    vm = vm,
+                    onBack = { currentScreen = AppScreen.Menu },
+                )
+            }
         }
     }
         // ── Bottom bar (Menu screen only) ────────────────────────────
@@ -612,4 +620,5 @@ private sealed class AppScreen {
     data class ModeEditor(val modeId: String? = null) : AppScreen()
     data object ShotLog : AppScreen()
     data object Intervalometer2 : AppScreen()
+    data object AstroMode2 : AppScreen()
 }

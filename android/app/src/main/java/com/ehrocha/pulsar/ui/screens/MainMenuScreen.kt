@@ -61,6 +61,7 @@ fun MainMenuScreen(
     onModesSelected: () -> Unit = {},
     onUserModeRun: (com.ehrocha.pulsar.model.UserMode) -> Unit = {},
     onIntervalometer2Selected: () -> Unit = {},
+    onAstroMode2Selected: () -> Unit = {},
     onSettingsSelected: () -> Unit = {},
 ) {
     val fwState by vm.firmwareManager.state.collectAsState()
@@ -191,6 +192,9 @@ fun MainMenuScreen(
                         },
                         launcherItem(R.string.mode_astro, Icons.Default.Stars) {
                             onQuickFlow(FlowStepType.ASTRO)
+                        },
+                        launcherItem(R.string.mode_astro_2, Icons.Default.Stars) {
+                            onAstroMode2Selected()
                         },
                         launcherItem(R.string.mode_dark_frame, Icons.Default.LensBlur) {
                             onQuickFlow(FlowStepType.DARK_FRAME)

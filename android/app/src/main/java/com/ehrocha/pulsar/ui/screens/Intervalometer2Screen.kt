@@ -165,7 +165,7 @@ fun Intervalometer2Screen(vm: PulsarViewModel, onBack: () -> Unit) {
 // ── Editors ──────────────────────────────────────────────────────────────
 
 @Composable
-private fun SegmentedTimeEditor(
+internal fun SegmentedTimeEditor(
     ms: Long,
     onChange: (Long) -> Unit,
     rangeMs: LongRange,
@@ -230,7 +230,7 @@ private fun SegmentedTimeEditor(
 }
 
 @Composable
-private fun ShotsEditor(
+internal fun ShotsEditor(
     value: Int,
     onChange: (Int) -> Unit,
     enabled: Boolean,
@@ -371,7 +371,7 @@ private fun recomposeMs(h: Int, m: Int, s: Int, cs: Int): Long =
 // ── Summary + bottom bar ─────────────────────────────────────────────────
 
 @Composable
-private fun SummaryStrip(shotCount: Int, continuous: Boolean, totalMs: Long) {
+internal fun SummaryStrip(shotCount: Int, continuous: Boolean, totalMs: Long) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = Modifier.fillMaxWidth(),
@@ -389,13 +389,13 @@ private fun SummaryStrip(shotCount: Int, continuous: Boolean, totalMs: Long) {
             )
             if (!continuous && totalMs > 0) {
                 Text(
-                    stringResource(R.string.iv2_summary_total, formatHmsPretty(totalMs)),
+                    stringResource(R.string.iv2_summary_total, iv2FormatHmsPretty(totalMs)),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.width(12.dp))
                 Text(
-                    stringResource(R.string.iv2_summary_ends, formatEndClock(totalMs)),
+                    stringResource(R.string.iv2_summary_ends, iv2FormatEndClock(totalMs)),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
@@ -406,7 +406,7 @@ private fun SummaryStrip(shotCount: Int, continuous: Boolean, totalMs: Long) {
 }
 
 @Composable
-private fun BottomBar(
+internal fun BottomBar(
     running: Boolean,
     canStart: Boolean,
     hint: String?,
@@ -470,7 +470,7 @@ private fun BottomBar(
     }
 }
 
-private fun formatHmsPretty(ms: Long): String {
+internal fun iv2FormatHmsPretty(ms: Long): String {
     val totalSec = (ms + 500) / 1000
     val h = totalSec / 3600
     val m = (totalSec % 3600) / 60
@@ -479,7 +479,7 @@ private fun formatHmsPretty(ms: Long): String {
            else String.format(Locale.US, "%02d:%02d", m, s)
 }
 
-private fun formatEndClock(durationFromNowMs: Long): String {
+internal fun iv2FormatEndClock(durationFromNowMs: Long): String {
     val end = Calendar.getInstance().apply {
         timeInMillis = System.currentTimeMillis() + durationFromNowMs
     }

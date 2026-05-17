@@ -15,6 +15,15 @@
     <string name="tab_dashboard">Dashboard</string>
     <string name="mode_intervalometer">Intervalometer</string>
     <string name="mode_intervalometer_2">Intervalometer 2</string>
+    <string name="mode_astro_2">Astro 2</string>
+
+    <!-- Astro 2 -->
+    <string name="astro2_tab_lens">Lens</string>
+    <string name="astro2_max_exposure_label">MAX EXPOSURE</string>
+    <string name="astro2_sensor_format">Sensor format</string>
+    <string name="astro2_rule">Rule</string>
+    <string name="astro2_set_lens">Set focal length to start</string>
+    <string name="astro2_set_lens_and_interval">Set focal length and interval to start</string>
 
     <!-- Intervalometer 2 -->
     <string name="iv2_tab_interval">Interval</string>
