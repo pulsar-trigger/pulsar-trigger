@@ -14,9 +14,6 @@
     <string name="tab_tools">Tools</string>
     <string name="tab_dashboard">Dashboard</string>
     <string name="mode_intervalometer">Intervalometer</string>
-    <string name="mode_intervalometer_2">Intervalometer 2</string>
-    <string name="mode_astro_2">Astro 2</string>
-
     <!-- Astro 2 -->
     <string name="astro2_tab_lens">Lens</string>
     <string name="astro2_max_exposure_label">MAX EXPOSURE</string>
@@ -36,6 +33,8 @@
     <string name="iv2_set_interval">Set interval to start</string>
     <string name="iv2_set_exposure_and_interval">Set exposure and interval to start</string>
     <string name="iv2_continuous_warning">∞ Continuous — will run until you press Stop</string>
+    <string name="iv2_wizard_prev">Prev</string>
+    <string name="iv2_wizard_next">Next</string>
     <string name="iv2_summary_shots">%1$s shots</string>
     <string name="iv2_summary_continuous">Until stopped</string>
     <string name="iv2_summary_total">%1$s total</string>

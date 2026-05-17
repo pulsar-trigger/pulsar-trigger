@@ -62,6 +62,55 @@ private val SENSOR_OPTS = listOf(
 
 private val FOCAL_DIAL_PRESETS = listOf(14, 24, 35, 50, 85, 105, 135, 200)
 
+/** Map a continuous angle (degrees from 12 o'clock clockwise) into the focal
+ *  range. Presets sit at evenly spaced positions; angles between presets
+ *  produce interpolated values (so the user can land on 16, 70, etc.). The
+ *  last arc — wrapping from the highest preset back to the lowest — is
+ *  treated as a dead zone: pin to whichever endpoint the finger is nearer.
+ *  Returns null if the angle is out of range (shouldn't happen with 0–360). */
+private fun focalFromAngle(angleDeg: Double, presets: List<Int>): Int? {
+    val n = presets.size
+    if (n < 2) return null
+    val stepDeg = 360.0 / n
+    val segmentIdx = (angleDeg / stepDeg).toInt().coerceIn(0, n - 1)
+    val frac = (angleDeg - segmentIdx * stepDeg) / stepDeg
+    if (segmentIdx == n - 1) {
+        // Dead arc between the last preset and the wrap-back to the first —
+        // skip interpolation, snap to the nearer endpoint.
+        return if (frac < 0.5) presets[n - 1] else presets[0]
+    }
+    val a = presets[segmentIdx]
+    val b = presets[segmentIdx + 1]
+    return (a + (b - a) * frac).roundToInt()
+}
+
+/** Inverse of [focalFromAngle] — where does this focal value sit on the dial? */
+private fun angleFromFocal(valueMm: Int, presets: List<Int>): Double {
+    val n = presets.size
+    val stepDeg = 360.0 / n
+    if (valueMm <= presets.first()) return 0.0
+    if (valueMm >= presets.last()) return (n - 1) * stepDeg
+    for (i in 0 until n - 1) {
+        if (valueMm in presets[i]..presets[i + 1]) {
+            val frac = (valueMm - presets[i]).toDouble() / (presets[i + 1] - presets[i])
+            return i * stepDeg + frac * stepDeg
+        }
+    }
+    return 0.0
+}
+
+/** Which preset is the current value closest to (for highlighting the rim tick)? */
+private fun nearestPresetIndex(valueMm: Int, presets: List<Int>): Int {
+    if (valueMm <= 0) return -1
+    var bestIdx = 0
+    var bestDelta = Int.MAX_VALUE
+    presets.forEachIndexed { i, p ->
+        val d = kotlin.math.abs(p - valueMm)
+        if (d < bestDelta) { bestDelta = d; bestIdx = i }
+    }
+    return bestIdx
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AstroMode2Screen(vm: PulsarViewModel, onBack: () -> Unit) {
@@ -86,28 +135,40 @@ fun AstroMode2Screen(vm: PulsarViewModel, onBack: () -> Unit) {
                   else delayMs + shotCount.toLong() * (maxExpMs + intervalMs) - intervalMs
 
     val configComplete = focalLength > 0 && intervalMs > 0L
+    val currentTabValid = when (tab) {
+        AstroTab.LENS -> focalLength > 0
+        AstroTab.INTERVAL -> intervalMs > 0L
+        AstroTab.DELAY -> true
+        AstroTab.SHOTS -> true
+    }
     val bottomHint = when {
-        !configComplete && focalLength == 0 && intervalMs == 0L ->
+        tab == AstroTab.LENS && focalLength == 0 -> stringResource(R.string.astro2_set_lens)
+        tab == AstroTab.INTERVAL && intervalMs == 0L -> stringResource(R.string.iv2_set_interval)
+        tab == AstroTab.SHOTS && continuous && configComplete ->
+            stringResource(R.string.iv2_continuous_warning)
+        tab == AstroTab.SHOTS && !configComplete ->
             stringResource(R.string.astro2_set_lens_and_interval)
-        !configComplete && focalLength == 0 -> stringResource(R.string.astro2_set_lens)
-        !configComplete && intervalMs == 0L -> stringResource(R.string.iv2_set_interval)
-        configComplete && continuous -> stringResource(R.string.iv2_continuous_warning)
         else -> null
     }
 
     Scaffold(
         topBar = {
             PulsarTopBar(
-                title = stringResource(R.string.mode_astro_2),
+                title = stringResource(R.string.mode_astro),
                 onBack = onBack,
             )
         },
         bottomBar = {
             BottomBar(
                 running = running,
+                currentTabIdx = tabIdx,
+                tabCount = AstroTab.entries.size,
+                currentTabValid = currentTabValid,
                 canStart = connected && !running && configComplete,
                 hint = if (running) null else bottomHint,
                 hintIsAccent = configComplete && continuous,
+                onPrev = { if (tabIdx > 0) tabIdx-- },
+                onNext = { if (tabIdx < AstroTab.entries.size - 1) tabIdx++ },
                 onStart = {
                     vm.saveFlowSteps(
                         listOf(
@@ -314,7 +375,7 @@ private fun FocalLengthDial(
         )
     }
 
-    var lastSelected by remember(valueMm) { mutableIntStateOf(valueMm) }
+    var lastEmitted by remember(valueMm) { mutableIntStateOf(valueMm) }
     val n = FOCAL_DIAL_PRESETS.size
     val stepDeg = 360.0 / n
 
@@ -332,10 +393,10 @@ private fun FocalLengthDial(
                             atan2(dy.toDouble(), dx.toDouble()) + PI / 2
                         )
                         if (angleDeg < 0) angleDeg += 360.0
-                        val idx = (((angleDeg + stepDeg / 2) / stepDeg).toInt()) % n
-                        val newVal = FOCAL_DIAL_PRESETS[idx]
-                        if (newVal != lastSelected) {
-                            lastSelected = newVal
+                        val newVal = focalFromAngle(angleDeg, FOCAL_DIAL_PRESETS)
+                            ?: return@detectDragGestures
+                        if (newVal != lastEmitted) {
+                            lastEmitted = newVal
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onChange(newVal)
                         }
@@ -357,13 +418,16 @@ private fun FocalLengthDial(
 
             val tickInset = with(density) { 12.dp.toPx() }
             val tickOutset = with(density) { 14.dp.toPx() }
-            val selectedIdx = FOCAL_DIAL_PRESETS.indexOf(valueMm)
+            // Highlight the preset that's the user's current "neighborhood"
+            // (the one they're closest to numerically). Lets users see the
+            // anchor even when between presets.
+            val nearestPresetIdx = nearestPresetIndex(valueMm, FOCAL_DIAL_PRESETS)
 
             for (i in 0 until n) {
                 val rad = -PI / 2 + i * (2 * PI / n)
-                val isSelected = i == selectedIdx
+                val isNearest = i == nearestPresetIdx && valueMm > 0
                 drawLine(
-                    color = if (isSelected) primary else outline,
+                    color = if (isNearest) primary else outline,
                     start = Offset(
                         center.x + (ringR - tickInset) * cos(rad).toFloat(),
                         center.y + (ringR - tickInset) * sin(rad).toFloat(),
@@ -372,14 +436,16 @@ private fun FocalLengthDial(
                         center.x + (ringR + tickOutset) * cos(rad).toFloat(),
                         center.y + (ringR + tickOutset) * sin(rad).toFloat(),
                     ),
-                    strokeWidth = if (isSelected)
-                        with(density) { 6.dp.toPx() } else with(density) { 2.dp.toPx() },
+                    strokeWidth = if (isNearest)
+                        with(density) { 5.dp.toPx() } else with(density) { 2.dp.toPx() },
                 )
             }
 
-            // Indicator dot at selected
-            if (selectedIdx >= 0) {
-                val rad = -PI / 2 + selectedIdx * (2 * PI / n)
+            // Indicator dot — at the user's actual angle (not snapped),
+            // so the dial reads true even between presets like 16 or 70.
+            if (valueMm > 0) {
+                val angleDeg = angleFromFocal(valueMm, FOCAL_DIAL_PRESETS)
+                val rad = -PI / 2 + Math.toRadians(angleDeg)
                 drawCircle(
                     color = primary,
                     radius = with(density) { 8.dp.toPx() },

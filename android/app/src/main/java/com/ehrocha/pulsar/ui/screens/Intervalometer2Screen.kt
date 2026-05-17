@@ -10,8 +10,9 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -74,12 +75,19 @@ fun Intervalometer2Screen(vm: PulsarViewModel, onBack: () -> Unit) {
     // (no countdown / run-until-stop).
     val configComplete = exposureMs > 0L && intervalMs > 0L
     val isContinuous = configComplete && shotCount == 0
+    // Per-tab validity: gates the wizard's Next button. Delay and Shots are
+    // always valid (0 means "no countdown" / "continuous", both legitimate).
+    val currentTabValid = when (tab) {
+        IvTab.EXPOSURE -> exposureMs > 0L
+        IvTab.INTERVAL -> intervalMs > 0L
+        IvTab.DELAY -> true
+        IvTab.SHOTS -> true
+    }
     val bottomHint = when {
-        !configComplete && exposureMs == 0L && intervalMs == 0L ->
-            stringResource(R.string.iv2_set_exposure_and_interval)
-        !configComplete && exposureMs == 0L -> stringResource(R.string.iv2_set_exposure)
-        !configComplete && intervalMs == 0L -> stringResource(R.string.iv2_set_interval)
-        isContinuous -> stringResource(R.string.iv2_continuous_warning)
+        tab == IvTab.EXPOSURE && exposureMs == 0L -> stringResource(R.string.iv2_set_exposure)
+        tab == IvTab.INTERVAL && intervalMs == 0L -> stringResource(R.string.iv2_set_interval)
+        isContinuous && tab == IvTab.SHOTS -> stringResource(R.string.iv2_continuous_warning)
+        !configComplete && tab == IvTab.SHOTS -> stringResource(R.string.iv2_set_exposure_and_interval)
         else -> null
     }
     val hintIsContinuous = isContinuous && configComplete
@@ -87,16 +95,21 @@ fun Intervalometer2Screen(vm: PulsarViewModel, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             PulsarTopBar(
-                title = stringResource(R.string.mode_intervalometer_2),
+                title = stringResource(R.string.mode_intervalometer),
                 onBack = onBack,
             )
         },
         bottomBar = {
             BottomBar(
                 running = running,
+                currentTabIdx = tabIdx,
+                tabCount = IvTab.entries.size,
+                currentTabValid = currentTabValid,
                 canStart = connected && !running && configComplete,
                 hint = if (running) null else bottomHint,
                 hintIsAccent = hintIsContinuous,
+                onPrev = { if (tabIdx > 0) tabIdx-- },
+                onNext = { if (tabIdx < IvTab.entries.size - 1) tabIdx++ },
                 onStart = {
                     vm.saveFlowSteps(
                         listOf(
@@ -405,15 +418,29 @@ internal fun SummaryStrip(shotCount: Int, continuous: Boolean, totalMs: Long) {
     }
 }
 
+/**
+ * Wizard-style bottom bar. Prev / Next navigate between tabs; on the last
+ * tab Next is replaced by Start (gated on the global config-complete check).
+ * Per-tab validity gates Next so the user can't skip required fields.
+ *
+ * During a run the whole nav collapses to a single Stop pill.
+ */
 @Composable
 internal fun BottomBar(
     running: Boolean,
+    currentTabIdx: Int,
+    tabCount: Int,
+    currentTabValid: Boolean,
     canStart: Boolean,
     hint: String?,
     hintIsAccent: Boolean = false,
+    onPrev: () -> Unit,
+    onNext: () -> Unit,
     onStart: () -> Unit,
     onStop: () -> Unit,
 ) {
+    val isLast = currentTabIdx >= tabCount - 1
+    val isFirst = currentTabIdx == 0
     Surface(tonalElevation = 2.dp) {
         Column(modifier = Modifier.fillMaxWidth()) {
             if (hint != null) {
@@ -436,11 +463,8 @@ internal fun BottomBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                IconButton(onClick = { /* TODO: save preset */ }, enabled = !running) {
-                    Icon(Icons.Default.Save, contentDescription = stringResource(R.string.save))
-                }
-                Spacer(Modifier.weight(1f))
                 if (running) {
+                    Spacer(Modifier.weight(1f))
                     Button(
                         onClick = onStop,
                         colors = ButtonDefaults.buttonColors(
@@ -453,16 +477,40 @@ internal fun BottomBar(
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.btn_stop), fontWeight = FontWeight.Bold)
                     }
+                    Spacer(Modifier.weight(1f))
                 } else {
-                    Button(
-                        onClick = onStart,
-                        enabled = canStart,
+                    OutlinedButton(
+                        onClick = onPrev,
+                        enabled = !isFirst,
                         shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier.height(56.dp).fillMaxWidth(0.6f),
+                        modifier = Modifier.height(56.dp).weight(1f),
                     ) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.btn_start), fontWeight = FontWeight.Bold)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        Spacer(Modifier.width(6.dp))
+                        Text(stringResource(R.string.iv2_wizard_prev))
+                    }
+                    if (isLast) {
+                        Button(
+                            onClick = onStart,
+                            enabled = canStart,
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier.height(56.dp).weight(1.4f),
+                        ) {
+                            Icon(Icons.Default.PlayArrow, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.btn_start), fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        Button(
+                            onClick = onNext,
+                            enabled = currentTabValid,
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier.height(56.dp).weight(1f),
+                        ) {
+                            Text(stringResource(R.string.iv2_wizard_next), fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.width(6.dp))
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                        }
                     }
                 }
             }

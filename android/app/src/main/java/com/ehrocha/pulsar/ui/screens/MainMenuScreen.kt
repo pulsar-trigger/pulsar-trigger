@@ -17,7 +17,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AvTimer
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
@@ -185,15 +184,9 @@ fun MainMenuScreen(
                     val userModes by vm.userModes.collectAsState()
                     val builtIns = listOf(
                         launcherItem(R.string.mode_intervalometer, Icons.Default.Timer) {
-                            onQuickFlow(FlowStepType.INTERVALOMETER)
-                        },
-                        launcherItem(R.string.mode_intervalometer_2, Icons.Default.AvTimer) {
                             onIntervalometer2Selected()
                         },
                         launcherItem(R.string.mode_astro, Icons.Default.Stars) {
-                            onQuickFlow(FlowStepType.ASTRO)
-                        },
-                        launcherItem(R.string.mode_astro_2, Icons.Default.Stars) {
                             onAstroMode2Selected()
                         },
                         launcherItem(R.string.mode_dark_frame, Icons.Default.LensBlur) {
