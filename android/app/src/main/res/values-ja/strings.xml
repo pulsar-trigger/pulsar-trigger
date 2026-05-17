@@ -111,9 +111,6 @@
     <string name="label_app">アプリ</string>
     <string name="btn_check_app_update">アプリの更新を確認</string>
     <string name="status_up_to_date">最新の状態です！</string>
-    <string name="btn_download_install">ダウンロード＆インストール</string>
-    <string name="status_downloading_apk">APK をダウンロード中…</string>
-    <string name="status_download_complete">ダウンロード完了 — インストーラーが自動的に開きます。</string>
     <string name="status_update_check_failed">更新の確認に失敗しました</string>
     <string name="hw_simulator_note">シミュレーターモードではハードウェア情報を利用できません</string>
     <string name="hw_connect_prompt">ハードウェア情報を表示するにはデバイスに接続してください</string>

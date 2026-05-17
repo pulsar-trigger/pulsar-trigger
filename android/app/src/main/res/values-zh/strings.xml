@@ -113,9 +113,6 @@
     <string name="label_app">应用</string>
     <string name="btn_check_app_update">检查应用更新</string>
     <string name="status_up_to_date">已是最新版本！</string>
-    <string name="btn_download_install">下载 &amp; 安装</string>
-    <string name="status_downloading_apk">正在下载 APK…</string>
-    <string name="status_download_complete">下载完成 — 安装程序将自动打开。</string>
     <string name="status_update_check_failed">检查更新失败</string>
     <string name="hw_simulator_note">模拟器模式下无法查看硬件信息</string>
     <string name="hw_connect_prompt">连接设备以查看硬件信息</string>

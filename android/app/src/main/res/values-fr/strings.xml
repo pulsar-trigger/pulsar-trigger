@@ -111,9 +111,6 @@
     <string name="label_app">Application</string>
     <string name="btn_check_app_update">Vérifier les mises à jour de l\'application</string>
     <string name="status_up_to_date">Vous êtes à jour !</string>
-    <string name="btn_download_install">Télécharger &amp; Installer</string>
-    <string name="status_downloading_apk">Téléchargement de l\'APK…</string>
-    <string name="status_download_complete">Téléchargement terminé — l\'installateur devrait s\'ouvrir automatiquement.</string>
     <string name="status_update_check_failed">Échec de la vérification des mises à jour</string>
     <string name="hw_simulator_note">Informations matérielles non disponibles en mode simulateur</string>
     <string name="hw_connect_prompt">Connectez un appareil pour voir les informations matérielles</string>

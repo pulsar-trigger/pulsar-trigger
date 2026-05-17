@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
@@ -1606,7 +1607,6 @@ private fun UpdatesSection(vm: PulsarViewModel) {
     // App state
     val updateManager = vm.appUpdateManager
     val updateState by updateManager.state.collectAsState()
-    val appProgress by updateManager.progress.collectAsState()
     val appRelease by updateManager.latestRelease.collectAsState()
     val appError by updateManager.errorMessage.collectAsState()
     val appVersion = BuildConfig.VERSION_NAME
@@ -1819,46 +1819,15 @@ private fun UpdatesSection(vm: PulsarViewModel) {
                         )
                     }
                     Button(
-                        onClick = { updateManager.downloadAndInstall() },
+                        onClick = { updateManager.openReleasePage() },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                     ) {
-                        Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.btn_download_install))
+                        Text(stringResource(R.string.btn_open_release_page))
                     }
                 }
-            }
-
-            AppUpdateState.DOWNLOADING -> {
-                Text(stringResource(R.string.status_downloading_apk), style = MaterialTheme.typography.bodyMedium)
-                LinearProgressIndicator(
-                    progress = { appProgress },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Text(
-                    "${(appProgress * 100).toInt()}%",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                OutlinedButton(
-                    onClick = { updateManager.cancel() },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                ) { Text(stringResource(R.string.cancel)) }
-            }
-
-            AppUpdateState.READY_TO_INSTALL -> {
-                Text(
-                    stringResource(R.string.status_download_complete),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                OutlinedButton(
-                    onClick = { updateManager.reset() },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                ) { Text(stringResource(R.string.done)) }
             }
 
             AppUpdateState.ERROR -> {

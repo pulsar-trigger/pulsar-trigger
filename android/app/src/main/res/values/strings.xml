@@ -238,9 +238,7 @@
     <string name="label_app">App</string>
     <string name="btn_check_app_update">Check for App Update</string>
     <string name="status_up_to_date">You\'re up to date!</string>
-    <string name="btn_download_install">Download &amp; Install</string>
-    <string name="status_downloading_apk">Downloading APK…</string>
-    <string name="status_download_complete">Download complete — the installer should open automatically.</string>
+    <string name="btn_open_release_page">Open Release Page</string>
     <string name="status_update_check_failed">Update check failed</string>
 
     <!-- Default values settings -->
