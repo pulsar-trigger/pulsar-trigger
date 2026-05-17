@@ -68,7 +68,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val bleManager get() = bleController.bleManager
 
     val scanning: StateFlow<Boolean> = bleController.scanning
-    val devices: StateFlow<List<BluetoothDevice>> = bleController.devices
+    val devices: StateFlow<List<com.ehrocha.pulsar.ble.ScannedDevice>> = bleController.devices
 
     // Connection-side flows. [status] is multiplexed below — BLE updates flow
     // in, but the simulator can write directly when it's running.

@@ -8,6 +8,9 @@
     <string name="use_simulator">Use Simulator</string>
     <string name="simulator_description">Explore the app without a real device</string>
     <string name="unknown_device">Unknown Device</string>
+    <string name="board_esp32_generic">ESP32 (generic)</string>
+    <string name="board_m5stick_s3">M5StickC Plus2 (S3)</string>
+    <string name="board_m5core2">M5Stack Core2</string>
 
     <!-- MainMenuScreen -->
     <string name="tab_trigger">Trigger</string>

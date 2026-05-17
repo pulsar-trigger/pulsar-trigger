@@ -20,6 +20,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.DeveloperBoard
+import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PhoneAndroid
@@ -163,8 +166,8 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(devices) { device ->
-                    DeviceCard(device) { vm.connectTo(device) }
+                items(devices) { scanned ->
+                    DeviceCard(scanned) { vm.connectTo(scanned.device) }
                 }
                 if (devices.isEmpty()) {
                     item { PairingProtocolCard() }
@@ -340,7 +343,9 @@ private fun PairingStep(number: String, text: String) {
 
 @SuppressLint("MissingPermission")
 @Composable
-private fun DeviceCard(device: BluetoothDevice, onClick: () -> Unit) {
+private fun DeviceCard(scanned: com.ehrocha.pulsar.ble.ScannedDevice, onClick: () -> Unit) {
+    val device = scanned.device
+    val boardLabel = boardLabel(scanned.boardKind)
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
@@ -352,28 +357,62 @@ private fun DeviceCard(device: BluetoothDevice, onClick: () -> Unit) {
             modifier = Modifier.padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Board-specific icon
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                modifier = Modifier.size(48.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        boardIcon(scanned.boardKind),
+                        contentDescription = boardLabel,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(
                     device.name ?: stringResource(R.string.unknown_device),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
+                if (boardLabel != null) {
+                    Text(
+                        boardLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
                 Text(
                     device.address,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                modifier = Modifier.size(40.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text("󰁔", color = MaterialTheme.colorScheme.primary, fontSize = 18.sp)
-                }
-            }
         }
     }
+}
+
+@Composable
+private fun boardIcon(kind: com.ehrocha.pulsar.ble.BoardKind): androidx.compose.ui.graphics.vector.ImageVector =
+    when (kind) {
+        com.ehrocha.pulsar.ble.BoardKind.M5STICK_S3 ->
+            androidx.compose.material.icons.Icons.Default.Smartphone
+        com.ehrocha.pulsar.ble.BoardKind.M5CORE2 ->
+            androidx.compose.material.icons.Icons.Default.DeveloperBoard
+        com.ehrocha.pulsar.ble.BoardKind.GENERIC_ESP32 ->
+            androidx.compose.material.icons.Icons.Default.Memory
+        com.ehrocha.pulsar.ble.BoardKind.UNKNOWN ->
+            androidx.compose.material.icons.Icons.Default.Bluetooth
+    }
+
+@Composable
+private fun boardLabel(kind: com.ehrocha.pulsar.ble.BoardKind): String? = when (kind) {
+    com.ehrocha.pulsar.ble.BoardKind.M5STICK_S3 -> stringResource(R.string.board_m5stick_s3)
+    com.ehrocha.pulsar.ble.BoardKind.M5CORE2 -> stringResource(R.string.board_m5core2)
+    com.ehrocha.pulsar.ble.BoardKind.GENERIC_ESP32 -> stringResource(R.string.board_esp32_generic)
+    com.ehrocha.pulsar.ble.BoardKind.UNKNOWN -> null
 }

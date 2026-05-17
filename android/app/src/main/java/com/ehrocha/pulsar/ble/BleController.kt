@@ -50,8 +50,8 @@ class BleController(private val context: Context) {
     private val _scanning = MutableStateFlow(false)
     val scanning: StateFlow<Boolean> = _scanning
 
-    private val _devices = MutableStateFlow<List<BluetoothDevice>>(emptyList())
-    val devices: StateFlow<List<BluetoothDevice>> = _devices
+    private val _devices = MutableStateFlow<List<ScannedDevice>>(emptyList())
+    val devices: StateFlow<List<ScannedDevice>> = _devices
 
     // ── Connection state (forwarded from BleManager) ────────────────────
     val connected: StateFlow<Boolean> = bleManager.connectionState
@@ -63,9 +63,27 @@ class BleController(private val context: Context) {
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val dev = result.device
-            if (_devices.value.none { it.address == dev.address }) {
-                _devices.value = _devices.value + dev
-            }
+            val mfgData = result.scanRecord?.getManufacturerSpecificData(PULSAR_MFG_COMPANY_ID)
+            val boardId = mfgData?.getOrNull(0)?.toInt()?.and(0xFF) ?: 0
+            val chipModel = mfgData?.getOrNull(1)?.toInt()?.and(0xFF) ?: 0
+            val fwMajor = mfgData?.getOrNull(2)?.toInt()?.and(0xFF) ?: 0
+            val fwMinor = mfgData?.getOrNull(3)?.toInt()?.and(0xFF) ?: 0
+            val scanned = ScannedDevice(
+                device = dev,
+                boardKind = BoardKind.fromId(boardId),
+                chipModel = chipModel,
+                fwMajor = fwMajor,
+                fwMinor = fwMinor,
+            )
+            val current = _devices.value
+            val existing = current.indexOfFirst { it.device.address == dev.address }
+            _devices.value = if (existing >= 0) {
+                // Replace if new entry carries richer info (mfg data not always
+                // present in every advertisement packet).
+                if (scanned.boardKind != BoardKind.UNKNOWN && current[existing].boardKind == BoardKind.UNKNOWN) {
+                    current.toMutableList().also { it[existing] = scanned }
+                } else current
+            } else current + scanned
         }
     }
 

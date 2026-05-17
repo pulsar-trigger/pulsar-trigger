@@ -466,6 +466,37 @@ void ble_init() {
     adv->setMinInterval(0x00F4);  // 152.5 ms
     adv->setMaxInterval(0x01FE);  // 318.75 ms
     adv->setMinPreferred(0x06);
+
+    // Manufacturer-specific data in the scan response: lets the Android app
+    // distinguish board variants (M5Core2 vs M5Stick S3 vs generic ESP32)
+    // before connecting, so we can show the right device image.
+    //   bytes 0-1: company ID 0xFFFF (unregistered / hobbyist)
+    //   byte 2:    PULSAR_BOARD_ID  — 1=generic ESP32, 2=M5StickC S3, 3=M5Core2
+    //   byte 3:    ESP chip model   — 1=ESP32, 2=S2, 3=S3, 4=C3
+    //   byte 4-5:  firmware major / minor (for completeness)
+    {
+        esp_chip_info_t chip;
+        esp_chip_info(&chip);
+        uint8_t chip_model = 0;
+        switch (chip.model) {
+            case CHIP_ESP32:   chip_model = 1; break;
+            case CHIP_ESP32S2: chip_model = 2; break;
+            case CHIP_ESP32S3: chip_model = 3; break;
+            case CHIP_ESP32C3: chip_model = 4; break;
+            default:           chip_model = 0; break;
+        }
+        uint8_t mfg[6] = {
+            0xFF, 0xFF,
+            (uint8_t)PULSAR_BOARD_ID,
+            chip_model,
+            (uint8_t)FW_VERSION_MAJOR,
+            (uint8_t)FW_VERSION_MINOR,
+        };
+        BLEAdvertisementData scanResp;
+        scanResp.setManufacturerData(std::string((char*)mfg, sizeof(mfg)));
+        adv->setScanResponseData(scanResp);
+    }
+
     BLEDevice::startAdvertising();
 
     ESP_LOGI(TAG, "Advertising as '%s'", _deviceName);
