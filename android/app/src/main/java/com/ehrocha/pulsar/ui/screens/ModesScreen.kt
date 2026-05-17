@@ -142,7 +142,9 @@ private fun UserModeRow(
     }
 }
 
-/** Editor for a single user mode. New mode if [editingId] is null. */
+/** Editor for a single user mode. New mode if [editingId] is null.
+ *  Reuses the same panel composables as the live mode screens, so the editor
+ *  shows scrub fields with presets / sub-second support rather than raw ms. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModeEditorScreen(
@@ -152,13 +154,23 @@ fun ModeEditorScreen(
 ) {
     val modes by vm.userModes.collectAsState()
     val existing = remember(editingId, modes) { modes.firstOrNull { it.id == editingId } }
+    val initial = existing?.body ?: UserMode.Body()
 
     var name by remember { mutableStateOf(existing?.name ?: "") }
-    var fwMode by remember { mutableStateOf(existing?.body?.fwMode ?: TriggerMode.INTERVALOMETER) }
-    var intervalMs by remember { mutableStateOf((existing?.body?.intervalMs ?: 5000L).toString()) }
-    var exposureMs by remember { mutableStateOf((existing?.body?.exposureMs ?: 200L).toString()) }
-    var shotCount by remember { mutableStateOf((existing?.body?.shotCount ?: 30).toString()) }
-    var delayMs by remember { mutableStateOf((existing?.body?.delayMs ?: 0L).toString()) }
+    var fwMode by remember { mutableStateOf(initial.fwMode) }
+    // Shared params (Intervalometer / Astro / DarkFrame use these)
+    var intervalMs by remember { mutableStateOf(initial.intervalMs) }
+    var exposureMs by remember { mutableStateOf(initial.exposureMs) }
+    var shotCount by remember { mutableStateOf(initial.shotCount) }
+    var delayMs by remember { mutableStateOf(initial.delayMs) }
+    // Astro-only
+    var focalLength by remember { mutableStateOf(initial.focalLength) }
+    var cropFactor by remember { mutableStateOf(initial.cropFactor) }
+    var ruleDivisor by remember { mutableStateOf(initial.ruleDivisor) }
+    // Ramp-only
+    var rampStartExposureMs by remember { mutableStateOf(initial.rampStartExposureMs) }
+    var rampEndExposureMs by remember { mutableStateOf(initial.rampEndExposureMs) }
+    var rampSteps by remember { mutableStateOf(initial.rampSteps) }
 
     Scaffold(
         topBar = {
@@ -171,9 +183,6 @@ fun ModeEditorScreen(
                 },
                 actions = {
                     val canSave = name.isNotBlank()
-                        && intervalMs.toLongOrNull() != null
-                        && exposureMs.toLongOrNull() != null
-                        && shotCount.toIntOrNull() != null
                     TextButton(
                         enabled = canSave,
                         onClick = {
@@ -182,10 +191,16 @@ fun ModeEditorScreen(
                                 name = name.trim(),
                                 body = UserMode.Body(
                                     fwMode = fwMode,
-                                    intervalMs = intervalMs.toLongOrNull() ?: 5000L,
-                                    exposureMs = exposureMs.toLongOrNull() ?: 200L,
-                                    shotCount = shotCount.toIntOrNull() ?: 30,
-                                    delayMs = delayMs.toLongOrNull() ?: 0L,
+                                    intervalMs = intervalMs,
+                                    exposureMs = exposureMs,
+                                    shotCount = shotCount,
+                                    delayMs = delayMs,
+                                    focalLength = focalLength,
+                                    cropFactor = cropFactor,
+                                    ruleDivisor = ruleDivisor,
+                                    rampStartExposureMs = rampStartExposureMs,
+                                    rampEndExposureMs = rampEndExposureMs,
+                                    rampSteps = rampSteps,
                                 ),
                             )
                             vm.upsertUserMode(mode)
@@ -202,7 +217,7 @@ fun ModeEditorScreen(
                 .padding(horizontal = 16.dp)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             OutlinedTextField(
                 value = name,
@@ -212,12 +227,13 @@ fun ModeEditorScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
+            // Firmware mode picker — drives which panel is shown below.
             val supported = listOf(TriggerMode.INTERVALOMETER, TriggerMode.ASTRO,
                 TriggerMode.DARK_FRAME, TriggerMode.RAMP)
             var fwExpanded by remember { mutableStateOf(false) }
             ExposedDropdownMenuBox(expanded = fwExpanded, onExpandedChange = { fwExpanded = it }) {
                 OutlinedTextField(
-                    value = fwMode.name,
+                    value = labelFor(fwMode),
                     onValueChange = {}, readOnly = true,
                     label = { Text(stringResource(R.string.modes_field_fwmode)) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = fwExpanded) },
@@ -225,31 +241,71 @@ fun ModeEditorScreen(
                 )
                 ExposedDropdownMenu(expanded = fwExpanded, onDismissRequest = { fwExpanded = false }) {
                     supported.forEach { m ->
-                        DropdownMenuItem(text = { Text(m.name) }, onClick = { fwMode = m; fwExpanded = false })
+                        DropdownMenuItem(
+                            text = { Text(labelFor(m)) },
+                            onClick = { fwMode = m; fwExpanded = false },
+                        )
                     }
                 }
             }
 
-            OutlinedTextField(
-                value = intervalMs, onValueChange = { intervalMs = it },
-                label = { Text(stringResource(R.string.modes_field_interval_ms)) },
-                singleLine = true, modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = exposureMs, onValueChange = { exposureMs = it },
-                label = { Text(stringResource(R.string.modes_field_exposure_ms)) },
-                singleLine = true, modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = shotCount, onValueChange = { shotCount = it },
-                label = { Text(stringResource(R.string.modes_field_shot_count)) },
-                singleLine = true, modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = delayMs, onValueChange = { delayMs = it },
-                label = { Text(stringResource(R.string.modes_field_delay_ms)) },
-                singleLine = true, modifier = Modifier.fillMaxWidth(),
-            )
+            // Mode-specific panel — same composable as the live trigger view.
+            when (fwMode) {
+                TriggerMode.INTERVALOMETER -> IntervalometerPanelContent(
+                    intervalMs = intervalMs,
+                    exposureMs = exposureMs,
+                    shotCount = shotCount,
+                    delayMs = delayMs,
+                    onIntervalChanged = { intervalMs = it },
+                    onExposureChanged = { exposureMs = it },
+                    onDelayChanged = { delayMs = it },
+                    onShotCountChanged = { shotCount = it },
+                )
+                TriggerMode.ASTRO -> AstroPanelContent(
+                    focalLength = focalLength,
+                    cropFactor = cropFactor,
+                    shotCount = shotCount,
+                    delayMs = delayMs,
+                    gapMs = intervalMs,
+                    ruleDivisor = ruleDivisor,
+                    onCropFactorChanged = { cropFactor = it },
+                    onFocalLengthChanged = { focalLength = it },
+                    onGapMsChanged = { intervalMs = it },
+                    onDelayMsChanged = { delayMs = it },
+                    onRuleChanged = { ruleDivisor = it },
+                    onShotCountChanged = { shotCount = it },
+                )
+                TriggerMode.DARK_FRAME -> DarkFramePanelContent(
+                    count = shotCount,
+                    exposureMs = exposureMs,
+                    gapMs = intervalMs,
+                    onCountChanged = { shotCount = it },
+                    onExposureMsChanged = { exposureMs = it },
+                    onGapMsChanged = { intervalMs = it },
+                )
+                TriggerMode.RAMP -> RampPanelContent(
+                    startExposureMs = rampStartExposureMs,
+                    endExposureMs = rampEndExposureMs,
+                    steps = rampSteps,
+                    intervalMs = intervalMs,
+                    onStartExposureChanged = { rampStartExposureMs = it },
+                    onEndExposureChanged = { rampEndExposureMs = it },
+                    onStepsChanged = { rampSteps = it },
+                    onIntervalChanged = { intervalMs = it },
+                )
+                else -> Unit
+            }
+
+            Spacer(Modifier.height(24.dp))
         }
     }
+}
+
+@Composable
+private fun labelFor(mode: TriggerMode): String = when (mode) {
+    TriggerMode.INTERVALOMETER -> stringResource(R.string.mode_intervalometer)
+    TriggerMode.ASTRO          -> stringResource(R.string.mode_astro)
+    TriggerMode.DARK_FRAME     -> stringResource(R.string.mode_dark_frame)
+    TriggerMode.RAMP           -> stringResource(R.string.mode_ramp)
+    else                       -> mode.name
 }
