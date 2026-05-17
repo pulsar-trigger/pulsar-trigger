@@ -70,7 +70,9 @@ fun TimelapseScreen(
     val running = runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
 
-    var tabIdx by rememberSaveable { mutableIntStateOf(0) }
+    var tabIdx by rememberSaveable {
+        mutableIntStateOf(if (loadedPreset != null) TlTab.entries.size - 1 else 0)
+    }
     val tab = TlTab.entries[tabIdx]
 
     val continuous = shotCount == 0
@@ -173,6 +175,10 @@ fun TimelapseScreen(
             }
 
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                if (running) {
+                    RunningView(plannedShots = shotCount)
+                    return@Box
+                }
                 when (tab) {
                     TlTab.INTERVAL -> SegmentedTimeEditor(
                         ms = intervalMs,

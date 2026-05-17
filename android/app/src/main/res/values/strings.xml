@@ -53,6 +53,14 @@
     <string name="iv2_wizard_prev">Prev</string>
     <string name="iv2_wizard_next">Next</string>
 
+    <!-- Live-run progress view -->
+    <string name="iv2_running_shots">shots</string>
+    <string name="iv2_running_remaining">remaining</string>
+    <string name="iv2_state_exposing">EXPOSING</string>
+    <string name="iv2_state_waiting">WAITING</string>
+    <string name="iv2_state_error">ERROR</string>
+    <string name="iv2_state_starting">STARTING</string>
+
     <!-- Preset picker + save -->
     <string name="preset_picker_start_fresh">Start fresh</string>
     <string name="preset_picker_start_fresh_subtitle">New configuration from zero</string>

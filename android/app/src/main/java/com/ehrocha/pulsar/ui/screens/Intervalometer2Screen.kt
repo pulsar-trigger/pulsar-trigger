@@ -34,11 +34,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.model.FlowStep
 import com.ehrocha.pulsar.model.RunState
 import com.ehrocha.pulsar.ui.components.NumPadDialog
 import com.ehrocha.pulsar.ui.components.PulsarTopBar
 import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
+import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 import com.ehrocha.pulsar.ui.theme.LocalRunState
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import java.util.Calendar
@@ -88,7 +90,11 @@ fun Intervalometer2Screen(
     val running = runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
 
-    var tabIdx by rememberSaveable { mutableIntStateOf(0) }
+    // Jump to the final tab when a preset is loaded — its values are already
+    // valid so the user is one tap away from Start.
+    var tabIdx by rememberSaveable {
+        mutableIntStateOf(if (loadedPreset != null) IvTab.entries.size - 1 else 0)
+    }
     val tab = IvTab.entries[tabIdx]
 
     val continuous = shotCount == 0
@@ -208,6 +214,10 @@ fun Intervalometer2Screen(
             }
 
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                if (running) {
+                    RunningView(plannedShots = shotCount)
+                    return@Box
+                }
                 when (tab) {
                     IvTab.EXPOSURE -> SegmentedTimeEditor(
                         ms = exposureMs,
@@ -477,6 +487,104 @@ private fun recomposeMs(h: Int, m: Int, s: Int, cs: Int): Long =
     h * 3_600_000L + m * 60_000L + s * 1_000L + cs * 10L
 
 // ── Summary + bottom bar ─────────────────────────────────────────────────
+
+/**
+ * Live-run dashboard rendered in place of the tab editors while a sequence
+ * is running. Shows current state pill, shot counter (taken / planned, or
+ * `n / ∞` for continuous), time remaining, and a progress bar.
+ *
+ * State pulls from [LocalDeviceStatus] (firmware status frame). For continuous
+ * runs the progress bar is indeterminate.
+ */
+@Composable
+internal fun RunningView(plannedShots: Int) {
+    val status = LocalDeviceStatus.current
+    val state = status?.state ?: DeviceState.IDLE
+    val shotsTaken = status?.shotsTaken ?: 0
+    val timeRemainingMs = status?.timeRemainingMs ?: 0L
+    val continuous = plannedShots == 0
+    val progress = if (continuous) 0f
+                   else (shotsTaken.toFloat() / plannedShots.coerceAtLeast(1))
+                       .coerceIn(0f, 1f)
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        StatusPill(state)
+        Spacer(Modifier.height(28.dp))
+
+        Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                "$shotsTaken",
+                fontSize = 96.sp,
+                fontWeight = FontWeight.Light,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                if (continuous) " / ∞" else " / $plannedShots",
+                fontSize = 32.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 14.dp),
+            )
+        }
+        Text(
+            stringResource(R.string.iv2_running_shots),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Spacer(Modifier.height(24.dp))
+
+        if (!continuous && timeRemainingMs > 0) {
+            Text(
+                iv2FormatHmsPretty(timeRemainingMs),
+                fontSize = 36.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                stringResource(R.string.iv2_running_remaining),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        Spacer(Modifier.height(32.dp))
+
+        if (continuous) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        } else {
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxWidth().height(8.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatusPill(state: DeviceState) {
+    val (labelRes, color) = when (state) {
+        DeviceState.RUNNING -> R.string.iv2_state_exposing to MaterialTheme.colorScheme.primary
+        DeviceState.WAITING -> R.string.iv2_state_waiting to MaterialTheme.colorScheme.secondary
+        DeviceState.ERROR   -> R.string.iv2_state_error to MaterialTheme.colorScheme.error
+        DeviceState.IDLE    -> R.string.iv2_state_starting to MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = color.copy(alpha = 0.15f),
+    ) {
+        Text(
+            stringResource(labelRes),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = color,
+            letterSpacing = 2.sp,
+        )
+    }
+}
 
 @Composable
 internal fun SummaryStrip(

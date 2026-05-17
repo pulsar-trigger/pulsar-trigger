@@ -63,7 +63,9 @@ fun Ramp2Screen(
     val running = runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
 
-    var tabIdx by rememberSaveable { mutableIntStateOf(0) }
+    var tabIdx by rememberSaveable {
+        mutableIntStateOf(if (loadedPreset != null) RampTab.entries.size - 1 else 0)
+    }
     val tab = RampTab.entries[tabIdx]
 
     val avgExpMs = (startExposureMs + endExposureMs) / 2
@@ -165,6 +167,10 @@ fun Ramp2Screen(
                 }
             }
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                if (running) {
+                    RunningView(plannedShots = steps)
+                    return@Box
+                }
                 when (tab) {
                     RampTab.START -> SegmentedTimeEditor(
                         ms = startExposureMs,

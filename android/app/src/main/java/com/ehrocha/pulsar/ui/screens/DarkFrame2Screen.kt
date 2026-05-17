@@ -59,7 +59,9 @@ fun DarkFrame2Screen(
     val running = runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
 
-    var tabIdx by rememberSaveable { mutableIntStateOf(0) }
+    var tabIdx by rememberSaveable {
+        mutableIntStateOf(if (loadedPreset != null) DfTab.entries.size - 1 else 0)
+    }
     val tab = DfTab.entries[tabIdx]
 
     val totalMs = shotCount.toLong() * (exposureMs + intervalMs) - intervalMs.coerceAtMost(0L)
@@ -155,6 +157,10 @@ fun DarkFrame2Screen(
                 }
             }
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                if (running) {
+                    RunningView(plannedShots = shotCount)
+                    return@Box
+                }
                 when (tab) {
                     DfTab.EXPOSURE -> SegmentedTimeEditor(
                         ms = exposureMs,

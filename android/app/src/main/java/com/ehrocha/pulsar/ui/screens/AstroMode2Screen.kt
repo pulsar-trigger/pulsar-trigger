@@ -151,7 +151,9 @@ fun AstroMode2Screen(
     val running = runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
 
-    var tabIdx by rememberSaveable { mutableIntStateOf(0) }
+    var tabIdx by rememberSaveable {
+        mutableIntStateOf(if (loadedPreset != null) AstroTab.entries.size - 1 else 0)
+    }
     val tab = AstroTab.entries[tabIdx]
 
     val maxExpMs = if (focalLength > 0)
@@ -269,6 +271,10 @@ fun AstroMode2Screen(
             }
 
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                if (running) {
+                    RunningView(plannedShots = shotCount)
+                    return@Box
+                }
                 when (tab) {
                     AstroTab.LENS -> LensTab(
                         focalLength = focalLength,
