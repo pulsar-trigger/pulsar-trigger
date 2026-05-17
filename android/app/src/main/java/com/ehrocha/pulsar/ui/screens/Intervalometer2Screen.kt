@@ -239,6 +239,7 @@ fun Intervalometer2Screen(
                 shotCount = shotCount,
                 continuous = continuous,
                 totalMs = totalMs,
+                cameraHintRes = R.string.cam_hint_bulb,
             )
         }
     }
@@ -478,11 +479,28 @@ private fun recomposeMs(h: Int, m: Int, s: Int, cs: Int): Long =
 // ── Summary + bottom bar ─────────────────────────────────────────────────
 
 @Composable
-internal fun SummaryStrip(shotCount: Int, continuous: Boolean, totalMs: Long) {
+internal fun SummaryStrip(
+    shotCount: Int,
+    continuous: Boolean,
+    totalMs: Long,
+    cameraHintRes: Int? = null,
+) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = Modifier.fillMaxWidth(),
     ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            if (cameraHintRes != null) {
+                Text(
+                    stringResource(cameraHintRes),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -508,6 +526,7 @@ internal fun SummaryStrip(shotCount: Int, continuous: Boolean, totalMs: Long) {
                     fontWeight = FontWeight.Bold,
                 )
             }
+        }
         }
     }
 }

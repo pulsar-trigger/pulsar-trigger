@@ -757,6 +757,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             TriggerMode.RAMP -> return          // app-orchestrated ramp, no single command
             TriggerMode.CUSTOM_FLOW -> return  // app-orchestrated, no single command
             TriggerMode.TRACKER -> return      // IMU streaming, no config needed
+            TriggerMode.TIMELAPSE -> return    // app-side discriminator, runtime is INTERVALOMETER
         }
         bleController.sendCommand(packet)
     }

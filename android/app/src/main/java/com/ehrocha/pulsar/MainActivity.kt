@@ -377,12 +377,16 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     onAstroMode2Selected = {
                         currentScreen = AppScreen.PresetPicker(TriggerMode.ASTRO)
                     },
+                    onTimelapseSelected = {
+                        currentScreen = AppScreen.PresetPicker(TriggerMode.TIMELAPSE)
+                    },
                     onUserModeRun = { mode ->
                         // Bookmarked tile click: open the wizard for the
                         // preset's fwMode with that preset's id loaded.
                         currentScreen = when (mode.body.fwMode) {
                             TriggerMode.INTERVALOMETER -> AppScreen.Intervalometer2(mode.id)
                             TriggerMode.ASTRO -> AppScreen.AstroMode2(mode.id)
+                            TriggerMode.TIMELAPSE -> AppScreen.Timelapse(mode.id)
                             else -> AppScreen.Menu // DF/Ramp wizards not yet wired
                         }
                     },
@@ -505,6 +509,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                         currentScreen = when (screen.fwMode) {
                             TriggerMode.INTERVALOMETER -> AppScreen.Intervalometer2()
                             TriggerMode.ASTRO -> AppScreen.AstroMode2()
+                            TriggerMode.TIMELAPSE -> AppScreen.Timelapse()
                             else -> AppScreen.Menu
                         }
                     },
@@ -512,9 +517,22 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                         currentScreen = when (screen.fwMode) {
                             TriggerMode.INTERVALOMETER -> AppScreen.Intervalometer2(preset.id)
                             TriggerMode.ASTRO -> AppScreen.AstroMode2(preset.id)
+                            TriggerMode.TIMELAPSE -> AppScreen.Timelapse(preset.id)
                             else -> AppScreen.Menu
                         }
                     },
+                )
+            }
+            is AppScreen.Timelapse -> {
+                BackHandler {
+                    currentScreen = AppScreen.PresetPicker(TriggerMode.TIMELAPSE)
+                }
+                com.ehrocha.pulsar.ui.screens.TimelapseScreen(
+                    vm = vm,
+                    onBack = {
+                        currentScreen = AppScreen.PresetPicker(TriggerMode.TIMELAPSE)
+                    },
+                    initialPresetId = screen.presetId,
                 )
             }
             is AppScreen.Intervalometer2 -> {
@@ -607,5 +625,6 @@ private sealed class AppScreen {
     data object ShotLog : AppScreen()
     data class Intervalometer2(val presetId: String? = null) : AppScreen()
     data class AstroMode2(val presetId: String? = null) : AppScreen()
+    data class Timelapse(val presetId: String? = null) : AppScreen()
     data class PresetPicker(val fwMode: TriggerMode) : AppScreen()
 }

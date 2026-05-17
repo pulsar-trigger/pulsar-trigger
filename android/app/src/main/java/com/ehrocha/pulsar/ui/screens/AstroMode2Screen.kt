@@ -304,6 +304,7 @@ fun AstroMode2Screen(
                 shotCount = shotCount,
                 continuous = continuous,
                 totalMs = totalMs,
+                cameraHintRes = R.string.cam_hint_bulb,
             )
         }
     }

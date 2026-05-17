@@ -205,6 +205,7 @@ private fun titleResFor(fwMode: TriggerMode): Int = when (fwMode) {
     TriggerMode.ASTRO -> R.string.mode_astro
     TriggerMode.DARK_FRAME -> R.string.mode_dark_frame
     TriggerMode.RAMP -> R.string.mode_ramp
+    TriggerMode.TIMELAPSE -> R.string.mode_timelapse
     else -> R.string.mode_intervalometer
 }
 
@@ -218,6 +219,8 @@ private fun presetSummary(preset: UserMode): String {
     return when (b.fwMode) {
         TriggerMode.INTERVALOMETER ->
             "${timeFmt(b.exposureMs)} · ${timeFmt(b.intervalMs)} gap · ${if (b.shotCount == 0) "∞" else "${b.shotCount}"} shots"
+        TriggerMode.TIMELAPSE ->
+            "${timeFmt(b.intervalMs)} interval · ${if (b.shotCount == 0) "∞" else "${b.shotCount}"} shots"
         TriggerMode.ASTRO -> {
             val maxExp = if (b.focalLength > 0)
                 AppConfig.astroExposureMs(b.focalLength, b.cropFactor, b.ruleDivisor)

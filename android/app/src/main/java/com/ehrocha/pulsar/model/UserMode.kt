@@ -87,8 +87,12 @@ data class UserMode(
             val bodyJson = json.optJSONObject("body") ?: return null
             val fw = TriggerMode.entries.firstOrNull { it.name == bodyJson.optString("fwMode") }
                 ?: return null
-            if (fw == TriggerMode.PRESS_HOLD || fw == TriggerMode.PRESS_LOCK ||
-                fw == TriggerMode.TRACKER || fw == TriggerMode.CUSTOM_FLOW) return null
+            // Allow-list: only modes that are storable as a preset.
+            val allowed = setOf(
+                TriggerMode.INTERVALOMETER, TriggerMode.ASTRO,
+                TriggerMode.DARK_FRAME, TriggerMode.RAMP, TriggerMode.TIMELAPSE,
+            )
+            if (fw !in allowed) return null
             val params = bodyJson.optJSONObject("params") ?: JSONObject()
             val body = Body(
                 fwMode = fw,

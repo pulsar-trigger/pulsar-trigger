@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.LensBlur
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.Timer
@@ -59,6 +60,7 @@ fun MainMenuScreen(
     onUserModeRun: (com.ehrocha.pulsar.model.UserMode) -> Unit = {},
     onIntervalometer2Selected: () -> Unit = {},
     onAstroMode2Selected: () -> Unit = {},
+    onTimelapseSelected: () -> Unit = {},
     onSettingsSelected: () -> Unit = {},
 ) {
     val fwState by vm.firmwareManager.state.collectAsState()
@@ -183,6 +185,9 @@ fun MainMenuScreen(
                     val builtIns = listOf(
                         launcherItem(R.string.mode_intervalometer, Icons.Default.Timer) {
                             onIntervalometer2Selected()
+                        },
+                        launcherItem(R.string.mode_timelapse, Icons.Default.PhotoLibrary) {
+                            onTimelapseSelected()
                         },
                         launcherItem(R.string.mode_astro, Icons.Default.Stars) {
                             onAstroMode2Selected()

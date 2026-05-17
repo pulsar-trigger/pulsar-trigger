@@ -36,6 +36,11 @@ object AppConfig {
     /** Shutter-open duration for each shot (ms). */
     const val DEFAULT_EXPOSURE_MS = 200L
 
+    /** Trigger pulse length used by Timelapse mode (ms). The camera owns the
+     *  actual exposure via its own shutter-speed setting; Pulsar just needs
+     *  to hold the line long enough for the camera to register the trigger. */
+    const val TIMELAPSE_PULSE_MS = 200L
+
     /** Number of shots in a single intervalometer run. */
     const val DEFAULT_SHOT_COUNT = 10
 

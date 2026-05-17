@@ -109,6 +109,11 @@ enum class TriggerMode(val id: Byte) {
     PRESS_HOLD(Op.SET_PRESS_HOLD),
     PRESS_LOCK(Op.SET_PRESS_LOCK),
     TRACKER(Op.SET_TRACKER),
+    /** App-side discriminator. Uses the INTERVALOMETER firmware path with a
+     *  fixed ~200 ms shutter pulse — the camera's own shutter speed setting
+     *  controls the actual exposure. The id byte is a sentinel; nothing
+     *  with this value is ever sent over BLE. */
+    TIMELAPSE(0x7E.toByte()),
     CUSTOM_FLOW(0x7F.toByte()),  // app-orchestrated, never sent to firmware
     ;
 
