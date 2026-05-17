@@ -223,6 +223,9 @@ fun IntScrubField(
     unit: String? = null,
     presets: List<Int> = emptyList(),
     presetLabel: (Int) -> String = { it.toString() },
+    /** When non-null, the value 0 is rendered as this label (e.g. "∞").
+     *  Must be paired with `range.first == 0` for scrub-to-0 to work. */
+    zeroLabel: String? = null,
 ) {
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
@@ -279,14 +282,15 @@ fun IntScrubField(
                     },
             ) {
                 Row(verticalAlignment = Alignment.Bottom) {
+                    val isZeroSpecial = zeroLabel != null && displayedValue == 0
                     Text(
-                        "$displayedValue",
+                        if (isZeroSpecial) zeroLabel!! else "$displayedValue",
                         style = MaterialTheme.typography.displaySmall,
                         fontWeight = FontWeight.Bold,
                         color = if (isDragging) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.onSurface,
                     )
-                    if (unit != null) {
+                    if (unit != null && !isZeroSpecial) {
                         Spacer(Modifier.width(6.dp))
                         Text(
                             unit,
@@ -296,8 +300,10 @@ fun IntScrubField(
                         )
                     }
                 }
+                val rangeFirstLabel = if (zeroLabel != null && range.first == 0) zeroLabel
+                                      else "${range.first}"
                 Text(
-                    "${range.first}–${range.last}",
+                    "$rangeFirstLabel–${range.last}",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -596,8 +596,13 @@ internal fun IntervalometerPanelContent(
     onShotCountChanged: ((Int) -> Unit)? = null,
     maxShotCount: Int = 999,
     enabled: Boolean = true,
+    /** Allow shotCount=0 ("∞") meaning run until the user hits STOP. Off for
+     *  flow steps, on for single-mode triggers and user-mode presets. */
+    allowContinuous: Boolean = true,
 ) {
-    val totalSequenceTimeMs = delayMs + shotCount.toLong() * (exposureMs + intervalMs) - intervalMs
+    val continuous = allowContinuous && shotCount == 0
+    val totalSequenceTimeMs = if (continuous) 0L
+        else delayMs + shotCount.toLong() * (exposureMs + intervalMs) - intervalMs
     // Conflict warning takes precedence (it's a math problem, not a hardware
     // constraint). The battery check is a secondary heuristic.
     val batteryPct = LocalDeviceStatus.current?.batteryPct
@@ -612,11 +617,11 @@ internal fun IntervalometerPanelContent(
     Column(verticalArrangement = Arrangement.spacedBy(20.dp), modifier = modifier) {
         HeroSummary(
             primaryLabel = stringResource(R.string.label_shots),
-            primaryValue = "$shotCount",
+            primaryValue = if (continuous) "∞" else "$shotCount",
             secondaryLabel = stringResource(R.string.label_total_duration),
-            secondaryValue = formatDuration(totalSequenceTimeMs),
+            secondaryValue = if (continuous) "∞" else formatDuration(totalSequenceTimeMs),
             warning = warning,
-            totalDurationMs = totalSequenceTimeMs,
+            totalDurationMs = if (continuous) null else totalSequenceTimeMs,
         )
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -646,13 +651,17 @@ internal fun IntervalometerPanelContent(
             )
 
             if (onShotCountChanged != null) {
+                val minShot = if (allowContinuous) 0 else AppConfig.MIN_SHOT_COUNT
                 IntScrubField(
                     label = stringResource(R.string.label_number_of_shots),
                     value = shotCount,
-                    range = AppConfig.MIN_SHOT_COUNT..maxShotCount,
-                    onValueChange = { onShotCountChanged(it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT)) },
+                    range = minShot..maxShotCount,
+                    onValueChange = { onShotCountChanged(it.coerceAtLeast(minShot)) },
                     enabled = enabled,
-                    presets = listOf(30, 60, 120, 240),
+                    presets = if (allowContinuous) listOf(0, 30, 60, 120, 240)
+                              else listOf(30, 60, 120, 240),
+                    presetLabel = { if (it == 0) "∞" else it.toString() },
+                    zeroLabel = if (allowContinuous) "∞" else null,
                 )
             }
         }
@@ -742,10 +751,13 @@ internal fun AstroPanelContent(
     onRuleChanged: ((Int) -> Unit)? = null,
     onShotCountChanged: ((Int) -> Unit)? = null,
     enabled: Boolean = true,
+    allowContinuous: Boolean = true,
 ) {
     val maxExposureMs = AppConfig.astroExposureMs(focalLength, cropFactor, ruleDivisor)
     val maxExposureS = AppConfig.astroExposureS(focalLength, cropFactor, ruleDivisor)
-    val totalTimeMs = delayMs + shotCount.toLong() * (maxExposureMs + gapMs) - gapMs
+    val continuous = allowContinuous && shotCount == 0
+    val totalTimeMs = if (continuous) 0L
+        else delayMs + shotCount.toLong() * (maxExposureMs + gapMs) - gapMs
 
     val rule500Ms = AppConfig.astroExposureMs(focalLength, cropFactor, AppConfig.DEFAULT_RULE_DIVISOR)
     val rule400Ms = AppConfig.astroExposureMs(focalLength, cropFactor, AppConfig.TIGHT_RULE_DIVISOR)
@@ -801,9 +813,13 @@ internal fun AstroPanelContent(
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(stringResource(R.string.label_total_duration), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(formatDuration(totalTimeMs), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text(
+                            if (continuous) "∞" else formatDuration(totalTimeMs),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                        )
                     }
-                    if (totalTimeMs > 0) {
+                    if (!continuous && totalTimeMs > 0) {
                         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                             Text(
                                 stringResource(R.string.label_ends_at, formatEndClock(totalTimeMs)),
@@ -935,13 +951,17 @@ internal fun AstroPanelContent(
             )
 
             if (onShotCountChanged != null) {
+                val minShot = if (allowContinuous) 0 else AppConfig.MIN_SHOT_COUNT
                 IntScrubField(
                     label = stringResource(R.string.label_number_of_shots),
                     value = shotCount,
-                    range = AppConfig.MIN_SHOT_COUNT..AppConfig.DEFAULT_MAX_SHOTS,
-                    onValueChange = { onShotCountChanged(it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT)) },
+                    range = minShot..AppConfig.DEFAULT_MAX_SHOTS,
+                    onValueChange = { onShotCountChanged(it.coerceAtLeast(minShot)) },
                     enabled = enabled,
-                    presets = listOf(30, 60, 120, 240),
+                    presets = if (allowContinuous) listOf(0, 30, 60, 120, 240)
+                              else listOf(30, 60, 120, 240),
+                    presetLabel = { if (it == 0) "∞" else it.toString() },
+                    zeroLabel = if (allowContinuous) "∞" else null,
                 )
             }
         }

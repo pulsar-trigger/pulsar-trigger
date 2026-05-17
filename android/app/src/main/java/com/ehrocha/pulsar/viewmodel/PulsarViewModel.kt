@@ -365,7 +365,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         prefs.edit().putLong(KEY_INTV_EXPOSURE, clamped).apply()
     }
     fun setShotCount(v: Int) {
-        val clamped = v.coerceAtLeast(AppConfig.MIN_SHOT_COUNT)
+        // 0 is a sentinel for "continuous — run until STOP". Firmware
+        // treats count==0 as no auto-completion check.
+        val clamped = v.coerceAtLeast(0)
         _shotCount.value = clamped
         prefs.edit().putInt(KEY_INTV_COUNT, clamped).apply()
     }
@@ -377,7 +379,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     fun setAstroCropFactor(v: Float) { _astroCropFactor.value = v }
     fun setAstroRuleDivisor(v: Int) { _astroRuleDivisor.value = v }
     fun setAstroGapMs(v: Long) { _astroGapMs.value = v.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS) }
-    fun setAstroShotCount(v: Int) { _astroShotCount.value = v.coerceAtLeast(AppConfig.MIN_SHOT_COUNT) }
+    fun setAstroShotCount(v: Int) { _astroShotCount.value = v.coerceAtLeast(0) }
     fun setAstroDelayMs(v: Long) { _astroDelayMs.value = v }
     fun setDarkFrameCount(v: Int) { _darkFrameCount.value = v.coerceAtLeast(AppConfig.MIN_SHOT_COUNT) }
     fun setDarkFrameExposureMs(v: Long) { _darkFrameExposureMs.value = v.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS) }

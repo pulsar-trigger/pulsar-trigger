@@ -1517,6 +1517,9 @@ private fun IntervalometerStepEditor(step: FlowStep.Intervalometer, onChange: (F
         onExposureChanged = { onChange(step.copy(exposureMs = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS))) },
         onShotCountChanged = { onChange(step.copy(shotCount = it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT))) },
         onDelayChanged = { onChange(step.copy(delayMs = it)) },
+        // No ∞ inside a multi-step flow — a continuous step would block
+        // every subsequent step from running.
+        allowContinuous = false,
     )
 }
 
@@ -1534,6 +1537,7 @@ private fun AstroStepEditor(step: FlowStep.Astro, onChange: (FlowStep.Astro) -> 
         onGapMsChanged = { onChange(step.copy(gapMs = it.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS))) },
         onShotCountChanged = { onChange(step.copy(shotCount = it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT))) },
         onDelayMsChanged = { onChange(step.copy(delayMs = it)) },
+        allowContinuous = false,
     )
 }
 
