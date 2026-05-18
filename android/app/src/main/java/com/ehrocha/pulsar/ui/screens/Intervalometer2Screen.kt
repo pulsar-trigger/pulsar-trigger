@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.PlayArrow
@@ -505,6 +506,7 @@ internal fun RunningView(plannedShots: Int) {
     val state = status?.state ?: DeviceState.IDLE
     val shotsTaken = status?.shotsTaken ?: 0
     val timeRemainingMs = status?.timeRemainingMs ?: 0L
+    val batteryPct = status?.batteryPct ?: 0
     val continuous = plannedShots == 0
     val progress = if (continuous) 0f
                    else (shotsTaken.toFloat() / plannedShots.coerceAtLeast(1))
@@ -515,7 +517,13 @@ internal fun RunningView(plannedShots: Int) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        StatusPill(state)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            StatusPill(state)
+            if (batteryPct > 0) {
+                Spacer(Modifier.width(12.dp))
+                BatteryChip(pct = batteryPct)
+            }
+        }
         Spacer(Modifier.height(28.dp))
 
         Row(verticalAlignment = Alignment.Bottom) {
@@ -561,6 +569,41 @@ internal fun RunningView(plannedShots: Int) {
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier.fillMaxWidth().height(8.dp),
+            )
+        }
+    }
+}
+
+/** Tiny battery chip surfaced next to the [StatusPill] during a run. Only
+ *  shows when a meaningful percentage is available (ESP32 firmware reports
+ *  0 — no analog reading; Canon polling fills it in from the body). */
+@Composable
+private fun BatteryChip(pct: Int) {
+    val color = when {
+        pct < 20 -> MaterialTheme.colorScheme.error
+        pct < 50 -> MaterialTheme.colorScheme.tertiary
+        else -> MaterialTheme.colorScheme.primary
+    }
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = color.copy(alpha = 0.15f),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Default.BatteryFull,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                "$pct%",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = color,
             )
         }
     }

@@ -25,6 +25,14 @@
     <string name="canon_rename_subtitle">Wähle einen Spitznamen für %1$s. Leer lassen zum Entfernen.</string>
     <string name="canon_rename_label">Spitzname</string>
     <string name="canon_on_wifi">Aktuelles WLAN: %1$s</string>
+    <string name="canon_camera_capabilities">Funktionen…</string>
+    <string name="canon_capabilities_probing">Kamera wird abgefragt…</string>
+    <string name="canon_capabilities_failed">Kamera nicht erreichbar. WLAN und Anmeldedaten prüfen.</string>
+    <string name="canon_capabilities_version">CCAPI %1$s — %2$d Endpunkte</string>
+    <string name="canon_cap_bulb">Manuelles Bulb (shutterbutton/manual)</string>
+    <string name="canon_cap_shooting_mode">Aufnahmemodus (bulb / m)</string>
+    <string name="canon_cap_dial_ignore">Physisches Moduswahlrad übergehen</string>
+    <string name="canon_cap_polling">Ereignis-Polling (/event/polling)</string>
     <string name="canon_sub_second_warning">WiFi-Latenz macht Bulb-Zeiten unter 1 s unzuverlässig. Nutze Timelapse (Kamera steuert Belichtung) oder den ESP32-Transport.</string>
     <string name="canon_setup_title">Camera Control API aktivieren</string>
     <string name="canon_setup_intro">Pulsar benötigt aktives CCAPI. Die meisten R-Bodies benötigen eine einmalige Aktivierung:</string>

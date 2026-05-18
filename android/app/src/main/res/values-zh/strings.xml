@@ -25,6 +25,14 @@
     <string name="canon_rename_subtitle">为 %1$s 设置昵称，留空则清除。</string>
     <string name="canon_rename_label">昵称</string>
     <string name="canon_on_wifi">当前 Wi-Fi：%1$s</string>
+    <string name="canon_camera_capabilities">功能…</string>
+    <string name="canon_capabilities_probing">正在查询相机…</string>
+    <string name="canon_capabilities_failed">无法访问相机。请检查 Wi-Fi 与凭据。</string>
+    <string name="canon_capabilities_version">CCAPI %1$s — %2$d 个端点</string>
+    <string name="canon_cap_bulb">手动 Bulb（shutterbutton/manual）</string>
+    <string name="canon_cap_shooting_mode">拍摄模式（bulb / m）</string>
+    <string name="canon_cap_dial_ignore">覆盖物理模式拨盘</string>
+    <string name="canon_cap_polling">事件轮询（/event/polling）</string>
     <string name="canon_sub_second_warning">WiFi 延迟会让低于 1 秒的 Bulb 曝光不准。请改用延时模式 (相机控制曝光) 或 ESP32 通道。</string>
     <string name="canon_setup_title">启用 Camera Control API</string>
     <string name="canon_setup_intro">Pulsar 需要相机启用 CCAPI。大多数 R 系列机身需要一次性激活：</string>

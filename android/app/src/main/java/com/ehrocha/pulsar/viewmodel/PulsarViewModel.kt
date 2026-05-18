@@ -182,6 +182,38 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             ?: camera.nickname
             ?: camera.friendlyName
 
+    /** Snapshot of what a Canon body advertises in its `/ccapi` endpoint
+     *  matrix. Populated by [probeCanonCapabilities] for the "Capabilities"
+     *  menu item in the scan card. */
+    data class CanonCapabilities(
+        val version: String,
+        val endpointCount: Int,
+        val supportsBulb: Boolean,
+        val supportsDialIgnore: Boolean,
+        val supportsPolling: Boolean,
+        val supportsShootingMode: Boolean,
+    )
+
+    /** One-shot probe used by the scan UI. Reuses any saved credentials for
+     *  this camera. Returns null on auth-required / network failure — callers
+     *  surface that as "couldn't probe". */
+    suspend fun probeCanonCapabilities(
+        camera: com.ehrocha.pulsar.transport.ccapi.CanonCamera,
+    ): CanonCapabilities? {
+        val creds = loadCanonCreds(camera.udn)
+        val client = com.ehrocha.pulsar.transport.ccapi.CcapiClient(camera.accessUrl, creds)
+        val r = client.connect()
+        if (r !is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.Ok) return null
+        return CanonCapabilities(
+            version = client.version ?: "?",
+            endpointCount = client.endpoints[client.version]?.length() ?: 0,
+            supportsBulb = client.supports("/shooting/control/shutterbutton/manual", "post"),
+            supportsDialIgnore = client.supports("/shooting/control/ignoreshootingmodedialmode", "post"),
+            supportsPolling = client.supports("/event/polling", "get"),
+            supportsShootingMode = client.supports("/shooting/settings/shootingmode", "put"),
+        )
+    }
+
     // Connection-side flows. [status] is multiplexed below — BLE updates flow
     // in, but the simulator can write directly when it's running.
     private val _connected = MutableStateFlow(false)

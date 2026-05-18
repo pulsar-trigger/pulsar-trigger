@@ -62,6 +62,7 @@ fun Ramp2Screen(
     val runState = LocalRunState.current
     val running = runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
+    val onCanon = vm.canonTransport.collectAsState().value != null
 
     var tabIdx by rememberSaveable {
         mutableIntStateOf(if (loadedPreset != null) RampTab.entries.size - 1 else 0)
@@ -79,9 +80,13 @@ fun Ramp2Screen(
         RampTab.INTERVAL -> intervalMs > 0L
         RampTab.STEPS -> steps >= 2
     }
+    val subSecondStart = onCanon && startExposureMs in 1L..999L
+    val subSecondEnd = onCanon && endExposureMs in 1L..999L
     val bottomHint = when {
         tab == RampTab.START && startExposureMs == 0L -> stringResource(R.string.ramp2_set_start)
+        tab == RampTab.START && subSecondStart -> stringResource(R.string.canon_sub_second_warning)
         tab == RampTab.END && endExposureMs == 0L -> stringResource(R.string.ramp2_set_end)
+        tab == RampTab.END && subSecondEnd -> stringResource(R.string.canon_sub_second_warning)
         tab == RampTab.INTERVAL && intervalMs == 0L -> stringResource(R.string.iv2_set_interval)
         tab == RampTab.STEPS && steps < 2 -> stringResource(R.string.ramp2_set_steps)
         else -> null

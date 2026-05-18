@@ -144,7 +144,12 @@ class CcapiDiscovery(private val context: Context) {
                 k.trim().lowercase() to v.trim()
             }
         val typed = headers["st"] ?: headers["nt"]
-        if (typed?.contains("ICPO-CameraControlAPIService", ignoreCase = true) != true) {
+        // Require both the Canon namespace AND the specific service so we
+        // don't accidentally pick up other UPnP devices that happen to share
+        // a substring (e.g. random IoT vendors using "Camera" service names).
+        if (typed == null ||
+            !typed.contains("schemas-canon-com", ignoreCase = true) ||
+            !typed.contains("ICPO-CameraControlAPIService", ignoreCase = true)) {
             return
         }
         val location = headers["location"] ?: return

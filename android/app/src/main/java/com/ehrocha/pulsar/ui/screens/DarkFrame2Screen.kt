@@ -58,6 +58,7 @@ fun DarkFrame2Screen(
     val runState = LocalRunState.current
     val running = runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
+    val onCanon = vm.canonTransport.collectAsState().value != null
 
     var tabIdx by rememberSaveable {
         mutableIntStateOf(if (loadedPreset != null) DfTab.entries.size - 1 else 0)
@@ -72,8 +73,10 @@ fun DarkFrame2Screen(
         DfTab.INTERVAL -> intervalMs > 0L
         DfTab.SHOTS -> shotCount > 0  // Dark frames need a finite count
     }
+    val subSecondCanon = onCanon && exposureMs in 1L..999L
     val bottomHint = when {
         tab == DfTab.EXPOSURE && exposureMs == 0L -> stringResource(R.string.iv2_set_exposure)
+        tab == DfTab.EXPOSURE && subSecondCanon -> stringResource(R.string.canon_sub_second_warning)
         tab == DfTab.INTERVAL && intervalMs == 0L -> stringResource(R.string.iv2_set_interval)
         tab == DfTab.SHOTS && shotCount == 0 -> stringResource(R.string.df2_set_shots)
         else -> null
