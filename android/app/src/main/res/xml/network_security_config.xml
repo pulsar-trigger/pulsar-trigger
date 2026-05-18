@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Canon CCAPI cameras serve plain HTTP on the local network. Modern Android
+  (targetSdk 28+) blocks cleartext traffic by default — apps must opt in.
+  We allow cleartext for *any* host because cameras hand us arbitrary IPs
+  (camera AP, home LAN, hotel WiFi, etc.) and we can't enumerate them in
+  advance. The manifest also sets `usesCleartextTraffic="true"` as a
+  belt-and-braces fallback for older Android versions / OEM overrides.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
