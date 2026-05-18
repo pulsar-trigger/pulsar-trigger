@@ -10,7 +10,7 @@ import com.ehrocha.pulsar.AppConfig
 /**
  * Builds BLE command packets in protocol v2 (TLV).
  * Frame layout: `[opcode][ver][payload_len][TLV bytes]`. See
- * `docs/ble-protocol-v2.md`.
+ * `docs/ble-protocol.md`.
  */
 object CommandBuilder {
 

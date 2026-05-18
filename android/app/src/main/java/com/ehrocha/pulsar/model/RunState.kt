@@ -12,10 +12,7 @@ import com.ehrocha.pulsar.ble.StatusFrame
  * Canonical run state — the single value UI consumers should read to decide
  * what to render. Combines the firmware/simulator [StatusFrame] with the
  * flow runner's bookkeeping into one shape so views don't have to combine
- * four parallel flags by hand.
- *
- * Phase 3 of the refactor (`docs/refactor-plan.md`). Today it's derived
- * from existing flows; a follow-up will make it authoritative.
+ * four parallel flags by hand. Derived from the viewmodel's other flows.
  */
 sealed class RunState {
     /** Nothing happening. */

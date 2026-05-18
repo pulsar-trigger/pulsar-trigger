@@ -347,7 +347,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Single derived run-state — UI consumers should prefer this over the
      *  individual `status` / `flowRunning` / `flowPaused` / `flowCurrentStep`
-     *  flows. See [RunState] and `docs/refactor-plan.md` Phase 3. */
+     *  flows. See [RunState]. */
     val runState: StateFlow<RunState> = combine(
         _status, _flowRunning, _flowPaused, _flowCurrentStep, _flowSteps,
     ) { status, running, paused, currentStep, steps ->

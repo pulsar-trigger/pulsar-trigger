@@ -29,8 +29,6 @@ import kotlinx.coroutines.flow.StateFlow
  * Commands (`sendCommand`, `connect`, `disconnect`, `requestCacheRefresh`)
  * delegate to [PulsarBleManager]. The viewmodel multiplexes [status] with
  * its simulator status flow.
- *
- * Phase 2 of the refactor (`docs/refactor-plan.md`).
  */
 class BleController(private val context: Context) {
 

@@ -1,24 +1,25 @@
 # Mode Definitions — JSON Schema
 
-> Status: **draft for review.**
-
 ## Goal
 
-Let users author, save, share, and run their own ESP32 trigger modes. A
-"user mode" is a named, single-step firmware preset. The app supports up to
-five user modes at once; they appear under a "User Modes" entry on the home
-screen and run through the same BLE flow runner the built-in modes use.
-
-The phone-camera capture path was removed; this schema is BLE-trigger-only.
+Let users author, save, share, and run their own trigger-mode presets. A
+"user mode" is a named, single-step preset (one firmware/CCAPI mode + its
+parameters). Bookmarked presets appear as tiles on the Trigger tab; the
+rest live in the per-mode `PresetPickerScreen`. They run through the same
+flow runner the built-in modes use — same code path against BLE, simulator,
+or CCAPI.
 
 ## Where user modes live in the UI
 
-Tools tab gets a **Modes** entry. Tapping it opens a list of saved modes
-(max five). Each row: name, mode summary, edit + delete actions. Floating
-"+" button to create a new mode; it's hidden once five exist.
+Presets are accessed via the per-mode `PresetPickerScreen` (one picker per
+`fwMode`). Each row: name, parameter summary, bookmark toggle, edit/delete
+actions. Bookmarking surfaces the preset as a tile on the home Trigger
+tab. Tapping a preset opens the wizard for that mode pre-filled with the
+saved values.
 
-Running a mode happens via the standard BLE start path — same as any
-intervalometer/astro/dark-frame/ramp run today.
+Running a preset goes through the active transport — BLE if a Pulsar
+trigger is connected, CCAPI if a Canon body is connected, simulator
+otherwise. The flow runner doesn't care.
 
 ## Top-level envelope
 
@@ -33,7 +34,7 @@ Every exported mode file is a single JSON object:
   "description": "Optional note shown in the import dialog.",
   "tags": ["timelapse", "shared"],
   "body": {
-    "fwMode": "INTERVALOMETER" | "ASTRO" | "DARK_FRAME" | "RAMP",
+    "fwMode": "INTERVALOMETER" | "ASTRO" | "TIMELAPSE" | "DARK_FRAME" | "RAMP",
     "params": { ... }
   }
 }
@@ -51,18 +52,25 @@ Multi-mode export wraps an array under a bundle envelope:
 
 ## `params` by `fwMode`
 
-All four firmware modes share `intervalMs`, `exposureMs`, `shotCount`,
+All five preset-able modes share `intervalMs`, `exposureMs`, `shotCount`,
 `delayMs`. Some carry extras:
 
-| `fwMode`         | Required                                           | Extras                                                |
-| ---------------- | -------------------------------------------------- | ----------------------------------------------------- |
-| `INTERVALOMETER` | `intervalMs`, `exposureMs`, `shotCount`, `delayMs` | —                                                     |
-| `ASTRO`          | same                                               | `focalLength`, `cropFactor`, `ruleDivisor`            |
-| `DARK_FRAME`     | same                                               | —                                                     |
+| `fwMode`         | Required                                           | Extras                                                  |
+| ---------------- | -------------------------------------------------- | ------------------------------------------------------- |
+| `INTERVALOMETER` | `intervalMs`, `exposureMs`, `shotCount`, `delayMs` | —                                                       |
+| `ASTRO`          | same                                               | `focalLength`, `cropFactor`, `ruleDivisor`              |
+| `TIMELAPSE`      | same (`exposureMs` is the pulse sentinel)          | —                                                       |
+| `DARK_FRAME`     | same                                               | —                                                       |
 | `RAMP`           | same                                               | `rampStartExposureMs`, `rampEndExposureMs`, `rampSteps` |
 
 `PRESS_HOLD`, `PRESS_LOCK`, `TRACKER`, `CUSTOM_FLOW` aren't representable as
 presets (imperative or app-orchestrated). Import rejects them.
+
+`TIMELAPSE` is the only mode where `exposureMs` is a sentinel rather than a
+real exposure value — the camera owns timing (set its own shutter speed)
+and Pulsar just pulses the shutter on schedule. On CCAPI this dispatches
+through `runCanonTimelapse` (single-shot `POST /shutterbutton`); the other
+bulb-based modes use `runCanonBulb` (full_press / wait / release).
 
 Sample full envelope:
 

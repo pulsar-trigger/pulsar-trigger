@@ -21,7 +21,7 @@ object PulsarUuids {
 }
 
 /** Protocol v2: TLV payloads behind a 1-byte opcode + 1-byte version.
- *  See docs/ble-protocol-v2.md for the design rationale. */
+ *  See docs/ble-protocol.md for the design rationale. */
 object ProtoV2 {
     const val VERSION: Byte = 0x02
 }
@@ -57,7 +57,7 @@ object NotifyOp {
     const val ACK: Byte         = 0x82.toByte()
 }
 
-/** v2 TLV tag registry. See docs/ble-protocol-v2.md for the partitioning. */
+/** v2 TLV tag registry. See docs/ble-protocol.md for the partitioning. */
 object Tag {
     // Capture parameters (0x01–0x0F)
     const val INTERVAL_MS: Byte    = 0x01
