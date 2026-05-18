@@ -10,6 +10,7 @@ import android.app.Application
 import android.bluetooth.BluetoothDevice
 import android.content.Context
 import android.content.Intent
+import android.net.wifi.WifiManager
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -86,6 +87,28 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val ccapiDiscovery = com.ehrocha.pulsar.transport.ccapi.CcapiDiscovery(app)
     val canonCameras: StateFlow<List<com.ehrocha.pulsar.transport.ccapi.CanonCamera>> =
         ccapiDiscovery.cameras
+
+    /** Current Wi-Fi SSID, or null if not on Wi-Fi / permission missing.
+     *  Surfaced in the scan card so users can confirm they joined the
+     *  camera's AP before tapping a discovered Canon. */
+    private val _currentWifiSsid = MutableStateFlow<String?>(null)
+    val currentWifiSsid: StateFlow<String?> = _currentWifiSsid
+
+    @Suppress("DEPRECATION", "MissingPermission")
+    private fun refreshWifiSsid() {
+        // `connectionInfo.ssid` is deprecated for SDK 31+ but still works
+        // with location permission; the recommended replacement
+        // (`ConnectivityManager.NetworkCapabilities.transportInfo`) requires
+        // listening for callbacks, which is heavier than we need for a
+        // periodic display hint. Pulsar already holds FINE_LOCATION for BLE.
+        val wifi = getApplication<Application>()
+            .getSystemService(Context.WIFI_SERVICE) as? WifiManager
+        val raw = wifi?.connectionInfo?.ssid
+        val cleaned = raw
+            ?.takeIf { it.isNotBlank() && it != "<unknown ssid>" }
+            ?.removeSurrounding("\"")
+        _currentWifiSsid.value = cleaned
+    }
 
     // ── Canon CCAPI transport (Phase 2) ──────────────────────────────────
     // When non-null, the app talks to a Canon camera over HTTP instead of BLE.
@@ -386,6 +409,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     fun startScan() {
         bleController.startScan()
         ccapiDiscovery.start()
+        refreshWifiSsid()
     }
     fun stopScan() {
         bleController.stopScan()

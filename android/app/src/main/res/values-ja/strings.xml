@@ -24,6 +24,7 @@
     <string name="canon_rename_title">カメラの名称変更</string>
     <string name="canon_rename_subtitle">%1$s のニックネームを入力してください。空欄で削除します。</string>
     <string name="canon_rename_label">ニックネーム</string>
+    <string name="canon_on_wifi">現在の Wi-Fi: %1$s</string>
     <string name="canon_sub_second_warning">WiFi の遅延により、1 秒未満のバルブ露光は不安定になります。Timelapse モード (カメラがシャッター制御) か ESP32 経路を使ってください。</string>
     <string name="canon_setup_title">Camera Control API を有効化</string>
     <string name="canon_setup_intro">Pulsar を使うには CCAPI を有効にする必要があります。多くの R シリーズでは一度だけ以下の設定が必要です:</string>

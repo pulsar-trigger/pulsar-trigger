@@ -24,6 +24,7 @@
     <string name="canon_rename_title">重命名相机</string>
     <string name="canon_rename_subtitle">为 %1$s 设置昵称，留空则清除。</string>
     <string name="canon_rename_label">昵称</string>
+    <string name="canon_on_wifi">当前 Wi-Fi：%1$s</string>
     <string name="canon_sub_second_warning">WiFi 延迟会让低于 1 秒的 Bulb 曝光不准。请改用延时模式 (相机控制曝光) 或 ESP32 通道。</string>
     <string name="canon_setup_title">启用 Camera Control API</string>
     <string name="canon_setup_intro">Pulsar 需要相机启用 CCAPI。大多数 R 系列机身需要一次性激活：</string>

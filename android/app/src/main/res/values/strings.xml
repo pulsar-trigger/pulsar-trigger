@@ -28,6 +28,7 @@
     <string name="canon_rename_title">Rename camera</string>
     <string name="canon_rename_subtitle">Pick a nickname for %1$s. Leave blank to clear.</string>
     <string name="canon_rename_label">Nickname</string>
+    <string name="canon_on_wifi">Currently on Wi-Fi: %1$s</string>
     <string name="canon_sub_second_warning">WiFi RTT makes sub-second bulb timing unreliable. Use Timelapse mode (camera owns exposure) or the ESP32 transport instead.</string>
     <string name="canon_setup_title">Enable Camera Control API</string>
     <string name="canon_setup_intro">Pulsar needs CCAPI active on your camera. Most R-series bodies need a one-time activation:</string>

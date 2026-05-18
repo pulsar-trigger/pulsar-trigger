@@ -72,6 +72,7 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
     val canonError by vm.canonError.collectAsState()
     val canonAuthPrompt by vm.canonAuthPrompt.collectAsState()
     val canonNicknames by vm.canonNicknames.collectAsState()
+    val currentSsid by vm.currentWifiSsid.collectAsState()
     var canonInfo by remember { mutableStateOf<com.ehrocha.pulsar.transport.ccapi.CanonCamera?>(null) }
     var renameCanon by remember { mutableStateOf<com.ehrocha.pulsar.transport.ccapi.CanonCamera?>(null) }
     var showCanonSetupHelp by remember { mutableStateOf(false) }
@@ -186,13 +187,21 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
                 }
                 if (canonCameras.isNotEmpty()) {
                     item {
-                        Text(
-                            stringResource(R.string.section_canon_cameras),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(top = 4.dp),
-                        )
+                        Column(modifier = Modifier.padding(top = 4.dp)) {
+                            Text(
+                                stringResource(R.string.section_canon_cameras),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            currentSsid?.let { ssid ->
+                                Text(
+                                    stringResource(R.string.canon_on_wifi, ssid),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
                     }
                     items(canonCameras) { camera ->
                         CanonCameraCard(

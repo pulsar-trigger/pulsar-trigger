@@ -24,6 +24,7 @@
     <string name="canon_rename_title">Kamera umbenennen</string>
     <string name="canon_rename_subtitle">Wähle einen Spitznamen für %1$s. Leer lassen zum Entfernen.</string>
     <string name="canon_rename_label">Spitzname</string>
+    <string name="canon_on_wifi">Aktuelles WLAN: %1$s</string>
     <string name="canon_sub_second_warning">WiFi-Latenz macht Bulb-Zeiten unter 1 s unzuverlässig. Nutze Timelapse (Kamera steuert Belichtung) oder den ESP32-Transport.</string>
     <string name="canon_setup_title">Camera Control API aktivieren</string>
     <string name="canon_setup_intro">Pulsar benötigt aktives CCAPI. Die meisten R-Bodies benötigen eine einmalige Aktivierung:</string>
