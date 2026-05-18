@@ -22,6 +22,7 @@
     <string name="canon_err_generic">Connect failed (%1$s).</string>
     <string name="canon_bulb_hint">Canon (CCAPI) connected — all modes route through bulb. Sub-second exposures are unreliable over WiFi.</string>
     <string name="canon_reconnecting_hint">Reconnecting to camera over WiFi…</string>
+    <string name="canon_no_bulb_hint">This body doesn\'t expose manual-bulb over CCAPI. Use Timelapse or Manual; bulb modes are disabled.</string>
     <string name="canon_sub_second_warning">WiFi RTT makes sub-second bulb timing unreliable. Use Timelapse mode (camera owns exposure) or the ESP32 transport instead.</string>
     <string name="canon_setup_title">Enable Camera Control API</string>
     <string name="canon_setup_intro">Pulsar needs CCAPI active on your camera. Most R-series bodies need a one-time activation:</string>

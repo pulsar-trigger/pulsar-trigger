@@ -18,6 +18,7 @@
     <string name="canon_err_generic">Error al conectar (%1$s).</string>
     <string name="canon_bulb_hint">Canon (CCAPI) conectada — todos los modos usan bulb. Las exposiciones por debajo de 1 s no son fiables por WiFi.</string>
     <string name="canon_reconnecting_hint">Reconectando con la cámara por WiFi…</string>
+    <string name="canon_no_bulb_hint">Este cuerpo no expone bulb manual por CCAPI. Usa Timelapse o Manual; los modos bulb están desactivados.</string>
     <string name="canon_sub_second_warning">La latencia WiFi hace que el bulb por debajo de 1 s sea poco fiable. Usa Timelapse (la cámara controla la exposición) o el transporte ESP32.</string>
     <string name="canon_setup_title">Activar Camera Control API</string>
     <string name="canon_setup_intro">Pulsar necesita CCAPI activado en tu cámara. La mayoría de los cuerpos R requieren una activación única:</string>

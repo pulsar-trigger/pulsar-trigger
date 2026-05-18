@@ -185,29 +185,28 @@ fun MainMenuScreen(
                     val userModes by vm.userModes.collectAsState()
                     val canonTransport by vm.canonTransport.collectAsState()
                     val canonReconnecting by vm.canonReconnecting.collectAsState()
+                    val canonSupportsBulb by vm.canonSupportsBulb.collectAsState()
                     val onCanon = canonTransport != null
+                    // PowerShot / older R-bodies don't expose /shutterbutton/manual.
+                    // Without it the bulb-based modes can't run; hide them.
+                    val bulbBlocked = onCanon && !canonSupportsBulb
                     val builtIns = listOf(
-                        launcherItem(R.string.mode_intervalometer, Icons.Default.Timer) {
-                            onIntervalometer2Selected()
-                        },
+                        launcherItem(R.string.mode_intervalometer, Icons.Default.Timer,
+                            enabled = !bulbBlocked) { onIntervalometer2Selected() },
                         launcherItem(R.string.mode_timelapse, Icons.Default.PhotoLibrary) {
                             onTimelapseSelected()
                         },
-                        launcherItem(R.string.mode_astro, Icons.Default.Stars) {
-                            onAstroMode2Selected()
-                        },
-                        launcherItem(R.string.mode_dark_frame, Icons.Default.LensBlur) {
-                            onQuickFlow(FlowStepType.DARK_FRAME)
-                        },
-                        launcherItem(R.string.mode_ramp, Icons.AutoMirrored.Filled.TrendingUp) {
-                            onQuickFlow(FlowStepType.RAMP)
-                        },
+                        launcherItem(R.string.mode_astro, Icons.Default.Stars,
+                            enabled = !bulbBlocked) { onAstroMode2Selected() },
+                        launcherItem(R.string.mode_dark_frame, Icons.Default.LensBlur,
+                            enabled = !bulbBlocked) { onQuickFlow(FlowStepType.DARK_FRAME) },
+                        launcherItem(R.string.mode_ramp, Icons.AutoMirrored.Filled.TrendingUp,
+                            enabled = !bulbBlocked) { onQuickFlow(FlowStepType.RAMP) },
                         launcherItem(R.string.mode_manual, Icons.Default.TouchApp) {
                             onManualSelected()
                         },
-                        launcherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList) {
-                            onCustomFlowSelected()
-                        },
+                        launcherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList,
+                            enabled = !bulbBlocked) { onCustomFlowSelected() },
                     )
                     // Only bookmarked user modes get quick-launch tiles here.
                     // Other saved presets live in the preset picker for each mode.
@@ -221,7 +220,10 @@ fun MainMenuScreen(
                     }
                     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                         if (onCanon) {
-                            CanonBulbBanner(reconnecting = canonReconnecting)
+                            CanonBulbBanner(
+                                reconnecting = canonReconnecting,
+                                bulbUnsupported = bulbBlocked,
+                            )
                             Spacer(Modifier.height(8.dp))
                         }
                         LauncherGrid(builtIns + userTiles)
@@ -296,13 +298,24 @@ private fun LauncherGrid(items: List<LauncherItem>) {
 }
 
 @Composable
-private fun CanonBulbBanner(reconnecting: Boolean) {
-    val containerColor = if (reconnecting)
-        MaterialTheme.colorScheme.errorContainer
-    else MaterialTheme.colorScheme.secondaryContainer
-    val onContainer = if (reconnecting)
-        MaterialTheme.colorScheme.onErrorContainer
-    else MaterialTheme.colorScheme.onSecondaryContainer
+private fun CanonBulbBanner(
+    reconnecting: Boolean,
+    bulbUnsupported: Boolean,
+) {
+    // Three-state precedence: reconnecting > bulbUnsupported > healthy.
+    val containerColor = when {
+        reconnecting || bulbUnsupported -> MaterialTheme.colorScheme.errorContainer
+        else -> MaterialTheme.colorScheme.secondaryContainer
+    }
+    val onContainer = when {
+        reconnecting || bulbUnsupported -> MaterialTheme.colorScheme.onErrorContainer
+        else -> MaterialTheme.colorScheme.onSecondaryContainer
+    }
+    val copyRes = when {
+        reconnecting -> R.string.canon_reconnecting_hint
+        bulbUnsupported -> R.string.canon_no_bulb_hint
+        else -> R.string.canon_bulb_hint
+    }
     Surface(
         color = containerColor,
         shape = RoundedCornerShape(12.dp),
@@ -328,10 +341,7 @@ private fun CanonBulbBanner(reconnecting: Boolean) {
             }
             Spacer(Modifier.width(8.dp))
             Text(
-                text = stringResource(
-                    if (reconnecting) R.string.canon_reconnecting_hint
-                    else R.string.canon_bulb_hint
-                ),
+                text = stringResource(copyRes),
                 style = MaterialTheme.typography.labelMedium,
                 color = onContainer,
             )

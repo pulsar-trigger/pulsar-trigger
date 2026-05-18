@@ -50,6 +50,12 @@ class CcapiTransport(
      *  flipped back off on [release] so the user regains control. */
     private var dialIgnoreActive = false
 
+    /** True iff the body reports `/shooting/control/shutterbutton/manual` in
+     *  its endpoint matrix. Set after [connect]; bulb-based modes refuse to
+     *  start otherwise. */
+    val supportsBulb: Boolean
+        get() = client.supports(PATH_SHUTTER_MANUAL, "post")
+
     /** Probe `GET /ccapi`, pin version, cache endpoints. Returns the client's
      *  [CcapiClient.Result] verbatim so callers can route 401 / network errors. */
     suspend fun connect(): CcapiClient.Result<Unit> {

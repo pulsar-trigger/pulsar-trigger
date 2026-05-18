@@ -114,6 +114,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val _canonReconnecting = MutableStateFlow(false)
     val canonReconnecting: StateFlow<Boolean> = _canonReconnecting
 
+    /** True when the connected Canon body advertises the manual-bulb endpoint.
+     *  Older or PowerShot-class bodies don't — the UI hides bulb-based modes
+     *  for them (only Timelapse / Manual / Custom flow remain useful). */
+    val canonSupportsBulb: StateFlow<Boolean> = _canonTransport
+        .map { it?.supportsBulb == true }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     /** Per-UDN digest credentials. Each entry lets the next connect to the
      *  same camera skip the auth prompt entirely. */
     private val canonCredsPrefs = app.getSharedPreferences("pulsar_canon_creds", Context.MODE_PRIVATE)
@@ -1004,6 +1011,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         intervalMs: Long,
         startDelayMs: Long,
     ) {
+        if (!transport.supportsBulb) {
+            Log.w(TAG, "Bulb requested on body without /shutterbutton/manual — aborting run")
+            throw IllegalStateException("Canon body lacks manual bulb support")
+        }
         val continuous = shots <= 0
         val plannedTotal = if (continuous) 0L
                            else startDelayMs + shots * (exposureMs + intervalMs) - intervalMs
@@ -1054,6 +1065,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         step: FlowStep.Ramp,
         rampSteps: Int,
     ) {
+        if (!transport.supportsBulb) {
+            Log.w(TAG, "Ramp requested on body without /shutterbutton/manual — aborting run")
+            throw IllegalStateException("Canon body lacks manual bulb support")
+        }
         transport.setShutterMode(bulb = true)
         try {
             for (i in 0 until rampSteps) {
