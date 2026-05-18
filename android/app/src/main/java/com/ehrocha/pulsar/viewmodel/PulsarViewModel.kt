@@ -76,6 +76,19 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val canonCameras: StateFlow<List<com.ehrocha.pulsar.transport.ccapi.CanonCamera>> =
         ccapiDiscovery.cameras
 
+    // ── Canon CCAPI transport (Phase 2) ──────────────────────────────────
+    // When non-null, the app talks to a Canon camera over HTTP instead of BLE.
+    // Mutually exclusive with BLE & simulator — picking one disconnects the
+    // others. Only Timelapse runs are supported in Phase 2.
+    private val _canonTransport =
+        MutableStateFlow<com.ehrocha.pulsar.transport.ccapi.CcapiTransport?>(null)
+    val canonTransport: StateFlow<com.ehrocha.pulsar.transport.ccapi.CcapiTransport?> =
+        _canonTransport
+    private val _canonConnecting = MutableStateFlow(false)
+    val canonConnecting: StateFlow<Boolean> = _canonConnecting
+    private val _canonError = MutableStateFlow<String?>(null)
+    val canonError: StateFlow<String?> = _canonError
+
     // Connection-side flows. [status] is multiplexed below — BLE updates flow
     // in, but the simulator can write directly when it's running.
     private val _connected = MutableStateFlow(false)
@@ -222,6 +235,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         // also writes to it directly while it's running.
         viewModelScope.launch {
             bleController.connected.collect {
+                // Canon takes priority — don't let BLE disconnect kick the
+                // user out of an active Canon session.
+                if (_canonTransport.value != null) return@collect
                 _connected.value = it
                 if (it) {
                     sendAutoOff()
@@ -232,7 +248,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             bleController.status.collect {
-                if (!_simulatorActive.value) _status.value = it
+                if (!_simulatorActive.value && _canonTransport.value == null) {
+                    _status.value = it
+                }
             }
         }
 
@@ -306,11 +324,77 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     @SuppressLint("MissingPermission")
     fun connectTo(device: BluetoothDevice) {
+        // Hang up any active Canon session so transports stay single-valued.
+        if (_canonTransport.value != null) disconnectCanon()
         _deviceName.value = device.name ?: "Pulsar"
         bleController.connect(device)
     }
 
+    /** Open an HTTP session to a Canon CCAPI camera. Pins the API version and
+     *  flips [connected] true on success. Mutually exclusive with BLE — any
+     *  active BLE session is dropped first. Phase 2: Timelapse only. */
+    fun connectCanon(camera: com.ehrocha.pulsar.transport.ccapi.CanonCamera) {
+        viewModelScope.launch {
+            _canonError.value = null
+            _canonConnecting.value = true
+            // Hang up any existing BLE link so the UI's notion of "what's
+            // connected" stays single-valued.
+            if (bleController.connected.value) bleController.disconnect()
+            stopScan()
+
+            val transport = com.ehrocha.pulsar.transport.ccapi.CcapiTransport(camera)
+            val result = transport.connect()
+            _canonConnecting.value = false
+            when (result) {
+                is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.Ok -> {
+                    _canonTransport.value = transport
+                    _deviceName.value = camera.nickname ?: camera.friendlyName
+                    _connected.value = true
+                    _status.value = StatusFrame(
+                        state = DeviceState.IDLE,
+                        mode = TriggerMode.TIMELAPSE.id,
+                        shotsTaken = 0,
+                        timeRemainingMs = 0L,
+                        batteryPct = 0,
+                        errorCode = 0,
+                        fwVersion = "",
+                    )
+                }
+                is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.NeedsAuth ->
+                    _canonError.value = "auth_required"
+                is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.Http ->
+                    _canonError.value = "http_${result.code}"
+                is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.Network ->
+                    _canonError.value = "network"
+            }
+        }
+    }
+
+    fun clearCanonError() { _canonError.value = null }
+
+    private fun disconnectCanon() {
+        val transport = _canonTransport.value ?: return
+        viewModelScope.launch { transport.release() }
+        _canonTransport.value = null
+        if (!bleController.connected.value && !_simulatorActive.value) {
+            _connected.value = false
+            _status.value = null
+        }
+    }
+
     fun disconnect() {
+        if (_canonTransport.value != null) {
+            // Cancel any running flow first so the Canon loop stops firing.
+            if (_flowRunning.value) {
+                flowJob?.cancel()
+                flowJob = null
+                _flowRunning.value = false
+                _flowPaused.value = false
+                _flowCurrentStep.value = -1
+            }
+            disconnectCanon()
+            return
+        }
         if (_simulatorActive.value) {
             disconnectSimulator()
             return
@@ -546,10 +630,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         // Hand the BLE stop off immediately (don't wait on cancellation) so
         // the firmware halts ASAP; then await the flow's own finally to settle
         // _flowRunning / _flowCurrentStep before we stomp _status.
-        if (!_simulatorActive.value) {
+        if (!_simulatorActive.value && _canonTransport.value == null) {
             bleController.sendCommand(CommandBuilder.stop())
         }
         viewModelScope.launch {
+            _canonTransport.value?.stop()
             flowJob?.cancelAndJoin()
             flowJob = null
             _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
@@ -569,18 +654,26 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             is FlowStep.Intervalometer -> {
-                if (_simulatorActive.value) {
-                    simulateShots(step.shotCount, step.exposureMs, step.intervalMs, step.delayMs)
-                } else {
-                    sendModeCommand(
-                        CommandBuilder.setIntervalometer(
-                            step.intervalMs, step.exposureMs, step.shotCount, step.delayMs,
-                        )
+                val canon = _canonTransport.value
+                when {
+                    canon != null -> runCanonTimelapse(
+                        canon, step.shotCount, step.intervalMs, step.delayMs,
                     )
-                    waitForCompletion(step.shotCount)
+                    _simulatorActive.value -> simulateShots(
+                        step.shotCount, step.exposureMs, step.intervalMs, step.delayMs,
+                    )
+                    else -> {
+                        sendModeCommand(
+                            CommandBuilder.setIntervalometer(
+                                step.intervalMs, step.exposureMs, step.shotCount, step.delayMs,
+                            )
+                        )
+                        waitForCompletion(step.shotCount)
+                    }
                 }
             }
             is FlowStep.Astro -> {
+                if (_canonTransport.value != null) throw CanonUnsupportedException("astro")
                 val expMs = AppConfig.astroExposureMs(step.focalLength, step.cropFactor, step.ruleDivisor)
                 if (_simulatorActive.value) {
                     simulateShots(step.shotCount, expMs, step.gapMs, step.delayMs)
@@ -592,6 +685,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             is FlowStep.DarkFrame -> {
+                if (_canonTransport.value != null) throw CanonUnsupportedException("dark_frame")
                 if (_simulatorActive.value) {
                     simulateShots(step.shotCount, step.exposureMs, step.gapMs, 0L)
                 } else {
@@ -604,6 +698,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             is FlowStep.Ramp -> {
+                if (_canonTransport.value != null) throw CanonUnsupportedException("ramp")
                 val rampSteps = step.steps.coerceAtLeast(2)
                 for (i in 0 until rampSteps) {
                     coroutineContext.ensureActive()
@@ -622,6 +717,58 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
+
+    /** Drives a Timelapse-style sequence via CCAPI single-shot shutterbutton.
+     *  The camera owns exposure (set its own shutter speed); we just fire and
+     *  delay. Continuous mode (shots=0) is supported — the loop runs until
+     *  cancelled. Status is reported simulator-style via [_status] writes so
+     *  the existing RunningView UI works unchanged. */
+    private suspend fun runCanonTimelapse(
+        transport: com.ehrocha.pulsar.transport.ccapi.CcapiTransport,
+        shots: Int,
+        intervalMs: Long,
+        startDelayMs: Long,
+    ) {
+        // Approximate per-shot exposure for "time remaining" math. The actual
+        // exposure happens inside the camera; ~250 ms covers shutter actuation
+        // round-trip + typical 1/30 s pulse.
+        val perShotEstimate = 250L
+        val continuous = shots <= 0
+        val plannedTotal = if (continuous) 0L
+                           else startDelayMs + shots * (perShotEstimate + intervalMs) - intervalMs
+
+        if (startDelayMs > 0) {
+            _status.value = _status.value?.copy(
+                state = DeviceState.WAITING, shotsTaken = 0,
+                timeRemainingMs = plannedTotal,
+            )
+            delay(startDelayMs)
+        }
+
+        var shot = 0
+        while (true) {
+            coroutineContext.ensureActive()
+            shot += 1
+            val remaining = if (continuous) 0L
+                            else ((shots - shot + 1).coerceAtLeast(0)) *
+                                (perShotEstimate + intervalMs) - intervalMs
+            _status.value = _status.value?.copy(
+                state = DeviceState.RUNNING, shotsTaken = shot - 1,
+                timeRemainingMs = remaining.coerceAtLeast(0),
+            )
+            transport.fireShutter(af = true)
+            _status.value = _status.value?.copy(
+                state = DeviceState.WAITING, shotsTaken = shot,
+                timeRemainingMs = (remaining - perShotEstimate).coerceAtLeast(0),
+            )
+            if (!continuous && shot >= shots) break
+            if (intervalMs > 0) delay(intervalMs)
+        }
+        _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
+    }
+
+    private class CanonUnsupportedException(val modeKey: String) :
+        IllegalStateException("Mode '$modeKey' not yet supported over CCAPI (Phase 2 = Timelapse only)")
 
     /** Simulate a sequence of shots by updating _status directly (for flow steps in simulator). */
     private suspend fun simulateShots(totalShots: Int, expMs: Long, gapMs: Long, startDelayMs: Long) {
@@ -742,6 +889,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun start() {
+        if (_canonTransport.value != null) {
+            // Direct start() is the legacy single-mode path; Canon only runs
+            // via the flow runner (Timelapse wizard → startFlow()).
+            Log.w(TAG, "start() ignored on Canon transport — use Timelapse wizard")
+            return
+        }
         if (_simulatorActive.value) {
             startSimulatorRun()
             return
@@ -755,6 +908,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             stopFlow()
             return
         }
+        if (_canonTransport.value != null) return
         if (_simulatorActive.value) {
             stopSimulatorRun()
             return

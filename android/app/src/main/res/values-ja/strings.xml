@@ -5,6 +5,12 @@
     <string name="canon_camera_subtitle">Canon CCAPI</string>
     <string name="canon_camera_join_wifi_hint">カメラの WiFi または同じ LAN に接続してください</string>
     <string name="cd_canon_camera">Canon カメラ (CCAPI)</string>
+    <string name="canon_connect">接続</string>
+    <string name="canon_connecting">接続中…</string>
+    <string name="canon_err_auth">カメラが認証を要求しています。カメラ側で無効にするか、ダイジェスト認証 (フェーズ4) の対応をお待ちください。</string>
+    <string name="canon_err_network">カメラに接続できませんでした。WiFi ネットワークを確認してください。</string>
+    <string name="canon_err_generic">接続に失敗しました (%1$s)。</string>
+    <string name="canon_timelapse_only_hint">Canon (CCAPI) 接続中 — フェーズ 2 は Timelapse のみ対応。バルブモードはフェーズ 3 で対応します。</string>
     <string name="available_devices">利用可能なデバイス</string>
     <string name="select_device_prompt">Pulsar トリガーを選択してコントロールセッションを開始します。</string>
     <string name="use_simulator">シミュレーターを使用</string>

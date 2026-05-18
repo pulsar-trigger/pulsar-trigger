@@ -15,6 +15,12 @@
     <string name="canon_camera_subtitle">Canon CCAPI</string>
     <string name="canon_camera_join_wifi_hint">Join the camera\'s WiFi network or same LAN</string>
     <string name="cd_canon_camera">Canon camera (CCAPI)</string>
+    <string name="canon_connect">Connect</string>
+    <string name="canon_connecting">Connecting…</string>
+    <string name="canon_err_auth">Camera requires authentication. Disable it on the camera or wait for Pulsar to add digest support (Phase 4).</string>
+    <string name="canon_err_network">Could not reach the camera. Make sure you are on its WiFi network.</string>
+    <string name="canon_err_generic">Connect failed (%1$s).</string>
+    <string name="canon_timelapse_only_hint">Canon (CCAPI) connected — Phase 2 supports Timelapse only. Bulb modes land in Phase 3.</string>
 
     <!-- MainMenuScreen -->
     <string name="tab_trigger">Trigger</string>

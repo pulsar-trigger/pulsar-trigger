@@ -63,6 +63,8 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
     val devices by vm.devices.collectAsState()
     val canonCameras by vm.canonCameras.collectAsState()
     val connected by vm.connected.collectAsState()
+    val canonConnecting by vm.canonConnecting.collectAsState()
+    val canonError by vm.canonError.collectAsState()
     var canonInfo by remember { mutableStateOf<com.ehrocha.pulsar.transport.ccapi.CanonCamera?>(null) }
 
     if (connected) {
@@ -238,12 +240,28 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
         LanguagePickerDialog(onDismiss = { showLanguageDialog = false })
     }
 
+    // Dismiss the connect dialog automatically once we successfully connect.
+    LaunchedEffect(connected, canonInfo) {
+        if (connected && canonInfo != null) canonInfo = null
+    }
+
     canonInfo?.let { cam ->
         AlertDialog(
-            onDismissRequest = { canonInfo = null },
+            onDismissRequest = { if (!canonConnecting) { canonInfo = null; vm.clearCanonError() } },
             confirmButton = {
-                TextButton(onClick = { canonInfo = null }) {
-                    Text(stringResource(android.R.string.ok))
+                TextButton(
+                    onClick = { vm.connectCanon(cam) },
+                    enabled = !canonConnecting,
+                ) {
+                    Text(
+                        if (canonConnecting) stringResource(R.string.canon_connecting)
+                        else stringResource(R.string.canon_connect)
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { canonInfo = null; vm.clearCanonError() }) {
+                    Text(stringResource(R.string.cancel))
                 }
             },
             icon = {
@@ -253,7 +271,7 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
             title = { Text(cam.nickname ?: cam.friendlyName) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("${cam.friendlyName}",
+                    Text(cam.friendlyName,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold)
                     Text("${cam.ipAddress}:${cam.port}",
@@ -267,6 +285,18 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
                         stringResource(R.string.canon_camera_join_wifi_hint),
                         style = MaterialTheme.typography.bodySmall,
                     )
+                    canonError?.let { err ->
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = when (err) {
+                                "auth_required" -> stringResource(R.string.canon_err_auth)
+                                "network" -> stringResource(R.string.canon_err_network)
+                                else -> stringResource(R.string.canon_err_generic, err)
+                            },
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
             },
         )

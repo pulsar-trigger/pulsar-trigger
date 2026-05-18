@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material3.*
@@ -182,28 +183,24 @@ fun MainMenuScreen(
                 }
                 TAB_TRIGGER -> {
                     val userModes by vm.userModes.collectAsState()
+                    val canonTransport by vm.canonTransport.collectAsState()
+                    val onCanon = canonTransport != null
                     val builtIns = listOf(
-                        launcherItem(R.string.mode_intervalometer, Icons.Default.Timer) {
-                            onIntervalometer2Selected()
-                        },
+                        launcherItem(R.string.mode_intervalometer, Icons.Default.Timer,
+                            enabled = !onCanon) { onIntervalometer2Selected() },
                         launcherItem(R.string.mode_timelapse, Icons.Default.PhotoLibrary) {
                             onTimelapseSelected()
                         },
-                        launcherItem(R.string.mode_astro, Icons.Default.Stars) {
-                            onAstroMode2Selected()
-                        },
-                        launcherItem(R.string.mode_dark_frame, Icons.Default.LensBlur) {
-                            onQuickFlow(FlowStepType.DARK_FRAME)
-                        },
-                        launcherItem(R.string.mode_ramp, Icons.AutoMirrored.Filled.TrendingUp) {
-                            onQuickFlow(FlowStepType.RAMP)
-                        },
-                        launcherItem(R.string.mode_manual, Icons.Default.TouchApp) {
-                            onManualSelected()
-                        },
-                        launcherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList) {
-                            onCustomFlowSelected()
-                        },
+                        launcherItem(R.string.mode_astro, Icons.Default.Stars,
+                            enabled = !onCanon) { onAstroMode2Selected() },
+                        launcherItem(R.string.mode_dark_frame, Icons.Default.LensBlur,
+                            enabled = !onCanon) { onQuickFlow(FlowStepType.DARK_FRAME) },
+                        launcherItem(R.string.mode_ramp, Icons.AutoMirrored.Filled.TrendingUp,
+                            enabled = !onCanon) { onQuickFlow(FlowStepType.RAMP) },
+                        launcherItem(R.string.mode_manual, Icons.Default.TouchApp,
+                            enabled = !onCanon) { onManualSelected() },
+                        launcherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList,
+                            enabled = !onCanon) { onCustomFlowSelected() },
                     )
                     // Only bookmarked user modes get quick-launch tiles here.
                     // Other saved presets live in the preset picker for each mode.
@@ -212,10 +209,15 @@ fun MainMenuScreen(
                             key = "user:${mode.id}",
                             label = mode.name,
                             icon = Icons.Default.Bookmark,
+                            enabled = !onCanon || mode.body.fwMode == com.ehrocha.pulsar.ble.TriggerMode.TIMELAPSE,
                             onClick = { onUserModeRun(mode) },
                         )
                     }
-                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        if (onCanon) {
+                            CanonTimelapseOnlyBanner()
+                            Spacer(Modifier.height(8.dp))
+                        }
                         LauncherGrid(builtIns + userTiles)
                     }
                 }
@@ -249,6 +251,7 @@ private data class LauncherItem(
     val key: String,
     val label: String,
     val icon: ImageVector,
+    val enabled: Boolean = true,
     val onClick: () -> Unit,
 )
 
@@ -256,11 +259,13 @@ private data class LauncherItem(
 private fun launcherItem(
     labelRes: Int,
     icon: ImageVector,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ): LauncherItem = LauncherItem(
     key = "res:$labelRes",
     label = stringResource(labelRes),
     icon = icon,
+    enabled = enabled,
     onClick = onClick,
 )
 
@@ -277,7 +282,35 @@ private fun LauncherGrid(items: List<LauncherItem>) {
             LauncherTile(
                 label = item.label,
                 icon = item.icon,
+                enabled = item.enabled,
                 onClick = item.onClick,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CanonTimelapseOnlyBanner() {
+    Surface(
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Default.Wifi,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.canon_timelapse_only_hint),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
             )
         }
     }
@@ -288,17 +321,19 @@ private fun LauncherTile(
     label: String,
     icon: ImageVector,
     onClick: () -> Unit,
+    enabled: Boolean = true,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.92f else 1f,
+        targetValue = if (pressed && enabled) 0.92f else 1f,
         animationSpec = spring(stiffness = 500f),
         label = "tileScale",
     )
 
     Surface(
         onClick = onClick,
+        enabled = enabled,
         interactionSource = interactionSource,
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
@@ -313,10 +348,11 @@ private fun LauncherTile(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.padding(8.dp),
         ) {
+            val contentAlpha = if (enabled) 1f else 0.35f
             Icon(
                 icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = contentAlpha),
                 modifier = Modifier.size(24.dp),
             )
             Spacer(Modifier.height(6.dp))
@@ -327,6 +363,7 @@ private fun LauncherTile(
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
             )
         }
     }
