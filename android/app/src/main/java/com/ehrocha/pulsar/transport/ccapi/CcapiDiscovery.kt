@@ -6,6 +6,8 @@
 package com.ehrocha.pulsar.transport.ccapi
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
 import android.util.Log
 import kotlinx.coroutines.*
@@ -13,7 +15,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.net.DatagramPacket
 import java.net.InetAddress
+import java.net.InetSocketAddress
 import java.net.MulticastSocket
+import java.net.NetworkInterface
 import java.net.SocketTimeoutException
 
 /**
@@ -76,11 +80,29 @@ class CcapiDiscovery(private val context: Context) {
     }
 
     private suspend fun runDiscovery() {
+        // CRITICAL: bind the multicast socket explicitly to the WiFi
+        // interface. On Android when the phone joins a camera's AP, the
+        // OS flags WiFi as "no internet" and may deliver multicast to the
+        // wrong interface (or none at all) unless we pin it. Without this
+        // discovery silently sees no packets even though the camera is
+        // broadcasting normally.
+        val wifiInterface = pickWifiInterface()
+        Log.i(TAG, "Multicast bound to interface: ${wifiInterface?.name ?: "DEFAULT (may not work on camera AP)"}")
+
+        val groupAddr = InetAddress.getByName(SSDP_GROUP)
+        val groupSocketAddr = InetSocketAddress(groupAddr, SSDP_PORT)
+
         val socket = try {
             MulticastSocket(SSDP_PORT).apply {
                 reuseAddress = true
                 soTimeout = SOCKET_TIMEOUT_MS
-                joinGroup(InetAddress.getByName(SSDP_GROUP))
+                if (wifiInterface != null) {
+                    networkInterface = wifiInterface
+                    joinGroup(groupSocketAddr, wifiInterface)
+                } else {
+                    @Suppress("DEPRECATION")
+                    joinGroup(groupAddr)
+                }
             }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to open multicast socket", e)
@@ -98,6 +120,7 @@ class CcapiDiscovery(private val context: Context) {
                     val pkt = DatagramPacket(buf, buf.size)
                     socket.receive(pkt)
                     val msg = String(pkt.data, 0, pkt.length)
+                    Log.v(TAG, "SSDP packet from ${pkt.address.hostAddress}:${pkt.port} (${pkt.length} bytes)")
                     handleMessage(msg)
                 } catch (_: SocketTimeoutException) {
                     // No packet within window — keep listening
@@ -108,9 +131,31 @@ class CcapiDiscovery(private val context: Context) {
                 }
             }
         } finally {
-            try { socket.leaveGroup(InetAddress.getByName(SSDP_GROUP)) } catch (_: Exception) {}
+            try {
+                if (wifiInterface != null) {
+                    socket.leaveGroup(groupSocketAddr, wifiInterface)
+                } else {
+                    @Suppress("DEPRECATION")
+                    socket.leaveGroup(groupAddr)
+                }
+            } catch (_: Exception) {}
             socket.close()
         }
+    }
+
+    /** Find the NetworkInterface backing the currently-connected WiFi network.
+     *  Returns null if no WiFi network is up or the API is unavailable —
+     *  caller falls back to default-interface multicast (typically won't work
+     *  on camera AP, but kept for forward compat). */
+    private fun pickWifiInterface(): NetworkInterface? {
+        val cm = context.applicationContext
+            .getSystemService(ConnectivityManager::class.java) ?: return null
+        @Suppress("DEPRECATION")
+        val wifiNetwork = cm.allNetworks.firstOrNull { net ->
+            cm.getNetworkCapabilities(net)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+        } ?: return null
+        val ifName = cm.getLinkProperties(wifiNetwork)?.interfaceName ?: return null
+        return NetworkInterface.getByName(ifName)
     }
 
     private fun sendMSearch(socket: MulticastSocket) {
@@ -150,6 +195,7 @@ class CcapiDiscovery(private val context: Context) {
         if (typed == null ||
             !typed.contains("schemas-canon-com", ignoreCase = true) ||
             !typed.contains("ICPO-CameraControlAPIService", ignoreCase = true)) {
+            if (typed != null) Log.v(TAG, "Filtered out non-Canon SSDP service: $typed")
             return
         }
         val location = headers["location"] ?: return
