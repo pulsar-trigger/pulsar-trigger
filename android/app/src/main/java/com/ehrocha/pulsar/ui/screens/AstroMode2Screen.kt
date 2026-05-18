@@ -145,11 +145,15 @@ fun AstroMode2Screen(
     var shotCount by rememberSaveable {
         mutableIntStateOf(loadedPreset?.body?.shotCount ?: 0)
     }
+    var useAutofocus by rememberSaveable {
+        mutableStateOf(loadedPreset?.body?.useAutofocus ?: false)
+    }
     var showSaveDialog by remember { mutableStateOf(false) }
 
     val runState = LocalRunState.current
     val running = runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
+    val onCanon = vm.canonTransport.collectAsState().value != null
 
     var tabIdx by rememberSaveable {
         mutableIntStateOf(if (loadedPreset != null) AstroTab.entries.size - 1 else 0)
@@ -248,6 +252,7 @@ fun AstroMode2Screen(
                                         gapMs = intervalMs,
                                         shotCount = shotCount,
                                         delayMs = delayMs,
+                                        useAutofocus = useAutofocus,
                                     )
                                 )
                             )
@@ -298,11 +303,23 @@ fun AstroMode2Screen(
                         rangeMs = 0L..3_600_000L,
                         enabled = !running,
                     )
-                    AstroTab.SHOTS -> ShotsEditor(
-                        value = shotCount,
-                        onChange = { shotCount = it },
-                        enabled = !running,
-                    )
+                    AstroTab.SHOTS -> Column(
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.padding(horizontal = 24.dp),
+                    ) {
+                        ShotsEditor(
+                            value = shotCount,
+                            onChange = { shotCount = it },
+                            enabled = !running,
+                        )
+                        if (onCanon) {
+                            com.ehrocha.pulsar.ui.components.AutofocusToggle(
+                                checked = useAutofocus,
+                                onCheckedChange = { useAutofocus = it },
+                                enabled = !running,
+                            )
+                        }
+                    }
                 }
             }
 
@@ -328,6 +345,7 @@ fun AstroMode2Screen(
                     focalLength = focalLength,
                     cropFactor = cropFactor,
                     ruleDivisor = ruleDivisor,
+                    useAutofocus = useAutofocus,
                 )
                 val mode = if (editingPreset != null) {
                     editingPreset.copy(name = name.trim(), body = body)

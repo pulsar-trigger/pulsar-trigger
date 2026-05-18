@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.model.FlowStep
@@ -52,6 +53,9 @@ fun DarkFrame2Screen(
     }
     var shotCount by rememberSaveable {
         mutableIntStateOf(loadedPreset?.body?.shotCount ?: 0)
+    }
+    var useAutofocus by rememberSaveable {
+        mutableStateOf(loadedPreset?.body?.useAutofocus ?: false)
     }
     var showSaveDialog by remember { mutableStateOf(false) }
 
@@ -138,6 +142,7 @@ fun DarkFrame2Screen(
                                         shotCount = shotCount,
                                         exposureMs = exposureMs,
                                         gapMs = intervalMs,
+                                        useAutofocus = useAutofocus,
                                     )
                                 )
                             )
@@ -177,11 +182,23 @@ fun DarkFrame2Screen(
                         rangeMs = 0L..3_600_000L,
                         enabled = !running,
                     )
-                    DfTab.SHOTS -> ShotsEditor(
-                        value = shotCount,
-                        onChange = { shotCount = it },
-                        enabled = !running,
-                    )
+                    DfTab.SHOTS -> Column(
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.padding(horizontal = 24.dp),
+                    ) {
+                        ShotsEditor(
+                            value = shotCount,
+                            onChange = { shotCount = it },
+                            enabled = !running,
+                        )
+                        if (onCanon) {
+                            com.ehrocha.pulsar.ui.components.AutofocusToggle(
+                                checked = useAutofocus,
+                                onCheckedChange = { useAutofocus = it },
+                                enabled = !running,
+                            )
+                        }
+                    }
                 }
             }
             SummaryStrip(
@@ -203,6 +220,7 @@ fun DarkFrame2Screen(
                     exposureMs = exposureMs,
                     intervalMs = intervalMs,
                     shotCount = shotCount,
+                    useAutofocus = useAutofocus,
                 )
                 val mode = if (editingPreset != null) {
                     editingPreset.copy(name = name.trim(), body = body)

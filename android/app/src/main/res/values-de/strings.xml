@@ -46,6 +46,9 @@
     <string name="canon_cap_dial_ignore">Physisches Moduswahlrad übergehen</string>
     <string name="canon_cap_polling">Ereignis-Polling (/event/polling)</string>
     <string name="canon_sub_second_warning">WiFi-Latenz macht Bulb-Zeiten unter 1 s unzuverlässig. Nutze Timelapse (Kamera steuert Belichtung) oder den ESP32-Transport.</string>
+    <string name="ccapi_af_toggle_label">Autofokus pro Aufnahme</string>
+    <string name="ccapi_af_toggle_on_hint">Kamera fokussiert vor jeder Aufnahme. Ideal für Tagesmotive.</string>
+    <string name="ccapi_af_toggle_off_hint">Kamera nimmt mit aktueller Fokuseinstellung auf. Ideal für Astro / Sternenfelder (AF würde Sterne suchen und driften).</string>
     <string name="canon_setup_title">Camera Control API aktivieren</string>
     <string name="canon_setup_intro">Pulsar benötigt aktives CCAPI. Die meisten R-Bodies benötigen eine einmalige Aktivierung:</string>
     <string name="canon_setup_step_1">1. CCAPI Activation Tool aus dem Canon-Entwicklerportal laden.</string>

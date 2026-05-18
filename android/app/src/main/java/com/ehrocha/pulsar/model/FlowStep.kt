@@ -43,6 +43,10 @@ sealed class FlowStep {
         val exposureMs: Long = AppConfig.DEFAULT_EXPOSURE_MS,
         val shotCount: Int = AppConfig.DEFAULT_SHOT_COUNT,
         val delayMs: Long = AppConfig.DEFAULT_DELAY_MS,
+        /** Send `af: true` on the CCAPI shutter calls (camera autofocuses
+         *  before each shot). Ignored on the ESP32 path — that one just
+         *  pulses the shutter line and AF behaviour is up to the body. */
+        val useAutofocus: Boolean = false,
     ) : FlowStep() {
         override val type get() = FlowStepType.INTERVALOMETER
     }
@@ -55,6 +59,7 @@ sealed class FlowStep {
         val gapMs: Long = AppConfig.DEFAULT_ASTRO_GAP_MS,
         val shotCount: Int = AppConfig.DEFAULT_SHOT_COUNT,
         val delayMs: Long = AppConfig.DEFAULT_ASTRO_DELAY_MS,
+        val useAutofocus: Boolean = false,
     ) : FlowStep() {
         override val type get() = FlowStepType.ASTRO
     }
@@ -64,6 +69,7 @@ sealed class FlowStep {
         val exposureMs: Long = AppConfig.DEFAULT_EXPOSURE_MS,
         val shotCount: Int = 10,
         val gapMs: Long = AppConfig.DEFAULT_ASTRO_GAP_MS,
+        val useAutofocus: Boolean = false,
     ) : FlowStep() {
         override val type get() = FlowStepType.DARK_FRAME
     }
@@ -74,6 +80,7 @@ sealed class FlowStep {
         val endExposureMs: Long = 10_000L,
         val steps: Int = 50,
         val intervalMs: Long = AppConfig.DEFAULT_INTERVAL_MS,
+        val useAutofocus: Boolean = false,
     ) : FlowStep() {
         override val type get() = FlowStepType.RAMP
     }
@@ -95,6 +102,7 @@ sealed class FlowStep {
                 put("exposureMs", s.exposureMs)
                 put("shotCount", s.shotCount)
                 put("delayMs", s.delayMs)
+                put("useAutofocus", s.useAutofocus)
             }
             is Astro -> {
                 put("focalLength", s.focalLength)
@@ -103,17 +111,20 @@ sealed class FlowStep {
                 put("gapMs", s.gapMs)
                 put("shotCount", s.shotCount)
                 put("delayMs", s.delayMs)
+                put("useAutofocus", s.useAutofocus)
             }
             is DarkFrame -> {
                 put("exposureMs", s.exposureMs)
                 put("shotCount", s.shotCount)
                 put("gapMs", s.gapMs)
+                put("useAutofocus", s.useAutofocus)
             }
             is Ramp -> {
                 put("startExposureMs", s.startExposureMs)
                 put("endExposureMs", s.endExposureMs)
                 put("steps", s.steps)
                 put("intervalMs", s.intervalMs)
+                put("useAutofocus", s.useAutofocus)
             }
             is Pause -> {
                 put("label", s.label)
@@ -144,6 +155,7 @@ sealed class FlowStep {
                     exposureMs = json.optLong("exposureMs", AppConfig.DEFAULT_EXPOSURE_MS),
                     shotCount = json.optInt("shotCount", AppConfig.DEFAULT_SHOT_COUNT),
                     delayMs = json.optLong("delayMs", AppConfig.DEFAULT_DELAY_MS),
+                    useAutofocus = json.optBoolean("useAutofocus", false),
                 )
                 FlowStepType.ASTRO -> Astro(
                     id = id,
@@ -153,6 +165,7 @@ sealed class FlowStep {
                     gapMs = json.optLong("gapMs", AppConfig.DEFAULT_ASTRO_GAP_MS),
                     shotCount = json.optInt("shotCount", AppConfig.DEFAULT_SHOT_COUNT),
                     delayMs = json.optLong("delayMs", AppConfig.DEFAULT_ASTRO_DELAY_MS),
+                    useAutofocus = json.optBoolean("useAutofocus", false),
                 )
                 FlowStepType.DARK_FRAME -> DarkFrame(
                     id = id,
@@ -171,6 +184,7 @@ sealed class FlowStep {
                         "gapMs",
                         json.optLong("darkFrameGapMs", AppConfig.DEFAULT_ASTRO_GAP_MS),
                     ),
+                    useAutofocus = json.optBoolean("useAutofocus", false),
                 )
                 FlowStepType.RAMP -> Ramp(
                     id = id,
@@ -187,6 +201,7 @@ sealed class FlowStep {
                         "intervalMs",
                         json.optLong("rampIntervalMs", AppConfig.DEFAULT_INTERVAL_MS),
                     ),
+                    useAutofocus = json.optBoolean("useAutofocus", false),
                 )
                 FlowStepType.PAUSE -> Pause(
                     id = id,

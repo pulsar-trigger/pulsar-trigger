@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.TriggerMode
@@ -64,11 +65,17 @@ fun TimelapseScreen(
     var shotCount by rememberSaveable {
         mutableIntStateOf(loadedPreset?.body?.shotCount ?: 0)
     }
+    // Daylight Timelapse usually wants per-shot AF; default ON for this mode
+    // unlike the bulb-based wizards.
+    var useAutofocus by rememberSaveable {
+        mutableStateOf(loadedPreset?.body?.useAutofocus ?: true)
+    }
     var showSaveDialog by remember { mutableStateOf(false) }
 
     val runState = LocalRunState.current
     val running = runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
+    val onCanon = vm.canonTransport.collectAsState().value != null
 
     var tabIdx by rememberSaveable {
         mutableIntStateOf(if (loadedPreset != null) TlTab.entries.size - 1 else 0)
@@ -152,6 +159,7 @@ fun TimelapseScreen(
                                         exposureMs = pulseMs,
                                         shotCount = shotCount,
                                         delayMs = delayMs,
+                                        useAutofocus = useAutofocus,
                                     )
                                 )
                             )
@@ -192,11 +200,23 @@ fun TimelapseScreen(
                         rangeMs = 0L..3_600_000L,
                         enabled = !running,
                     )
-                    TlTab.SHOTS -> ShotsEditor(
-                        value = shotCount,
-                        onChange = { shotCount = it },
-                        enabled = !running,
-                    )
+                    TlTab.SHOTS -> Column(
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.padding(horizontal = 24.dp),
+                    ) {
+                        ShotsEditor(
+                            value = shotCount,
+                            onChange = { shotCount = it },
+                            enabled = !running,
+                        )
+                        if (onCanon) {
+                            com.ehrocha.pulsar.ui.components.AutofocusToggle(
+                                checked = useAutofocus,
+                                onCheckedChange = { useAutofocus = it },
+                                enabled = !running,
+                            )
+                        }
+                    }
                 }
             }
 
@@ -220,6 +240,7 @@ fun TimelapseScreen(
                     exposureMs = pulseMs,
                     shotCount = shotCount,
                     delayMs = delayMs,
+                    useAutofocus = useAutofocus,
                 )
                 val mode = if (editingPreset != null) {
                     editingPreset.copy(name = name.trim(), body = body)

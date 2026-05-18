@@ -46,6 +46,9 @@
     <string name="canon_cap_dial_ignore">覆盖物理模式拨盘</string>
     <string name="canon_cap_polling">事件轮询（/event/polling）</string>
     <string name="canon_sub_second_warning">WiFi 延迟会让低于 1 秒的 Bulb 曝光不准。请改用延时模式 (相机控制曝光) 或 ESP32 通道。</string>
+    <string name="ccapi_af_toggle_label">每次拍摄自动对焦</string>
+    <string name="ccapi_af_toggle_on_hint">相机会在每次拍摄前自动对焦。适合白天题材。</string>
+    <string name="ccapi_af_toggle_off_hint">相机会在当前焦点位置拍摄。适合天文/星野（自动对焦会在星点上拉风箱并漂移）。</string>
     <string name="canon_setup_title">启用 Camera Control API</string>
     <string name="canon_setup_intro">Pulsar 需要相机启用 CCAPI。大多数 R 系列机身需要一次性激活：</string>
     <string name="canon_setup_step_1">1. 在佳能开发者门户下载 CCAPI Activation Tool。</string>

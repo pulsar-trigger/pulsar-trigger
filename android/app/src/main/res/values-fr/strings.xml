@@ -46,6 +46,9 @@
     <string name="canon_cap_dial_ignore">Outrepasser la molette physique</string>
     <string name="canon_cap_polling">Polling d\'événements (/event/polling)</string>
     <string name="canon_sub_second_warning">La latence WiFi rend les poses bulb sous 1 s peu fiables. Utilisez Timelapse (l\'appareil gère la pose) ou le transport ESP32.</string>
+    <string name="ccapi_af_toggle_label">Autofocus par prise</string>
+    <string name="ccapi_af_toggle_on_hint">L\'appareil fait la mise au point avant chaque prise. Idéal en plein jour.</string>
+    <string name="ccapi_af_toggle_off_hint">L\'appareil prend à la mise au point actuelle. Idéal pour l\'astro / champs d\'étoiles (l\'AF tenterait de focaliser sur les étoiles et dériverait).</string>
     <string name="canon_setup_title">Activer Camera Control API</string>
     <string name="canon_setup_intro">Pulsar a besoin de CCAPI activé sur votre appareil. La plupart des boîtiers R requièrent une activation unique :</string>
     <string name="canon_setup_step_1">1. Téléchargez le CCAPI Activation Tool sur le portail développeur Canon.</string>

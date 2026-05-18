@@ -42,6 +42,10 @@ data class UserMode(
         val rampStartExposureMs: Long = 500L,
         val rampEndExposureMs: Long = 10_000L,
         val rampSteps: Int = 50,
+        /** Whether to send `af: true` on CCAPI shutter calls. Ignored on
+         *  the BLE/ESP32 path. Default off so bulb astro runs don't try to
+         *  AF on stars between shots. */
+        val useAutofocus: Boolean = false,
     )
 
     fun toJson(): JSONObject = JSONObject().apply {
@@ -59,6 +63,7 @@ data class UserMode(
                 put("exposureMs", body.exposureMs)
                 put("shotCount", body.shotCount)
                 put("delayMs", body.delayMs)
+                put("useAutofocus", body.useAutofocus)
                 if (body.fwMode == TriggerMode.ASTRO) {
                     put("focalLength", body.focalLength)
                     put("cropFactor", body.cropFactor.toDouble())
@@ -106,6 +111,7 @@ data class UserMode(
                 rampStartExposureMs = params.optLong("rampStartExposureMs", 500L),
                 rampEndExposureMs = params.optLong("rampEndExposureMs", 10_000L),
                 rampSteps = params.optInt("rampSteps", 50),
+                useAutofocus = params.optBoolean("useAutofocus", false),
             )
             return UserMode(
                 id = json.optString("id").takeIf { it.isNotEmpty() } ?: UUID.randomUUID().toString(),

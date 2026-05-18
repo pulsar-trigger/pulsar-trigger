@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.model.FlowStep
@@ -56,6 +57,9 @@ fun Ramp2Screen(
     }
     var steps by rememberSaveable {
         mutableIntStateOf(loadedPreset?.body?.rampSteps ?: 0)
+    }
+    var useAutofocus by rememberSaveable {
+        mutableStateOf(loadedPreset?.body?.useAutofocus ?: false)
     }
     var showSaveDialog by remember { mutableStateOf(false) }
 
@@ -150,6 +154,7 @@ fun Ramp2Screen(
                                         endExposureMs = endExposureMs,
                                         steps = steps,
                                         intervalMs = intervalMs,
+                                        useAutofocus = useAutofocus,
                                     )
                                 )
                             )
@@ -195,11 +200,23 @@ fun Ramp2Screen(
                         rangeMs = 0L..3_600_000L,
                         enabled = !running,
                     )
-                    RampTab.STEPS -> ShotsEditor(
-                        value = steps,
-                        onChange = { steps = it },
-                        enabled = !running,
-                    )
+                    RampTab.STEPS -> Column(
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.padding(horizontal = 24.dp),
+                    ) {
+                        ShotsEditor(
+                            value = steps,
+                            onChange = { steps = it },
+                            enabled = !running,
+                        )
+                        if (onCanon) {
+                            com.ehrocha.pulsar.ui.components.AutofocusToggle(
+                                checked = useAutofocus,
+                                onCheckedChange = { useAutofocus = it },
+                                enabled = !running,
+                            )
+                        }
+                    }
                 }
             }
             SummaryStrip(
@@ -222,6 +239,7 @@ fun Ramp2Screen(
                     rampEndExposureMs = endExposureMs,
                     rampSteps = steps,
                     intervalMs = intervalMs,
+                    useAutofocus = useAutofocus,
                 )
                 val mode = if (editingPreset != null) {
                     editingPreset.copy(name = name.trim(), body = body)

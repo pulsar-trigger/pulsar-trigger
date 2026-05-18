@@ -46,6 +46,9 @@
     <string name="canon_cap_dial_ignore">Override physical mode dial</string>
     <string name="canon_cap_polling">Event polling (/event/polling)</string>
     <string name="canon_sub_second_warning">WiFi RTT makes sub-second bulb timing unreliable. Use Timelapse mode (camera owns exposure) or the ESP32 transport instead.</string>
+    <string name="ccapi_af_toggle_label">Autofocus per shot</string>
+    <string name="ccapi_af_toggle_on_hint">Camera autofocuses before each shot. Best for daylight subjects.</string>
+    <string name="ccapi_af_toggle_off_hint">Camera shoots at the current focus position. Best for astro / star fields (AF would hunt on stars and drift).</string>
     <string name="canon_setup_title">Enable Camera Control API</string>
     <string name="canon_setup_intro">Pulsar needs CCAPI active on your camera. Most R-series bodies need a one-time activation:</string>
     <string name="canon_setup_step_1">1. Download Canon\'s CCAPI Activation Tool from the developer portal.</string>

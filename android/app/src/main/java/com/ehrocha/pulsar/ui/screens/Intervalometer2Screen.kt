@@ -83,6 +83,9 @@ fun Intervalometer2Screen(
     var delayMs by rememberSaveable {
         mutableLongStateOf(loadedPreset?.body?.delayMs ?: 0L)
     }
+    var useAutofocus by rememberSaveable {
+        mutableStateOf(loadedPreset?.body?.useAutofocus ?: false)
+    }
 
     // Save dialog state
     var showSaveDialog by remember { mutableStateOf(false) }
@@ -195,6 +198,7 @@ fun Intervalometer2Screen(
                                         exposureMs = exposureMs,
                                         shotCount = shotCount,
                                         delayMs = delayMs,
+                                        useAutofocus = useAutofocus,
                                     )
                                 )
                             )
@@ -241,11 +245,23 @@ fun Intervalometer2Screen(
                         rangeMs = 0L..3_600_000L,
                         enabled = !running,
                     )
-                    IvTab.SHOTS -> ShotsEditor(
-                        value = shotCount,
-                        onChange = { shotCount = it },
-                        enabled = !running,
-                    )
+                    IvTab.SHOTS -> Column(
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.padding(horizontal = 24.dp),
+                    ) {
+                        ShotsEditor(
+                            value = shotCount,
+                            onChange = { shotCount = it },
+                            enabled = !running,
+                        )
+                        if (onCanon) {
+                            com.ehrocha.pulsar.ui.components.AutofocusToggle(
+                                checked = useAutofocus,
+                                onCheckedChange = { useAutofocus = it },
+                                enabled = !running,
+                            )
+                        }
+                    }
                 }
             }
 
@@ -269,6 +285,7 @@ fun Intervalometer2Screen(
                     exposureMs = exposureMs,
                     shotCount = shotCount,
                     delayMs = delayMs,
+                    useAutofocus = useAutofocus,
                 )
                 val mode = if (editingPreset != null) {
                     editingPreset.copy(name = name.trim(), body = body)

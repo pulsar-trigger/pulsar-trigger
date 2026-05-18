@@ -46,6 +46,9 @@
     <string name="canon_cap_dial_ignore">Substituir dial físico de modo</string>
     <string name="canon_cap_polling">Polling de eventos (/event/polling)</string>
     <string name="canon_sub_second_warning">A latência do WiFi torna o bulb abaixo de 1 s pouco confiável. Use Timelapse (a câmera controla a exposição) ou o transporte ESP32.</string>
+    <string name="ccapi_af_toggle_label">Autofoco a cada disparo</string>
+    <string name="ccapi_af_toggle_on_hint">A câmera foca antes de cada disparo. Ideal para cenas diurnas.</string>
+    <string name="ccapi_af_toggle_off_hint">A câmera dispara na posição de foco atual. Ideal para astro / campos estelares (o AF tentaria focar nas estrelas e perderia foco).</string>
     <string name="canon_setup_title">Ativar Camera Control API</string>
     <string name="canon_setup_intro">A Pulsar precisa do CCAPI ativo na sua câmera. A maioria das corpos R precisa de uma ativação única:</string>
     <string name="canon_setup_step_1">1. Baixe a CCAPI Activation Tool no portal de desenvolvedores da Canon.</string>

@@ -1070,10 +1070,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         // exposureMs; the camera owns timing in that path. Any
                         // other exposureMs means a bulb-style run.
                         if (step.exposureMs == AppConfig.TIMELAPSE_PULSE_MS) {
-                            runCanonTimelapse(canon, step.shotCount, step.intervalMs, step.delayMs)
+                            runCanonTimelapse(canon, step.shotCount, step.intervalMs, step.delayMs,
+                                af = step.useAutofocus)
                         } else {
                             runCanonBulb(canon, step.shotCount, step.exposureMs,
-                                step.intervalMs, step.delayMs)
+                                step.intervalMs, step.delayMs, af = step.useAutofocus)
                         }
                     }
                     _simulatorActive.value -> simulateShots(
@@ -1094,7 +1095,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 val expMs = AppConfig.astroExposureMs(step.focalLength, step.cropFactor, step.ruleDivisor)
                 when {
                     canon != null -> runCanonBulb(canon, step.shotCount, expMs,
-                        step.gapMs, step.delayMs)
+                        step.gapMs, step.delayMs, af = step.useAutofocus)
                     _simulatorActive.value -> simulateShots(step.shotCount, expMs, step.gapMs, step.delayMs)
                     else -> {
                         sendModeCommand(
@@ -1108,7 +1109,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 val canon = _canonTransport.value
                 when {
                     canon != null -> runCanonBulb(canon, step.shotCount, step.exposureMs,
-                        step.gapMs, 0L)
+                        step.gapMs, 0L, af = step.useAutofocus)
                     _simulatorActive.value -> simulateShots(step.shotCount, step.exposureMs, step.gapMs, 0L)
                     else -> {
                         sendModeCommand(
@@ -1124,7 +1125,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 val canon = _canonTransport.value
                 val rampSteps = step.steps.coerceAtLeast(2)
                 if (canon != null) {
-                    runCanonRamp(canon, step, rampSteps)
+                    runCanonRamp(canon, step, rampSteps, af = step.useAutofocus)
                 } else {
                     for (i in 0 until rampSteps) {
                         coroutineContext.ensureActive()
@@ -1155,6 +1156,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         shots: Int,
         intervalMs: Long,
         startDelayMs: Long,
+        af: Boolean = true,
     ) {
         // Approximate per-shot exposure for "time remaining" math. The actual
         // exposure happens inside the camera; ~250 ms covers shutter actuation
@@ -1183,7 +1185,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 state = DeviceState.RUNNING, shotsTaken = shot - 1,
                 timeRemainingMs = remaining.coerceAtLeast(0),
             )
-            transport.fireShutter(af = true)
+            transport.fireShutter(af = af)
             _status.value = _status.value?.copy(
                 state = DeviceState.WAITING, shotsTaken = shot,
                 timeRemainingMs = (remaining - perShotEstimate).coerceAtLeast(0),
@@ -1206,6 +1208,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         exposureMs: Long,
         intervalMs: Long,
         startDelayMs: Long,
+        af: Boolean = false,
     ) {
         if (!transport.supportsBulb) {
             Log.w(TAG, "Bulb requested on body without /shutterbutton/manual — aborting run")
@@ -1236,7 +1239,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     state = DeviceState.RUNNING, shotsTaken = shot - 1,
                     timeRemainingMs = remaining.coerceAtLeast(0),
                 )
-                transport.startBulb(af = true)
+                transport.startBulb(af = af)
                 delay(exposureMs)
                 transport.stopBulb()
                 _status.value = _status.value?.copy(
@@ -1260,6 +1263,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         transport: com.ehrocha.pulsar.transport.ccapi.CcapiTransport,
         step: FlowStep.Ramp,
         rampSteps: Int,
+        af: Boolean = false,
     ) {
         if (!transport.supportsBulb) {
             Log.w(TAG, "Ramp requested on body without /shutterbutton/manual — aborting run")
@@ -1279,7 +1283,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         ((step.startExposureMs + step.endExposureMs) / 2 + step.intervalMs))
                         - step.intervalMs,
                 )
-                transport.startBulb(af = true)
+                transport.startBulb(af = af)
                 delay(expMs)
                 transport.stopBulb()
                 _status.value = _status.value?.copy(
