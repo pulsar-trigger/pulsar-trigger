@@ -125,6 +125,40 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  same camera skip the auth prompt entirely. */
     private val canonCredsPrefs = app.getSharedPreferences("pulsar_canon_creds", Context.MODE_PRIVATE)
 
+    /** Per-UDN user-set nicknames for Canon cameras. Shown in the scan card
+     *  and as the connected device label in place of the body's own name. */
+    private val canonNicknamesPrefs =
+        app.getSharedPreferences("pulsar_canon_nicks", Context.MODE_PRIVATE)
+    private val _canonNicknames = MutableStateFlow(loadAllCanonNicknames())
+    val canonNicknames: StateFlow<Map<String, String>> = _canonNicknames
+
+    private fun loadAllCanonNicknames(): Map<String, String> =
+        canonNicknamesPrefs.all
+            .mapNotNull { (k, v) -> if (v is String && k.isNotEmpty()) k to v else null }
+            .toMap()
+
+    /** Set or clear (empty string) the user-facing nickname for a Canon camera.
+     *  The new value flows through [canonNicknames]; if this camera is
+     *  currently active, its [deviceName] is updated immediately. */
+    fun setCanonNickname(udn: String, nickname: String) {
+        val trimmed = nickname.trim()
+        val edit = canonNicknamesPrefs.edit()
+        if (trimmed.isEmpty()) edit.remove(udn) else edit.putString(udn, trimmed)
+        edit.apply()
+        _canonNicknames.value = loadAllCanonNicknames()
+        val active = _canonTransport.value
+        if (active != null && active.camera.udn == udn) {
+            _deviceName.value = effectiveCanonName(active.camera)
+        }
+    }
+
+    /** Display name for a Canon camera. Precedence: user nickname > body
+     *  nickname > body friendly name. */
+    fun effectiveCanonName(camera: com.ehrocha.pulsar.transport.ccapi.CanonCamera): String =
+        _canonNicknames.value[camera.udn]?.takeIf { it.isNotEmpty() }
+            ?: camera.nickname
+            ?: camera.friendlyName
+
     // Connection-side flows. [status] is multiplexed below — BLE updates flow
     // in, but the simulator can write directly when it's running.
     private val _connected = MutableStateFlow(false)
@@ -392,7 +426,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.Ok -> {
                     _canonTransport.value = transport
                     _canonAuthPrompt.value = null
-                    _deviceName.value = camera.nickname ?: camera.friendlyName
+                    _deviceName.value = effectiveCanonName(camera)
                     _connected.value = true
                     _status.value = StatusFrame(
                         state = DeviceState.IDLE,

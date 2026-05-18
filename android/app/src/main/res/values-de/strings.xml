@@ -19,6 +19,11 @@
     <string name="canon_bulb_hint">Canon (CCAPI) verbunden — alle Modi nutzen Bulb. Belichtungen unter 1 s sind über WiFi nicht zuverlässig.</string>
     <string name="canon_reconnecting_hint">Verbindung zur Kamera über WiFi wird wiederhergestellt…</string>
     <string name="canon_no_bulb_hint">Dieser Body bietet kein manuelles Bulb über CCAPI. Nutze Timelapse oder Manuell; Bulb-Modi sind deaktiviert.</string>
+    <string name="canon_camera_menu">Kamera-Optionen</string>
+    <string name="canon_camera_rename">Umbenennen</string>
+    <string name="canon_rename_title">Kamera umbenennen</string>
+    <string name="canon_rename_subtitle">Wähle einen Spitznamen für %1$s. Leer lassen zum Entfernen.</string>
+    <string name="canon_rename_label">Spitzname</string>
     <string name="canon_sub_second_warning">WiFi-Latenz macht Bulb-Zeiten unter 1 s unzuverlässig. Nutze Timelapse (Kamera steuert Belichtung) oder den ESP32-Transport.</string>
     <string name="canon_setup_title">Camera Control API aktivieren</string>
     <string name="canon_setup_intro">Pulsar benötigt aktives CCAPI. Die meisten R-Bodies benötigen eine einmalige Aktivierung:</string>

@@ -19,6 +19,11 @@
     <string name="canon_bulb_hint">已连接佳能 (CCAPI) — 所有模式均通过 Bulb 拍摄。WiFi 下低于 1 秒的曝光不可靠。</string>
     <string name="canon_reconnecting_hint">正在通过 WiFi 重新连接相机…</string>
     <string name="canon_no_bulb_hint">此机身未通过 CCAPI 公开手动 Bulb。请使用延时或手动模式；Bulb 模式已禁用。</string>
+    <string name="canon_camera_menu">相机选项</string>
+    <string name="canon_camera_rename">重命名</string>
+    <string name="canon_rename_title">重命名相机</string>
+    <string name="canon_rename_subtitle">为 %1$s 设置昵称，留空则清除。</string>
+    <string name="canon_rename_label">昵称</string>
     <string name="canon_sub_second_warning">WiFi 延迟会让低于 1 秒的 Bulb 曝光不准。请改用延时模式 (相机控制曝光) 或 ESP32 通道。</string>
     <string name="canon_setup_title">启用 Camera Control API</string>
     <string name="canon_setup_intro">Pulsar 需要相机启用 CCAPI。大多数 R 系列机身需要一次性激活：</string>

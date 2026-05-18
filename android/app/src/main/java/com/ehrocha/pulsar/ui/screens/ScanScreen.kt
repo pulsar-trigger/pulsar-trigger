@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.DeveloperBoard
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Visibility
@@ -70,7 +71,9 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
     val canonConnecting by vm.canonConnecting.collectAsState()
     val canonError by vm.canonError.collectAsState()
     val canonAuthPrompt by vm.canonAuthPrompt.collectAsState()
+    val canonNicknames by vm.canonNicknames.collectAsState()
     var canonInfo by remember { mutableStateOf<com.ehrocha.pulsar.transport.ccapi.CanonCamera?>(null) }
+    var renameCanon by remember { mutableStateOf<com.ehrocha.pulsar.transport.ccapi.CanonCamera?>(null) }
     var showCanonSetupHelp by remember { mutableStateOf(false) }
 
     if (connected) {
@@ -192,7 +195,12 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
                         )
                     }
                     items(canonCameras) { camera ->
-                        CanonCameraCard(camera) { canonInfo = camera }
+                        CanonCameraCard(
+                            camera = camera,
+                            nickname = canonNicknames[camera.udn],
+                            onClick = { canonInfo = camera },
+                            onRename = { renameCanon = camera },
+                        )
                     }
                 }
                 if (devices.isEmpty() && canonCameras.isEmpty()) {
@@ -262,6 +270,18 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
 
     if (showCanonSetupHelp) {
         CanonSetupHelpDialog(onDismiss = { showCanonSetupHelp = false })
+    }
+
+    renameCanon?.let { cam ->
+        CanonRenameDialog(
+            camera = cam,
+            initial = canonNicknames[cam.udn].orEmpty(),
+            onDismiss = { renameCanon = null },
+            onConfirm = { newName ->
+                vm.setCanonNickname(cam.udn, newName)
+                renameCanon = null
+            },
+        )
     }
 
     canonAuthPrompt?.let { cam ->
@@ -498,6 +518,45 @@ private fun CanonAuthDialog(
 }
 
 @Composable
+private fun CanonRenameDialog(
+    camera: com.ehrocha.pulsar.transport.ccapi.CanonCamera,
+    initial: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    var name by rememberSaveable { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.canon_rename_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    stringResource(R.string.canon_rename_subtitle, camera.friendlyName),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.take(40) },
+                    label = { Text(stringResource(R.string.canon_rename_label)) },
+                    singleLine = true,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(name.trim()) }) {
+                Text(stringResource(R.string.save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
+}
+
+@Composable
 private fun CanonSetupHelpDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -635,8 +694,14 @@ private fun DeviceCard(scanned: com.ehrocha.pulsar.ble.ScannedDevice, onClick: (
 @Composable
 private fun CanonCameraCard(
     camera: com.ehrocha.pulsar.transport.ccapi.CanonCamera,
+    nickname: String?,
     onClick: () -> Unit,
+    onRename: () -> Unit,
 ) {
+    val displayName = nickname?.takeIf { it.isNotEmpty() }
+        ?: camera.nickname
+        ?: camera.friendlyName
+    var menuOpen by remember { mutableStateOf(false) }
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
@@ -645,7 +710,7 @@ private fun CanonCameraCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 20.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
@@ -665,20 +730,46 @@ private fun CanonCameraCard(
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    camera.nickname ?: camera.friendlyName,
+                    displayName,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )
-                Text(
-                    stringResource(R.string.canon_camera_subtitle),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                // When the user has set a nickname, surface the body's own
+                // friendly name underneath so they can still tell which model
+                // it is (e.g. "Astro Cam" / "EOS R10").
+                if (!nickname.isNullOrEmpty()) {
+                    Text(
+                        camera.friendlyName,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                } else {
+                    Text(
+                        stringResource(R.string.canon_camera_subtitle),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
                 Text(
                     "${camera.ipAddress}:${camera.port}",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            Box {
+                IconButton(onClick = { menuOpen = true }) {
+                    Icon(
+                        Icons.Default.MoreVert,
+                        contentDescription = stringResource(R.string.canon_camera_menu),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.canon_camera_rename)) },
+                        onClick = { menuOpen = false; onRename() },
+                    )
+                }
             }
         }
     }
