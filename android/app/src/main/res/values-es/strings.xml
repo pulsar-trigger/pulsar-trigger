@@ -10,7 +10,7 @@
     <string name="canon_err_auth">La cámara requiere autenticación. Desactívala en la cámara o espera al soporte digest (Fase 4).</string>
     <string name="canon_err_network">No se pudo contactar con la cámara. Comprueba tu red WiFi.</string>
     <string name="canon_err_generic">Error al conectar (%1$s).</string>
-    <string name="canon_timelapse_only_hint">Canon (CCAPI) conectada — la Fase 2 solo admite Timelapse. Los modos bulb llegan en la Fase 3.</string>
+    <string name="canon_bulb_hint">Canon (CCAPI) conectada — todos los modos usan bulb. Manual hold desactivado (Fase 4).</string>
     <string name="available_devices">Dispositivos Disponibles</string>
     <string name="select_device_prompt">Selecciona tu Pulsar trigger para iniciar la sesión de control.</string>
     <string name="use_simulator">Usar Simulador</string>

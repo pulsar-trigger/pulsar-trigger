@@ -39,6 +39,21 @@ interface CameraTransport {
      */
     suspend fun fireShutter(af: Boolean = true)
 
+    /**
+     * Put the camera into bulb (or back to manual) before a bulb-style run.
+     * On Canon bodies with a physical mode dial this may also flip
+     * `ignoreshootingmodedialmode` so the PUT actually takes effect. Best
+     * effort — failure is logged, not thrown, so the caller can still try
+     * the bulb sequence in case the user pre-set the mode on the body.
+     */
+    suspend fun setShutterMode(bulb: Boolean)
+
+    /** Begin a bulb exposure (full-press hold). Pair with [stopBulb]. */
+    suspend fun startBulb(af: Boolean = true)
+
+    /** Release the shutter — closes the bulb exposure started by [startBulb]. */
+    suspend fun stopBulb()
+
     /** Abort any in-flight bulb exposure or shutter press. */
     suspend fun stop()
 

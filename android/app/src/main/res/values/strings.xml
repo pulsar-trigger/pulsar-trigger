@@ -20,7 +20,7 @@
     <string name="canon_err_auth">Camera requires authentication. Disable it on the camera or wait for Pulsar to add digest support (Phase 4).</string>
     <string name="canon_err_network">Could not reach the camera. Make sure you are on its WiFi network.</string>
     <string name="canon_err_generic">Connect failed (%1$s).</string>
-    <string name="canon_timelapse_only_hint">Canon (CCAPI) connected — Phase 2 supports Timelapse only. Bulb modes land in Phase 3.</string>
+    <string name="canon_bulb_hint">Canon (CCAPI) connected — all modes route through bulb. Manual hold is disabled (Phase 4).</string>
 
     <!-- MainMenuScreen -->
     <string name="tab_trigger">Trigger</string>

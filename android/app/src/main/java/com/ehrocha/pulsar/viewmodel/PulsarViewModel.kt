@@ -656,9 +656,17 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             is FlowStep.Intervalometer -> {
                 val canon = _canonTransport.value
                 when {
-                    canon != null -> runCanonTimelapse(
-                        canon, step.shotCount, step.intervalMs, step.delayMs,
-                    )
+                    canon != null -> {
+                        // Timelapse wizard stores its pulse-length sentinel as
+                        // exposureMs; the camera owns timing in that path. Any
+                        // other exposureMs means a bulb-style run.
+                        if (step.exposureMs == AppConfig.TIMELAPSE_PULSE_MS) {
+                            runCanonTimelapse(canon, step.shotCount, step.intervalMs, step.delayMs)
+                        } else {
+                            runCanonBulb(canon, step.shotCount, step.exposureMs,
+                                step.intervalMs, step.delayMs)
+                        }
+                    }
                     _simulatorActive.value -> simulateShots(
                         step.shotCount, step.exposureMs, step.intervalMs, step.delayMs,
                     )
@@ -673,45 +681,55 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             is FlowStep.Astro -> {
-                if (_canonTransport.value != null) throw CanonUnsupportedException("astro")
+                val canon = _canonTransport.value
                 val expMs = AppConfig.astroExposureMs(step.focalLength, step.cropFactor, step.ruleDivisor)
-                if (_simulatorActive.value) {
-                    simulateShots(step.shotCount, expMs, step.gapMs, step.delayMs)
-                } else {
-                    sendModeCommand(
-                        CommandBuilder.setAstro(step.gapMs, expMs, step.shotCount, step.delayMs)
-                    )
-                    waitForCompletion(step.shotCount)
+                when {
+                    canon != null -> runCanonBulb(canon, step.shotCount, expMs,
+                        step.gapMs, step.delayMs)
+                    _simulatorActive.value -> simulateShots(step.shotCount, expMs, step.gapMs, step.delayMs)
+                    else -> {
+                        sendModeCommand(
+                            CommandBuilder.setAstro(step.gapMs, expMs, step.shotCount, step.delayMs)
+                        )
+                        waitForCompletion(step.shotCount)
+                    }
                 }
             }
             is FlowStep.DarkFrame -> {
-                if (_canonTransport.value != null) throw CanonUnsupportedException("dark_frame")
-                if (_simulatorActive.value) {
-                    simulateShots(step.shotCount, step.exposureMs, step.gapMs, 0L)
-                } else {
-                    sendModeCommand(
-                        CommandBuilder.setDarkFrame(
-                            step.gapMs, step.exposureMs, step.shotCount, 0L,
+                val canon = _canonTransport.value
+                when {
+                    canon != null -> runCanonBulb(canon, step.shotCount, step.exposureMs,
+                        step.gapMs, 0L)
+                    _simulatorActive.value -> simulateShots(step.shotCount, step.exposureMs, step.gapMs, 0L)
+                    else -> {
+                        sendModeCommand(
+                            CommandBuilder.setDarkFrame(
+                                step.gapMs, step.exposureMs, step.shotCount, 0L,
+                            )
                         )
-                    )
-                    waitForCompletion(step.shotCount)
+                        waitForCompletion(step.shotCount)
+                    }
                 }
             }
             is FlowStep.Ramp -> {
-                if (_canonTransport.value != null) throw CanonUnsupportedException("ramp")
+                val canon = _canonTransport.value
                 val rampSteps = step.steps.coerceAtLeast(2)
-                for (i in 0 until rampSteps) {
-                    coroutineContext.ensureActive()
-                    val fraction = i.toDouble() / (rampSteps - 1)
-                    val expMs = (step.startExposureMs +
-                        fraction * (step.endExposureMs - step.startExposureMs)).toLong()
-                    if (_simulatorActive.value) {
-                        simulateShots(1, expMs, step.intervalMs, 0L)
-                    } else {
-                        sendModeCommand(
-                            CommandBuilder.setRamp(step.intervalMs, expMs, 1, 0L)
-                        )
-                        waitForCompletion(1)
+                if (canon != null) {
+                    runCanonRamp(canon, step, rampSteps)
+                } else {
+                    for (i in 0 until rampSteps) {
+                        coroutineContext.ensureActive()
+                        val fraction = i.toDouble() / (rampSteps - 1)
+                        val expMs = (step.startExposureMs +
+                            fraction * (step.endExposureMs - step.startExposureMs)).toLong()
+                        if (_simulatorActive.value) {
+                            simulateShots(1, expMs, step.intervalMs, 0L)
+                        } else {
+                            sendModeCommand(
+                                CommandBuilder.setRamp(step.intervalMs, expMs, 1, 0L)
+                            )
+                            waitForCompletion(1)
+                        }
                     }
                 }
             }
@@ -767,8 +785,98 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
     }
 
-    private class CanonUnsupportedException(val modeKey: String) :
-        IllegalStateException("Mode '$modeKey' not yet supported over CCAPI (Phase 2 = Timelapse only)")
+    /** Bulb-style intervalometer over CCAPI. The app owns timing: switch to
+     *  bulb, full-press, wait `exposureMs`, release, wait `intervalMs`,
+     *  repeat. Status is reported simulator-style via [_status] writes so
+     *  the existing RunningView UI works unchanged. Releases the shutter in
+     *  a finally block — guarantees the camera doesn't sit with bulb open
+     *  if the flow is cancelled mid-exposure. */
+    private suspend fun runCanonBulb(
+        transport: com.ehrocha.pulsar.transport.ccapi.CcapiTransport,
+        shots: Int,
+        exposureMs: Long,
+        intervalMs: Long,
+        startDelayMs: Long,
+    ) {
+        val continuous = shots <= 0
+        val plannedTotal = if (continuous) 0L
+                           else startDelayMs + shots * (exposureMs + intervalMs) - intervalMs
+
+        transport.setShutterMode(bulb = true)
+        try {
+            if (startDelayMs > 0) {
+                _status.value = _status.value?.copy(
+                    state = DeviceState.WAITING, shotsTaken = 0,
+                    timeRemainingMs = plannedTotal,
+                )
+                delay(startDelayMs)
+            }
+
+            var shot = 0
+            while (true) {
+                coroutineContext.ensureActive()
+                shot += 1
+                val remaining = if (continuous) 0L
+                                else ((shots - shot + 1).coerceAtLeast(0)) *
+                                    (exposureMs + intervalMs) - intervalMs
+                _status.value = _status.value?.copy(
+                    state = DeviceState.RUNNING, shotsTaken = shot - 1,
+                    timeRemainingMs = remaining.coerceAtLeast(0),
+                )
+                transport.startBulb(af = true)
+                delay(exposureMs)
+                transport.stopBulb()
+                _status.value = _status.value?.copy(
+                    state = DeviceState.WAITING, shotsTaken = shot,
+                    timeRemainingMs = (remaining - exposureMs).coerceAtLeast(0),
+                )
+                if (!continuous && shot >= shots) break
+                if (intervalMs > 0) delay(intervalMs)
+            }
+        } finally {
+            withContext(NonCancellable) {
+                try { transport.stopBulb() } catch (_: Throwable) {}
+            }
+        }
+        _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
+    }
+
+    /** Exposure ramp over CCAPI: a sequence of bulb shots whose exposure
+     *  interpolates linearly from start to end across [rampSteps] steps. */
+    private suspend fun runCanonRamp(
+        transport: com.ehrocha.pulsar.transport.ccapi.CcapiTransport,
+        step: FlowStep.Ramp,
+        rampSteps: Int,
+    ) {
+        transport.setShutterMode(bulb = true)
+        try {
+            for (i in 0 until rampSteps) {
+                coroutineContext.ensureActive()
+                val fraction = i.toDouble() / (rampSteps - 1)
+                val expMs = (step.startExposureMs +
+                    fraction * (step.endExposureMs - step.startExposureMs)).toLong()
+                _status.value = _status.value?.copy(
+                    state = DeviceState.RUNNING, shotsTaken = i,
+                    // Best-effort remaining estimate: assume average exposure.
+                    timeRemainingMs = ((rampSteps - i) *
+                        ((step.startExposureMs + step.endExposureMs) / 2 + step.intervalMs))
+                        - step.intervalMs,
+                )
+                transport.startBulb(af = true)
+                delay(expMs)
+                transport.stopBulb()
+                _status.value = _status.value?.copy(
+                    state = DeviceState.WAITING, shotsTaken = i + 1,
+                )
+                if (i < rampSteps - 1 && step.intervalMs > 0) delay(step.intervalMs)
+            }
+        } finally {
+            withContext(NonCancellable) {
+                try { transport.stopBulb() } catch (_: Throwable) {}
+            }
+        }
+        _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
+    }
 
     /** Simulate a sequence of shots by updating _status directly (for flow steps in simulator). */
     private suspend fun simulateShots(totalShots: Int, expMs: Long, gapMs: Long, startDelayMs: Long) {

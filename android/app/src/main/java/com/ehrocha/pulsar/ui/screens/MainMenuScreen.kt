@@ -185,22 +185,30 @@ fun MainMenuScreen(
                     val userModes by vm.userModes.collectAsState()
                     val canonTransport by vm.canonTransport.collectAsState()
                     val onCanon = canonTransport != null
+                    // Manual hold relies on press/release timing — disabled on
+                    // CCAPI until Phase 4 (HTTP RTT makes sub-second presses
+                    // unreliable). Everything else works over bulb.
                     val builtIns = listOf(
-                        launcherItem(R.string.mode_intervalometer, Icons.Default.Timer,
-                            enabled = !onCanon) { onIntervalometer2Selected() },
+                        launcherItem(R.string.mode_intervalometer, Icons.Default.Timer) {
+                            onIntervalometer2Selected()
+                        },
                         launcherItem(R.string.mode_timelapse, Icons.Default.PhotoLibrary) {
                             onTimelapseSelected()
                         },
-                        launcherItem(R.string.mode_astro, Icons.Default.Stars,
-                            enabled = !onCanon) { onAstroMode2Selected() },
-                        launcherItem(R.string.mode_dark_frame, Icons.Default.LensBlur,
-                            enabled = !onCanon) { onQuickFlow(FlowStepType.DARK_FRAME) },
-                        launcherItem(R.string.mode_ramp, Icons.AutoMirrored.Filled.TrendingUp,
-                            enabled = !onCanon) { onQuickFlow(FlowStepType.RAMP) },
+                        launcherItem(R.string.mode_astro, Icons.Default.Stars) {
+                            onAstroMode2Selected()
+                        },
+                        launcherItem(R.string.mode_dark_frame, Icons.Default.LensBlur) {
+                            onQuickFlow(FlowStepType.DARK_FRAME)
+                        },
+                        launcherItem(R.string.mode_ramp, Icons.AutoMirrored.Filled.TrendingUp) {
+                            onQuickFlow(FlowStepType.RAMP)
+                        },
                         launcherItem(R.string.mode_manual, Icons.Default.TouchApp,
                             enabled = !onCanon) { onManualSelected() },
-                        launcherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList,
-                            enabled = !onCanon) { onCustomFlowSelected() },
+                        launcherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList) {
+                            onCustomFlowSelected()
+                        },
                     )
                     // Only bookmarked user modes get quick-launch tiles here.
                     // Other saved presets live in the preset picker for each mode.
@@ -209,13 +217,12 @@ fun MainMenuScreen(
                             key = "user:${mode.id}",
                             label = mode.name,
                             icon = Icons.Default.Bookmark,
-                            enabled = !onCanon || mode.body.fwMode == com.ehrocha.pulsar.ble.TriggerMode.TIMELAPSE,
                             onClick = { onUserModeRun(mode) },
                         )
                     }
                     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                         if (onCanon) {
-                            CanonTimelapseOnlyBanner()
+                            CanonBulbBanner()
                             Spacer(Modifier.height(8.dp))
                         }
                         LauncherGrid(builtIns + userTiles)
@@ -290,7 +297,7 @@ private fun LauncherGrid(items: List<LauncherItem>) {
 }
 
 @Composable
-private fun CanonTimelapseOnlyBanner() {
+private fun CanonBulbBanner() {
     Surface(
         color = MaterialTheme.colorScheme.secondaryContainer,
         shape = RoundedCornerShape(12.dp),
@@ -308,7 +315,7 @@ private fun CanonTimelapseOnlyBanner() {
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                text = stringResource(R.string.canon_timelapse_only_hint),
+                text = stringResource(R.string.canon_bulb_hint),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSecondaryContainer,
             )

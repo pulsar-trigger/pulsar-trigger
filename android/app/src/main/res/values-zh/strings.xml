@@ -10,7 +10,7 @@
     <string name="canon_err_auth">相机需要身份验证。请在相机端关闭，或等待 Pulsar 添加摘要支持 (阶段 4)。</string>
     <string name="canon_err_network">无法访问相机。请检查 WiFi 网络。</string>
     <string name="canon_err_generic">连接失败 (%1$s)。</string>
-    <string name="canon_timelapse_only_hint">已连接佳能 (CCAPI) — 阶段 2 仅支持延时摄影。Bulb 模式将在阶段 3 加入。</string>
+    <string name="canon_bulb_hint">已连接佳能 (CCAPI) — 所有模式均通过 Bulb 拍摄。手动长按已禁用 (阶段 4)。</string>
     <string name="available_devices">可用设备</string>
     <string name="select_device_prompt">选择您的 Pulsar 触发器以开始控制会话。</string>
     <string name="use_simulator">使用模拟器</string>

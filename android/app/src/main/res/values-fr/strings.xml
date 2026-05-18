@@ -10,7 +10,7 @@
     <string name="canon_err_auth">L\'appareil exige une authentification. Désactivez-la sur l\'appareil ou attendez la prise en charge digest (Phase 4).</string>
     <string name="canon_err_network">Impossible de joindre l\'appareil. Vérifiez votre réseau WiFi.</string>
     <string name="canon_err_generic">Échec de la connexion (%1$s).</string>
-    <string name="canon_timelapse_only_hint">Canon (CCAPI) connecté — la Phase 2 prend en charge uniquement Timelapse. Les modes bulb arrivent en Phase 3.</string>
+    <string name="canon_bulb_hint">Canon (CCAPI) connecté — tous les modes passent par bulb. Manual hold désactivé (Phase 4).</string>
     <string name="available_devices">Appareils disponibles</string>
     <string name="select_device_prompt">Sélectionnez votre déclencheur Pulsar pour commencer la session de contrôle.</string>
     <string name="use_simulator">Utiliser le simulateur</string>
