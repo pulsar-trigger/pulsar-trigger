@@ -7,7 +7,13 @@
     <string name="cd_canon_camera">Canon-Kamera (CCAPI)</string>
     <string name="canon_connect">Verbinden</string>
     <string name="canon_connecting">Verbinden…</string>
-    <string name="canon_err_auth">Die Kamera erfordert Authentifizierung. Deaktiviere sie an der Kamera oder warte auf Digest-Support (Phase 4).</string>
+    <string name="canon_err_auth">Die Kamera erfordert Authentifizierung. Gib den auf der Kamera konfigurierten Benutzernamen und das Passwort ein.</string>
+    <string name="canon_auth_title">Kamera-Authentifizierung</string>
+    <string name="canon_auth_subtitle">%1$s benötigt Benutzername und Passwort.</string>
+    <string name="canon_auth_user">Benutzername</string>
+    <string name="canon_auth_pass">Passwort</string>
+    <string name="canon_auth_show_pass">Passwort anzeigen</string>
+    <string name="canon_auth_hide_pass">Passwort verbergen</string>
     <string name="canon_err_network">Kamera nicht erreichbar. Prüfe dein WiFi-Netzwerk.</string>
     <string name="canon_err_generic">Verbindung fehlgeschlagen (%1$s).</string>
     <string name="canon_bulb_hint">Canon (CCAPI) verbunden — alle Modi nutzen Bulb. Belichtungen unter 1 s sind über WiFi nicht zuverlässig.</string>

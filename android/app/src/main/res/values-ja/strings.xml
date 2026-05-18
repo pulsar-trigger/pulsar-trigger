@@ -7,7 +7,13 @@
     <string name="cd_canon_camera">Canon カメラ (CCAPI)</string>
     <string name="canon_connect">接続</string>
     <string name="canon_connecting">接続中…</string>
-    <string name="canon_err_auth">カメラが認証を要求しています。カメラ側で無効にするか、ダイジェスト認証 (フェーズ4) の対応をお待ちください。</string>
+    <string name="canon_err_auth">カメラが認証を要求しています。カメラ側で設定したユーザー名とパスワードを入力してください。</string>
+    <string name="canon_auth_title">カメラ認証</string>
+    <string name="canon_auth_subtitle">%1$s はユーザー名とパスワードが必要です。</string>
+    <string name="canon_auth_user">ユーザー名</string>
+    <string name="canon_auth_pass">パスワード</string>
+    <string name="canon_auth_show_pass">パスワードを表示</string>
+    <string name="canon_auth_hide_pass">パスワードを非表示</string>
     <string name="canon_err_network">カメラに接続できませんでした。WiFi ネットワークを確認してください。</string>
     <string name="canon_err_generic">接続に失敗しました (%1$s)。</string>
     <string name="canon_bulb_hint">Canon (CCAPI) 接続中 — すべてのモードがバルブ経由で動作します。WiFi 経由では 1 秒未満の露光は不安定です。</string>

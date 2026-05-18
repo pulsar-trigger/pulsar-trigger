@@ -92,6 +92,18 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val _canonError = MutableStateFlow<String?>(null)
     val canonError: StateFlow<String?> = _canonError
 
+    /** When non-null, the UI should prompt for username + password — the
+     *  previous connect attempt to this camera returned 401. Cleared on
+     *  successful connect or cancel. */
+    private val _canonAuthPrompt =
+        MutableStateFlow<com.ehrocha.pulsar.transport.ccapi.CanonCamera?>(null)
+    val canonAuthPrompt: StateFlow<com.ehrocha.pulsar.transport.ccapi.CanonCamera?> =
+        _canonAuthPrompt
+
+    /** Per-UDN digest credentials. Each entry lets the next connect to the
+     *  same camera skip the auth prompt entirely. */
+    private val canonCredsPrefs = app.getSharedPreferences("pulsar_canon_creds", Context.MODE_PRIVATE)
+
     // Connection-side flows. [status] is multiplexed below — BLE updates flow
     // in, but the simulator can write directly when it's running.
     private val _connected = MutableStateFlow(false)
@@ -336,7 +348,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     /** Open an HTTP session to a Canon CCAPI camera. Pins the API version and
      *  flips [connected] true on success. Mutually exclusive with BLE — any
      *  active BLE session is dropped first. Phase 2: Timelapse only. */
-    fun connectCanon(camera: com.ehrocha.pulsar.transport.ccapi.CanonCamera) {
+    fun connectCanon(
+        camera: com.ehrocha.pulsar.transport.ccapi.CanonCamera,
+        credentials: com.ehrocha.pulsar.transport.ccapi.CcapiClient.Credentials? = null,
+    ) {
         viewModelScope.launch {
             _canonError.value = null
             _canonConnecting.value = true
@@ -345,12 +360,17 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             if (bleController.connected.value) bleController.disconnect()
             stopScan()
 
-            val transport = com.ehrocha.pulsar.transport.ccapi.CcapiTransport(camera)
+            // Reuse saved digest creds for this camera if the caller didn't
+            // provide explicit ones (e.g. on app restart, user picks the same
+            // camera — we shouldn't prompt again).
+            val effectiveCreds = credentials ?: loadCanonCreds(camera.udn)
+            val transport = com.ehrocha.pulsar.transport.ccapi.CcapiTransport(camera, effectiveCreds)
             val result = transport.connect()
             _canonConnecting.value = false
             when (result) {
                 is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.Ok -> {
                     _canonTransport.value = transport
+                    _canonAuthPrompt.value = null
                     _deviceName.value = camera.nickname ?: camera.friendlyName
                     _connected.value = true
                     _status.value = StatusFrame(
@@ -362,10 +382,18 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         errorCode = 0,
                         fwVersion = "",
                     )
+                    // Persist creds only once they're known-good.
+                    if (credentials != null) saveCanonCreds(camera.udn, credentials)
                     startCanonPolling(transport)
                 }
-                is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.NeedsAuth ->
+                is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.NeedsAuth -> {
+                    // Either the camera requires auth from cold start, or
+                    // saved creds are stale (user changed password on the
+                    // body). Drop the stale entry and prompt fresh.
+                    if (effectiveCreds != null) clearCanonCreds(camera.udn)
+                    _canonAuthPrompt.value = camera
                     _canonError.value = "auth_required"
+                }
                 is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.Http ->
                     _canonError.value = "http_${result.code}"
                 is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.Network ->
@@ -374,7 +402,47 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Called from the credentials dialog. Cleans the prior error state then
+     *  re-runs [connectCanon] with the supplied digest credentials. */
+    fun submitCanonCredentials(
+        camera: com.ehrocha.pulsar.transport.ccapi.CanonCamera,
+        username: String,
+        password: String,
+    ) {
+        _canonError.value = null
+        connectCanon(
+            camera,
+            com.ehrocha.pulsar.transport.ccapi.CcapiClient.Credentials(username, password),
+        )
+    }
+
+    fun cancelCanonAuth() {
+        _canonAuthPrompt.value = null
+        _canonError.value = null
+    }
+
     fun clearCanonError() { _canonError.value = null }
+
+    private fun loadCanonCreds(udn: String):
+            com.ehrocha.pulsar.transport.ccapi.CcapiClient.Credentials? {
+        val user = canonCredsPrefs.getString("u:$udn", null) ?: return null
+        val pass = canonCredsPrefs.getString("p:$udn", null) ?: return null
+        return com.ehrocha.pulsar.transport.ccapi.CcapiClient.Credentials(user, pass)
+    }
+
+    private fun saveCanonCreds(
+        udn: String,
+        creds: com.ehrocha.pulsar.transport.ccapi.CcapiClient.Credentials,
+    ) {
+        canonCredsPrefs.edit()
+            .putString("u:$udn", creds.username)
+            .putString("p:$udn", creds.password)
+            .apply()
+    }
+
+    private fun clearCanonCreds(udn: String) {
+        canonCredsPrefs.edit().remove("u:$udn").remove("p:$udn").apply()
+    }
 
     private var canonPollJob: Job? = null
 

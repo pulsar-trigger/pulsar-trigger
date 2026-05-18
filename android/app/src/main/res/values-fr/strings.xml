@@ -7,7 +7,13 @@
     <string name="cd_canon_camera">Appareil Canon (CCAPI)</string>
     <string name="canon_connect">Connecter</string>
     <string name="canon_connecting">Connexion…</string>
-    <string name="canon_err_auth">L\'appareil exige une authentification. Désactivez-la sur l\'appareil ou attendez la prise en charge digest (Phase 4).</string>
+    <string name="canon_err_auth">L\'appareil exige une authentification. Saisissez le nom d\'utilisateur et le mot de passe configurés sur l\'appareil.</string>
+    <string name="canon_auth_title">Authentification de l\'appareil</string>
+    <string name="canon_auth_subtitle">%1$s requiert un identifiant et un mot de passe.</string>
+    <string name="canon_auth_user">Nom d\'utilisateur</string>
+    <string name="canon_auth_pass">Mot de passe</string>
+    <string name="canon_auth_show_pass">Afficher le mot de passe</string>
+    <string name="canon_auth_hide_pass">Masquer le mot de passe</string>
     <string name="canon_err_network">Impossible de joindre l\'appareil. Vérifiez votre réseau WiFi.</string>
     <string name="canon_err_generic">Échec de la connexion (%1$s).</string>
     <string name="canon_bulb_hint">Canon (CCAPI) connecté — tous les modes passent par bulb. Les poses inférieures à 1 s sont peu fiables en WiFi.</string>

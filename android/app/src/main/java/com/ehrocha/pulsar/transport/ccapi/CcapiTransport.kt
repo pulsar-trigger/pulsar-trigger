@@ -25,6 +25,7 @@ import org.json.JSONObject
  */
 class CcapiTransport(
     val camera: CanonCamera,
+    credentials: CcapiClient.Credentials? = null,
 ) : CameraTransport {
     companion object {
         private const val TAG = "CcapiTransport"
@@ -37,7 +38,7 @@ class CcapiTransport(
 
     override val kind = TransportKind.CCAPI
 
-    private val client = CcapiClient(camera.accessUrl)
+    private val client = CcapiClient(camera.accessUrl, credentials)
 
     private val _label = MutableStateFlow(camera.nickname ?: camera.friendlyName)
     override val label: StateFlow<String> = _label

@@ -7,7 +7,13 @@
     <string name="cd_canon_camera">佳能相机 (CCAPI)</string>
     <string name="canon_connect">连接</string>
     <string name="canon_connecting">连接中…</string>
-    <string name="canon_err_auth">相机需要身份验证。请在相机端关闭，或等待 Pulsar 添加摘要支持 (阶段 4)。</string>
+    <string name="canon_err_auth">相机需要身份验证。请输入在相机上设置的用户名和密码。</string>
+    <string name="canon_auth_title">相机身份验证</string>
+    <string name="canon_auth_subtitle">%1$s 需要用户名和密码。</string>
+    <string name="canon_auth_user">用户名</string>
+    <string name="canon_auth_pass">密码</string>
+    <string name="canon_auth_show_pass">显示密码</string>
+    <string name="canon_auth_hide_pass">隐藏密码</string>
     <string name="canon_err_network">无法访问相机。请检查 WiFi 网络。</string>
     <string name="canon_err_generic">连接失败 (%1$s)。</string>
     <string name="canon_bulb_hint">已连接佳能 (CCAPI) — 所有模式均通过 Bulb 拍摄。WiFi 下低于 1 秒的曝光不可靠。</string>

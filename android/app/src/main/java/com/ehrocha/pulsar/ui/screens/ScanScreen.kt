@@ -26,6 +26,8 @@ import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Wifi
@@ -37,6 +39,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.style.TextAlign
 import com.ehrocha.pulsar.AppConfig
@@ -66,6 +69,7 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
     val connected by vm.connected.collectAsState()
     val canonConnecting by vm.canonConnecting.collectAsState()
     val canonError by vm.canonError.collectAsState()
+    val canonAuthPrompt by vm.canonAuthPrompt.collectAsState()
     var canonInfo by remember { mutableStateOf<com.ehrocha.pulsar.transport.ccapi.CanonCamera?>(null) }
     var showCanonSetupHelp by remember { mutableStateOf(false) }
 
@@ -260,9 +264,23 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
         CanonSetupHelpDialog(onDismiss = { showCanonSetupHelp = false })
     }
 
+    canonAuthPrompt?.let { cam ->
+        CanonAuthDialog(
+            camera = cam,
+            connecting = canonConnecting,
+            onCancel = { vm.cancelCanonAuth() },
+            onSubmit = { u, p -> vm.submitCanonCredentials(cam, u, p) },
+        )
+    }
+
     // Dismiss the connect dialog automatically once we successfully connect.
     LaunchedEffect(connected, canonInfo) {
         if (connected && canonInfo != null) canonInfo = null
+    }
+    // Auth dialog takes over once we know credentials are needed — otherwise
+    // both dialogs stack on top of each other.
+    LaunchedEffect(canonAuthPrompt) {
+        if (canonAuthPrompt != null) canonInfo = null
     }
 
     canonInfo?.let { cam ->
@@ -397,6 +415,83 @@ private fun LanguagePickerDialog(onDismiss: () -> Unit) {
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text(stringResource(android.R.string.ok))
+            }
+        },
+    )
+}
+
+@Composable
+private fun CanonAuthDialog(
+    camera: com.ehrocha.pulsar.transport.ccapi.CanonCamera,
+    connecting: Boolean,
+    onCancel: () -> Unit,
+    onSubmit: (String, String) -> Unit,
+) {
+    var user by rememberSaveable { mutableStateOf("") }
+    var pass by rememberSaveable { mutableStateOf("") }
+    var revealPass by remember { mutableStateOf(false) }
+    val canSubmit = user.isNotBlank() && pass.isNotEmpty() && !connecting
+
+    AlertDialog(
+        onDismissRequest = { if (!connecting) onCancel() },
+        icon = {
+            Icon(
+                Icons.Default.Wifi,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        },
+        title = { Text(stringResource(R.string.canon_auth_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    stringResource(R.string.canon_auth_subtitle, camera.friendlyName),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = user,
+                    onValueChange = { user = it },
+                    label = { Text(stringResource(R.string.canon_auth_user)) },
+                    singleLine = true,
+                    enabled = !connecting,
+                )
+                val passTransform: androidx.compose.ui.text.input.VisualTransformation =
+                    if (revealPass) androidx.compose.ui.text.input.VisualTransformation.None
+                    else androidx.compose.ui.text.input.PasswordVisualTransformation()
+                OutlinedTextField(
+                    value = pass,
+                    onValueChange = { pass = it },
+                    label = { Text(stringResource(R.string.canon_auth_pass)) },
+                    singleLine = true,
+                    enabled = !connecting,
+                    visualTransformation = passTransform,
+                    trailingIcon = {
+                        IconButton(onClick = { revealPass = !revealPass }) {
+                            val icon = if (revealPass) Icons.Default.VisibilityOff
+                                       else Icons.Default.Visibility
+                            val descRes = if (revealPass) R.string.canon_auth_hide_pass
+                                          else R.string.canon_auth_show_pass
+                            Icon(icon, contentDescription = stringResource(descRes))
+                        }
+                    },
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onSubmit(user.trim(), pass) },
+                enabled = canSubmit,
+            ) {
+                Text(
+                    if (connecting) stringResource(R.string.canon_connecting)
+                    else stringResource(R.string.canon_connect)
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancel, enabled = !connecting) {
+                Text(stringResource(R.string.cancel))
             }
         },
     )

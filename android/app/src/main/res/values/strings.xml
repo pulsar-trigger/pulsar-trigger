@@ -17,7 +17,7 @@
     <string name="cd_canon_camera">Canon camera (CCAPI)</string>
     <string name="canon_connect">Connect</string>
     <string name="canon_connecting">Connecting…</string>
-    <string name="canon_err_auth">Camera requires authentication. Disable it on the camera or wait for Pulsar to add digest support (Phase 4).</string>
+    <string name="canon_err_auth">Camera requires authentication. Enter the username and password configured on the camera.</string>
     <string name="canon_err_network">Could not reach the camera. Make sure you are on its WiFi network.</string>
     <string name="canon_err_generic">Connect failed (%1$s).</string>
     <string name="canon_bulb_hint">Canon (CCAPI) connected — all modes route through bulb. Sub-second exposures are unreliable over WiFi.</string>
@@ -30,6 +30,12 @@
     <string name="canon_setup_step_4">4. Select Camera Control API and create / join a network (camera AP or your LAN).</string>
     <string name="canon_setup_step_5">5. Make sure your phone is on the same network, then re-run the scan.</string>
     <string name="canon_setup_button">Camera setup help</string>
+    <string name="canon_auth_title">Camera authentication</string>
+    <string name="canon_auth_subtitle">%1$s requires a username and password.</string>
+    <string name="canon_auth_user">Username</string>
+    <string name="canon_auth_pass">Password</string>
+    <string name="canon_auth_show_pass">Show password</string>
+    <string name="canon_auth_hide_pass">Hide password</string>
 
     <!-- MainMenuScreen -->
     <string name="tab_trigger">Trigger</string>

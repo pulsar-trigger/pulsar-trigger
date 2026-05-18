@@ -12,24 +12,30 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.security.MessageDigest
+import java.security.SecureRandom
 
 /**
  * Thin HTTP client for Canon CCAPI. Wraps `HttpURLConnection` to keep the
- * dependency footprint small — no OkHttp until/unless we need digest auth
- * (Phase 4 polish).
+ * dependency footprint small — no OkHttp; digest auth (RFC 7616) is
+ * hand-rolled below.
  *
  * Versioning: at connect time we call `GET /ccapi` and pick the highest
  * supported version. The pinned [version] is then prefixed onto every
  * subsequent request, so callers say `post("/shooting/control/shutterbutton")`
  * and the client emits `…/ccapi/ver110/shooting/control/shutterbutton`.
  *
- * Unauthenticated only for now. If the camera returns 401 we surface
- * [Result.NeedsAuth] and the wizard prompts the user; digest support
- * lands in Phase 4.
+ * Auth: pass [Credentials] to the constructor when the camera is configured
+ * with an account. The client sends the first request unauthenticated, parses
+ * the `WWW-Authenticate: Digest …` challenge from the 401, and retries with
+ * the computed response. The challenge is cached so subsequent requests
+ * preflight the Authorization header (saving a round-trip per call). MD5,
+ * MD5-sess, SHA-256, and SHA-256-sess are all supported.
  */
 class CcapiClient(
     /** From `CameraDescription` — e.g. `http://192.168.1.2:8080/ccapi/` */
     private val baseAccessUrl: String,
+    private val credentials: Credentials? = null,
 ) {
     companion object {
         private const val TAG = "CcapiClient"
@@ -40,6 +46,8 @@ class CcapiClient(
             "ver140", "ver130", "ver120", "ver110", "ver100",
         )
     }
+
+    data class Credentials(val username: String, val password: String)
 
     sealed interface Result<out T> {
         data class Ok<T>(val value: T) : Result<T>
@@ -58,10 +66,11 @@ class CcapiClient(
 
     private val rootUrl: String = baseAccessUrl.trimEnd('/')
 
-    /**
-     * Probe `GET /ccapi`, pin the highest supported version, and cache the
-     * endpoint matrix. Must succeed before any other call.
-     */
+    /** Cached digest challenge; populated on first 401 so subsequent requests
+     *  can pre-authenticate. */
+    @Volatile private var digestChallenge: DigestChallenge? = null
+    @Volatile private var digestNonceCount: Int = 0
+
     suspend fun connect(): Result<Unit> = withContext(Dispatchers.IO) {
         when (val r = rawGet(rootUrl)) {
             is Result.Ok -> {
@@ -89,8 +98,6 @@ class CcapiClient(
         }
     }
 
-    /** True if the given path (relative to `/ccapi/<ver>`) appears in the
-     *  cached endpoint matrix with the requested method. */
     fun supports(path: String, method: String = "post"): Boolean {
         val arr = endpoints[version ?: return false] ?: return false
         for (i in 0 until arr.length()) {
@@ -103,19 +110,18 @@ class CcapiClient(
         return false
     }
 
-    /** POST a JSON body to a versioned path; relative path begins with `/`. */
     suspend fun post(path: String, body: JSONObject? = null): Result<String> =
         withContext(Dispatchers.IO) {
             val ver = version ?: return@withContext Result.Network(
                 IllegalStateException("CcapiClient not connected; call connect() first"))
-            rawJsonRequest("POST", "$rootUrl/$ver$path", body)
+            sendWithDigest("POST", "$rootUrl/$ver$path", body?.toString())
         }
 
     suspend fun put(path: String, body: JSONObject? = null): Result<String> =
         withContext(Dispatchers.IO) {
             val ver = version ?: return@withContext Result.Network(
                 IllegalStateException("CcapiClient not connected; call connect() first"))
-            rawJsonRequest("PUT", "$rootUrl/$ver$path", body)
+            sendWithDigest("PUT", "$rootUrl/$ver$path", body?.toString())
         }
 
     suspend fun get(path: String): Result<String> =
@@ -125,12 +131,51 @@ class CcapiClient(
             rawGet("$rootUrl/$ver$path")
         }
 
-    private fun rawGet(url: String): Result<String> = openConnection(url, "GET", null)
+    private fun rawGet(url: String): Result<String> = sendWithDigest("GET", url, null)
 
-    private fun rawJsonRequest(method: String, url: String, body: JSONObject?): Result<String> =
-        openConnection(url, method, body?.toString())
+    /** One-or-two attempt request handler. First send goes out with whatever
+     *  Authorization header we can derive from a cached challenge (or none).
+     *  On 401: if [credentials] are set, parse the fresh challenge and retry —
+     *  but only once. Without credentials, a 401 returns [Result.NeedsAuth]. */
+    private fun sendWithDigest(method: String, url: String, jsonBody: String?): Result<String> {
+        val first = sendOnce(method, url, jsonBody, authHeader(method, url))
+        if (first !is Attempt.NeedsAuth) return first.toResult()
+        if (credentials == null) return Result.NeedsAuth
+        val challenge = first.challenge ?: return Result.NeedsAuth
+        digestChallenge = challenge
+        digestNonceCount = 0
+        return sendOnce(method, url, jsonBody, authHeader(method, url)).toResult()
+    }
 
-    private fun openConnection(url: String, method: String, jsonBody: String?): Result<String> {
+    private fun authHeader(method: String, url: String): String? {
+        val challenge = digestChallenge ?: return null
+        val creds = credentials ?: return null
+        val nc = (++digestNonceCount).coerceAtLeast(1)
+        return buildDigestHeader(challenge, creds, method, url, nc)
+    }
+
+    /** Single HTTP round-trip. Internal envelope so we can return either a
+     *  normal result or a 401 with the parsed challenge attached. */
+    private sealed interface Attempt {
+        data class Ok(val body: String) : Attempt
+        data class Http(val code: Int, val body: String) : Attempt
+        data class NeedsAuth(val challenge: DigestChallenge?) : Attempt
+        data class Network(val cause: Throwable) : Attempt
+    }
+
+    private fun Attempt.toResult(): Result<String> = when (this) {
+        is Attempt.Ok -> Result.Ok(body)
+        is Attempt.Http -> Result.Http(code, body)
+        is Attempt.NeedsAuth -> Result.NeedsAuth
+        is Attempt.Network -> Result.Network(cause)
+    }
+
+    private fun sendOnce(
+        method: String,
+        url: String,
+        jsonBody: String?,
+        authorization: String?,
+    ): Attempt {
         val conn = try {
             (URL(url).openConnection() as HttpURLConnection).apply {
                 connectTimeout = CONNECT_TIMEOUT_MS
@@ -141,9 +186,12 @@ class CcapiClient(
                     doOutput = true
                     setRequestProperty("Content-Type", "application/json")
                 }
+                if (authorization != null) {
+                    setRequestProperty("Authorization", authorization)
+                }
             }
         } catch (e: Exception) {
-            return Result.Network(e)
+            return Attempt.Network(e)
         }
         return try {
             if (jsonBody != null) {
@@ -153,17 +201,138 @@ class CcapiClient(
             val stream = if (code in 200..299) conn.inputStream else conn.errorStream
             val text = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
             when {
-                code in 200..299 -> Result.Ok(text)
-                code == 401 -> Result.NeedsAuth
+                code in 200..299 -> Attempt.Ok(text)
+                code == 401 -> {
+                    val auth = conn.getHeaderField("WWW-Authenticate")
+                    Attempt.NeedsAuth(auth?.let { parseDigestChallenge(it) })
+                }
                 else -> {
                     Log.w(TAG, "HTTP $code from $url: $text")
-                    Result.Http(code, text)
+                    Attempt.Http(code, text)
                 }
             }
         } catch (e: Exception) {
-            Result.Network(e)
+            Attempt.Network(e)
         } finally {
             try { conn.disconnect() } catch (_: Exception) {}
         }
+    }
+
+    // ── Digest auth (RFC 7616) ───────────────────────────────────────────
+
+    private data class DigestChallenge(
+        val realm: String,
+        val nonce: String,
+        val qop: String?,        // comma-separated; we pick "auth" when present
+        val opaque: String?,
+        val algorithm: String,   // MD5, MD5-sess, SHA-256, SHA-256-sess
+    )
+
+    private fun parseDigestChallenge(header: String): DigestChallenge? {
+        val trimmed = header.trim()
+        val prefix = "Digest "
+        if (!trimmed.regionMatches(0, prefix, 0, prefix.length, ignoreCase = true)) return null
+        val params = parseQuotedKv(trimmed.substring(prefix.length))
+        val realm = params["realm"] ?: return null
+        val nonce = params["nonce"] ?: return null
+        return DigestChallenge(
+            realm = realm,
+            nonce = nonce,
+            qop = params["qop"],
+            opaque = params["opaque"],
+            algorithm = params["algorithm"] ?: "MD5",
+        )
+    }
+
+    /** Tolerant `k=v[,k="v with spaces"]` parser for WWW-Authenticate. */
+    private fun parseQuotedKv(s: String): Map<String, String> {
+        val out = mutableMapOf<String, String>()
+        var i = 0
+        while (i < s.length) {
+            while (i < s.length && (s[i] == ' ' || s[i] == ',')) i++
+            if (i >= s.length) break
+            val keyStart = i
+            while (i < s.length && s[i] != '=' && s[i] != ',') i++
+            if (i >= s.length || s[i] == ',') { i++; continue }
+            val key = s.substring(keyStart, i).trim()
+            i++  // skip '='
+            val value: String
+            if (i < s.length && s[i] == '"') {
+                i++
+                val vs = i
+                while (i < s.length && s[i] != '"') i++
+                value = s.substring(vs, i)
+                if (i < s.length) i++
+            } else {
+                val vs = i
+                while (i < s.length && s[i] != ',') i++
+                value = s.substring(vs, i).trim()
+            }
+            if (key.isNotEmpty()) out[key] = value
+        }
+        return out
+    }
+
+    private fun buildDigestHeader(
+        ch: DigestChallenge,
+        creds: Credentials,
+        method: String,
+        fullUrl: String,
+        nc: Int,
+    ): String {
+        // The digest URI is the request-target — path + query, no scheme/host.
+        val u = URL(fullUrl)
+        val pathQ = (u.path ?: "/") + (u.query?.let { "?$it" } ?: "")
+        val algo = ch.algorithm.uppercase()
+        val useSha256 = algo.startsWith("SHA-256")
+        val sessionVariant = algo.endsWith("-SESS")
+        val hash: (String) -> String = if (useSha256) ::sha256Hex else ::md5Hex
+
+        val cnonce = randomHex(16)
+        val ncHex = "%08x".format(nc)
+
+        val ha1Base = hash("${creds.username}:${ch.realm}:${creds.password}")
+        val ha1 = if (sessionVariant) hash("$ha1Base:${ch.nonce}:$cnonce") else ha1Base
+        val ha2 = hash("$method:$pathQ")
+
+        val qop = ch.qop
+            ?.split(",")
+            ?.map { it.trim() }
+            ?.firstOrNull { it.equals("auth", ignoreCase = true) }
+        val response = if (qop != null) {
+            hash("$ha1:${ch.nonce}:$ncHex:$cnonce:$qop:$ha2")
+        } else {
+            hash("$ha1:${ch.nonce}:$ha2")
+        }
+
+        return buildString {
+            append("Digest ")
+            append("username=\"${creds.username}\", ")
+            append("realm=\"${ch.realm}\", ")
+            append("nonce=\"${ch.nonce}\", ")
+            append("uri=\"$pathQ\", ")
+            append("response=\"$response\"")
+            if (qop != null) {
+                append(", qop=$qop, nc=$ncHex, cnonce=\"$cnonce\"")
+            }
+            ch.opaque?.let { append(", opaque=\"$it\"") }
+            if (!ch.algorithm.equals("MD5", ignoreCase = true)) {
+                append(", algorithm=${ch.algorithm}")
+            }
+        }
+    }
+
+    private fun md5Hex(input: String): String = hashHex("MD5", input)
+    private fun sha256Hex(input: String): String = hashHex("SHA-256", input)
+
+    private fun hashHex(algorithm: String, input: String): String {
+        val bytes = MessageDigest.getInstance(algorithm).digest(input.toByteArray(Charsets.UTF_8))
+        return bytes.joinToString("") { "%02x".format(it) }
+    }
+
+    private fun randomHex(byteCount: Int): String {
+        val bytes = ByteArray(byteCount)
+        SecureRandom().nextBytes(bytes)
+        return bytes.joinToString("") { "%02x".format(it) }
     }
 }
