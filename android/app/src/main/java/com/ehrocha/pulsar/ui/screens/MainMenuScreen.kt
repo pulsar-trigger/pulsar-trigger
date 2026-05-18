@@ -184,6 +184,7 @@ fun MainMenuScreen(
                 TAB_TRIGGER -> {
                     val userModes by vm.userModes.collectAsState()
                     val canonTransport by vm.canonTransport.collectAsState()
+                    val canonReconnecting by vm.canonReconnecting.collectAsState()
                     val onCanon = canonTransport != null
                     val builtIns = listOf(
                         launcherItem(R.string.mode_intervalometer, Icons.Default.Timer) {
@@ -220,7 +221,7 @@ fun MainMenuScreen(
                     }
                     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                         if (onCanon) {
-                            CanonBulbBanner()
+                            CanonBulbBanner(reconnecting = canonReconnecting)
                             Spacer(Modifier.height(8.dp))
                         }
                         LauncherGrid(builtIns + userTiles)
@@ -295,9 +296,15 @@ private fun LauncherGrid(items: List<LauncherItem>) {
 }
 
 @Composable
-private fun CanonBulbBanner() {
+private fun CanonBulbBanner(reconnecting: Boolean) {
+    val containerColor = if (reconnecting)
+        MaterialTheme.colorScheme.errorContainer
+    else MaterialTheme.colorScheme.secondaryContainer
+    val onContainer = if (reconnecting)
+        MaterialTheme.colorScheme.onErrorContainer
+    else MaterialTheme.colorScheme.onSecondaryContainer
     Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer,
+        color = containerColor,
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -305,17 +312,28 @@ private fun CanonBulbBanner() {
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                Icons.Default.Wifi,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.size(20.dp),
-            )
+            if (reconnecting) {
+                CircularProgressIndicator(
+                    strokeWidth = 2.dp,
+                    color = onContainer,
+                    modifier = Modifier.size(16.dp),
+                )
+            } else {
+                Icon(
+                    Icons.Default.Wifi,
+                    contentDescription = null,
+                    tint = onContainer,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
             Spacer(Modifier.width(8.dp))
             Text(
-                text = stringResource(R.string.canon_bulb_hint),
+                text = stringResource(
+                    if (reconnecting) R.string.canon_reconnecting_hint
+                    else R.string.canon_bulb_hint
+                ),
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                color = onContainer,
             )
         }
     }

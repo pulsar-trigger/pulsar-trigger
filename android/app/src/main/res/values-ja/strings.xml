@@ -17,6 +17,7 @@
     <string name="canon_err_network">カメラに接続できませんでした。WiFi ネットワークを確認してください。</string>
     <string name="canon_err_generic">接続に失敗しました (%1$s)。</string>
     <string name="canon_bulb_hint">Canon (CCAPI) 接続中 — すべてのモードがバルブ経由で動作します。WiFi 経由では 1 秒未満の露光は不安定です。</string>
+    <string name="canon_reconnecting_hint">WiFi 経由でカメラに再接続中…</string>
     <string name="canon_sub_second_warning">WiFi の遅延により、1 秒未満のバルブ露光は不安定になります。Timelapse モード (カメラがシャッター制御) か ESP32 経路を使ってください。</string>
     <string name="canon_setup_title">Camera Control API を有効化</string>
     <string name="canon_setup_intro">Pulsar を使うには CCAPI を有効にする必要があります。多くの R シリーズでは一度だけ以下の設定が必要です:</string>

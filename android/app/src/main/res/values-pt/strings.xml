@@ -17,6 +17,7 @@
     <string name="canon_err_network">Não foi possível alcançar a câmera. Verifique a rede WiFi.</string>
     <string name="canon_err_generic">Falha ao conectar (%1$s).</string>
     <string name="canon_bulb_hint">Canon (CCAPI) conectada — todos os modos usam bulb. Exposições abaixo de 1 s não são confiáveis por WiFi.</string>
+    <string name="canon_reconnecting_hint">Reconectando à câmera por WiFi…</string>
     <string name="canon_sub_second_warning">A latência do WiFi torna o bulb abaixo de 1 s pouco confiável. Use Timelapse (a câmera controla a exposição) ou o transporte ESP32.</string>
     <string name="canon_setup_title">Ativar Camera Control API</string>
     <string name="canon_setup_intro">A Pulsar precisa do CCAPI ativo na sua câmera. A maioria das corpos R precisa de uma ativação única:</string>

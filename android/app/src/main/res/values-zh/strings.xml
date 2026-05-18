@@ -17,6 +17,7 @@
     <string name="canon_err_network">无法访问相机。请检查 WiFi 网络。</string>
     <string name="canon_err_generic">连接失败 (%1$s)。</string>
     <string name="canon_bulb_hint">已连接佳能 (CCAPI) — 所有模式均通过 Bulb 拍摄。WiFi 下低于 1 秒的曝光不可靠。</string>
+    <string name="canon_reconnecting_hint">正在通过 WiFi 重新连接相机…</string>
     <string name="canon_sub_second_warning">WiFi 延迟会让低于 1 秒的 Bulb 曝光不准。请改用延时模式 (相机控制曝光) 或 ESP32 通道。</string>
     <string name="canon_setup_title">启用 Camera Control API</string>
     <string name="canon_setup_intro">Pulsar 需要相机启用 CCAPI。大多数 R 系列机身需要一次性激活：</string>

@@ -17,6 +17,7 @@
     <string name="canon_err_network">Impossible de joindre l\'appareil. Vérifiez votre réseau WiFi.</string>
     <string name="canon_err_generic">Échec de la connexion (%1$s).</string>
     <string name="canon_bulb_hint">Canon (CCAPI) connecté — tous les modes passent par bulb. Les poses inférieures à 1 s sont peu fiables en WiFi.</string>
+    <string name="canon_reconnecting_hint">Reconnexion à l\'appareil en WiFi…</string>
     <string name="canon_sub_second_warning">La latence WiFi rend les poses bulb sous 1 s peu fiables. Utilisez Timelapse (l\'appareil gère la pose) ou le transport ESP32.</string>
     <string name="canon_setup_title">Activer Camera Control API</string>
     <string name="canon_setup_intro">Pulsar a besoin de CCAPI activé sur votre appareil. La plupart des boîtiers R requièrent une activation unique :</string>

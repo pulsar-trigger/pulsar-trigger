@@ -58,6 +58,13 @@ class CcapiTransport(
         return r
     }
 
+    /** Re-runs `GET /ccapi` to confirm the camera is still reachable. Used by
+     *  the ViewModel's reconnect loop after polling failures — if this comes
+     *  back Ok the existing session can resume; on persistent failure the
+     *  caller drops the transport. Lighter than building a fresh transport
+     *  because it preserves cached digest state and capability matrix. */
+    suspend fun reconnect(): CcapiClient.Result<Unit> = client.connect()
+
     override suspend fun release() {
         // Best-effort: hand the mode dial back. Swallowed if camera is gone.
         if (dialIgnoreActive) {

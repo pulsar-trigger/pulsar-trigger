@@ -56,7 +56,15 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         private const val KEY_SAVED_FLOWS = "saved_flows"
         private const val KEY_AUTO_OFF = "auto_off_minutes"
         private const val NOTIFICATION_THROTTLE_MS = 5_000L
-        private const val MAX_CANON_POLL_FAILS = 3
+        /** Poll failures before we abandon the long-poll and switch into
+         *  reconnect mode. 5× short long-polls (~10 s each at worst) gives
+         *  a fast WiFi handoff or short auto-off blip a chance to recover. */
+        private const val MAX_CANON_POLL_FAILS = 5
+        /** Cap on the reconnect loop after polling gave up. ~2 min covers the
+         *  common case (camera woke from auto-off, phone re-joined the AP).
+         *  Beyond that the session is treated as truly dead. */
+        private const val CANON_RECONNECT_TIMEOUT_MS = 120_000L
+        private const val CANON_RECONNECT_BACKOFF_MS = 3_000L
         const val DEFAULT_PIN_SHUTTER = AppConfig.DEFAULT_PIN_SHUTTER
         const val DEFAULT_PIN_FOCUS = AppConfig.DEFAULT_PIN_FOCUS
         val SAFE_OUTPUT_PINS = AppConfig.SAFE_OUTPUT_PINS
@@ -99,6 +107,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         MutableStateFlow<com.ehrocha.pulsar.transport.ccapi.CanonCamera?>(null)
     val canonAuthPrompt: StateFlow<com.ehrocha.pulsar.transport.ccapi.CanonCamera?> =
         _canonAuthPrompt
+
+    /** True while the polling loop has lost contact with the camera and is
+     *  trying to reach it again — the UI keeps the session alive (no return
+     *  to the scan screen) and shows a reconnecting banner. */
+    private val _canonReconnecting = MutableStateFlow(false)
+    val canonReconnecting: StateFlow<Boolean> = _canonReconnecting
 
     /** Per-UDN digest credentials. Each entry lets the next connect to the
      *  same camera skip the auth prompt entirely. */
@@ -446,10 +460,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     private var canonPollJob: Job? = null
 
-    /** Long-poll `/event/polling` for live battery + shot count. Drops the
-     *  Canon session after [MAX_CANON_POLL_FAILS] consecutive failures so the
-     *  user sees an obvious disconnect instead of stale state. The poll is
-     *  independent of the run loop — it runs whether or not a flow is active. */
+    /** Long-poll `/event/polling` for live battery + shot count. On a streak of
+     *  failures the loop enters reconnect mode and re-probes `/ccapi` for up
+     *  to [CANON_RECONNECT_TIMEOUT_MS] — covers the common case of the camera
+     *  briefly napping or the phone roaming. Persistent failure drops the
+     *  session for real. The poll is independent of the run loop — it runs
+     *  whether or not a flow is active. */
     private fun startCanonPolling(transport: com.ehrocha.pulsar.transport.ccapi.CcapiTransport) {
         canonPollJob?.cancel()
         canonPollJob = viewModelScope.launch {
@@ -462,23 +478,57 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                    _canonTransport.value === transport) {
                 when (val r = transport.pollEvents()) {
                     is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.Ok -> {
+                        // Healthy poll: clear any prior failure / reconnect state.
+                        if (_canonReconnecting.value) _canonReconnecting.value = false
                         consecutiveFails = 0
                         observedShots = applyCanonPollUpdate(r.value, observedShots)
                     }
                     else -> {
                         consecutiveFails += 1
                         if (consecutiveFails >= MAX_CANON_POLL_FAILS) {
-                            Log.w(TAG, "Canon polling failed $consecutiveFails× — dropping session")
+                            Log.w(TAG, "Canon polling failed $consecutiveFails× — entering reconnect")
+                            val recovered = attemptCanonReconnect(transport)
+                            if (recovered) {
+                                consecutiveFails = 0
+                                continue
+                            }
                             _canonError.value = "dropped"
                             disconnectCanon()
                             break
                         }
-                        // Backoff so we don't hammer the camera while it's
-                        // off / out of range. Short delay keeps reconnect snappy.
+                        // Short backoff before the next long-poll so we don't
+                        // hammer the camera. The long-poll itself is the bulk
+                        // of the wait when the network is fine.
                         delay(2_000)
                     }
                 }
             }
+        }
+    }
+
+    /** Re-probe `GET /ccapi` on a backoff until the camera responds or we hit
+     *  [CANON_RECONNECT_TIMEOUT_MS]. Keeps the existing transport / UI state
+     *  intact so the user doesn't get bounced back to the scan screen for a
+     *  transient blip. Returns true on recovery, false on giving up. */
+    private suspend fun attemptCanonReconnect(
+        transport: com.ehrocha.pulsar.transport.ccapi.CcapiTransport,
+    ): Boolean {
+        _canonReconnecting.value = true
+        val deadline = System.currentTimeMillis() + CANON_RECONNECT_TIMEOUT_MS
+        try {
+            while (System.currentTimeMillis() < deadline &&
+                   _canonTransport.value === transport) {
+                coroutineContext.ensureActive()
+                val r = transport.reconnect()
+                if (r is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.Ok) {
+                    Log.i(TAG, "Canon reconnect succeeded")
+                    return true
+                }
+                delay(CANON_RECONNECT_BACKOFF_MS)
+            }
+            return false
+        } finally {
+            _canonReconnecting.value = false
         }
     }
 
@@ -529,6 +579,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         val transport = _canonTransport.value ?: return
         canonPollJob?.cancel()
         canonPollJob = null
+        _canonReconnecting.value = false
         viewModelScope.launch { transport.release() }
         _canonTransport.value = null
         if (!bleController.connected.value && !_simulatorActive.value) {
