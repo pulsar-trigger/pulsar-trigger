@@ -136,21 +136,43 @@ class CcapiTransport(
     }
 
     /**
-     * Long-poll `/event/polling`. Camera blocks up to ~10 s (`timeout=short`)
-     * and returns only the fields that changed. Used by the ViewModel's
-     * polling job for battery / shot-count updates and dropout detection.
+     * Long-poll `/event/polling`. Camera blocks up to ~10 s (`timeout=short`
+     * on ver110+; `continue=on` on ver100) and returns only the fields that
+     * changed. Used by the ViewModel's polling job for battery / shot-count
+     * updates and dropout detection.
+     *
+     * On HTTP 400 from the primary query we retry once with the alternate
+     * form — covers bodies that report ver100 endpoints with a ver110-style
+     * version banner or vice versa.
      */
     suspend fun pollEvents(): CcapiClient.Result<JSONObject> {
-        return when (val r = client.get("$PATH_POLL?timeout=short")) {
-            is CcapiClient.Result.Ok -> try {
-                CcapiClient.Result.Ok(JSONObject(r.value))
-            } catch (e: Exception) {
-                CcapiClient.Result.Network(e)
+        val primary = primaryPollQuery()
+        return when (val r = client.get("$PATH_POLL?$primary")) {
+            is CcapiClient.Result.Ok -> parsePollBody(r.value)
+            is CcapiClient.Result.Http -> {
+                if (r.code == 400) {
+                    val alt = alternatePollQuery(primary)
+                    when (val r2 = client.get("$PATH_POLL?$alt")) {
+                        is CcapiClient.Result.Ok -> parsePollBody(r2.value)
+                        else -> r2 as CcapiClient.Result<JSONObject>
+                    }
+                } else r
             }
-            is CcapiClient.Result.Http -> r
             is CcapiClient.Result.NeedsAuth -> r
             is CcapiClient.Result.Network -> r
         }
+    }
+
+    private fun primaryPollQuery(): String =
+        if (client.version == "ver100") "continue=on" else "timeout=short"
+
+    private fun alternatePollQuery(primary: String): String =
+        if (primary == "timeout=short") "continue=on" else "timeout=short"
+
+    private fun parsePollBody(text: String): CcapiClient.Result<JSONObject> = try {
+        CcapiClient.Result.Ok(JSONObject(text))
+    } catch (e: Exception) {
+        CcapiClient.Result.Network(e)
     }
 
     private fun logResult(tag: String, r: CcapiClient.Result<*>) {
