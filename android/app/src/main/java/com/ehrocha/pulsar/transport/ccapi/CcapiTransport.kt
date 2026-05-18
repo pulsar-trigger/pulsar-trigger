@@ -153,17 +153,20 @@ class CcapiTransport(
      *  response body we saw. */
     suspend fun startLiveView(): Boolean {
         if (!_connected.value) return false
+        // `cameraposition` was introduced in ver110 — ver100 bodies (EOS RP)
+        // reject the field as invalid_parameter. Adapt the payload to what
+        // the pinned API version actually accepts.
+        val includeCameraPos = client.version?.let { it != "ver100" } ?: false
         // Prefer small first — it's the universally supported size, lowest
         // bandwidth, and renders fast enough for focus work.
         val sizesToTry = listOf("small", "medium", "large")
         var lastError: String? = null
         for (size in sizesToTry) {
-            val body = JSONObject()
-                .put("liveviewsize", size)
-                .put("cameraposition", "off")
+            val body = JSONObject().put("liveviewsize", size)
+            if (includeCameraPos) body.put("cameraposition", "off")
             val r = client.post(PATH_LIVEVIEW, body)
             if (r is CcapiClient.Result.Ok) {
-                Log.i(TAG, "liveview started @ $size")
+                Log.i(TAG, "liveview started @ $size (ver=${client.version})")
                 lastLiveViewError = null
                 return true
             }
