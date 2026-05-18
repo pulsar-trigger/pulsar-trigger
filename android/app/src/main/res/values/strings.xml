@@ -37,6 +37,7 @@
     <string name="canon_setup_step_3">3. On the camera, open Menu → Communication → Wi-Fi settings.</string>
     <string name="canon_setup_step_4">4. Select Camera Control API and create / join a network (camera AP or your LAN).</string>
     <string name="canon_setup_step_5">5. Make sure your phone is on the same network, then re-run the scan.</string>
+    <string name="canon_setup_long_runs">For multi-hour astro runs, set the camera\'s Auto power off to Disabled (Menu → Setup) so it doesn\'t nap during the gap between shots.</string>
     <string name="canon_setup_button">Camera setup help</string>
     <string name="canon_auth_title">Camera authentication</string>
     <string name="canon_auth_subtitle">%1$s requires a username and password.</string>

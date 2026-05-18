@@ -33,6 +33,7 @@
     <string name="canon_setup_step_3">3. カメラ側でメニュー → 通信機能 → Wi-Fi 設定を開きます。</string>
     <string name="canon_setup_step_4">4. Camera Control API を選び、ネットワーク (カメラ AP または LAN) を作成 / 参加します。</string>
     <string name="canon_setup_step_5">5. スマートフォンを同じネットワークに接続し、再スキャンしてください。</string>
+    <string name="canon_setup_long_runs">数時間に及ぶ天体撮影では、カメラの「自動電源オフ」を「切」に設定してください (メニュー → セットアップ)。撮影の合間にカメラがスリープしないようにします。</string>
     <string name="canon_setup_button">セットアップヘルプ</string>
     <string name="available_devices">利用可能なデバイス</string>
     <string name="select_device_prompt">Pulsar トリガーを選択してコントロールセッションを開始します。</string>

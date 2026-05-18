@@ -33,6 +33,7 @@
     <string name="canon_setup_step_3">3. Na câmera, abra Menu → Comunicação → Configurações Wi-Fi.</string>
     <string name="canon_setup_step_4">4. Selecione Camera Control API e crie/entre em uma rede (AP da câmera ou sua LAN).</string>
     <string name="canon_setup_step_5">5. Garanta que seu celular está na mesma rede e refaça a busca.</string>
+    <string name="canon_setup_long_runs">Para sessões longas de astro, defina o Auto power off da câmera como Desativado (Menu → Configuração) para que ela não durma entre cliques.</string>
     <string name="canon_setup_button">Ajuda de configuração</string>
     <string name="available_devices">Available Devices</string>
     <string name="select_device_prompt">Select your Pulsar trigger to begin control session.</string>

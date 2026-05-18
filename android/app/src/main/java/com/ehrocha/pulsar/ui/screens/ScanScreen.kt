@@ -594,6 +594,12 @@ private fun CanonSetupHelpDialog(onDismiss: () -> Unit) {
                     style = MaterialTheme.typography.bodySmall)
                 Text(stringResource(R.string.canon_setup_step_5),
                     style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    stringResource(R.string.canon_setup_long_runs),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
         confirmButton = {
