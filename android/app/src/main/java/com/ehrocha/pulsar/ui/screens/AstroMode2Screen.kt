@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
@@ -153,7 +154,25 @@ fun AstroMode2Screen(
     val runState = LocalRunState.current
     val running = runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
-    val onCanon = vm.canonTransport.collectAsState().value != null
+    val canonTransport = vm.canonTransport.collectAsState().value
+    val onCanon = canonTransport != null
+
+    // Fetch what lens is on the camera when we land on a CCAPI connection.
+    // For a *fresh* run (no preset loaded) and a prime lens, auto-fill the
+    // focal length. For a loaded preset we leave the saved value alone — the
+    // user explicitly picked it — but still surface the detection chip so
+    // they know what's mounted.
+    var lensInfo by remember {
+        mutableStateOf<com.ehrocha.pulsar.transport.ccapi.CcapiTransport.LensInfo?>(null)
+    }
+    LaunchedEffect(canonTransport) {
+        val t = canonTransport ?: return@LaunchedEffect
+        val info = t.getLensInfo() ?: return@LaunchedEffect
+        lensInfo = info
+        if (loadedPreset == null && focalLength == 0 && info.focalMm != null) {
+            focalLength = info.focalMm
+        }
+    }
 
     var tabIdx by rememberSaveable {
         mutableIntStateOf(if (loadedPreset != null) AstroTab.entries.size - 1 else 0)
@@ -284,6 +303,7 @@ fun AstroMode2Screen(
                     AstroTab.LENS -> LensTab(
                         focalLength = focalLength,
                         cropFactor = cropFactor,
+                        lensInfo = lensInfo,
                         ruleDivisor = ruleDivisor,
                         maxExpMs = maxExpMs,
                         onFocalChange = { focalLength = it },
@@ -369,6 +389,7 @@ private fun LensTab(
     cropFactor: Float,
     ruleDivisor: Int,
     maxExpMs: Long,
+    lensInfo: com.ehrocha.pulsar.transport.ccapi.CcapiTransport.LensInfo?,
     onFocalChange: (Int) -> Unit,
     onCropChange: (Float) -> Unit,
     onRuleChange: (Int) -> Unit,
@@ -401,6 +422,23 @@ private fun LensTab(
             onChange = onFocalChange,
             enabled = enabled,
         )
+
+        if (lensInfo != null && lensInfo.mounted) {
+            Spacer(Modifier.height(8.dp))
+            DetectedLensChip(
+                lens = lensInfo,
+                currentFocalMm = focalLength,
+                enabled = enabled,
+                onUseFocal = { onFocalChange(it) },
+            )
+        } else if (lensInfo != null && !lensInfo.mounted) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                stringResource(R.string.astro2_lens_not_mounted),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
 
         Spacer(Modifier.height(12.dp))
 
@@ -464,6 +502,65 @@ private fun LensTab(
  * spaced around the rim; drag anywhere on the dial to rotate the indicator
  * to the nearest preset. Tap the centre to enter an arbitrary value.
  */
+/** Chip below the focal-length dial that surfaces the lens reported by the
+ *  connected camera. For primes (parsed focal length single value) we offer
+ *  a one-tap "Use" button. For zooms we just inform — current zoom position
+ *  isn't reported by CCAPI, so the user types the value manually. */
+@Composable
+private fun DetectedLensChip(
+    lens: com.ehrocha.pulsar.transport.ccapi.CcapiTransport.LensInfo,
+    currentFocalMm: Int,
+    enabled: Boolean,
+    onUseFocal: (Int) -> Unit,
+) {
+    val matches = lens.focalMm != null && lens.focalMm == currentFocalMm
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Default.CameraAlt,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    lens.name,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    when {
+                        lens.isPrime -> stringResource(
+                            R.string.astro2_lens_detected_prime, lens.focalMm!!)
+                        lens.isZoom -> stringResource(
+                            R.string.astro2_lens_detected_zoom,
+                            lens.zoomRangeMm!!.first, lens.zoomRangeMm.last)
+                        else -> stringResource(R.string.astro2_lens_detected_unknown)
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (lens.isPrime && lens.focalMm != null && !matches) {
+                TextButton(
+                    onClick = { onUseFocal(lens.focalMm) },
+                    enabled = enabled,
+                ) {
+                    Text(stringResource(R.string.astro2_lens_use_focal, lens.focalMm))
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun FocalLengthDial(
     valueMm: Int,

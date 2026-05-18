@@ -129,6 +129,11 @@
     <string name="astro2_rule">Rule</string>
     <string name="astro2_set_lens">Set focal length to start</string>
     <string name="astro2_set_lens_and_interval">Set focal length and interval to start</string>
+    <string name="astro2_lens_detected_prime">Prime · %1$d mm</string>
+    <string name="astro2_lens_detected_zoom">Zoom · %1$d-%2$d mm — type your current value</string>
+    <string name="astro2_lens_detected_unknown">Detected from camera</string>
+    <string name="astro2_lens_use_focal">Use %1$d mm</string>
+    <string name="astro2_lens_not_mounted">No lens detected on the camera.</string>
 
     <!-- Intervalometer 2 -->
     <string name="iv2_tab_interval">Interval</string>

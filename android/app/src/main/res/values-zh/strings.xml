@@ -80,6 +80,11 @@
     <string name="star_focus_btn_back">返回</string>
     <string name="star_focus_btn_focus_done">已锐 — 继续</string>
     <string name="star_focus_btn_done">完成</string>
+    <string name="astro2_lens_detected_prime">定焦 · %1$d mm</string>
+    <string name="astro2_lens_detected_zoom">变焦 · %1$d-%2$d mm — 请输入当前焦距</string>
+    <string name="astro2_lens_detected_unknown">从相机检测</string>
+    <string name="astro2_lens_use_focal">使用 %1$d mm</string>
+    <string name="astro2_lens_not_mounted">相机未检测到镜头。</string>
     <string name="canon_setup_title">启用 Camera Control API</string>
     <string name="canon_setup_intro">Pulsar 需要相机启用 CCAPI。大多数 R 系列机身需要一次性激活：</string>
     <string name="canon_setup_step_1">1. 在佳能开发者门户下载 CCAPI Activation Tool。</string>

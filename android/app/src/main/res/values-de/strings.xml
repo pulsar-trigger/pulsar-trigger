@@ -80,6 +80,11 @@
     <string name="star_focus_btn_back">Zurück</string>
     <string name="star_focus_btn_focus_done">Scharf — weiter</string>
     <string name="star_focus_btn_done">Fertig</string>
+    <string name="astro2_lens_detected_prime">Festbrennweite · %1$d mm</string>
+    <string name="astro2_lens_detected_zoom">Zoom · %1$d-%2$d mm — aktuellen Wert eintragen</string>
+    <string name="astro2_lens_detected_unknown">Von der Kamera erkannt</string>
+    <string name="astro2_lens_use_focal">%1$d mm verwenden</string>
+    <string name="astro2_lens_not_mounted">Kein Objektiv an der Kamera erkannt.</string>
     <string name="canon_setup_title">Camera Control API aktivieren</string>
     <string name="canon_setup_intro">Pulsar benötigt aktives CCAPI. Die meisten R-Bodies benötigen eine einmalige Aktivierung:</string>
     <string name="canon_setup_step_1">1. CCAPI Activation Tool aus dem Canon-Entwicklerportal laden.</string>

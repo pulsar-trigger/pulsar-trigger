@@ -181,6 +181,53 @@ class CcapiTransport(
         logResult("drivefocus $action", client.post(PATH_DRIVE_FOCUS, body))
     }
 
+    /**
+     * Snapshot of `/devicestatus/lens`. Older bodies (EOS RP) return only
+     * `{mount, name}` — no native focal-length field — so [focalMm] /
+     * [zoomRangeMm] are parsed out of the lens model name when possible.
+     * Newer R-bodies that include `focallength` directly aren't covered yet
+     * because we don't have a body to verify the exact field name against.
+     */
+    data class LensInfo(
+        val mounted: Boolean,
+        val name: String,
+        /** Single focal length parsed from the name (e.g. "RF16mm F2.8" → 16).
+         *  Null for zoom lenses or unrecognised name shapes. */
+        val focalMm: Int?,
+        /** Zoom range parsed from the name (e.g. "RF24-105mm F4" → 24..105).
+         *  Null for primes / unrecognised shapes. Current zoom position isn't
+         *  reported by the older CCAPI revisions Pulsar targets, so the user
+         *  has to type the actual value. */
+        val zoomRangeMm: IntRange?,
+    ) {
+        val isPrime get() = focalMm != null && zoomRangeMm == null
+        val isZoom get() = zoomRangeMm != null
+    }
+
+    /** Read the currently mounted lens. Returns null on network / parse
+     *  failure — caller treats a null as "we don't know what's on there". */
+    suspend fun getLensInfo(): LensInfo? {
+        if (!_connected.value) return null
+        val r = client.get("/devicestatus/lens")
+        if (r !is CcapiClient.Result.Ok) {
+            logResult("devicestatus/lens", r)
+            return null
+        }
+        val json = runCatching { JSONObject(r.value) }.getOrNull() ?: return null
+        val mount = json.optBoolean("mount", false)
+        val name = json.optString("name", "")
+        // Try Canon's native field first if present (newer bodies). Fall back
+        // to parsing the model name for older firmware like the EOS RP.
+        val nativeFocal = json.optInt("focallength", -1).takeIf { it > 0 }
+        val (parsedFocal, parsedRange) = parseFocalFromName(name)
+        return LensInfo(
+            mounted = mount,
+            name = name,
+            focalMm = nativeFocal ?: parsedFocal,
+            zoomRangeMm = parsedRange,
+        )
+    }
+
     /** Direct, non-polling battery read. Used at connect time to seed the
      *  UI before `/event/polling` has a chance to deliver a change event —
      *  polling only returns *changed* fields, so a battery that hasn't
@@ -241,4 +288,22 @@ class CcapiTransport(
             is CcapiClient.Result.Network -> Log.w(TAG, "$tag network error", r.cause)
         }
     }
+}
+
+/** Parse focal length(s) out of a Canon lens model name. Returns
+ *  `(focalMm, zoomRangeMm)` — exactly one of the two is non-null on success,
+ *  both null if no usable number pattern is found. Handles names like:
+ *   - "RF16mm F2.8 STM" → (16, null)
+ *   - "EF 50mm f/1.8 STM" → (50, null)
+ *   - "RF24-105mm F4 L IS USM" → (null, 24..105)
+ *   - "EF 70-200mm f/2.8L II USM" → (null, 70..200) */
+internal fun parseFocalFromName(name: String): Pair<Int?, IntRange?> {
+    // Match an `N` or `N-M` immediately followed by an optional space and
+    // `mm`. The number must be at the start of a token so we don't trip on
+    // aperture digits like "F2.8" or extender markers like "1.4x".
+    val regex = Regex("""(?<!\d)(\d+)(?:-(\d+))?\s*mm""", RegexOption.IGNORE_CASE)
+    val m = regex.find(name) ?: return null to null
+    val low = m.groupValues[1].toIntOrNull() ?: return null to null
+    val high = m.groupValues[2].toIntOrNull()
+    return if (high != null && high > low) null to (low..high) else low to null
 }
