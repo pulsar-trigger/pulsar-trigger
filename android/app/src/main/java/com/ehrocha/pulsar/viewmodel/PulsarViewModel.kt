@@ -539,11 +539,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val _canonManualError = MutableStateFlow<String?>(null)
     val canonManualError: StateFlow<String?> = _canonManualError
 
-    /** Manually probe `http://<host>[:<port>]/upnp/CameraDevDesc.xml` and add
-     *  the camera to the scan list if successful. Use when SSDP discovery
-     *  can't reach the body — typically because the camera AP doesn't relay
-     *  multicast — but you can already hit the camera by IP. Common Canon
-     *  CCAPI ports are tried in turn if no port is given. */
+    /** Manually probe `http://<host>[:<port>]/ccapi` and add the camera to
+     *  the scan list if it responds. Bypasses SSDP and the UPnP device
+     *  descriptor entirely — many Canon bodies (notably the EOS RP) don't
+     *  serve `/upnp/CameraDevDesc.xml`, but every CCAPI-active body answers
+     *  `GET /ccapi` directly. Metadata (model + serial → stable UDN) comes
+     *  from `/deviceinformation` once the probe succeeds. */
     fun addCanonByHost(rawInput: String, onResult: (Boolean) -> Unit) {
         val trimmed = rawInput.trim()
             .removePrefix("http://").removePrefix("https://")
@@ -564,16 +565,22 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             _canonManualAdding.value = true
             try {
                 for (port in portsToTry) {
-                    val url = "http://$host:$port/upnp/CameraDevDesc.xml"
-                    Log.i(TAG, "Probing $url")
-                    val camera = withContext(kotlinx.coroutines.Dispatchers.IO) {
-                        com.ehrocha.pulsar.transport.ccapi.CameraDescription.fetch(url)
+                    val accessUrl = "http://$host:$port/ccapi"
+                    Log.i(TAG, "Probing $accessUrl")
+                    // Reuse the per-UDN credential store if we can — but we
+                    // don't know the UDN yet. Try unauthenticated first; the
+                    // client will surface NeedsAuth and the user can retry
+                    // from the regular auth dialog once the camera is added.
+                    val probeClient = com.ehrocha.pulsar.transport.ccapi.CcapiClient(accessUrl)
+                    val r = probeClient.connect()
+                    if (r !is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.Ok) {
+                        Log.i(TAG, "  → $r")
+                        continue
                     }
-                    if (camera != null) {
-                        ccapiDiscovery.addManual(camera)
-                        onResult(true)
-                        return@launch
-                    }
+                    val camera = buildManualCamera(probeClient, host, port, accessUrl)
+                    ccapiDiscovery.addManual(camera)
+                    onResult(true)
+                    return@launch
                 }
                 _canonManualError.value = "not_found"
                 onResult(false)
@@ -581,6 +588,43 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 _canonManualAdding.value = false
             }
         }
+    }
+
+    /** Try to pull friendly name + a stable identifier from `/deviceinformation`.
+     *  Falls back to host:port-derived defaults if the endpoint is missing or
+     *  doesn't return the fields we'd like. Best-effort — the camera entry is
+     *  still useful even if metadata is generic. */
+    private suspend fun buildManualCamera(
+        client: com.ehrocha.pulsar.transport.ccapi.CcapiClient,
+        host: String,
+        port: Int,
+        accessUrl: String,
+    ): com.ehrocha.pulsar.transport.ccapi.CanonCamera {
+        var name = "Canon Camera"
+        var udn = "manual:$host:$port"
+        if (client.supports("/deviceinformation", "get")) {
+            val r = client.get("/deviceinformation")
+            if (r is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.Ok) {
+                runCatching {
+                    val json = org.json.JSONObject(r.value)
+                    json.optString("productname").takeIf { it.isNotBlank() }?.let { name = it }
+                    // Prefer guid > serialnumber > macaddress as the stable
+                    // per-camera id. All are body-side identifiers that
+                    // survive IP changes.
+                    val stable = listOf("guid", "serialnumber", "macaddress")
+                        .firstNotNullOfOrNull { json.optString(it).takeIf { v -> v.isNotBlank() } }
+                    if (stable != null) udn = "canon:$stable"
+                }
+            }
+        }
+        return com.ehrocha.pulsar.transport.ccapi.CanonCamera(
+            udn = udn,
+            friendlyName = name,
+            nickname = null,
+            ipAddress = host,
+            port = port,
+            accessUrl = accessUrl,
+        )
     }
 
     fun clearCanonManualError() { _canonManualError.value = null }

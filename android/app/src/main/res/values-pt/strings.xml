@@ -27,7 +27,7 @@
     <string name="canon_on_wifi">Wi-Fi atual: %1$s</string>
     <string name="canon_manual_add_button">Adicionar por IP</string>
     <string name="canon_manual_add_title">Adicionar câmera por IP</string>
-    <string name="canon_manual_add_subtitle">Quando o AP da câmera bloqueia multicast, a descoberta SSDP não a encontra mesmo com TCP/IP funcionando. Informe o IP da câmera (e a porta se diferente de 8080).</string>
+    <string name="canon_manual_add_subtitle">Quando o SSDP não encontra a câmera (AP bloqueia multicast ou o corpo não publica UPnP), informe o IP da câmera (e a porta se não for 8080). A Pulsar consulta /ccapi diretamente — a mesma URL que abre no navegador.</string>
     <string name="canon_manual_add_label">Host ou host:porta</string>
     <string name="canon_manual_add_action">Adicionar</string>
     <string name="canon_manual_add_probing">Tentando…</string>

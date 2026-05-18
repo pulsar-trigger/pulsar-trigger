@@ -31,7 +31,7 @@
     <string name="canon_on_wifi">Currently on Wi-Fi: %1$s</string>
     <string name="canon_manual_add_button">Add by IP</string>
     <string name="canon_manual_add_title">Add camera by IP</string>
-    <string name="canon_manual_add_subtitle">When the camera AP blocks multicast, SSDP discovery can\'t find the camera even though TCP/IP works. Enter the camera\'s IP (and port if not the default 8080).</string>
+    <string name="canon_manual_add_subtitle">When SSDP discovery doesn\'t find the camera (camera AP blocks multicast, or the body skips UPnP), enter its IP (and port if not the default 8080). Pulsar probes /ccapi directly — the same URL that loads in your browser.</string>
     <string name="canon_manual_add_label">Host or host:port</string>
     <string name="canon_manual_add_action">Add</string>
     <string name="canon_manual_add_probing">Probing…</string>

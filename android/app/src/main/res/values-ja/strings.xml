@@ -27,7 +27,7 @@
     <string name="canon_on_wifi">現在の Wi-Fi: %1$s</string>
     <string name="canon_manual_add_button">IP で追加</string>
     <string name="canon_manual_add_title">IP でカメラを追加</string>
-    <string name="canon_manual_add_subtitle">カメラ AP がマルチキャストをブロックしていると、TCP/IP は通っても SSDP で見つかりません。カメラの IP (および 8080 以外ならポート) を入力してください。</string>
+    <string name="canon_manual_add_subtitle">SSDP でカメラが見つからないとき (AP がマルチキャストをブロック / 機体が UPnP を出さない) は、カメラの IP (および 8080 以外のポート) を入力してください。Pulsar は /ccapi に直接問い合わせます — ブラウザで開ける URL と同じです。</string>
     <string name="canon_manual_add_label">ホスト または host:port</string>
     <string name="canon_manual_add_action">追加</string>
     <string name="canon_manual_add_probing">確認中…</string>
