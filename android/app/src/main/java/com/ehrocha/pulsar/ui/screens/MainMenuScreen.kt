@@ -185,9 +185,6 @@ fun MainMenuScreen(
                     val userModes by vm.userModes.collectAsState()
                     val canonTransport by vm.canonTransport.collectAsState()
                     val onCanon = canonTransport != null
-                    // Manual hold relies on press/release timing — disabled on
-                    // CCAPI until Phase 4 (HTTP RTT makes sub-second presses
-                    // unreliable). Everything else works over bulb.
                     val builtIns = listOf(
                         launcherItem(R.string.mode_intervalometer, Icons.Default.Timer) {
                             onIntervalometer2Selected()
@@ -204,8 +201,9 @@ fun MainMenuScreen(
                         launcherItem(R.string.mode_ramp, Icons.AutoMirrored.Filled.TrendingUp) {
                             onQuickFlow(FlowStepType.RAMP)
                         },
-                        launcherItem(R.string.mode_manual, Icons.Default.TouchApp,
-                            enabled = !onCanon) { onManualSelected() },
+                        launcherItem(R.string.mode_manual, Icons.Default.TouchApp) {
+                            onManualSelected()
+                        },
                         launcherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList) {
                             onCustomFlowSelected()
                         },

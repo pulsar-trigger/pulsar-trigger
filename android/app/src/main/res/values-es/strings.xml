@@ -10,7 +10,16 @@
     <string name="canon_err_auth">La cámara requiere autenticación. Desactívala en la cámara o espera al soporte digest (Fase 4).</string>
     <string name="canon_err_network">No se pudo contactar con la cámara. Comprueba tu red WiFi.</string>
     <string name="canon_err_generic">Error al conectar (%1$s).</string>
-    <string name="canon_bulb_hint">Canon (CCAPI) conectada — todos los modos usan bulb. Manual hold desactivado (Fase 4).</string>
+    <string name="canon_bulb_hint">Canon (CCAPI) conectada — todos los modos usan bulb. Las exposiciones por debajo de 1 s no son fiables por WiFi.</string>
+    <string name="canon_sub_second_warning">La latencia WiFi hace que el bulb por debajo de 1 s sea poco fiable. Usa Timelapse (la cámara controla la exposición) o el transporte ESP32.</string>
+    <string name="canon_setup_title">Activar Camera Control API</string>
+    <string name="canon_setup_intro">Pulsar necesita CCAPI activado en tu cámara. La mayoría de los cuerpos R requieren una activación única:</string>
+    <string name="canon_setup_step_1">1. Descarga la CCAPI Activation Tool desde el portal de desarrolladores de Canon.</string>
+    <string name="canon_setup_step_2">2. Conecta la cámara al PC por USB, ejecuta la herramienta y sigue las instrucciones.</string>
+    <string name="canon_setup_step_3">3. En la cámara, abre Menú → Comunicación → Ajustes Wi-Fi.</string>
+    <string name="canon_setup_step_4">4. Selecciona Camera Control API y crea/únete a una red (AP de la cámara o tu LAN).</string>
+    <string name="canon_setup_step_5">5. Asegúrate de que tu teléfono está en la misma red y vuelve a escanear.</string>
+    <string name="canon_setup_button">Ayuda de configuración</string>
     <string name="available_devices">Dispositivos Disponibles</string>
     <string name="select_device_prompt">Selecciona tu Pulsar trigger para iniciar la sesión de control.</string>
     <string name="use_simulator">Usar Simulador</string>

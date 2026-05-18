@@ -35,6 +35,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -54,6 +56,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         private const val KEY_SAVED_FLOWS = "saved_flows"
         private const val KEY_AUTO_OFF = "auto_off_minutes"
         private const val NOTIFICATION_THROTTLE_MS = 5_000L
+        private const val MAX_CANON_POLL_FAILS = 3
         const val DEFAULT_PIN_SHUTTER = AppConfig.DEFAULT_PIN_SHUTTER
         const val DEFAULT_PIN_FOCUS = AppConfig.DEFAULT_PIN_FOCUS
         val SAFE_OUTPUT_PINS = AppConfig.SAFE_OUTPUT_PINS
@@ -359,6 +362,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         errorCode = 0,
                         fwVersion = "",
                     )
+                    startCanonPolling(transport)
                 }
                 is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.NeedsAuth ->
                     _canonError.value = "auth_required"
@@ -372,8 +376,91 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clearCanonError() { _canonError.value = null }
 
+    private var canonPollJob: Job? = null
+
+    /** Long-poll `/event/polling` for live battery + shot count. Drops the
+     *  Canon session after [MAX_CANON_POLL_FAILS] consecutive failures so the
+     *  user sees an obvious disconnect instead of stale state. The poll is
+     *  independent of the run loop — it runs whether or not a flow is active. */
+    private fun startCanonPolling(transport: com.ehrocha.pulsar.transport.ccapi.CcapiTransport) {
+        canonPollJob?.cancel()
+        canonPollJob = viewModelScope.launch {
+            var consecutiveFails = 0
+            // Tracks shot count via `addedcontents` so the camera's own
+            // counter — including any shots fired with the body's hardware
+            // button — feeds back into the UI.
+            var observedShots = 0
+            while (currentCoroutineContext().isActive &&
+                   _canonTransport.value === transport) {
+                when (val r = transport.pollEvents()) {
+                    is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.Ok -> {
+                        consecutiveFails = 0
+                        observedShots = applyCanonPollUpdate(r.value, observedShots)
+                    }
+                    else -> {
+                        consecutiveFails += 1
+                        if (consecutiveFails >= MAX_CANON_POLL_FAILS) {
+                            Log.w(TAG, "Canon polling failed $consecutiveFails× — dropping session")
+                            _canonError.value = "dropped"
+                            disconnectCanon()
+                            break
+                        }
+                        // Backoff so we don't hammer the camera while it's
+                        // off / out of range. Short delay keeps reconnect snappy.
+                        delay(2_000)
+                    }
+                }
+            }
+        }
+    }
+
+    /** Maps the long-poll payload onto our [StatusFrame]: battery level
+     *  string → percent, addedcontents → cumulative shot count. */
+    private fun applyCanonPollUpdate(json: org.json.JSONObject, prevShots: Int): Int {
+        val current = _status.value ?: return prevShots
+        var nextShots = prevShots
+
+        json.optJSONObject("battery")?.let { batt ->
+            val pct = canonBatteryToPct(batt.optString("level"))
+            if (pct != null) _status.value = current.copy(batteryPct = pct)
+        }
+
+        // `addedcontents` is the list of files added since the last poll. Add
+        // its length to our running counter so the wizard's progress matches
+        // what's actually on the card.
+        val added = json.optJSONArray("addedcontents")
+        if (added != null && added.length() > 0) {
+            nextShots += added.length()
+            // Only stomp shotsTaken if the run loop isn't authoritative for
+            // this moment (e.g. while we're in WAITING / IDLE between shots).
+            val s = _status.value ?: return nextShots
+            if (s.state != DeviceState.RUNNING) {
+                _status.value = s.copy(shotsTaken = nextShots.coerceAtLeast(s.shotsTaken))
+            }
+        }
+        return nextShots
+    }
+
+    /** Canon's battery `level` strings map onto rough percentages. Numeric
+     *  forms ("85%") are parsed when present. */
+    private fun canonBatteryToPct(level: String?): Int? {
+        if (level.isNullOrEmpty()) return null
+        // "85%" / "85" — parse the integer prefix.
+        level.trimEnd('%').toIntOrNull()?.let { return it.coerceIn(0, 100) }
+        return when (level.lowercase()) {
+            "full" -> 100
+            "high" -> 80
+            "half" -> 50
+            "low", "quarter" -> 20
+            "charge", "chargestop", "chargecomp" -> 0
+            else -> null
+        }
+    }
+
     private fun disconnectCanon() {
         val transport = _canonTransport.value ?: return
+        canonPollJob?.cancel()
+        canonPollJob = null
         viewModelScope.launch { transport.release() }
         _canonTransport.value = null
         if (!bleController.connected.value && !_simulatorActive.value) {
@@ -1042,6 +1129,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Press & Hold: shutter open on down */
     fun shutterDown() {
+        val canon = _canonTransport.value
+        if (canon != null) {
+            _status.value = _status.value?.copy(state = DeviceState.RUNNING)
+            viewModelScope.launch { canon.startBulb(af = true) }
+            return
+        }
         if (_simulatorActive.value) {
             _status.value = _status.value?.copy(state = DeviceState.RUNNING)
             return
@@ -1052,6 +1145,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Press & Hold: shutter close on up */
     fun shutterUp() {
+        val canon = _canonTransport.value
+        if (canon != null) {
+            viewModelScope.launch { canon.stopBulb() }
+            _status.value = _status.value?.copy(state = DeviceState.IDLE)
+            return
+        }
         if (_simulatorActive.value) {
             _status.value = _status.value?.copy(state = DeviceState.IDLE)
             return

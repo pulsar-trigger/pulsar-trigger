@@ -10,7 +10,16 @@
     <string name="canon_err_auth">Die Kamera erfordert Authentifizierung. Deaktiviere sie an der Kamera oder warte auf Digest-Support (Phase 4).</string>
     <string name="canon_err_network">Kamera nicht erreichbar. Prüfe dein WiFi-Netzwerk.</string>
     <string name="canon_err_generic">Verbindung fehlgeschlagen (%1$s).</string>
-    <string name="canon_bulb_hint">Canon (CCAPI) verbunden — alle Modi nutzen Bulb. Manual Hold deaktiviert (Phase 4).</string>
+    <string name="canon_bulb_hint">Canon (CCAPI) verbunden — alle Modi nutzen Bulb. Belichtungen unter 1 s sind über WiFi nicht zuverlässig.</string>
+    <string name="canon_sub_second_warning">WiFi-Latenz macht Bulb-Zeiten unter 1 s unzuverlässig. Nutze Timelapse (Kamera steuert Belichtung) oder den ESP32-Transport.</string>
+    <string name="canon_setup_title">Camera Control API aktivieren</string>
+    <string name="canon_setup_intro">Pulsar benötigt aktives CCAPI. Die meisten R-Bodies benötigen eine einmalige Aktivierung:</string>
+    <string name="canon_setup_step_1">1. CCAPI Activation Tool aus dem Canon-Entwicklerportal laden.</string>
+    <string name="canon_setup_step_2">2. Kamera per USB an den PC anschließen, Tool starten und Anweisungen folgen.</string>
+    <string name="canon_setup_step_3">3. An der Kamera: Menü → Kommunikation → WLAN-Einstellungen öffnen.</string>
+    <string name="canon_setup_step_4">4. Camera Control API wählen und ein Netzwerk anlegen/beitreten (Kamera-AP oder LAN).</string>
+    <string name="canon_setup_step_5">5. Stelle sicher, dass dein Telefon im selben Netz ist, und scanne erneut.</string>
+    <string name="canon_setup_button">Einrichtungshilfe</string>
     <string name="available_devices">Verfügbare Geräte</string>
     <string name="select_device_prompt">Wähle deinen Pulsar-Auslöser, um die Steuerungssitzung zu starten.</string>
     <string name="use_simulator">Simulator verwenden</string>

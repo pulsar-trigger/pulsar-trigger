@@ -32,6 +32,7 @@ class CcapiTransport(
         private const val PATH_SHUTTER_MANUAL = "/shooting/control/shutterbutton/manual"
         private const val PATH_SHOOTING_MODE = "/shooting/settings/shootingmode"
         private const val PATH_DIAL_IGNORE = "/shooting/control/ignoreshootingmodedialmode"
+        private const val PATH_POLL = "/event/polling"
     }
 
     override val kind = TransportKind.CCAPI
@@ -118,6 +119,24 @@ class CcapiTransport(
     override suspend fun stop() {
         // Belt-and-braces: if a bulb exposure is open, release it.
         if (_connected.value) stopBulb()
+    }
+
+    /**
+     * Long-poll `/event/polling`. Camera blocks up to ~10 s (`timeout=short`)
+     * and returns only the fields that changed. Used by the ViewModel's
+     * polling job for battery / shot-count updates and dropout detection.
+     */
+    suspend fun pollEvents(): CcapiClient.Result<JSONObject> {
+        return when (val r = client.get("$PATH_POLL?timeout=short")) {
+            is CcapiClient.Result.Ok -> try {
+                CcapiClient.Result.Ok(JSONObject(r.value))
+            } catch (e: Exception) {
+                CcapiClient.Result.Network(e)
+            }
+            is CcapiClient.Result.Http -> r
+            is CcapiClient.Result.NeedsAuth -> r
+            is CcapiClient.Result.Network -> r
+        }
     }
 
     private fun logResult(tag: String, r: CcapiClient.Result<*>) {

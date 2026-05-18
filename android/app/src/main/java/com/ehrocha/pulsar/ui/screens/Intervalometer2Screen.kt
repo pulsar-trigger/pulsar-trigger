@@ -89,6 +89,7 @@ fun Intervalometer2Screen(
     val runState = LocalRunState.current
     val running = runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
+    val onCanon = vm.canonTransport.collectAsState().value != null
 
     // Jump to the final tab when a preset is loaded — its values are already
     // valid so the user is one tap away from Start.
@@ -114,8 +115,10 @@ fun Intervalometer2Screen(
         IvTab.DELAY -> true
         IvTab.SHOTS -> true
     }
+    val subSecondCanon = onCanon && exposureMs in 1L..999L
     val bottomHint = when {
         tab == IvTab.EXPOSURE && exposureMs == 0L -> stringResource(R.string.iv2_set_exposure)
+        tab == IvTab.EXPOSURE && subSecondCanon -> stringResource(R.string.canon_sub_second_warning)
         tab == IvTab.INTERVAL && intervalMs == 0L -> stringResource(R.string.iv2_set_interval)
         isContinuous && tab == IvTab.SHOTS -> stringResource(R.string.iv2_continuous_warning)
         !configComplete && tab == IvTab.SHOTS -> stringResource(R.string.iv2_set_exposure_and_interval)

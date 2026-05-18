@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.DeveloperBoard
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -66,6 +67,7 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
     val canonConnecting by vm.canonConnecting.collectAsState()
     val canonError by vm.canonError.collectAsState()
     var canonInfo by remember { mutableStateOf<com.ehrocha.pulsar.transport.ccapi.CanonCamera?>(null) }
+    var showCanonSetupHelp by remember { mutableStateOf(false) }
 
     if (connected) {
         LaunchedEffect(Unit) { onConnected() }
@@ -192,6 +194,20 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
                 if (devices.isEmpty() && canonCameras.isEmpty()) {
                     item { PairingProtocolCard() }
                 }
+                item {
+                    TextButton(onClick = { showCanonSetupHelp = true }) {
+                        Icon(
+                            Icons.Default.HelpOutline,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            stringResource(R.string.canon_setup_button),
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                    }
+                }
             }
         }
 
@@ -238,6 +254,10 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
 
     if (showLanguageDialog) {
         LanguagePickerDialog(onDismiss = { showLanguageDialog = false })
+    }
+
+    if (showCanonSetupHelp) {
+        CanonSetupHelpDialog(onDismiss = { showCanonSetupHelp = false })
     }
 
     // Dismiss the connect dialog automatically once we successfully connect.
@@ -372,6 +392,45 @@ private fun LanguagePickerDialog(onDismiss: () -> Unit) {
                         }
                     }
                 }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.ok))
+            }
+        },
+    )
+}
+
+@Composable
+private fun CanonSetupHelpDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                Icons.Default.Wifi,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+            )
+        },
+        title = { Text(stringResource(R.string.canon_setup_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    stringResource(R.string.canon_setup_intro),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(stringResource(R.string.canon_setup_step_1),
+                    style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.canon_setup_step_2),
+                    style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.canon_setup_step_3),
+                    style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.canon_setup_step_4),
+                    style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.canon_setup_step_5),
+                    style = MaterialTheme.typography.bodySmall)
             }
         },
         confirmButton = {
