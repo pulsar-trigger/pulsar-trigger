@@ -25,6 +25,14 @@
     <string name="canon_rename_subtitle">为 %1$s 设置昵称，留空则清除。</string>
     <string name="canon_rename_label">昵称</string>
     <string name="canon_on_wifi">当前 Wi-Fi：%1$s</string>
+    <string name="canon_manual_add_button">按 IP 添加</string>
+    <string name="canon_manual_add_title">按 IP 添加相机</string>
+    <string name="canon_manual_add_subtitle">当相机的 AP 屏蔽多播时，即使 TCP/IP 可达，SSDP 也无法发现相机。请输入相机的 IP（端口非 8080 时也需指定）。</string>
+    <string name="canon_manual_add_label">Host 或 host:port</string>
+    <string name="canon_manual_add_action">添加</string>
+    <string name="canon_manual_add_probing">正在探测…</string>
+    <string name="canon_manual_add_not_found">该地址未收到佳能相机的响应。请确认 IP 并尝试在浏览器中打开 API 页面。</string>
+    <string name="canon_manual_add_invalid">请输入相机的 IP 或 host[:port]。</string>
     <string name="canon_camera_capabilities">功能…</string>
     <string name="canon_capabilities_probing">正在查询相机…</string>
     <string name="canon_capabilities_failed">无法访问相机。请检查 Wi-Fi 与凭据。</string>

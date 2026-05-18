@@ -12,7 +12,10 @@ import android.net.wifi.WifiManager
 import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import java.net.DatagramPacket
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -49,17 +52,32 @@ class CcapiDiscovery(private val context: Context) {
     private val _scanning = MutableStateFlow(false)
     val scanning: StateFlow<Boolean> = _scanning
 
-    private val _cameras = MutableStateFlow<List<CanonCamera>>(emptyList())
-    val cameras: StateFlow<List<CanonCamera>> = _cameras
-
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var discoveryJob: Job? = null
+
+    /** SSDP-discovered cameras. Cleared on each [start]. */
+    private val _ssdpCameras = MutableStateFlow<List<CanonCamera>>(emptyList())
+
+    /** User-added cameras. Survives scan restarts so an IP-based entry stays
+     *  visible even if SSDP fails to find it. */
+    private val _manualCameras = MutableStateFlow<List<CanonCamera>>(emptyList())
+
+    /** Merged view consumed by the UI — SSDP results plus any manually added,
+     *  de-duplicated by UDN with SSDP winning (it has the freshest LOCATION). */
+    val cameras: StateFlow<List<CanonCamera>> =
+        combine(_ssdpCameras, _manualCameras) { ssdp, manual ->
+            val merged = ssdp.toMutableList()
+            for (m in manual) {
+                if (merged.none { it.udn == m.udn }) merged += m
+            }
+            merged
+        }.stateIn(scope, SharingStarted.Eagerly, emptyList())
     private var multicastLock: WifiManager.MulticastLock? = null
 
     fun start() {
         if (discoveryJob?.isActive == true) return
         _scanning.value = true
-        _cameras.value = emptyList()
+        _ssdpCameras.value = emptyList()
 
         val wifi = context.applicationContext
             .getSystemService(Context.WIFI_SERVICE) as? WifiManager
@@ -69,6 +87,16 @@ class CcapiDiscovery(private val context: Context) {
         }
 
         discoveryJob = scope.launch { runDiscovery() }
+    }
+
+    /** Manually inject a camera discovered by direct probe (not SSDP).
+     *  Survives scan restarts so an IP-based entry stays visible even if
+     *  SSDP fails to find the body. De-duplicated by UDN. */
+    fun addManual(camera: CanonCamera) {
+        val existing = _manualCameras.value
+        if (existing.any { it.udn == camera.udn }) return
+        _manualCameras.value = existing + camera
+        Log.i(TAG, "Manually added ${camera.friendlyName} @ ${camera.ipAddress}")
     }
 
     fun stop() {
@@ -112,8 +140,17 @@ class CcapiDiscovery(private val context: Context) {
 
         try {
             // Active probe — kicks the camera into responding immediately
-            // instead of waiting for the next periodic NOTIFY.
-            sendMSearch(socket)
+            // instead of waiting for the next periodic NOTIFY. We send the
+            // Canon-specific ST plus a generic ssdp:all so we catch bodies
+            // that filter strictly on ST, and we burst-send to cope with UDP
+            // loss on flaky camera APs.
+            scope.launch {
+                repeat(3) { i ->
+                    sendMSearch(socket, SERVICE_TYPE)
+                    sendMSearch(socket, "ssdp:all")
+                    if (i < 2) delay(500)
+                }
+            }
             val buf = ByteArray(2048)
             while (currentCoroutineContext().isActive) {
                 try {
@@ -158,13 +195,13 @@ class CcapiDiscovery(private val context: Context) {
         return NetworkInterface.getByName(ifName)
     }
 
-    private fun sendMSearch(socket: MulticastSocket) {
+    private fun sendMSearch(socket: MulticastSocket, st: String) {
         val payload = buildString {
             append("M-SEARCH * HTTP/1.1\r\n")
             append("HOST: $SSDP_GROUP:$SSDP_PORT\r\n")
             append("MAN: \"ssdp:discover\"\r\n")
             append("MX: 3\r\n")
-            append("ST: $SERVICE_TYPE\r\n")
+            append("ST: $st\r\n")
             append("\r\n")
         }.toByteArray()
         try {
@@ -172,7 +209,7 @@ class CcapiDiscovery(private val context: Context) {
                 payload, payload.size,
                 InetAddress.getByName(SSDP_GROUP), SSDP_PORT,
             ))
-            Log.i(TAG, "Sent M-SEARCH")
+            Log.i(TAG, "Sent M-SEARCH ST=$st")
         } catch (e: Exception) {
             Log.w(TAG, "M-SEARCH send failed", e)
         }
@@ -202,9 +239,9 @@ class CcapiDiscovery(private val context: Context) {
 
         scope.launch {
             val camera = CameraDescription.fetch(location) ?: return@launch
-            val existing = _cameras.value
+            val existing = _ssdpCameras.value
             if (existing.any { it.udn == camera.udn }) return@launch
-            _cameras.value = existing + camera
+            _ssdpCameras.value = existing + camera
             Log.i(TAG, "Discovered ${camera.friendlyName} @ ${camera.ipAddress}")
         }
     }

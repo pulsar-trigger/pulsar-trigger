@@ -534,6 +534,57 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clearCanonError() { _canonError.value = null }
 
+    private val _canonManualAdding = MutableStateFlow(false)
+    val canonManualAdding: StateFlow<Boolean> = _canonManualAdding
+    private val _canonManualError = MutableStateFlow<String?>(null)
+    val canonManualError: StateFlow<String?> = _canonManualError
+
+    /** Manually probe `http://<host>[:<port>]/upnp/CameraDevDesc.xml` and add
+     *  the camera to the scan list if successful. Use when SSDP discovery
+     *  can't reach the body — typically because the camera AP doesn't relay
+     *  multicast — but you can already hit the camera by IP. Common Canon
+     *  CCAPI ports are tried in turn if no port is given. */
+    fun addCanonByHost(rawInput: String, onResult: (Boolean) -> Unit) {
+        val trimmed = rawInput.trim()
+            .removePrefix("http://").removePrefix("https://")
+            .substringBefore('/')
+        if (trimmed.isEmpty()) {
+            _canonManualError.value = "invalid"
+            onResult(false)
+            return
+        }
+        val (host, explicitPort) = if (':' in trimmed) {
+            val (h, p) = trimmed.split(':', limit = 2)
+            h to p.toIntOrNull()
+        } else trimmed to null
+        val portsToTry = explicitPort?.let { listOf(it) } ?: listOf(8080, 80, 8612)
+
+        viewModelScope.launch {
+            _canonManualError.value = null
+            _canonManualAdding.value = true
+            try {
+                for (port in portsToTry) {
+                    val url = "http://$host:$port/upnp/CameraDevDesc.xml"
+                    Log.i(TAG, "Probing $url")
+                    val camera = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        com.ehrocha.pulsar.transport.ccapi.CameraDescription.fetch(url)
+                    }
+                    if (camera != null) {
+                        ccapiDiscovery.addManual(camera)
+                        onResult(true)
+                        return@launch
+                    }
+                }
+                _canonManualError.value = "not_found"
+                onResult(false)
+            } finally {
+                _canonManualAdding.value = false
+            }
+        }
+    }
+
+    fun clearCanonManualError() { _canonManualError.value = null }
+
     private fun loadCanonCreds(udn: String):
             com.ehrocha.pulsar.transport.ccapi.CcapiClient.Credentials? {
         val user = canonCredsPrefs.getString("u:$udn", null) ?: return null

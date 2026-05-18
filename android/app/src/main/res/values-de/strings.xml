@@ -25,6 +25,14 @@
     <string name="canon_rename_subtitle">Wähle einen Spitznamen für %1$s. Leer lassen zum Entfernen.</string>
     <string name="canon_rename_label">Spitzname</string>
     <string name="canon_on_wifi">Aktuelles WLAN: %1$s</string>
+    <string name="canon_manual_add_button">Per IP hinzufügen</string>
+    <string name="canon_manual_add_title">Kamera per IP hinzufügen</string>
+    <string name="canon_manual_add_subtitle">Wenn der Kamera-AP Multicast blockiert, findet SSDP die Kamera nicht, obwohl TCP/IP funktioniert. Gib die IP der Kamera ein (und den Port, wenn nicht 8080).</string>
+    <string name="canon_manual_add_label">Host oder host:port</string>
+    <string name="canon_manual_add_action">Hinzufügen</string>
+    <string name="canon_manual_add_probing">Prüfung…</string>
+    <string name="canon_manual_add_not_found">Keine Canon-Kamera hat unter dieser Adresse geantwortet. IP prüfen und sicherstellen, dass die API-Seite im Browser lädt.</string>
+    <string name="canon_manual_add_invalid">Gib die IP oder host[:port] der Kamera ein.</string>
     <string name="canon_camera_capabilities">Funktionen…</string>
     <string name="canon_capabilities_probing">Kamera wird abgefragt…</string>
     <string name="canon_capabilities_failed">Kamera nicht erreichbar. WLAN und Anmeldedaten prüfen.</string>

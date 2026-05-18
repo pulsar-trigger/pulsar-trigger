@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
@@ -79,6 +80,7 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
     var renameCanon by remember { mutableStateOf<com.ehrocha.pulsar.transport.ccapi.CanonCamera?>(null) }
     var capabilitiesCanon by remember { mutableStateOf<com.ehrocha.pulsar.transport.ccapi.CanonCamera?>(null) }
     var showCanonSetupHelp by remember { mutableStateOf(false) }
+    var showCanonManualAdd by remember { mutableStateOf(false) }
 
     if (connected) {
         LaunchedEffect(Unit) { onConnected() }
@@ -220,17 +222,31 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
                     item { PairingProtocolCard() }
                 }
                 item {
-                    TextButton(onClick = { showCanonSetupHelp = true }) {
-                        Icon(
-                            Icons.Default.HelpOutline,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            stringResource(R.string.canon_setup_button),
-                            style = MaterialTheme.typography.labelMedium,
-                        )
+                    Row {
+                        TextButton(onClick = { showCanonSetupHelp = true }) {
+                            Icon(
+                                Icons.Default.HelpOutline,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                stringResource(R.string.canon_setup_button),
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                        }
+                        TextButton(onClick = { showCanonManualAdd = true }) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                stringResource(R.string.canon_manual_add_button),
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                        }
                     }
                 }
             }
@@ -283,6 +299,22 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
 
     if (showCanonSetupHelp) {
         CanonSetupHelpDialog(onDismiss = { showCanonSetupHelp = false })
+    }
+
+    if (showCanonManualAdd) {
+        CanonManualAddDialog(
+            adding = vm.canonManualAdding.collectAsState().value,
+            error = vm.canonManualError.collectAsState().value,
+            onDismiss = {
+                showCanonManualAdd = false
+                vm.clearCanonManualError()
+            },
+            onSubmit = { input ->
+                vm.addCanonByHost(input) { ok ->
+                    if (ok) showCanonManualAdd = false
+                }
+            },
+        )
     }
 
     renameCanon?.let { cam ->
@@ -624,6 +656,66 @@ private fun CapabilityRow(label: String, supported: Boolean) {
         Spacer(Modifier.width(8.dp))
         Text(label, style = MaterialTheme.typography.bodySmall)
     }
+}
+
+@Composable
+private fun CanonManualAddDialog(
+    adding: Boolean,
+    error: String?,
+    onDismiss: () -> Unit,
+    onSubmit: (String) -> Unit,
+) {
+    var host by rememberSaveable { mutableStateOf("") }
+    val canSubmit = host.trim().isNotEmpty() && !adding
+    AlertDialog(
+        onDismissRequest = { if (!adding) onDismiss() },
+        icon = {
+            Icon(Icons.Default.Add, contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary)
+        },
+        title = { Text(stringResource(R.string.canon_manual_add_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    stringResource(R.string.canon_manual_add_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = host,
+                    onValueChange = { host = it.trim() },
+                    label = { Text(stringResource(R.string.canon_manual_add_label)) },
+                    placeholder = { Text("192.168.1.2:8080") },
+                    singleLine = true,
+                    enabled = !adding,
+                )
+                if (error != null) {
+                    Text(
+                        text = when (error) {
+                            "not_found" -> stringResource(R.string.canon_manual_add_not_found)
+                            "invalid" -> stringResource(R.string.canon_manual_add_invalid)
+                            else -> error
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSubmit(host) }, enabled = canSubmit) {
+                Text(
+                    if (adding) stringResource(R.string.canon_manual_add_probing)
+                    else stringResource(R.string.canon_manual_add_action)
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !adding) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
 }
 
 @Composable
