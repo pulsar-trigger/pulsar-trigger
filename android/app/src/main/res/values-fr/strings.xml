@@ -28,6 +28,10 @@
     <string name="canon_manual_add_button">Ajouter par IP</string>
     <string name="canon_manual_add_title">Ajouter un appareil par IP</string>
     <string name="canon_manual_add_subtitle">Quand SSDP ne trouve pas l\'appareil (AP bloquant le multicast, ou boîtier qui ne diffuse pas l\'UPnP), saisissez son IP (et le port si différent de 8080). Pulsar interroge /ccapi directement — la même URL que celle qui s\'ouvre dans le navigateur.</string>
+    <string name="btn_download_install">Télécharger et Installer</string>
+    <string name="btn_install_now">Installer Maintenant</string>
+    <string name="status_downloading_apk">Téléchargement de l\'APK… %1$d%%</string>
+    <string name="status_apk_ready">Téléchargement terminé — ouvrez l\'installeur ci-dessous.</string>
     <string name="canon_manual_add_label">Hôte ou hôte:port</string>
     <string name="canon_manual_add_action">Ajouter</string>
     <string name="canon_manual_add_probing">Sondage…</string>

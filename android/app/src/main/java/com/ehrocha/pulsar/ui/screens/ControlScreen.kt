@@ -1819,14 +1819,51 @@ private fun UpdatesSection(vm: PulsarViewModel) {
                         )
                     }
                     Button(
-                        onClick = { updateManager.openReleasePage() },
+                        onClick = { updateManager.downloadAndInstall() },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                     ) {
-                        Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.SystemUpdate, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.btn_download_install))
+                    }
+                    TextButton(
+                        onClick = { updateManager.openReleasePage() },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
                         Text(stringResource(R.string.btn_open_release_page))
                     }
+                }
+            }
+
+            AppUpdateState.DOWNLOADING -> {
+                val progress by updateManager.downloadProgress.collectAsState()
+                Text(
+                    stringResource(R.string.status_downloading_apk, (progress * 100).toInt()),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                LinearProgressIndicator(
+                    progress = { progress.coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
+            AppUpdateState.READY_TO_INSTALL -> {
+                Text(
+                    stringResource(R.string.status_apk_ready),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Button(
+                    onClick = { updateManager.launchInstaller() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Icon(Icons.Default.SystemUpdate, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.btn_install_now))
                 }
             }
 
