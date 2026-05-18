@@ -59,6 +59,34 @@
     <string name="star_focus_near">Near</string>
     <string name="star_focus_far">Far</string>
     <string name="star_focus_lens_hint">Set the lens to AF mode on the body switch — drive focus only works with the motor engaged. Once you\'re happy, you can flip the lens to MF to lock the position.</string>
+
+    <!-- Star Focus wizard steps -->
+    <string name="star_focus_step_prep">Prep</string>
+    <string name="star_focus_step_aim">Aim</string>
+    <string name="star_focus_step_focus">Focus</string>
+    <string name="star_focus_step_lock">Lock</string>
+
+    <string name="star_focus_prep_title">Prepare camera</string>
+    <string name="star_focus_prep_intro">Before we can drive focus and stream live view, the camera needs to be set up. Once done, tap Next.</string>
+    <string name="star_focus_prep_step_af">Set the lens AF/MF switch to AF (if your lens has one). Drive-focus only works when the motor is engaged.</string>
+    <string name="star_focus_prep_step_mode">Set the camera mode dial to M. Live view is disabled while the body is in Bulb — focus first, then switch the dial to B for your astro run.</string>
+    <string name="star_focus_prep_step_aim">Point the camera at a bright star (or a distant point light source) — the brighter the star, the more responsive the sharpness readout.</string>
+
+    <string name="star_focus_aim_title">Pick a star to track</string>
+    <string name="star_focus_aim_hint">Tap a bright star in the image below. A yellow circle will lock onto it. Pulsar measures the peak brightness in that circle as you focus.</string>
+
+    <string name="star_focus_focus_title">Walk focus until sharp</string>
+
+    <string name="star_focus_lock_title">Lock focus</string>
+    <string name="star_focus_lock_intro">Focus is set. To make sure nothing shifts during your astro run:</string>
+    <string name="star_focus_lock_step_switch">If your lens has an AF/MF switch, flip it to MF now. This physically disconnects the focus motor — bulletproof.</string>
+    <string name="star_focus_lock_step_no_switch">If your lens has no AF/MF switch, leave it. Pulsar sends \"AF off\" with every bulb shot anyway (the per-shot toggle in the wizards), so the motor won\'t move during the run.</string>
+    <string name="star_focus_lock_step_avoid_ring">Don\'t touch the focus ring. On most modern lenses the ring is electronic and will move focus even in MF.</string>
+
+    <string name="star_focus_btn_next">Next</string>
+    <string name="star_focus_btn_back">Back</string>
+    <string name="star_focus_btn_focus_done">Focus is sharp — continue</string>
+    <string name="star_focus_btn_done">Done</string>
     <string name="canon_setup_title">Enable Camera Control API</string>
     <string name="canon_setup_intro">Pulsar needs CCAPI active on your camera. Most R-series bodies need a one-time activation:</string>
     <string name="canon_setup_step_1">1. Download Canon\'s CCAPI Activation Tool from the developer portal.</string>

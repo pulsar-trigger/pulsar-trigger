@@ -15,6 +15,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.CenterFocusStrong
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
@@ -42,21 +46,31 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 private const val ROI_PX = 32
-private const val FRAME_INTERVAL_MS = 150L  // ~6-7 fps target
+private const val FRAME_INTERVAL_MS = 150L  // ~6-7 fps
+
+private enum class Step(
+    val labelRes: Int,
+    val titleRes: Int,
+    val icon: ImageVector,
+) {
+    PREP(R.string.star_focus_step_prep, R.string.star_focus_prep_title, Icons.Default.CameraAlt),
+    AIM(R.string.star_focus_step_aim, R.string.star_focus_aim_title, Icons.Default.Star),
+    FOCUS(R.string.star_focus_step_focus, R.string.star_focus_focus_title, Icons.Default.CenterFocusStrong),
+    LOCK(R.string.star_focus_step_lock, R.string.star_focus_lock_title, Icons.Default.Lock),
+}
 
 /**
- * Star Focus Assist — live view from the Canon body, tap a star, watch
- * sharpness as you walk focus near/far. Useful for nailing pinpoint focus
- * on stars before kicking off an astro run. CCAPI-only; the BLE/ESP32 path
- * has no concept of live view or focus drive.
+ * Star Focus Assist — 4-step wizard for nailing pinpoint focus on stars over
+ * CCAPI before kicking off an astro run.
  *
- * Behavior:
- *  - Starts `/shooting/liveview` on enter, stops on leave or disconnect.
- *  - Polls `/shooting/liveview/flip` at ~6 fps for JPEG frames.
- *  - User taps a point on the frame → ROI center stored in bitmap coords.
- *  - Each frame: extracts a [ROI_PX]² box around the ROI, computes the peak
- *    luminance, displays it. Sharp star = high peak; defocused = lower.
- *  - Six drivefocus buttons step the lens motor in/out at three step sizes.
+ *  1. PREP   — instructions: lens to AF, camera mode dial to M (not Bulb).
+ *  2. AIM    — live view appears, user taps a bright star.
+ *  3. FOCUS  — live view + sharpness readout + drive-focus buttons.
+ *  4. LOCK   — instructions: flip lens to MF if it has the switch; either way
+ *              Pulsar will send `af: false` during the actual run.
+ *
+ * Live view starts on PREP→AIM and stops on AIM/FOCUS→LOCK (or screen exit).
+ * Drive-focus on the RP requires the lens to be in AF mode on the body switch.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,31 +81,31 @@ fun StarFocusScreen(
     val transport by vm.canonTransport.collectAsState()
     val t = transport
     if (t == null) {
-        // Defensive: the menu tile is gated on canonTransport != null, but
-        // if the user disconnects while on this screen we drop back.
+        // Defensive: the menu tile is gated, but if the user disconnects
+        // mid-flow we bail.
         LaunchedEffect(Unit) { onBack() }
         return
     }
 
+    var step by remember { mutableStateOf(Step.PREP) }
     var frame by remember { mutableStateOf<Bitmap?>(null) }
     var roiCenter by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var sharpness by remember { mutableIntStateOf(0) }
     var displayedSize by remember { mutableStateOf<IntSize?>(null) }
     var liveViewError by remember { mutableStateOf<String?>(null) }
 
-    // Stop live view on screen leave. DisposableEffect can't suspend, so
-    // the VM provides a fire-and-forget stop that runs in viewModelScope.
-    DisposableEffect(t) {
-        onDispose { vm.stopCanonLiveView() }
-    }
-
-    // Start liveview + run the frame loop.
-    LaunchedEffect(t) {
+    // Live view runs only on AIM + FOCUS steps. Start on entry to AIM, stop
+    // on transition out (or screen exit). Restarting on every recomposition
+    // would thrash the camera, so we key on a derived flag.
+    val liveViewActive = step == Step.AIM || step == Step.FOCUS
+    LaunchedEffect(liveViewActive) {
+        if (!liveViewActive) return@LaunchedEffect
         val started = t.startLiveView()
         if (!started) {
             liveViewError = "start_failed"
             return@LaunchedEffect
         }
+        liveViewError = null
         while (isActive) {
             val bytes = t.getLiveViewFrame()
             if (bytes != null && bytes.isNotEmpty()) {
@@ -106,6 +120,15 @@ fun StarFocusScreen(
             delay(FRAME_INTERVAL_MS)
         }
     }
+    // Belt-and-braces: stop live view when leaving the screen entirely.
+    DisposableEffect(t) {
+        onDispose { vm.stopCanonLiveView() }
+    }
+    // Also stop when we move to LOCK explicitly so the user gets battery back
+    // while reading the lock instructions.
+    LaunchedEffect(step) {
+        if (step == Step.LOCK) vm.stopCanonLiveView()
+    }
 
     Scaffold(
         topBar = {
@@ -118,147 +141,379 @@ fun StarFocusScreen(
         Column(
             modifier = Modifier
                 .padding(padding)
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .fillMaxSize(),
         ) {
-            // Live-view image
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color.Black)
-                    .onSizeChanged { displayedSize = it },
-                contentAlignment = Alignment.Center,
-            ) {
-                val bmp = frame
-                when {
-                    liveViewError != null -> Text(
-                        stringResource(R.string.star_focus_start_failed),
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(16.dp),
+            StepIndicator(current = step, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+            HorizontalDivider()
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                when (step) {
+                    Step.PREP -> PrepStep(onNext = { step = Step.AIM })
+                    Step.AIM -> AimStep(
+                        transport = t,
+                        frame = frame,
+                        liveViewError = liveViewError,
+                        roiCenter = roiCenter,
+                        displayedSize = displayedSize,
+                        onDisplayedSizeChange = { displayedSize = it },
+                        onRoiPicked = { x, y, bmp ->
+                            roiCenter = x to y
+                            sharpness = computePeakLuminance(bmp, x, y, ROI_PX)
+                        },
+                        onBack = { step = Step.PREP },
+                        onNext = { step = Step.FOCUS },
                     )
-                    bmp == null -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.height(12.dp))
-                        Text(
-                            stringResource(R.string.star_focus_starting),
-                            color = Color.White.copy(alpha = 0.7f),
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                    else -> {
-                        Image(
-                            bitmap = bmp.asImageBitmap(),
-                            contentDescription = stringResource(R.string.star_focus_liveview_cd),
-                            contentScale = ContentScale.Fit,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .pointerInput(bmp.width, bmp.height) {
-                                    detectTapGestures { tap ->
-                                        val (bx, by) = viewToBitmap(
-                                            tap.x, tap.y,
-                                            size.width.toFloat(), size.height.toFloat(),
-                                            bmp.width, bmp.height,
-                                        )
-                                        if (bx in 0 until bmp.width && by in 0 until bmp.height) {
-                                            roiCenter = bx to by
-                                            sharpness = computePeakLuminance(bmp, bx, by, ROI_PX)
-                                        }
-                                    }
-                                },
-                        )
-                        // ROI overlay
-                        val ds = displayedSize
-                        val roi = roiCenter
-                        if (roi != null && ds != null) {
-                            RoiOverlay(
-                                roiX = roi.first, roiY = roi.second,
-                                bmpW = bmp.width, bmpH = bmp.height,
-                                viewW = ds.width, viewH = ds.height,
-                            )
-                        }
-                    }
+                    Step.FOCUS -> FocusStep(
+                        transport = t,
+                        frame = frame,
+                        liveViewError = liveViewError,
+                        roiCenter = roiCenter,
+                        sharpness = sharpness,
+                        displayedSize = displayedSize,
+                        onDisplayedSizeChange = { displayedSize = it },
+                        onBack = { step = Step.AIM },
+                        onDone = { step = Step.LOCK },
+                    )
+                    Step.LOCK -> LockStep(
+                        onBack = { step = Step.FOCUS },
+                        onDone = onBack,
+                    )
                 }
             }
+        }
+    }
+}
 
-            // Sharpness readout
+// ── Step UIs ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun StepIndicator(current: Step, modifier: Modifier = Modifier) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Step.entries.forEachIndexed { idx, s ->
+            val active = s == current
+            val done = s.ordinal < current.ordinal
+            val color = when {
+                active -> MaterialTheme.colorScheme.primary
+                done -> MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+            }
             Surface(
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth(),
+                color = color.copy(alpha = if (active) 0.2f else 0.1f),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.weight(1f),
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
-                        Icons.Default.Star,
+                        s.icon,
                         contentDescription = null,
-                        tint = if (roiCenter != null) MaterialTheme.colorScheme.primary
-                               else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        tint = color,
+                        modifier = Modifier.size(16.dp),
                     )
-                    Spacer(Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            stringResource(R.string.star_focus_sharpness_label),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            if (roiCenter == null)
-                                stringResource(R.string.star_focus_tap_to_mark)
-                            else "$sharpness / 255",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 22.sp,
-                        )
-                    }
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        stringResource(s.labelRes),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = color,
+                        fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
+                    )
                 }
             }
+            if (idx < Step.entries.size - 1) Spacer(Modifier.width(4.dp))
+        }
+    }
+}
 
-            // Drive-focus row: 3 near, 3 far. 1 = fine, 3 = coarse.
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth(),
+@Composable
+private fun PrepStep(onNext: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text(
+            stringResource(R.string.star_focus_prep_title),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            stringResource(R.string.star_focus_prep_intro),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        InstructionRow("1.", stringResource(R.string.star_focus_prep_step_af))
+        InstructionRow("2.", stringResource(R.string.star_focus_prep_step_mode))
+        InstructionRow("3.", stringResource(R.string.star_focus_prep_step_aim))
+        Spacer(Modifier.weight(1f))
+        Button(
+            onClick = onNext,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(12.dp),
+        ) { Text(stringResource(R.string.star_focus_btn_next)) }
+    }
+}
+
+@Composable
+private fun AimStep(
+    transport: CcapiTransport,
+    frame: Bitmap?,
+    liveViewError: String?,
+    roiCenter: Pair<Int, Int>?,
+    displayedSize: IntSize?,
+    onDisplayedSizeChange: (IntSize) -> Unit,
+    onRoiPicked: (Int, Int, Bitmap) -> Unit,
+    onBack: () -> Unit,
+    onNext: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            stringResource(R.string.star_focus_aim_hint),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        LiveViewBox(
+            frame = frame,
+            liveViewError = liveViewError,
+            roiCenter = roiCenter,
+            onDisplayedSizeChange = onDisplayedSizeChange,
+            onTap = { bmp, x, y -> onRoiPicked(x, y, bmp) },
+            displayedSize = displayedSize,
+            modifier = Modifier.weight(1f),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.star_focus_btn_back))
+            }
+            Button(
+                onClick = onNext,
+                modifier = Modifier.weight(2f),
+                enabled = roiCenter != null,
+            ) { Text(stringResource(R.string.star_focus_btn_next)) }
+        }
+    }
+}
+
+@Composable
+private fun FocusStep(
+    transport: CcapiTransport,
+    frame: Bitmap?,
+    liveViewError: String?,
+    roiCenter: Pair<Int, Int>?,
+    sharpness: Int,
+    displayedSize: IntSize?,
+    onDisplayedSizeChange: (IntSize) -> Unit,
+    onBack: () -> Unit,
+    onDone: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        LiveViewBox(
+            frame = frame,
+            liveViewError = liveViewError,
+            roiCenter = roiCenter,
+            onDisplayedSizeChange = onDisplayedSizeChange,
+            onTap = null,  // ROI locked during focus
+            displayedSize = displayedSize,
+            modifier = Modifier.weight(1f),
+        )
+        // Sharpness readout
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            stringResource(R.string.star_focus_near),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f),
-                        )
-                        Text(
-                            stringResource(R.string.star_focus_far),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.End,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        FocusBtn("«««", "near3", t, Modifier.weight(1f))
-                        FocusBtn("««", "near2", t, Modifier.weight(1f))
-                        FocusBtn("«", "near1", t, Modifier.weight(1f))
-                        FocusBtn("»", "far1", t, Modifier.weight(1f))
-                        FocusBtn("»»", "far2", t, Modifier.weight(1f))
-                        FocusBtn("»»»", "far3", t, Modifier.weight(1f))
-                    }
+                Icon(
+                    Icons.Default.Star,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.star_focus_sharpness_label),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text("$sharpness / 255", fontWeight = FontWeight.Bold, fontSize = 22.sp)
                 }
             }
-            Text(
-                stringResource(R.string.star_focus_lens_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+        }
+        // Drive-focus row
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        stringResource(R.string.star_focus_near),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        stringResource(R.string.star_focus_far),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    FocusBtn("«««", "near3", transport, Modifier.weight(1f))
+                    FocusBtn("««", "near2", transport, Modifier.weight(1f))
+                    FocusBtn("«", "near1", transport, Modifier.weight(1f))
+                    FocusBtn("»", "far1", transport, Modifier.weight(1f))
+                    FocusBtn("»»", "far2", transport, Modifier.weight(1f))
+                    FocusBtn("»»»", "far3", transport, Modifier.weight(1f))
+                }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.star_focus_btn_back))
+            }
+            Button(onClick = onDone, modifier = Modifier.weight(2f)) {
+                Text(stringResource(R.string.star_focus_btn_focus_done))
+            }
+        }
+    }
+}
+
+@Composable
+private fun LockStep(onBack: () -> Unit, onDone: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text(
+            stringResource(R.string.star_focus_lock_title),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            stringResource(R.string.star_focus_lock_intro),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        InstructionRow("•", stringResource(R.string.star_focus_lock_step_switch))
+        InstructionRow("•", stringResource(R.string.star_focus_lock_step_no_switch))
+        InstructionRow("•", stringResource(R.string.star_focus_lock_step_avoid_ring))
+        Spacer(Modifier.weight(1f))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.star_focus_btn_back))
+            }
+            Button(
+                onClick = onDone,
+                modifier = Modifier.weight(2f).height(48.dp),
+            ) { Text(stringResource(R.string.star_focus_btn_done)) }
+        }
+    }
+}
+
+// ── Shared building blocks ───────────────────────────────────────────────
+
+@Composable
+private fun InstructionRow(bullet: String, text: String) {
+    Row(verticalAlignment = Alignment.Top) {
+        Text(
+            bullet,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(end = 12.dp).width(20.dp),
+        )
+        Text(text, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
+private fun LiveViewBox(
+    frame: Bitmap?,
+    liveViewError: String?,
+    roiCenter: Pair<Int, Int>?,
+    onDisplayedSizeChange: (IntSize) -> Unit,
+    onTap: ((Bitmap, Int, Int) -> Unit)?,
+    displayedSize: IntSize?,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.Black)
+            .onSizeChanged { onDisplayedSizeChange(it) },
+        contentAlignment = Alignment.Center,
+    ) {
+        val bmp = frame
+        when {
+            liveViewError != null -> Text(
+                stringResource(R.string.star_focus_start_failed),
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(16.dp),
             )
+            bmp == null -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    stringResource(R.string.star_focus_starting),
+                    color = Color.White.copy(alpha = 0.7f),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            else -> {
+                Image(
+                    bitmap = bmp.asImageBitmap(),
+                    contentDescription = stringResource(R.string.star_focus_liveview_cd),
+                    contentScale = ContentScale.Fit,
+                    modifier = if (onTap != null) {
+                        Modifier
+                            .fillMaxSize()
+                            .pointerInput(bmp.width, bmp.height) {
+                                detectTapGestures { tap ->
+                                    val (bx, by) = viewToBitmap(
+                                        tap.x, tap.y,
+                                        size.width.toFloat(), size.height.toFloat(),
+                                        bmp.width, bmp.height,
+                                    )
+                                    if (bx in 0 until bmp.width && by in 0 until bmp.height) {
+                                        onTap(bmp, bx, by)
+                                    }
+                                }
+                            }
+                    } else {
+                        Modifier.fillMaxSize()
+                    },
+                )
+                val ds = displayedSize
+                val roi = roiCenter
+                if (roi != null && ds != null) {
+                    RoiOverlay(
+                        roiX = roi.first, roiY = roi.second,
+                        bmpW = bmp.width, bmpH = bmp.height,
+                        viewW = ds.width, viewH = ds.height,
+                    )
+                }
+            }
         }
     }
 }
@@ -309,8 +564,6 @@ private fun FocusBtn(
     }
 }
 
-/** Map a tap (composable coords) to bitmap coords given a ContentScale.Fit
- *  image — the image is centered and may letterbox on one axis. */
 private fun viewToBitmap(
     tx: Float, ty: Float,
     viewW: Float, viewH: Float,
@@ -325,8 +578,7 @@ private fun viewToBitmap(
 }
 
 /** Peak luminance inside a [size]×[size] box centered at ([cx], [cy]) on
- *  [bmp]. Clamped to the bitmap bounds. Returns 0..255; higher = sharper
- *  star (more concentrated light). */
+ *  [bmp]. Returns 0..255; higher = sharper star (more concentrated light). */
 private fun computePeakLuminance(bmp: Bitmap, cx: Int, cy: Int, size: Int): Int {
     val half = size / 2
     val x0 = (cx - half).coerceAtLeast(0)
@@ -343,7 +595,6 @@ private fun computePeakLuminance(bmp: Bitmap, cx: Int, cy: Int, size: Int): Int 
         val r = (p shr 16) and 0xFF
         val g = (p shr 8) and 0xFF
         val b = p and 0xFF
-        // Integer approximation of 0.299R + 0.587G + 0.114B (BT.601).
         val luma = (r * 77 + g * 150 + b * 29) shr 8
         if (luma > peak) peak = luma
     }
