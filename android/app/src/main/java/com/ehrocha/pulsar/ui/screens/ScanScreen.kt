@@ -20,12 +20,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.DeveloperBoard
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -59,7 +61,9 @@ import com.google.accompanist.permissions.rememberPermissionState
 fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
     val scanning by vm.scanning.collectAsState()
     val devices by vm.devices.collectAsState()
+    val canonCameras by vm.canonCameras.collectAsState()
     val connected by vm.connected.collectAsState()
+    var canonInfo by remember { mutableStateOf<com.ehrocha.pulsar.transport.ccapi.CanonCamera?>(null) }
 
     if (connected) {
         LaunchedEffect(Unit) { onConnected() }
@@ -169,7 +173,21 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
                 items(devices) { scanned ->
                     DeviceCard(scanned) { vm.connectTo(scanned.device) }
                 }
-                if (devices.isEmpty()) {
+                if (canonCameras.isNotEmpty()) {
+                    item {
+                        Text(
+                            stringResource(R.string.section_canon_cameras),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    }
+                    items(canonCameras) { camera ->
+                        CanonCameraCard(camera) { canonInfo = camera }
+                    }
+                }
+                if (devices.isEmpty() && canonCameras.isEmpty()) {
                     item { PairingProtocolCard() }
                 }
             }
@@ -218,6 +236,40 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
 
     if (showLanguageDialog) {
         LanguagePickerDialog(onDismiss = { showLanguageDialog = false })
+    }
+
+    canonInfo?.let { cam ->
+        AlertDialog(
+            onDismissRequest = { canonInfo = null },
+            confirmButton = {
+                TextButton(onClick = { canonInfo = null }) {
+                    Text(stringResource(android.R.string.ok))
+                }
+            },
+            icon = {
+                Icon(Icons.Default.CameraAlt, contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary)
+            },
+            title = { Text(cam.nickname ?: cam.friendlyName) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("${cam.friendlyName}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold)
+                    Text("${cam.ipAddress}:${cam.port}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(cam.accessUrl,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.canon_camera_join_wifi_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            },
+        )
     }
 }
 
@@ -390,6 +442,58 @@ private fun DeviceCard(scanned: com.ehrocha.pulsar.ble.ScannedDevice, onClick: (
                     device.address,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CanonCameraCard(
+    camera: com.ehrocha.pulsar.transport.ccapi.CanonCamera,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                modifier = Modifier.size(48.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.Wifi,
+                        contentDescription = stringResource(R.string.cd_canon_camera),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    camera.nickname ?: camera.friendlyName,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    stringResource(R.string.canon_camera_subtitle),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    "${camera.ipAddress}:${camera.port}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

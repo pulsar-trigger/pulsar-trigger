@@ -1,6 +1,10 @@
 <resources>
     <string name="app_name">Pulsar</string>
     <string name="app_tagline">BLE リモートトリガー</string>
+    <string name="section_canon_cameras">Canon カメラ (WiFi)</string>
+    <string name="canon_camera_subtitle">Canon CCAPI</string>
+    <string name="canon_camera_join_wifi_hint">カメラの WiFi または同じ LAN に接続してください</string>
+    <string name="cd_canon_camera">Canon カメラ (CCAPI)</string>
     <string name="available_devices">利用可能なデバイス</string>
     <string name="select_device_prompt">Pulsar トリガーを選択してコントロールセッションを開始します。</string>
     <string name="use_simulator">シミュレーターを使用</string>

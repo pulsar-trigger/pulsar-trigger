@@ -70,6 +70,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val scanning: StateFlow<Boolean> = bleController.scanning
     val devices: StateFlow<List<com.ehrocha.pulsar.ble.ScannedDevice>> = bleController.devices
 
+    // ── CCAPI (Canon WiFi) discovery ─────────────────────────────────────
+    // Runs alongside BLE scan; scan card shows both lists.
+    private val ccapiDiscovery = com.ehrocha.pulsar.transport.ccapi.CcapiDiscovery(app)
+    val canonCameras: StateFlow<List<com.ehrocha.pulsar.transport.ccapi.CanonCamera>> =
+        ccapiDiscovery.cameras
+
     // Connection-side flows. [status] is multiplexed below — BLE updates flow
     // in, but the simulator can write directly when it's running.
     private val _connected = MutableStateFlow(false)
@@ -289,8 +295,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun startScan() = bleController.startScan()
-    fun stopScan() = bleController.stopScan()
+    fun startScan() {
+        bleController.startScan()
+        ccapiDiscovery.start()
+    }
+    fun stopScan() {
+        bleController.stopScan()
+        ccapiDiscovery.stop()
+    }
 
     @SuppressLint("MissingPermission")
     fun connectTo(device: BluetoothDevice) {

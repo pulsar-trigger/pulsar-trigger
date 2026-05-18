@@ -1,6 +1,10 @@
 <resources>
     <string name="app_name">Pulsar</string>
     <string name="app_tagline">BLE 远程触发器</string>
+    <string name="section_canon_cameras">佳能相机 (WiFi)</string>
+    <string name="canon_camera_subtitle">Canon CCAPI</string>
+    <string name="canon_camera_join_wifi_hint">请连接相机的 WiFi 或同一局域网</string>
+    <string name="cd_canon_camera">佳能相机 (CCAPI)</string>
     <string name="available_devices">可用设备</string>
     <string name="select_device_prompt">选择您的 Pulsar 触发器以开始控制会话。</string>
     <string name="use_simulator">使用模拟器</string>

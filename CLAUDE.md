@@ -100,4 +100,14 @@ cd firmware
 - [README.md](README.md) — full architecture, hardware, BLE protocol
 - [docs/ble-protocol.md](docs/ble-protocol.md) — packet format specification
 - [docs/wiring.md](docs/wiring.md) — hardware schematics
+- [docs/ccapi.md](docs/ccapi.md) — Canon CCAPI (WiFi) integration design
 - [.github/copilot-instructions.md](.github/copilot-instructions.md) — AI assistant conventions
+
+## Transports (in flight)
+
+Pulsar is moving toward a `CameraTransport` abstraction that lets the
+wizards drive either the ESP32 (BLE) or a Canon EOS R-series camera
+directly (WiFi via CCAPI). The ESP32 path stays as the universal
+remote-port driver; CCAPI is a no-extra-hardware option for compatible
+Canon bodies. See `docs/ccapi.md` for the phased plan. Canon SDK PDFs live
+outside the repo at `../Canon-API/` (NDA — do not commit).

@@ -1,6 +1,10 @@
 <resources>
     <string name="app_name">Pulsar</string>
     <string name="app_tagline">BLE-Fernauslöser</string>
+    <string name="section_canon_cameras">Canon-Kameras (WiFi)</string>
+    <string name="canon_camera_subtitle">Canon CCAPI</string>
+    <string name="canon_camera_join_wifi_hint">Verbinde dich mit dem WiFi der Kamera oder dem gleichen lokalen Netzwerk</string>
+    <string name="cd_canon_camera">Canon-Kamera (CCAPI)</string>
     <string name="available_devices">Verfügbare Geräte</string>
     <string name="select_device_prompt">Wähle deinen Pulsar-Auslöser, um die Steuerungssitzung zu starten.</string>
     <string name="use_simulator">Simulator verwenden</string>

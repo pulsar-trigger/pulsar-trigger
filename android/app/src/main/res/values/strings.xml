@@ -11,6 +11,10 @@
     <string name="board_esp32_generic">ESP32 (generic)</string>
     <string name="board_m5stick_s3">M5StickC Plus2 (S3)</string>
     <string name="board_m5core2">M5Stack Core2</string>
+    <string name="section_canon_cameras">Canon Cameras (WiFi)</string>
+    <string name="canon_camera_subtitle">Canon CCAPI</string>
+    <string name="canon_camera_join_wifi_hint">Join the camera\'s WiFi network or same LAN</string>
+    <string name="cd_canon_camera">Canon camera (CCAPI)</string>
 
     <!-- MainMenuScreen -->
     <string name="tab_trigger">Trigger</string>

@@ -1,6 +1,10 @@
 <resources>
     <string name="app_name">Pulsar</string>
     <string name="app_tagline">Disparador Remoto BLE</string>
+    <string name="section_canon_cameras">Cámaras Canon (WiFi)</string>
+    <string name="canon_camera_subtitle">Canon CCAPI</string>
+    <string name="canon_camera_join_wifi_hint">Conéctate al WiFi de la cámara o a la misma red local</string>
+    <string name="cd_canon_camera">Cámara Canon (CCAPI)</string>
     <string name="available_devices">Dispositivos Disponibles</string>
     <string name="select_device_prompt">Selecciona tu Pulsar trigger para iniciar la sesión de control.</string>
     <string name="use_simulator">Usar Simulador</string>

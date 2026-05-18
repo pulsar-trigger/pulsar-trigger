@@ -1,6 +1,10 @@
 <resources>
     <string name="app_name">Pulsar</string>
     <string name="app_tagline">Déclencheur BLE</string>
+    <string name="section_canon_cameras">Appareils Canon (WiFi)</string>
+    <string name="canon_camera_subtitle">Canon CCAPI</string>
+    <string name="canon_camera_join_wifi_hint">Connectez-vous au WiFi de l\'appareil ou au même réseau local</string>
+    <string name="cd_canon_camera">Appareil Canon (CCAPI)</string>
     <string name="available_devices">Appareils disponibles</string>
     <string name="select_device_prompt">Sélectionnez votre déclencheur Pulsar pour commencer la session de contrôle.</string>
     <string name="use_simulator">Utiliser le simulateur</string>
