@@ -98,14 +98,27 @@ class CcapiClient(
         }
     }
 
+    /**
+     * Does this body advertise the given endpoint with the requested HTTP
+     * verb? `path` is relative to `/ccapi/<version>` (e.g.
+     * `/shooting/control/shutterbutton/manual`).
+     *
+     * Canon's actual `/ccapi` matrix entries look like
+     * `{"url": "http://ip:port/ccapi/ver100/...", "get": bool, "post": bool,
+     * "put": bool, "delete": bool}` — one boolean per verb rather than a
+     * single `method` string. We extract the path component of the `url`
+     * and check the boolean for the requested verb.
+     */
     fun supports(path: String, method: String = "post"): Boolean {
         val arr = endpoints[version ?: return false] ?: return false
+        val target = "/ccapi/$version$path"
+        val verb = method.lowercase()
         for (i in 0 until arr.length()) {
             val ep = arr.optJSONObject(i) ?: continue
-            if (ep.optString("path") == "/ccapi/$version$path" &&
-                ep.optString("method").equals(method, ignoreCase = true)) {
-                return true
-            }
+            val url = ep.optString("url")
+            val pathPart = runCatching { URL(url).path }.getOrNull() ?: url
+            if (pathPart != target) continue
+            return ep.optBoolean(verb, false)
         }
         return false
     }
