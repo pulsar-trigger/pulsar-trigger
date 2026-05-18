@@ -635,6 +635,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clearCanonManualError() { _canonManualError.value = null }
 
+    /** Fire-and-forget stop of any running Canon live-view session. Safe to
+     *  call from non-suspending contexts (e.g. `DisposableEffect.onDispose`)
+     *  — runs in the viewmodel scope. */
+    fun stopCanonLiveView() {
+        val transport = _canonTransport.value ?: return
+        viewModelScope.launch { transport.stopLiveView() }
+    }
+
     private fun loadCanonCreds(udn: String):
             com.ehrocha.pulsar.transport.ccapi.CcapiClient.Credentials? {
         val user = canonCredsPrefs.getString("u:$udn", null) ?: return null

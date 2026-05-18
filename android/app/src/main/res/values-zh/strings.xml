@@ -49,6 +49,16 @@
     <string name="ccapi_af_toggle_label">每次拍摄自动对焦</string>
     <string name="ccapi_af_toggle_on_hint">相机会在每次拍摄前自动对焦。适合白天题材。</string>
     <string name="ccapi_af_toggle_off_hint">相机会在当前焦点位置拍摄。适合天文/星野（自动对焦会在星点上拉风箱并漂移）。</string>
+    <string name="mode_star_focus">星点对焦</string>
+    <string name="star_focus_title">星点对焦助手</string>
+    <string name="star_focus_starting">正在启动实时取景…</string>
+    <string name="star_focus_start_failed">无法启动实时取景。请确认相机不在 Bulb 模式（该模式下实时取景被禁用），并且没有其他应用占用相机。</string>
+    <string name="star_focus_liveview_cd">相机实时取景</string>
+    <string name="star_focus_tap_to_mark">点选要追踪的星点</string>
+    <string name="star_focus_sharpness_label">ROI 内的峰值亮度</string>
+    <string name="star_focus_near">近</string>
+    <string name="star_focus_far">远</string>
+    <string name="star_focus_lens_hint">请将镜头机身开关拨到 AF — 马达仅在 AF 模式下响应。对好焦后可切到 MF 锁定。</string>
     <string name="canon_setup_title">启用 Camera Control API</string>
     <string name="canon_setup_intro">Pulsar 需要相机启用 CCAPI。大多数 R 系列机身需要一次性激活：</string>
     <string name="canon_setup_step_1">1. 在佳能开发者门户下载 CCAPI Activation Tool。</string>

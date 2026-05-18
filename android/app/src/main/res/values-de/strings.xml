@@ -49,6 +49,16 @@
     <string name="ccapi_af_toggle_label">Autofokus pro Aufnahme</string>
     <string name="ccapi_af_toggle_on_hint">Kamera fokussiert vor jeder Aufnahme. Ideal für Tagesmotive.</string>
     <string name="ccapi_af_toggle_off_hint">Kamera nimmt mit aktueller Fokuseinstellung auf. Ideal für Astro / Sternenfelder (AF würde Sterne suchen und driften).</string>
+    <string name="mode_star_focus">Sternenfokus</string>
+    <string name="star_focus_title">Sternenfokus-Assistent</string>
+    <string name="star_focus_starting">Live-View wird gestartet…</string>
+    <string name="star_focus_start_failed">Live-View konnte nicht gestartet werden. Bulb-Modus deaktiviert Live-View; auch keine andere App verbunden lassen.</string>
+    <string name="star_focus_liveview_cd">Live-View der Kamera</string>
+    <string name="star_focus_tap_to_mark">Stern zum Verfolgen antippen</string>
+    <string name="star_focus_sharpness_label">Spitzenhelligkeit in der ROI</string>
+    <string name="star_focus_near">Nah</string>
+    <string name="star_focus_far">Fern</string>
+    <string name="star_focus_lens_hint">Objektiv am Body-Schalter auf AF — der Motor reagiert nur bei aktivem AF. Danach gerne auf MF schalten, um die Schärfe zu fixieren.</string>
     <string name="canon_setup_title">Camera Control API aktivieren</string>
     <string name="canon_setup_intro">Pulsar benötigt aktives CCAPI. Die meisten R-Bodies benötigen eine einmalige Aktivierung:</string>
     <string name="canon_setup_step_1">1. CCAPI Activation Tool aus dem Canon-Entwicklerportal laden.</string>

@@ -49,6 +49,16 @@
     <string name="ccapi_af_toggle_label">Autofoco a cada disparo</string>
     <string name="ccapi_af_toggle_on_hint">A câmera foca antes de cada disparo. Ideal para cenas diurnas.</string>
     <string name="ccapi_af_toggle_off_hint">A câmera dispara na posição de foco atual. Ideal para astro / campos estelares (o AF tentaria focar nas estrelas e perderia foco).</string>
+    <string name="mode_star_focus">Foco em Estrelas</string>
+    <string name="star_focus_title">Assistente de Foco em Estrelas</string>
+    <string name="star_focus_starting">Iniciando live view…</string>
+    <string name="star_focus_start_failed">Não foi possível iniciar o live view. Verifique se a câmera não está em modo Bulb (o live view não funciona nele) e se nenhum outro app está conectado.</string>
+    <string name="star_focus_liveview_cd">Live view da câmera</string>
+    <string name="star_focus_tap_to_mark">Toque em uma estrela para acompanhar</string>
+    <string name="star_focus_sharpness_label">Brilho máximo na ROI</string>
+    <string name="star_focus_near">Perto</string>
+    <string name="star_focus_far">Longe</string>
+    <string name="star_focus_lens_hint">Coloque a lente em AF na chave do corpo — o motor só responde com AF engatado. Depois, troque para MF para travar a posição.</string>
     <string name="canon_setup_title">Ativar Camera Control API</string>
     <string name="canon_setup_intro">A Pulsar precisa do CCAPI ativo na sua câmera. A maioria das corpos R precisa de uma ativação única:</string>
     <string name="canon_setup_step_1">1. Baixe a CCAPI Activation Tool no portal de desenvolvedores da Canon.</string>

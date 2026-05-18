@@ -34,6 +34,9 @@ class CcapiTransport(
         private const val PATH_SHOOTING_MODE = "/shooting/settings/shootingmode"
         private const val PATH_DIAL_IGNORE = "/shooting/control/ignoreshootingmodedialmode"
         private const val PATH_POLL = "/event/polling"
+        private const val PATH_LIVEVIEW = "/shooting/liveview"
+        private const val PATH_LIVEVIEW_FLIP = "/shooting/liveview/flip"
+        private const val PATH_DRIVE_FOCUS = "/shooting/control/drivefocus"
     }
 
     override val kind = TransportKind.CCAPI
@@ -133,6 +136,49 @@ class CcapiTransport(
     override suspend fun stop() {
         // Belt-and-braces: if a bulb exposure is open, release it.
         if (_connected.value) stopBulb()
+    }
+
+    // ── Live view + focus drive (Star Focus tool) ───────────────────────
+
+    /** Begin a live-view session. The camera streams JPEG frames available
+     *  via [getLiveViewFrame]. Must be paired with [stopLiveView] when done
+     *  — live view holds the mirror up and drains battery. */
+    suspend fun startLiveView(): Boolean {
+        if (!_connected.value) return false
+        val body = JSONObject()
+            .put("liveviewsize", "medium")
+            .put("cameraposition", "off")
+        val r = client.post(PATH_LIVEVIEW, body)
+        logResult("liveview start", r)
+        return r is CcapiClient.Result.Ok
+    }
+
+    /** End the live-view session. */
+    suspend fun stopLiveView() {
+        if (!_connected.value) return
+        val body = JSONObject().put("liveviewsize", "off")
+        logResult("liveview stop", client.post(PATH_LIVEVIEW, body))
+    }
+
+    /** Fetch one JPEG frame from the running live-view session. Returns the
+     *  raw bytes or null on transport error. Canon's flip endpoint returns
+     *  the most recent frame on each request — the caller paces frame rate. */
+    suspend fun getLiveViewFrame(): ByteArray? {
+        if (!_connected.value) return null
+        return when (val r = client.getBytes(PATH_LIVEVIEW_FLIP, timeoutMs = 3_000)) {
+            is CcapiClient.Result.Ok -> r.value
+            else -> { logResult("liveview/flip", r); null }
+        }
+    }
+
+    /** Drive the focus motor relative to its current position. `action` is
+     *  one of `near1`/`near2`/`near3`/`far1`/`far2`/`far3` — 1 is fine, 3 is
+     *  coarse. Requires the lens to be in AF mode (motor disconnected when
+     *  the lens switch is MF). */
+    suspend fun driveFocus(action: String) {
+        if (!_connected.value) return
+        val body = JSONObject().put("action", action)
+        logResult("drivefocus $action", client.post(PATH_DRIVE_FOCUS, body))
     }
 
     /** Direct, non-polling battery read. Used at connect time to seed the

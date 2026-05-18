@@ -49,6 +49,16 @@
     <string name="ccapi_af_toggle_label">撮影ごとにオートフォーカス</string>
     <string name="ccapi_af_toggle_on_hint">撮影前にカメラがオートフォーカスします。日中の被写体向け。</string>
     <string name="ccapi_af_toggle_off_hint">現在のピント位置で撮影します。天体・星野撮影向け (AF だと星を追ってピントがずれます)。</string>
+    <string name="mode_star_focus">星にピント合わせ</string>
+    <string name="star_focus_title">星ピント合わせアシスト</string>
+    <string name="star_focus_starting">ライブビューを開始中…</string>
+    <string name="star_focus_start_failed">ライブビューを開始できません。カメラがバルブモードになっていないか、他のアプリが接続していないかご確認ください。</string>
+    <string name="star_focus_liveview_cd">カメラのライブビュー</string>
+    <string name="star_focus_tap_to_mark">追跡する星をタップ</string>
+    <string name="star_focus_sharpness_label">ROI 内のピーク輝度</string>
+    <string name="star_focus_near">近</string>
+    <string name="star_focus_far">遠</string>
+    <string name="star_focus_lens_hint">ボディのスイッチでレンズを AF に — モーターは AF 時のみ反応します。ピントが合ったら MF に切り替えて固定できます。</string>
     <string name="canon_setup_title">Camera Control API を有効化</string>
     <string name="canon_setup_intro">Pulsar を使うには CCAPI を有効にする必要があります。多くの R シリーズでは一度だけ以下の設定が必要です:</string>
     <string name="canon_setup_step_1">1. キヤノンの開発者ポータルから CCAPI Activation Tool をダウンロードします。</string>

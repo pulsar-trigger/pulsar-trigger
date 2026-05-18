@@ -144,7 +144,28 @@ class CcapiClient(
             rawGet("$rootUrl/$ver$path")
         }
 
+    /** Like [get] but returns the raw response body. Used by binary endpoints
+     *  like `/shooting/liveview/flip` where decoding through `readText()` would
+     *  mangle the JPEG. */
+    suspend fun getBytes(path: String, timeoutMs: Int? = null): Result<ByteArray> =
+        withContext(Dispatchers.IO) {
+            val ver = version ?: return@withContext Result.Network(
+                IllegalStateException("CcapiClient not connected; call connect() first"))
+            sendBytesWithDigest("$rootUrl/$ver$path", timeoutMs)
+        }
+
     private fun rawGet(url: String): Result<String> = sendWithDigest("GET", url, null)
+
+    /** Mirror of [sendWithDigest] for binary responses. */
+    private fun sendBytesWithDigest(url: String, timeoutMs: Int?): Result<ByteArray> {
+        val first = sendOnce("GET", url, null, authHeader("GET", url), timeoutMs)
+        if (first !is Attempt.NeedsAuth) return first.toBytesResult()
+        if (credentials == null) return Result.NeedsAuth
+        val challenge = first.challenge ?: return Result.NeedsAuth
+        digestChallenge = challenge
+        digestNonceCount = 0
+        return sendOnce("GET", url, null, authHeader("GET", url), timeoutMs).toBytesResult()
+    }
 
     /** One-or-two attempt request handler. First send goes out with whatever
      *  Authorization header we can derive from a cached challenge (or none).
@@ -168,16 +189,24 @@ class CcapiClient(
     }
 
     /** Single HTTP round-trip. Internal envelope so we can return either a
-     *  normal result or a 401 with the parsed challenge attached. */
+     *  normal result or a 401 with the parsed challenge attached. Holds the
+     *  body as raw bytes; callers convert to text or pass straight through. */
     private sealed interface Attempt {
-        data class Ok(val body: String) : Attempt
+        data class Ok(val bytes: ByteArray) : Attempt
         data class Http(val code: Int, val body: String) : Attempt
         data class NeedsAuth(val challenge: DigestChallenge?) : Attempt
         data class Network(val cause: Throwable) : Attempt
     }
 
     private fun Attempt.toResult(): Result<String> = when (this) {
-        is Attempt.Ok -> Result.Ok(body)
+        is Attempt.Ok -> Result.Ok(String(bytes, Charsets.UTF_8))
+        is Attempt.Http -> Result.Http(code, body)
+        is Attempt.NeedsAuth -> Result.NeedsAuth
+        is Attempt.Network -> Result.Network(cause)
+    }
+
+    private fun Attempt.toBytesResult(): Result<ByteArray> = when (this) {
+        is Attempt.Ok -> Result.Ok(bytes)
         is Attempt.Http -> Result.Http(code, body)
         is Attempt.NeedsAuth -> Result.NeedsAuth
         is Attempt.Network -> Result.Network(cause)
@@ -188,11 +217,12 @@ class CcapiClient(
         url: String,
         jsonBody: String?,
         authorization: String?,
+        readTimeoutMsOverride: Int? = null,
     ): Attempt {
         val conn = try {
             (URL(url).openConnection() as HttpURLConnection).apply {
                 connectTimeout = CONNECT_TIMEOUT_MS
-                readTimeout = READ_TIMEOUT_MS
+                readTimeout = readTimeoutMsOverride ?: READ_TIMEOUT_MS
                 requestMethod = method
                 doInput = true
                 if (jsonBody != null) {
@@ -212,16 +242,17 @@ class CcapiClient(
             }
             val code = conn.responseCode
             val stream = if (code in 200..299) conn.inputStream else conn.errorStream
-            val text = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            val bytes = stream?.use { it.readBytes() } ?: ByteArray(0)
             when {
-                code in 200..299 -> Attempt.Ok(text)
+                code in 200..299 -> Attempt.Ok(bytes)
                 code == 401 -> {
                     val auth = conn.getHeaderField("WWW-Authenticate")
                     Attempt.NeedsAuth(auth?.let { parseDigestChallenge(it) })
                 }
                 else -> {
-                    Log.w(TAG, "HTTP $code from $url: $text")
-                    Attempt.Http(code, text)
+                    val errBody = String(bytes, Charsets.UTF_8)
+                    Log.w(TAG, "HTTP $code from $url: $errBody")
+                    Attempt.Http(code, errBody)
                 }
             }
         } catch (e: Exception) {

@@ -397,6 +397,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     onPlannerSelected = { currentScreen = AppScreen.Planner },
                     onAlignmentSelected = { currentScreen = AppScreen.Alignment },
                     onWhatsUpSelected = { currentScreen = AppScreen.WhatsUp },
+                    onStarFocusSelected = { currentScreen = AppScreen.StarFocus },
                     onSettingsSelected = { currentScreen = AppScreen.Settings(SettingsSection.UPDATES) },
                 )
             }
@@ -485,6 +486,13 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
             AppScreen.ShotLog -> {
                 BackHandler { currentScreen = AppScreen.Menu }
                 com.ehrocha.pulsar.ui.screens.ShotLogScreen(
+                    vm = vm,
+                    onBack = { currentScreen = AppScreen.Menu },
+                )
+            }
+            AppScreen.StarFocus -> {
+                BackHandler { currentScreen = AppScreen.Menu }
+                com.ehrocha.pulsar.ui.screens.StarFocusScreen(
                     vm = vm,
                     onBack = { currentScreen = AppScreen.Menu },
                 )
@@ -641,6 +649,7 @@ private sealed class AppScreen {
     data object Alignment : AppScreen()
     data object WhatsUp : AppScreen()
     data object ShotLog : AppScreen()
+    data object StarFocus : AppScreen()
     data class Intervalometer2(val presetId: String? = null) : AppScreen()
     data class AstroMode2(val presetId: String? = null) : AppScreen()
     data class Timelapse(val presetId: String? = null) : AppScreen()

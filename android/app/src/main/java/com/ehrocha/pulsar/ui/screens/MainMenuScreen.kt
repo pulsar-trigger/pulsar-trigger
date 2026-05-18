@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.LensBlur
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TouchApp
@@ -58,6 +59,7 @@ fun MainMenuScreen(
     onPlannerSelected: () -> Unit = {},
     onAlignmentSelected: () -> Unit = {},
     onWhatsUpSelected: () -> Unit = {},
+    onStarFocusSelected: () -> Unit = {},
     onUserModeRun: (com.ehrocha.pulsar.model.UserMode) -> Unit = {},
     onIntervalometer2Selected: () -> Unit = {},
     onAstroMode2Selected: () -> Unit = {},
@@ -230,6 +232,7 @@ fun MainMenuScreen(
                     }
                 }
                 TAB_TOOLS -> {
+                    val canonOn = vm.canonTransport.collectAsState().value != null
                     val toolItems = listOf(
                         launcherItem(R.string.mode_planner, Icons.Default.DateRange) {
                             onPlannerSelected()
@@ -240,6 +243,13 @@ fun MainMenuScreen(
                         launcherItem(R.string.mode_whats_up, Icons.Default.Visibility) {
                             onWhatsUpSelected()
                         },
+                        // CCAPI-only tile; greyed out when on BLE / simulator so
+                        // its absence is discoverable without breaking layout.
+                        launcherItem(
+                            R.string.mode_star_focus,
+                            Icons.Default.Star,
+                            enabled = canonOn,
+                        ) { onStarFocusSelected() },
                     )
                     Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                         LauncherGrid(toolItems)
