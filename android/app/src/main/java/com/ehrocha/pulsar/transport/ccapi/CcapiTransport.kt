@@ -135,6 +135,18 @@ class CcapiTransport(
         if (_connected.value) stopBulb()
     }
 
+    /** Direct, non-polling battery read. Used at connect time to seed the
+     *  UI before `/event/polling` has a chance to deliver a change event —
+     *  polling only returns *changed* fields, so a battery that hasn't
+     *  ticked since boot is invisible to it. Returns null on failure. */
+    suspend fun getBatteryStatus(): JSONObject? {
+        if (!_connected.value) return null
+        return when (val r = client.get("/devicestatus/battery")) {
+            is CcapiClient.Result.Ok -> runCatching { JSONObject(r.value) }.getOrNull()
+            else -> { logResult("devicestatus/battery", r); null }
+        }
+    }
+
     /**
      * Long-poll `/event/polling`. Camera blocks up to ~10 s (`timeout=short`
      * on ver110+; `continue=on` on ver100) and returns only the fields that

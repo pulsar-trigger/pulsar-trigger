@@ -495,6 +495,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     )
                     // Persist creds only once they're known-good.
                     if (credentials != null) saveCanonCreds(camera.udn, credentials)
+                    // Seed battery before the long-poll has a chance to fire
+                    // — polling only delivers changed fields, so a static
+                    // battery would otherwise show as 0%.
+                    launch {
+                        transport.getBatteryStatus()?.let { applyCanonPollUpdate(it, 0) }
+                    }
                     startCanonPolling(transport)
                 }
                 is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.NeedsAuth -> {
@@ -730,8 +736,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         val current = _status.value ?: return prevShots
         var nextShots = prevShots
 
-        json.optJSONObject("battery")?.let { batt ->
-            val pct = canonBatteryToPct(batt.optString("level"))
+        // `battery` in poll/devicestatus responses comes in two shapes
+        // depending on the body: an object (single battery) or an array
+        // (multi-cell battery grip). Both are wrapped here.
+        val battObj = json.optJSONObject("battery")
+            ?: json.optJSONArray("battery")?.optJSONObject(0)
+        if (battObj != null) {
+            val pct = canonBatteryToPct(battObj.optString("level"))
             if (pct != null) _status.value = current.copy(batteryPct = pct)
         }
 
