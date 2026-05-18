@@ -102,7 +102,9 @@ fun StarFocusScreen(
         if (!liveViewActive) return@LaunchedEffect
         val started = t.startLiveView()
         if (!started) {
-            liveViewError = "start_failed"
+            // Surface what the camera actually told us so failures are
+            // debuggable from the screen instead of needing logcat.
+            liveViewError = t.lastLiveViewError ?: "start_failed"
             return@LaunchedEffect
         }
         liveViewError = null
@@ -466,11 +468,25 @@ private fun LiveViewBox(
     ) {
         val bmp = frame
         when {
-            liveViewError != null -> Text(
-                stringResource(R.string.star_focus_start_failed),
-                color = MaterialTheme.colorScheme.error,
+            liveViewError != null -> Column(
                 modifier = Modifier.padding(16.dp),
-            )
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    stringResource(R.string.star_focus_start_failed),
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                )
+                if (liveViewError != "start_failed") {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        liveViewError,
+                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
             bmp == null -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(12.dp))

@@ -140,17 +140,43 @@ class CcapiTransport(
 
     // ── Live view + focus drive (Star Focus tool) ───────────────────────
 
-    /** Begin a live-view session. The camera streams JPEG frames available
-     *  via [getLiveViewFrame]. Must be paired with [stopLiveView] when done
-     *  — live view holds the mirror up and drains battery. */
+    /** Last error message from a failed [startLiveView] attempt. Cleared on
+     *  the next successful start. Surfaced in the UI when live view can't
+     *  begin so the user (and us, debugging) can see why. */
+    @Volatile var lastLiveViewError: String? = null
+        private set
+
+    /** Begin a live-view session. Try a sequence of `liveviewsize` values —
+     *  older bodies (EOS RP) only accept `small`, newer ones accept `medium`
+     *  and `large` too. First one that gets a 200 wins. Returns true on
+     *  success; on failure [lastLiveViewError] holds the most informative
+     *  response body we saw. */
     suspend fun startLiveView(): Boolean {
         if (!_connected.value) return false
-        val body = JSONObject()
-            .put("liveviewsize", "medium")
-            .put("cameraposition", "off")
-        val r = client.post(PATH_LIVEVIEW, body)
-        logResult("liveview start", r)
-        return r is CcapiClient.Result.Ok
+        // Prefer small first — it's the universally supported size, lowest
+        // bandwidth, and renders fast enough for focus work.
+        val sizesToTry = listOf("small", "medium", "large")
+        var lastError: String? = null
+        for (size in sizesToTry) {
+            val body = JSONObject()
+                .put("liveviewsize", size)
+                .put("cameraposition", "off")
+            val r = client.post(PATH_LIVEVIEW, body)
+            if (r is CcapiClient.Result.Ok) {
+                Log.i(TAG, "liveview started @ $size")
+                lastLiveViewError = null
+                return true
+            }
+            logResult("liveview start @ $size", r)
+            lastError = when (r) {
+                is CcapiClient.Result.Http -> "HTTP ${r.code}: ${r.body.take(200)}"
+                is CcapiClient.Result.NeedsAuth -> "auth required"
+                is CcapiClient.Result.Network -> "network error: ${r.cause.message}"
+                else -> "unknown"
+            }
+        }
+        lastLiveViewError = lastError
+        return false
     }
 
     /** End the live-view session. */
