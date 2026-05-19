@@ -1143,11 +1143,18 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         // exposureMs; the camera owns timing in that path. Any
                         // other exposureMs means a bulb-style run.
                         if (step.exposureMs == AppConfig.TIMELAPSE_PULSE_MS) {
-                            runCanonTimelapse(canon, step.shotCount, step.intervalMs, step.delayMs,
-                                af = step.useAutofocus)
+                            com.ehrocha.pulsar.transport.runCanonTimelapse(
+                                canon, step.shotCount, step.intervalMs, step.delayMs,
+                                af = step.useAutofocus, status = _status,
+                                awaitReady = { awaitCanonReady(canon) },
+                            )
                         } else {
-                            runCanonBulb(canon, step.shotCount, step.exposureMs,
-                                step.intervalMs, step.delayMs, af = step.useAutofocus)
+                            com.ehrocha.pulsar.transport.runCanonBulb(
+                                canon, step.shotCount, step.exposureMs,
+                                step.intervalMs, step.delayMs, af = step.useAutofocus,
+                                status = _status,
+                                awaitReady = { awaitCanonReady(canon) },
+                            )
                         }
                     }
                     _simulatorActive.value -> simulateShots(
@@ -1167,8 +1174,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 val canon = _canonTransport.value
                 val expMs = AppConfig.astroExposureMs(step.focalLength, step.cropFactor, step.ruleDivisor)
                 when {
-                    canon != null -> runCanonBulb(canon, step.shotCount, expMs,
-                        step.gapMs, step.delayMs, af = step.useAutofocus)
+                    canon != null -> com.ehrocha.pulsar.transport.runCanonBulb(
+                        canon, step.shotCount, expMs,
+                        step.gapMs, step.delayMs, af = step.useAutofocus,
+                        status = _status, awaitReady = { awaitCanonReady(canon) },
+                    )
                     _simulatorActive.value -> simulateShots(step.shotCount, expMs, step.gapMs, step.delayMs)
                     else -> {
                         sendModeCommand(
@@ -1181,8 +1191,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             is FlowStep.DarkFrame -> {
                 val canon = _canonTransport.value
                 when {
-                    canon != null -> runCanonBulb(canon, step.shotCount, step.exposureMs,
-                        step.gapMs, 0L, af = step.useAutofocus)
+                    canon != null -> com.ehrocha.pulsar.transport.runCanonBulb(
+                        canon, step.shotCount, step.exposureMs,
+                        step.gapMs, 0L, af = step.useAutofocus,
+                        status = _status, awaitReady = { awaitCanonReady(canon) },
+                    )
                     _simulatorActive.value -> simulateShots(step.shotCount, step.exposureMs, step.gapMs, 0L)
                     else -> {
                         sendModeCommand(
@@ -1198,7 +1211,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 val canon = _canonTransport.value
                 val rampSteps = step.steps.coerceAtLeast(2)
                 if (canon != null) {
-                    runCanonRamp(canon, step, rampSteps, af = step.useAutofocus)
+                    com.ehrocha.pulsar.transport.runCanonRamp(
+                        canon, step, rampSteps, af = step.useAutofocus,
+                        status = _status, awaitReady = { awaitCanonReady(canon) },
+                    )
                 } else {
                     for (i in 0 until rampSteps) {
                         coroutineContext.ensureActive()
@@ -1219,22 +1235,27 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Holds the runner until the CCAPI transport is no longer in reconnect
-     *  mode, then returns. Throws if the transport was dropped entirely
-     *  (e.g. reconnect timed out) so the caller can bail cleanly instead of
-     *  firing shots into the void. The flow's [DeviceState] is flipped to
-     *  WAITING while paused so the RunningView shows the paused affordance
-     *  rather than RUNNING. */
+    /** Holds the runner until the active transport is no longer paused, then
+     *  returns. For CCAPI this checks [_canonReconnecting]; for non-CCAPI
+     *  transports (e.g. direct-BLE) the pause condition is transport-specific
+     *  and not wired yet, so this is currently a no-op there. Throws if a
+     *  CCAPI transport was dropped entirely (e.g. reconnect timed out) so the
+     *  caller can bail cleanly instead of firing shots into the void. The
+     *  flow's [DeviceState] is flipped to WAITING while paused so the
+     *  RunningView shows the paused affordance rather than RUNNING. */
     private suspend fun awaitCanonReady(
-        transport: com.ehrocha.pulsar.transport.ccapi.CcapiTransport,
+        transport: com.ehrocha.pulsar.transport.CameraTransport,
     ) {
-        if (!_canonReconnecting.value && _canonTransport.value === transport) return
+        // CCAPI is the only transport with a pause-on-reconnect concept today.
+        // Generalise when CanonBleTransport lands (bond-loss reconnect).
+        val ccapi = transport as? com.ehrocha.pulsar.transport.ccapi.CcapiTransport ?: return
+        if (!_canonReconnecting.value && _canonTransport.value === ccapi) return
         val priorState = _status.value?.state
         try {
             while (true) {
                 coroutineContext.ensureActive()
                 // Bail if the transport was replaced or torn down while we waited.
-                if (_canonTransport.value !== transport) {
+                if (_canonTransport.value !== ccapi) {
                     throw IllegalStateException("Canon transport dropped during pause")
                 }
                 if (!_canonReconnecting.value) return
@@ -1251,162 +1272,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Drives a Timelapse-style sequence via CCAPI single-shot shutterbutton.
-     *  The camera owns exposure (set its own shutter speed); we just fire and
-     *  delay. Continuous mode (shots=0) is supported — the loop runs until
-     *  cancelled. Status is reported simulator-style via [_status] writes so
-     *  the existing RunningView UI works unchanged. */
-    private suspend fun runCanonTimelapse(
-        transport: com.ehrocha.pulsar.transport.ccapi.CcapiTransport,
-        shots: Int,
-        intervalMs: Long,
-        startDelayMs: Long,
-        af: Boolean = true,
-    ) {
-        // Approximate per-shot exposure for "time remaining" math. The actual
-        // exposure happens inside the camera; ~250 ms covers shutter actuation
-        // round-trip + typical 1/30 s pulse.
-        val perShotEstimate = 250L
-        val continuous = shots <= 0
-        val plannedTotal = if (continuous) 0L
-                           else startDelayMs + shots * (perShotEstimate + intervalMs) - intervalMs
-
-        if (startDelayMs > 0) {
-            _status.value = _status.value?.copy(
-                state = DeviceState.WAITING, shotsTaken = 0,
-                timeRemainingMs = plannedTotal,
-            )
-            delay(startDelayMs)
-        }
-
-        var shot = 0
-        while (true) {
-            coroutineContext.ensureActive()
-            // If the transport is busy reconnecting, pause the run rather
-            // than firing into the void. Throws on permanent drop.
-            awaitCanonReady(transport)
-            shot += 1
-            val remaining = if (continuous) 0L
-                            else ((shots - shot + 1).coerceAtLeast(0)) *
-                                (perShotEstimate + intervalMs) - intervalMs
-            _status.value = _status.value?.copy(
-                state = DeviceState.RUNNING, shotsTaken = shot - 1,
-                timeRemainingMs = remaining.coerceAtLeast(0),
-            )
-            transport.fireShutter(af = af)
-            _status.value = _status.value?.copy(
-                state = DeviceState.WAITING, shotsTaken = shot,
-                timeRemainingMs = (remaining - perShotEstimate).coerceAtLeast(0),
-            )
-            if (!continuous && shot >= shots) break
-            if (intervalMs > 0) delay(intervalMs)
-        }
-        _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
-    }
-
-    /** Bulb-style intervalometer over CCAPI. The app owns timing: switch to
-     *  bulb, full-press, wait `exposureMs`, release, wait `intervalMs`,
-     *  repeat. Status is reported simulator-style via [_status] writes so
-     *  the existing RunningView UI works unchanged. Releases the shutter in
-     *  a finally block — guarantees the camera doesn't sit with bulb open
-     *  if the flow is cancelled mid-exposure. */
-    private suspend fun runCanonBulb(
-        transport: com.ehrocha.pulsar.transport.ccapi.CcapiTransport,
-        shots: Int,
-        exposureMs: Long,
-        intervalMs: Long,
-        startDelayMs: Long,
-        af: Boolean = false,
-    ) {
-        if (!transport.supportsBulb) {
-            Log.w(TAG, "Bulb requested on body without /shutterbutton/manual — aborting run")
-            throw IllegalStateException("Canon body lacks manual bulb support")
-        }
-        val continuous = shots <= 0
-        val plannedTotal = if (continuous) 0L
-                           else startDelayMs + shots * (exposureMs + intervalMs) - intervalMs
-
-        transport.setShutterMode(bulb = true)
-        try {
-            if (startDelayMs > 0) {
-                _status.value = _status.value?.copy(
-                    state = DeviceState.WAITING, shotsTaken = 0,
-                    timeRemainingMs = plannedTotal,
-                )
-                delay(startDelayMs)
-            }
-
-            var shot = 0
-            while (true) {
-                coroutineContext.ensureActive()
-                shot += 1
-                val remaining = if (continuous) 0L
-                                else ((shots - shot + 1).coerceAtLeast(0)) *
-                                    (exposureMs + intervalMs) - intervalMs
-                _status.value = _status.value?.copy(
-                    state = DeviceState.RUNNING, shotsTaken = shot - 1,
-                    timeRemainingMs = remaining.coerceAtLeast(0),
-                )
-                transport.startBulb(af = af)
-                delay(exposureMs)
-                transport.stopBulb()
-                _status.value = _status.value?.copy(
-                    state = DeviceState.WAITING, shotsTaken = shot,
-                    timeRemainingMs = (remaining - exposureMs).coerceAtLeast(0),
-                )
-                if (!continuous && shot >= shots) break
-                if (intervalMs > 0) delay(intervalMs)
-            }
-        } finally {
-            withContext(NonCancellable) {
-                try { transport.stopBulb() } catch (_: Throwable) {}
-            }
-        }
-        _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
-    }
-
-    /** Exposure ramp over CCAPI: a sequence of bulb shots whose exposure
-     *  interpolates linearly from start to end across [rampSteps] steps. */
-    private suspend fun runCanonRamp(
-        transport: com.ehrocha.pulsar.transport.ccapi.CcapiTransport,
-        step: FlowStep.Ramp,
-        rampSteps: Int,
-        af: Boolean = false,
-    ) {
-        if (!transport.supportsBulb) {
-            Log.w(TAG, "Ramp requested on body without /shutterbutton/manual — aborting run")
-            throw IllegalStateException("Canon body lacks manual bulb support")
-        }
-        transport.setShutterMode(bulb = true)
-        try {
-            for (i in 0 until rampSteps) {
-                coroutineContext.ensureActive()
-                awaitCanonReady(transport)
-                val fraction = i.toDouble() / (rampSteps - 1)
-                val expMs = (step.startExposureMs +
-                    fraction * (step.endExposureMs - step.startExposureMs)).toLong()
-                _status.value = _status.value?.copy(
-                    state = DeviceState.RUNNING, shotsTaken = i,
-                    // Best-effort remaining estimate: assume average exposure.
-                    timeRemainingMs = ((rampSteps - i) *
-                        ((step.startExposureMs + step.endExposureMs) / 2 + step.intervalMs))
-                        - step.intervalMs,
-                )
-                transport.startBulb(af = af)
-                delay(expMs)
-                transport.stopBulb()
-                _status.value = _status.value?.copy(
-                    state = DeviceState.WAITING, shotsTaken = i + 1,
-                )
-                if (i < rampSteps - 1 && step.intervalMs > 0) delay(step.intervalMs)
-            }
-        } finally {
-            withContext(NonCancellable) {
-                try { transport.stopBulb() } catch (_: Throwable) {}
-            }
-        }
-        _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
-    }
+    // The CCAPI / Canon-direct-BLE run loops live in
+    // `transport/CanonRunner.kt` — extracted so they can be exercised in
+    // unit tests without an Application context. The viewmodel wires the
+    // status flow and `awaitCanonReady` pause hook in to the top-level
+    // funcs at each call site.
 
     /** Simulate a sequence of shots by updating _status directly (for flow steps in simulator). */
     private suspend fun simulateShots(totalShots: Int, expMs: Long, gapMs: Long, startDelayMs: Long) {

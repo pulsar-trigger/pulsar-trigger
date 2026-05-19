@@ -56,8 +56,17 @@ class CcapiTransport(
     /** True iff the body reports `/shooting/control/shutterbutton/manual` in
      *  its endpoint matrix. Set after [connect]; bulb-based modes refuse to
      *  start otherwise. */
-    val supportsBulb: Boolean
+    override val supportsBulb: Boolean
         get() = client.supports(PATH_SHUTTER_MANUAL, "post")
+
+    // The CCAPI protocol exposes endpoints for all four of these. The camera-
+    // params wizard tab (ISO/Av/Tv) is the only UI that consumes
+    // `supportsSettings` today and it's parked; flagging it true now keeps
+    // the capability honest about what the transport can actually do.
+    override val supportsSettings: Boolean = true
+    override val supportsLiveView: Boolean = true
+    override val supportsLensInfo: Boolean = true
+    override val supportsBatteryReadout: Boolean = true
 
     /** Probe `GET /ccapi`, pin version, cache endpoints. Returns the client's
      *  [CcapiClient.Result] verbatim so callers can route 401 / network errors. */
