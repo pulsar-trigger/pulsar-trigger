@@ -317,6 +317,7 @@ data class SavedFlow(
     val tags: List<String> = emptyList(),
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
+        put("schema", SCHEMA_ID)
         put("name", name)
         put("steps", JSONArray().also { arr ->
             steps.forEach { arr.put(it.toJson()) }
@@ -328,16 +329,31 @@ data class SavedFlow(
     }
 
     companion object {
-        fun fromJson(json: JSONObject): SavedFlow = SavedFlow(
-            name = json.getString("name"),
-            steps = json.optJSONArray("steps")?.let { arr ->
-                (0 until arr.length()).map { FlowStep.fromJson(arr.getJSONObject(it)) }
-            } ?: emptyList(),
-            favorite = json.optBoolean("favorite", false),
-            tags = json.optJSONArray("tags")?.let { arr ->
-                (0 until arr.length()).map { arr.getString(it) }
-            } ?: emptyList(),
-        )
+        /** Bumped when fields are *removed* or *renamed* — additive changes
+         *  (new field with a default) don't require a bump because import
+         *  tolerates missing keys via `optX(..., default)`. v1 is the
+         *  original shape; v2 reserved if we ever need a real migration. */
+        const val SCHEMA_ID = "pulsar-flow/1"
+
+        fun fromJson(json: JSONObject): SavedFlow {
+            // Reject obviously-future schemas so we don't silently corrupt
+            // unknown fields into our v1 reader. Tolerant of missing schema
+            // (legacy files written before this field existed).
+            val schema = json.optString("schema", SCHEMA_ID)
+            if (schema != SCHEMA_ID && !schema.startsWith("pulsar-flow/")) {
+                throw IllegalArgumentException("Unknown SavedFlow schema: $schema")
+            }
+            return SavedFlow(
+                name = json.getString("name"),
+                steps = json.optJSONArray("steps")?.let { arr ->
+                    (0 until arr.length()).map { FlowStep.fromJson(arr.getJSONObject(it)) }
+                } ?: emptyList(),
+                favorite = json.optBoolean("favorite", false),
+                tags = json.optJSONArray("tags")?.let { arr ->
+                    (0 until arr.length()).map { arr.getString(it) }
+                } ?: emptyList(),
+            )
+        }
 
         fun serializeList(flows: List<SavedFlow>): String {
             val arr = JSONArray()
@@ -348,7 +364,9 @@ data class SavedFlow(
         fun deserializeList(json: String): List<SavedFlow> {
             if (json.isBlank()) return emptyList()
             val arr = JSONArray(json)
-            return (0 until arr.length()).map { fromJson(arr.getJSONObject(it)) }
+            return (0 until arr.length()).mapNotNull {
+                runCatching { fromJson(arr.getJSONObject(it)) }.getOrNull()
+            }
         }
     }
 }

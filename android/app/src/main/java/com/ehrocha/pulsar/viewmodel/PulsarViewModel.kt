@@ -71,6 +71,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         val SAFE_OUTPUT_PINS = AppConfig.SAFE_OUTPUT_PINS
         private const val CANON_CREDS_PREFS = "pulsar_canon_creds"
         private const val CANON_CREDS_PREFS_ENCRYPTED = "pulsar_canon_creds_v2"
+        /** Settings-export envelope schema. v1 = original shape. Increment
+         *  on field removal or rename; additive changes don't require a
+         *  bump. */
+        const val SETTINGS_EXPORT_SCHEMA = "pulsar-settings/1"
 
         /** Build the EncryptedSharedPreferences for CCAPI digest creds. On
          *  first run, copies anything still in the v1 plaintext file to v2
@@ -1400,6 +1404,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     /** Serialize all persisted settings to JSON for export. */
     fun exportSettingsJson(): String {
         val json = org.json.JSONObject()
+        // Schema tag at the envelope level — bumped on breaking field renames
+        // or removals; additive changes don't require a bump because import
+        // already tolerates missing keys.
+        json.put("schema", SETTINGS_EXPORT_SCHEMA)
         json.put("intv_interval_ms", _intervalMs.value)
         json.put("intv_exposure_ms", _exposureMs.value)
         json.put("intv_shot_count", _shotCount.value)
@@ -1413,9 +1421,17 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         return json.toString(2)
     }
 
-    /** Import settings from a JSON string. */
+    /** Import settings from a JSON string. Throws [IllegalArgumentException]
+     *  on unknown schema so a malformed or future-version file doesn't
+     *  silently clobber the user's current settings — the SAF-import UI
+     *  surfaces the message. Files without a schema tag are accepted as
+     *  legacy (pre-v0.238) and read as v1. */
     fun importSettingsJson(json: String) {
         val obj = org.json.JSONObject(json)
+        val schema = obj.optString("schema", SETTINGS_EXPORT_SCHEMA)
+        if (schema != SETTINGS_EXPORT_SCHEMA && !schema.startsWith("pulsar-settings/")) {
+            throw IllegalArgumentException("Unknown settings-file schema: $schema")
+        }
         setIntervalMs(obj.optLong("intv_interval_ms", AppConfig.DEFAULT_INTERVAL_MS))
         setExposureMs(obj.optLong("intv_exposure_ms", AppConfig.DEFAULT_EXPOSURE_MS))
         setShotCount(obj.optInt("intv_shot_count", AppConfig.DEFAULT_SHOT_COUNT))
