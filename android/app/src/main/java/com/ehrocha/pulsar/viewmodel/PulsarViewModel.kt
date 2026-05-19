@@ -1219,6 +1219,38 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Holds the runner until the CCAPI transport is no longer in reconnect
+     *  mode, then returns. Throws if the transport was dropped entirely
+     *  (e.g. reconnect timed out) so the caller can bail cleanly instead of
+     *  firing shots into the void. The flow's [DeviceState] is flipped to
+     *  WAITING while paused so the RunningView shows the paused affordance
+     *  rather than RUNNING. */
+    private suspend fun awaitCanonReady(
+        transport: com.ehrocha.pulsar.transport.ccapi.CcapiTransport,
+    ) {
+        if (!_canonReconnecting.value && _canonTransport.value === transport) return
+        val priorState = _status.value?.state
+        try {
+            while (true) {
+                coroutineContext.ensureActive()
+                // Bail if the transport was replaced or torn down while we waited.
+                if (_canonTransport.value !== transport) {
+                    throw IllegalStateException("Canon transport dropped during pause")
+                }
+                if (!_canonReconnecting.value) return
+                // Reflect "paused, waiting on camera" in the dashboard.
+                _status.value = _status.value?.copy(state = DeviceState.WAITING)
+                delay(500)
+            }
+        } finally {
+            // Restore the pre-pause state when we exit (success or throw)
+            // so the next iteration writes the right RUNNING/WAITING values.
+            if (priorState != null && _status.value?.state == DeviceState.WAITING) {
+                _status.value = _status.value?.copy(state = priorState)
+            }
+        }
+    }
+
     /** Drives a Timelapse-style sequence via CCAPI single-shot shutterbutton.
      *  The camera owns exposure (set its own shutter speed); we just fire and
      *  delay. Continuous mode (shots=0) is supported — the loop runs until
@@ -1250,6 +1282,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         var shot = 0
         while (true) {
             coroutineContext.ensureActive()
+            // If the transport is busy reconnecting, pause the run rather
+            // than firing into the void. Throws on permanent drop.
+            awaitCanonReady(transport)
             shot += 1
             val remaining = if (continuous) 0L
                             else ((shots - shot + 1).coerceAtLeast(0)) *
@@ -1346,6 +1381,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         try {
             for (i in 0 until rampSteps) {
                 coroutineContext.ensureActive()
+                awaitCanonReady(transport)
                 val fraction = i.toDouble() / (rampSteps - 1)
                 val expMs = (step.startExposureMs +
                     fraction * (step.endExposureMs - step.startExposureMs)).toLong()
