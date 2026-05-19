@@ -50,6 +50,11 @@
     <string name="ccapi_af_toggle_on_hint">相机会在每次拍摄前自动对焦。适合白天题材。</string>
     <string name="ccapi_af_toggle_off_hint">相机会在当前焦点位置拍摄。适合天文/星野（自动对焦会在星点上拉风箱并漂移）。</string>
     <string name="mode_star_focus">星点对焦</string>
+    <string name="mode_usb_probe">USB测试</string>
+    <string name="usb_probe_title">USB相机测试</string>
+    <string name="usb_probe_blurb">用USB-C数据线将相机连接到手机，打开相机电源，然后运行测试。我们将发送PTP GetDeviceInfo并报告协议路径是否开放。</string>
+    <string name="usb_probe_run">运行测试</string>
+    <string name="usb_probe_running">测试中…</string>
     <string name="star_focus_title">星点对焦助手</string>
     <string name="star_focus_starting">正在启动实时取景…</string>
     <string name="star_focus_start_failed">无法启动实时取景。请确认相机不在 Bulb 模式（该模式下实时取景被禁用），并且没有其他应用占用相机。</string>

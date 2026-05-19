@@ -50,6 +50,11 @@
     <string name="ccapi_af_toggle_on_hint">La cámara enfoca antes de cada disparo. Ideal para escenas diurnas.</string>
     <string name="ccapi_af_toggle_off_hint">La cámara dispara con el enfoque actual. Ideal para astro / campos de estrellas (el AF intentaría enfocar las estrellas y derivaría).</string>
     <string name="mode_star_focus">Enfoque a Estrellas</string>
+    <string name="mode_usb_probe">Prueba USB</string>
+    <string name="usb_probe_title">Prueba de Cámara USB</string>
+    <string name="usb_probe_blurb">Conecta la cámara al teléfono con un cable USB-C, enciende la cámara y ejecuta la prueba. Enviamos un PTP GetDeviceInfo e informamos si la ruta del protocolo está abierta.</string>
+    <string name="usb_probe_run">Ejecutar prueba</string>
+    <string name="usb_probe_running">Probando…</string>
     <string name="star_focus_title">Asistente de Enfoque a Estrellas</string>
     <string name="star_focus_starting">Iniciando live view…</string>
     <string name="star_focus_start_failed">No se pudo iniciar el live view. Comprueba que la cámara no esté en modo Bulb (live view no funciona ahí) y que ninguna otra app esté conectada.</string>

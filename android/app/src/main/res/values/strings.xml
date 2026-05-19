@@ -50,6 +50,11 @@
     <string name="ccapi_af_toggle_on_hint">Camera autofocuses before each shot. Best for daylight subjects.</string>
     <string name="ccapi_af_toggle_off_hint">Camera shoots at the current focus position. Best for astro / star fields (AF would hunt on stars and drift).</string>
     <string name="mode_star_focus">Star Focus</string>
+    <string name="mode_usb_probe">USB Test</string>
+    <string name="usb_probe_title">USB Camera Test</string>
+    <string name="usb_probe_blurb">Plug your camera into the phone with a USB-C cable, power the camera on, then run the probe. We send one PTP GetDeviceInfo and report whether the protocol path is open.</string>
+    <string name="usb_probe_run">Run probe</string>
+    <string name="usb_probe_running">Probing…</string>
     <string name="star_focus_title">Star Focus Assist</string>
     <string name="star_focus_starting">Starting live view…</string>
     <string name="star_focus_start_failed">Couldn\'t start live view. Make sure the camera isn\'t in Bulb mode on the body (live view is disabled there) and that no other app is connected.</string>

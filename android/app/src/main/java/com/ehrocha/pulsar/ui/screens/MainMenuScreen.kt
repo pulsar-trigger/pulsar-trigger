@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Stars
+import androidx.compose.material.icons.filled.Usb
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Visibility
@@ -60,6 +61,7 @@ fun MainMenuScreen(
     onAlignmentSelected: () -> Unit = {},
     onWhatsUpSelected: () -> Unit = {},
     onStarFocusSelected: () -> Unit = {},
+    onUsbProbeSelected: () -> Unit = {},
     onUserModeRun: (com.ehrocha.pulsar.model.UserMode) -> Unit = {},
     onIntervalometer2Selected: () -> Unit = {},
     onAstroMode2Selected: () -> Unit = {},
@@ -250,6 +252,13 @@ fun MainMenuScreen(
                             Icons.Default.Star,
                             enabled = canonOn,
                         ) { onStarFocusSelected() },
+                        // Temporary feasibility probe for the USB PTP transport.
+                        // Plug a body in via USB-C, tap, see whether the path is
+                        // viable. Remove once PTP transport is decided.
+                        launcherItem(
+                            R.string.mode_usb_probe,
+                            Icons.Default.Usb,
+                        ) { onUsbProbeSelected() },
                     )
                     Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                         LauncherGrid(toolItems)

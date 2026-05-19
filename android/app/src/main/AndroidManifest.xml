@@ -36,6 +36,9 @@
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
+    <!-- USB host: needed for the experimental PTP probe (Tools → USB camera test).
+         Not required — devices without USB OTG still get every other feature. -->
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
     <application
         android:name=".PulsarApp"
