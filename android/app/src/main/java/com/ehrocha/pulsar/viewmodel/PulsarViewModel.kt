@@ -395,22 +395,20 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         } catch (_: Exception) { emptyList() }
         _combinedFlows.value = FlowPresets.ALL + _savedFlows.value
 
-        // Auto-check for updates on connect
+        // App-update check fires once on app launch (independent of any
+        // connection). Previously this was gated on _connected.collect, which
+        // meant users who hadn't paired a device yet never saw a new version.
+        appUpdateManager.checkForUpdate(com.ehrocha.pulsar.BuildConfig.VERSION_NAME)
+
+        // Firmware update check requires a connected ESP32 — needs the chip
+        // model + current firmware version from DEVICE_INFO + status frames.
         viewModelScope.launch {
             _connected.collect { isConnected ->
-                if (isConnected) {
-                    // Always check app update
-                    appUpdateManager.checkForUpdate(
-                        com.ehrocha.pulsar.BuildConfig.VERSION_NAME
-                    )
-                    // For real device, wait for device info + status before
-                    // checking firmware updates so chip model is known
-                    if (!_simulatorActive.value) {
-                        deviceInfo.filterNotNull().first()
-                        val frame = _status.filterNotNull().first()
-                        if (frame.fwVersion.isNotEmpty()) {
-                            firmwareManager.checkForUpdate(frame.fwVersion)
-                        }
+                if (isConnected && !_simulatorActive.value) {
+                    deviceInfo.filterNotNull().first()
+                    val frame = _status.filterNotNull().first()
+                    if (frame.fwVersion.isNotEmpty()) {
+                        firmwareManager.checkForUpdate(frame.fwVersion)
                     }
                 }
             }

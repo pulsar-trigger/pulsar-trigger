@@ -41,9 +41,11 @@ import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.transport.ccapi.CcapiTransport
 import com.ehrocha.pulsar.ui.components.PulsarTopBar
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private const val ROI_PX = 32
 private const val FRAME_INTERVAL_MS = 150L  // ~6-7 fps
@@ -111,12 +113,20 @@ fun StarFocusScreen(
         while (isActive) {
             val bytes = t.getLiveViewFrame()
             if (bytes != null && bytes.isNotEmpty()) {
-                val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                // JPEG decode + per-ROI luminance scan are CPU-bound; off-
+                // load them to a worker thread so the Compose recomposition
+                // pass and the polling delay aren't blocked.
+                val (bmp, sharp) = withContext(Dispatchers.Default) {
+                    val b = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    val s = roiCenter?.let { (cx, cy) ->
+                        if (b != null) computePeakLuminance(b, cx, cy, ROI_PX)
+                        else null
+                    }
+                    b to s
+                }
                 if (bmp != null) {
                     frame = bmp
-                    roiCenter?.let { (cx, cy) ->
-                        sharpness = computePeakLuminance(bmp, cx, cy, ROI_PX)
-                    }
+                    if (sharp != null) sharpness = sharp
                 }
             }
             delay(FRAME_INTERVAL_MS)
