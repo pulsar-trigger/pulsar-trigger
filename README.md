@@ -148,6 +148,7 @@ Package: `com.ehrocha.pulsar`, `minSdk 26`, `compileSdk 35`. Navigation is a man
 | `PlannerScreen` / `SessionDetailScreen` / `MapLocationPicker` | Astro event planner with location/time/weather |
 | `AlignmentScreen` | Polar alignment helper using phone compass + Polaris position |
 | `WhatsUpScreen` | What's visible tonight — objects above horizon at the planned location/time |
+| `StarFocusScreen` | 4-step CCAPI focus wizard (Prep → Aim → Focus → Lock); live view + tap-to-mark + drive-focus stepper |
 | `ShotLogScreen` | History of completed runs — mode, shots, exposure, status |
 
 **Key design decisions:**
@@ -341,6 +342,10 @@ What's visible tonight at the planned location/time — Messier and NGC catalog 
 
 Uses the phone's compass + Polaris position calculation to help align an equatorial mount.
 
+### Star Focus Assist (CCAPI)
+
+Four-step guided wizard for nailing pinpoint focus on stars before kicking off a CCAPI astro run. Live view streams from the camera, the user taps a bright star, and a peak-luminance sharpness readout updates per frame as they walk focus with six drive-focus buttons (`«««` / `««` / `«` / `»` / `»»` / `»»»`). Auto-stops live view on screen leave or disconnect to save battery. See [docs/ccapi.md](docs/ccapi.md#star-focus-assist-tools-tab).
+
 ### Shot Log
 
 Every completed run gets a log entry: mode, exposure, interval, shot count, status (completed / stopped), timestamps. Survives uninstalls via SAF backup.
@@ -424,6 +429,8 @@ The running view updates in real time using a 100 ms client-side tick. The count
 ### Known Limitations
 
 - **CCAPI sub-second exposures** — bulb open/close costs two HTTP round-trips (~100–200 ms each). For exposures below 1 s the timing error is significant; the wizards show a warning when on CCAPI with `exposureMs < 1000`.
+- **CCAPI body-capability differences** — bulb-based modes (Intervalometer/Astro/Dark Frame/Ramp) require `/shooting/control/shutterbutton/manual`. Newer R-bodies expose it; older ones may not. Pulsar capability-detects at connect and dims the affected tiles when missing. Programmatic AF↔MF (`/shooting/settings/afoperation` PUT) likewise depends on the body — on the EOS RP it's read-only, so the user has to flip the lens AF/MF switch by hand. The per-shot `useAutofocus` toggle (defaults off for bulb modes) is the software backstop.
+- **CCAPI battery cost** — WiFi + CCAPI roughly halves a body's battery life. Plan ~2 h per LP-E17 on the RP for a bulb-no-liveview run; for longer sessions use USB-C power passthrough (DR-E18 dummy battery on the RP). The setup-help dialog in the scan screen has the same note.
 - **Single concurrent connection** — only one phone can control a Pulsar BLE device at a time. CCAPI sessions are similarly camera-singular.
 - **BLE pairing is Just Works** — no passkey, since the ESP32 has no I/O for PIN entry. Good enough for the threat model (someone in BLE range with intent to mess with your camera).
 - **Camera auto-off during long CCAPI runs** — set the body's auto-off to disabled in the camera menu before multi-hour sessions; Pulsar can reconnect but the run will stall during the nap.

@@ -93,6 +93,7 @@
     <string name="canon_setup_step_4">4. Camera Control API wählen und ein Netzwerk anlegen/beitreten (Kamera-AP oder LAN).</string>
     <string name="canon_setup_step_5">5. Stelle sicher, dass dein Telefon im selben Netz ist, und scanne erneut.</string>
     <string name="canon_setup_long_runs">Für mehrstündige Astro-Aufnahmen die automatische Abschaltung der Kamera auf Aus stellen (Menü → Einstellungen), damit sie zwischen den Aufnahmen nicht einschläft.</string>
+    <string name="canon_setup_battery_tip">Akku: CCAPI + WLAN verdoppelt etwa den Verbrauch. ~2 h pro LP-E17 an der RP einplanen; für längere Sessions USB-C-Stromversorgung (DR-E18-Koppler) nutzen.</string>
     <string name="canon_setup_button">Einrichtungshilfe</string>
     <string name="available_devices">Verfügbare Geräte</string>
     <string name="select_device_prompt">Wähle deinen Pulsar-Auslöser, um die Steuerungssitzung zu starten.</string>

@@ -93,6 +93,7 @@
     <string name="canon_setup_step_4">4. Selecciona Camera Control API y crea/únete a una red (AP de la cámara o tu LAN).</string>
     <string name="canon_setup_step_5">5. Asegúrate de que tu teléfono está en la misma red y vuelve a escanear.</string>
     <string name="canon_setup_long_runs">Para sesiones largas de astro, pon el Auto power off de la cámara en Desactivado (Menú → Configuración) para que no se duerma entre disparos.</string>
+    <string name="canon_setup_battery_tip">Batería: CCAPI + WiFi consume casi el doble. Cuenta con ~2 h por LP-E17 en la RP; para sesiones largas usa alimentación USB-C (acoplador DR-E18).</string>
     <string name="canon_setup_button">Ayuda de configuración</string>
     <string name="available_devices">Dispositivos Disponibles</string>
     <string name="select_device_prompt">Selecciona tu Pulsar trigger para iniciar la sesión de control.</string>

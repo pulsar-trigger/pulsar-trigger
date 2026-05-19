@@ -93,6 +93,7 @@
     <string name="canon_setup_step_4">4. 选择 Camera Control API 并创建 / 加入网络 (相机 AP 或局域网)。</string>
     <string name="canon_setup_step_5">5. 确认手机连接到相同网络，然后重新扫描。</string>
     <string name="canon_setup_long_runs">长时间星空拍摄时，请将相机的「自动关机」设为「关」（菜单 → 设置），避免在两次曝光之间相机休眠。</string>
+    <string name="canon_setup_battery_tip">电池：CCAPI + WiFi 大约会让续航减半。RP 用一块 LP-E17 约 2 小时；长时间拍摄请使用 USB-C 供电（DR-E18 假电池）。</string>
     <string name="canon_setup_button">设置帮助</string>
     <string name="available_devices">可用设备</string>
     <string name="select_device_prompt">选择您的 Pulsar 触发器以开始控制会话。</string>

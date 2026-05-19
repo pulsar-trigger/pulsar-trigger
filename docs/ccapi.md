@@ -127,6 +127,59 @@ All these are app-orchestrated coroutine loops in `PulsarViewModel.executeFlowSt
 
 The Timelapse wizard stores its pulse sentinel as `exposureMs = AppConfig.TIMELAPSE_PULSE_MS`. `executeFlowStep(FlowStep.Intervalometer)` dispatches to `runCanonTimelapse` when it sees that sentinel (camera owns timing) and `runCanonBulb` otherwise (app owns timing).
 
+### Per-shot autofocus toggle
+
+Every CCAPI shutter call (`/shutterbutton` and `/shutterbutton/manual`) takes an `af` boolean. Pulsar exposes this as a **per-preset switch** on the Intervalometer / Astro / Timelapse / Dark Frame / Ramp wizards — shown only when on CCAPI, irrelevant on BLE. Defaults:
+
+- Bulb-based modes (Intervalometer/Astro/DarkFrame/Ramp): `useAutofocus = false`. Bulb astro runs don't try to AF on stars between shots (which would hunt and drift).
+- Timelapse: `useAutofocus = true`. Daylight subjects, AF per shot is the right answer.
+
+Persisted in `FlowStep.useAutofocus` + `UserMode.Body.useAutofocus`. Threaded through `executeFlowStep` to `runCanonBulb` / `runCanonTimelapse` / `runCanonRamp` and into the `af` field of every `startBulb`/`fireShutter` call.
+
+### Star Focus Assist (Tools tab)
+
+Four-step guided wizard for nailing pinpoint focus on stars before kicking off an astro run. CCAPI-only — gated on `canonTransport != null`.
+
+1. **Prep** — instructions only: lens AF/MF switch to AF, mode dial to M (live view is disabled in Bulb).
+2. **Aim** — `POST /shooting/liveview`, polls `GET /shooting/liveview/flip` at ~6 fps. User taps a bright star; a 32×32-px ROI locks on it.
+3. **Focus** — live view continues with ROI visible. Per frame, Pulsar extracts the ROI and computes peak luminance (integer approx of BT.601 luma). Sharp star = high peak; defocused = lower. Six `drivefocus` buttons step the motor (`near3/2/1` and `far1/2/3`); 1 = fine, 3 = coarse.
+4. **Lock** — live view stops to save battery. Three bullets: flip lens to MF if it has the switch (bulletproof); for lenses without the switch, leave it (Pulsar already sends `af: false` on bulb runs); don't touch the focus ring.
+
+**Live view payload version-quirk** — `cameraposition` is a ver110+ field. On ver100 (EOS RP) we send just `{"liveviewsize": "small"}`. Older bodies often only accept `small`; newer ones also accept `medium` / `large`. The transport tries `small → medium → large` and the first success wins.
+
+**Drive-focus requires the lens to be in AF on the body switch.** Pulsar can't toggle the AF/MF mode programmatically on most bodies — `/shooting/settings/afoperation` is GET-only on the RP. The Lock step is honest about this and points at the per-shot `af: false` toggle as the software backstop.
+
+### Lens detection (Astro wizard)
+
+`GET /devicestatus/lens` returns `{"mount": true, "name": "RF16mm F2.8 STM"}` on the RP — no native focal-length field. Pulsar parses the lens name with a regex (`(?<!\d)(\d+)(?:-(\d+))?\s*mm`) to extract the focal length(s):
+
+- Prime: `RF16mm F2.8` → `focalMm = 16`
+- Zoom: `RF24-105mm F4` → `zoomRangeMm = 24..105` (current zoom position isn't reported on the older revisions — user types it).
+
+When the Astro wizard opens fresh on a Canon connection and the lens is a prime, the focal-length field auto-fills. For zooms, the wizard shows a chip with the detected range as a hint. For loaded presets, the saved value is never overridden. Newer R-bodies that include `focallength` in the response are honoured directly (no name parsing needed).
+
+### Connecting cameras that SSDP doesn't find
+
+Some Canon AP modes block multicast, or the body skips UPnP entirely. Two fallbacks are wired into the scan screen:
+
+- **`ssdp:all` M-SEARCH burst** alongside the targeted Canon URN, sent 3× at start for cameras that filter strictly on `ST`.
+- **"Add by IP" button** opens a dialog where the user types `host:port` (or just IP — common Canon ports are 8080, 80, 8612 in order). Pulsar probes `http://host:port/ccapi` directly — same URL that loads in the browser. On success it calls `/deviceinformation` for metadata (productname, guid/serialnumber/macaddress for a stable UDN), then adds the camera to the same list SSDP would have. Manual entries survive scan restarts.
+
+Older RP-class bodies don't serve `/upnp/CameraDevDesc.xml` at all, so the UPnP discovery path fails even with manual entry of the descriptor URL — the `/ccapi` direct probe is what works.
+
+### Capabilities matrix schema
+
+Canon's `/ccapi` response uses `{"url": "...", "get": bool, "post": bool, "put": bool, "delete": bool}` per entry — not the `{path, method}` shape the design docs hinted at. `CcapiClient.supports(path, method)` extracts the path component of `url` (which is fully-qualified) and reads the boolean for the requested verb. Worth flagging because the original implementation parsed the wrong fields and silently returned `false` for everything — every bulb-capable body looked bulb-incapable. Fixed in v0.226.
+
+### Body capabilities Pulsar capability-detects
+
+| Endpoint | Effect when absent |
+|---|---|
+| `/shooting/control/shutterbutton/manual` (POST) | Bulb-based modes dimmed in the UI; only Timelapse + Manual hold work. EOS RP has this. |
+| `/shooting/settings/shootingmode` (PUT) | `setShutterMode(bulb=true)` PUT fails silently; user must set Bulb on the physical mode dial. EOS RP doesn't expose this PUT. |
+| `/shooting/control/ignoreshootingmodedialmode` (POST) | Skip the dial-ignore wrap; rely on user-set bulb mode. |
+| `/event/polling` (GET) | No battery / shot-count updates from the camera. |
+
 ## Status surfacing
 
 Pulsar's wizards consume the same `StatusFrame` shape regardless of transport. The CCAPI path synthesizes frames simulator-style:
@@ -161,6 +214,25 @@ HTTP status codes Pulsar branches on:
 
 `CcapiClient.Result` is the sealed return type for every call: `Ok` / `Http(code, body)` / `NeedsAuth` / `Network(cause)`. Callers branch on it explicitly.
 
+## Battery & power
+
+CCAPI + WiFi roughly halves a body's normal battery life. Rough field numbers for the EOS RP on a fresh LP-E17 (~1040 mAh):
+
+| Scenario | ~Life | vs. baseline |
+|---|---|---|
+| Idle, no WiFi | 6–8 h | 1× |
+| CCAPI long-poll, no live view | 3–4 h | 2× |
+| CCAPI + live view continuous (Star Focus) | 1–2 h | 4× |
+
+For multi-hour astro sessions, USB-C power passthrough is the real answer — on the RP that's the Canon **DR-E18 dummy battery coupler + AC-E6N adapter** (or a third-party USB-C PD coupler with the same shape). Cold weather drops LP-E17 capacity ~30 % below 0 °C.
+
+Pulsar's design minimises avoidable drain:
+
+- Polling sends one HTTP request every ~10 s — no worse than EOS Utility.
+- Live view is gated to Star Focus's Aim + Focus steps and auto-stops on Lock or screen exit.
+- Manual disconnect cleans up (`stopLiveView` + dial-ignore restore).
+- We nag about the body's Auto power off in the setup help dialog (disable it, otherwise the body naps between long-interval shots).
+
 ## File layout
 
 | File | Purpose |
@@ -169,10 +241,12 @@ HTTP status codes Pulsar branches on:
 | `transport/ccapi/CanonCamera.kt` | Discovered-camera data class (UDN, friendly name, access URL, etc.) |
 | `transport/ccapi/CameraDescription.kt` | Fetches and parses `CameraDevDesc.xml` |
 | `transport/ccapi/CcapiDiscovery.kt` | SSDP listener + M-SEARCH; multicast lock; service-URN filter |
-| `transport/ccapi/CcapiClient.kt` | HTTP wrapper, version pin, digest auth (RFC 7616), capability lookup |
-| `transport/ccapi/CcapiTransport.kt` | `CameraTransport` impl — shutter, bulb lifecycle, polling |
-| `viewmodel/PulsarViewModel.kt` | `connectCanon` / `disconnectCanon`, polling job, reconnect loop, per-UDN creds + nicknames, `runCanonBulb` / `runCanonTimelapse` / `runCanonRamp` |
-| `ui/screens/ScanScreen.kt` | Canon card, connect/auth/rename/capabilities dialogs, setup-help walkthrough |
+| `transport/ccapi/CcapiClient.kt` | HTTP wrapper, version pin, digest auth (RFC 7616), capability lookup, byte-stream `getBytes` for JPEG frames |
+| `transport/ccapi/CcapiTransport.kt` | `CameraTransport` impl — shutter, bulb lifecycle, polling, live view, drive-focus, lens info, version-aware payloads |
+| `viewmodel/PulsarViewModel.kt` | `connectCanon` / `disconnectCanon`, polling job, reconnect loop, per-UDN creds + nicknames, `addCanonByHost` direct probe, `runCanonBulb` / `runCanonTimelapse` / `runCanonRamp`, `stopCanonLiveView` |
+| `ui/screens/ScanScreen.kt` | Canon card, connect/auth/rename/capabilities dialogs, manual-add dialog, setup-help walkthrough |
+| `ui/screens/StarFocusScreen.kt` | 4-step focus wizard (Prep / Aim / Focus / Lock) |
+| `ui/components/AutofocusToggle.kt` | Per-shot AF toggle rendered on wizards when on CCAPI |
 
 ## References
 
