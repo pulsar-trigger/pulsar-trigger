@@ -69,6 +69,42 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         const val DEFAULT_PIN_SHUTTER = AppConfig.DEFAULT_PIN_SHUTTER
         const val DEFAULT_PIN_FOCUS = AppConfig.DEFAULT_PIN_FOCUS
         val SAFE_OUTPUT_PINS = AppConfig.SAFE_OUTPUT_PINS
+        private const val CANON_CREDS_PREFS = "pulsar_canon_creds"
+        private const val CANON_CREDS_PREFS_ENCRYPTED = "pulsar_canon_creds_v2"
+
+        /** Build the EncryptedSharedPreferences for CCAPI digest creds. On
+         *  first run, copies anything still in the v1 plaintext file to v2
+         *  and wipes v1. If Keystore initialisation fails for any reason
+         *  (corrupted master key, GMS issues), falls back to the plaintext
+         *  file so the user isn't locked out — logs a warning. */
+        private fun buildCanonCredsPrefs(context: Context): android.content.SharedPreferences {
+            return try {
+                val masterKey = androidx.security.crypto.MasterKey.Builder(context)
+                    .setKeyScheme(androidx.security.crypto.MasterKey.KeyScheme.AES256_GCM)
+                    .build()
+                val encrypted = androidx.security.crypto.EncryptedSharedPreferences.create(
+                    context,
+                    CANON_CREDS_PREFS_ENCRYPTED,
+                    masterKey,
+                    androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                    androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+                )
+                // One-shot migration: pull any plaintext entries forward then
+                // wipe the old file so creds aren't sitting in cleartext.
+                val legacy = context.getSharedPreferences(CANON_CREDS_PREFS, Context.MODE_PRIVATE)
+                if (legacy.all.isNotEmpty()) {
+                    val edit = encrypted.edit()
+                    legacy.all.forEach { (k, v) -> if (v is String) edit.putString(k, v) }
+                    edit.apply()
+                    legacy.edit().clear().apply()
+                    android.util.Log.i(TAG, "Migrated ${legacy.all.size} canon creds entries to encrypted prefs")
+                }
+                encrypted
+            } catch (e: Exception) {
+                android.util.Log.w(TAG, "EncryptedSharedPreferences init failed, falling back to plaintext", e)
+                context.getSharedPreferences(CANON_CREDS_PREFS, Context.MODE_PRIVATE)
+            }
+        }
     }
 
     private val prefs = app.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -146,7 +182,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Per-UDN digest credentials. Each entry lets the next connect to the
      *  same camera skip the auth prompt entirely. */
-    private val canonCredsPrefs = app.getSharedPreferences("pulsar_canon_creds", Context.MODE_PRIVATE)
+    /** Encrypted-at-rest prefs file (AES-256, key in Android Keystore) for
+     *  CCAPI digest credentials. Migrated from a plain SharedPreferences
+     *  file in v0.237. Falls back to the plain file if EncryptedSharedPrefs
+     *  fails to initialise (extremely rare; would indicate a Keystore fault).
+     *  Old plain file is read once on first launch to migrate any saved
+     *  creds, then cleared. */
+    private val canonCredsPrefs = buildCanonCredsPrefs(app)
 
     /** Per-UDN user-set nicknames for Canon cameras. Shown in the scan card
      *  and as the connected device label in place of the body's own name. */
