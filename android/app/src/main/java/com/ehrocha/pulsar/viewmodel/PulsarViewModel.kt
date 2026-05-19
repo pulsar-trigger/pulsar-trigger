@@ -1236,9 +1236,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Holds the runner until the active transport is no longer paused, then
-     *  returns. For CCAPI this checks [_canonReconnecting]; for non-CCAPI
-     *  transports (e.g. direct-BLE) the pause condition is transport-specific
-     *  and not wired yet, so this is currently a no-op there. Throws if a
+     *  returns. For CCAPI this checks [_canonReconnecting]; any future
+     *  non-CCAPI transport would carry its own pause condition. Throws if a
      *  CCAPI transport was dropped entirely (e.g. reconnect timed out) so the
      *  caller can bail cleanly instead of firing shots into the void. The
      *  flow's [DeviceState] is flipped to WAITING while paused so the
@@ -1247,7 +1246,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         transport: com.ehrocha.pulsar.transport.CameraTransport,
     ) {
         // CCAPI is the only transport with a pause-on-reconnect concept today.
-        // Generalise when CanonBleTransport lands (bond-loss reconnect).
         val ccapi = transport as? com.ehrocha.pulsar.transport.ccapi.CcapiTransport ?: return
         if (!_canonReconnecting.value && _canonTransport.value === ccapi) return
         val priorState = _status.value?.state
@@ -1272,11 +1270,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // The CCAPI / Canon-direct-BLE run loops live in
-    // `transport/CanonRunner.kt` — extracted so they can be exercised in
-    // unit tests without an Application context. The viewmodel wires the
-    // status flow and `awaitCanonReady` pause hook in to the top-level
-    // funcs at each call site.
+    // The CCAPI run loops live in `transport/CanonRunner.kt` — extracted
+    // so they can be exercised in unit tests without an Application context.
+    // The viewmodel wires the status flow and `awaitCanonReady` pause hook
+    // in to the top-level funcs at each call site.
 
     /** Simulate a sequence of shots by updating _status directly (for flow steps in simulator). */
     private suspend fun simulateShots(totalShots: Int, expMs: Long, gapMs: Long, startDelayMs: Long) {

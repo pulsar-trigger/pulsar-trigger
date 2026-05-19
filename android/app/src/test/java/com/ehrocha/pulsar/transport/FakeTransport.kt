@@ -11,8 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 /** Test-only [CameraTransport] that records every call and exposes hooks
  *  for forcing failures. Used by `CanonRunner*Test` to verify the run
- *  loops drive whichever transport they're handed (CCAPI today, direct-BLE
- *  later) with the right sequencing.
+ *  loops drive any conforming transport with the right sequencing.
  *
  *  The recorded [calls] log lets a test assert "open → close → open → close"
  *  by reading `calls.map { it.tag }` against an expected sequence. */

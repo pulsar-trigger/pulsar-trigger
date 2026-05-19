@@ -23,10 +23,6 @@ import org.junit.Test
  * recording [FakeTransport] + virtual-time runTest so the sequencing and
  * timing of multi-shot bulb / timelapse / ramp loops is observable without
  * an Application context or real wall-clock.
- *
- * These were deferred until the interface promotion in Phase 1 of the
- * direct-Canon-BLE plan (see docs/canon-ble.md) — extracting the runners
- * from the viewmodel is what unlocked them.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class CanonRunnerTest {

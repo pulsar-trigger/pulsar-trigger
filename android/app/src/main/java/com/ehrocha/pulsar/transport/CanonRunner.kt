@@ -16,19 +16,19 @@ import kotlinx.coroutines.withContext
 import kotlin.coroutines.coroutineContext
 
 /**
- * Camera-driven run loops shared by every transport that owns shot timing on
- * the phone side (CCAPI today; direct-Canon-BLE later). Extracted from the
- * ViewModel so the bulb / timelapse / ramp sequencing can be exercised in unit
- * tests without an Application context — see `CanonRunnerTest`.
+ * Camera-driven run loops for transports that own shot timing on the phone
+ * side (CCAPI today; any future phone-driven transport in the same shape).
+ * Extracted from the ViewModel so the bulb / timelapse / ramp sequencing can
+ * be exercised in unit tests without an Application context —
+ * see `CanonRunnerTest`.
  *
  * The functions take their state mutators as parameters:
  *  - [status]: the run-screen `StatusFrame` flow. Writes here are the same the
  *    BLE simulator path makes, so the run UI is transport-agnostic.
  *  - [awaitReady]: pause hook invoked at the top of each shot iteration.
- *    The CCAPI viewmodel passes a closure that waits out the reconnect loop;
- *    direct-BLE will eventually pass a bond-loss hook. Tests pass a no-op.
- *    May throw to signal "give up — transport is gone for good"; callers
- *    propagate that as a flow failure.
+ *    The CCAPI viewmodel passes a closure that waits out the reconnect loop.
+ *    Tests pass a no-op. May throw to signal "give up — transport is gone
+ *    for good"; callers propagate that as a flow failure.
  */
 
 /** Timelapse-style sequence over CCAPI single-shot shutterbutton: camera owns

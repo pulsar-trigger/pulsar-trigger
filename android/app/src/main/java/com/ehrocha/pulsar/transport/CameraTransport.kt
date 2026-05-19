@@ -9,12 +9,9 @@ import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Camera-control transport. The wizards talk to this — they don't know whether
- * the actual I/O is BLE-to-ESP32, HTTP-to-Canon-CCAPI, or direct-BLE-to-Canon.
- * Implementations:
+ * the actual I/O is BLE-to-ESP32 or HTTP-to-Canon-CCAPI. Implementations:
  *  - `CcapiTransport`  — HTTP client for Canon EOS R-series WiFi cameras
  *    (`docs/ccapi.md`).
- *  - `CanonBleTransport` — planned direct phone-to-Canon-body BLE transport
- *    (`docs/canon-ble.md`); not built yet.
  *
  * The ESP32 BLE path doesn't go through this interface today — that path uses
  * firmware-side mode loops (`MODE_INTERVALOMETER` etc.) so the phone sets the
@@ -69,35 +66,30 @@ interface CameraTransport {
 
     // ── Capability flags ────────────────────────────────────────────────
     // Per-body / per-protocol capability the wizards check before exposing
-    // features. The two Canon transports differ sharply: CCAPI offers
-    // settings + live view + lens + battery readout; Canon direct-BLE is
-    // shutter-only. The wizards gate UI affordances on these.
+    // features. Future non-CCAPI transports (USB PTP, direct vendor BLE)
+    // would set these to advertise what they can and can't do.
 
-    /** Body advertises a manual-bulb endpoint (CCAPI: `/shutterbutton/manual`)
-     *  or the protocol supports app-timed bulb exposures (Canon BLE: press +
-     *  release with caller-owned gap). On bodies that lack bulb the
-     *  Intervalometer / Astro / Dark-Frame / Ramp tiles are dimmed; only
-     *  Timelapse + Manual still work. */
+    /** Body advertises a manual-bulb endpoint (CCAPI: `/shutterbutton/manual`).
+     *  On bodies that lack bulb the Intervalometer / Astro / Dark-Frame / Ramp
+     *  tiles are dimmed; only Timelapse + Manual still work. */
     val supportsBulb: Boolean
 
     /** Transport can read or write exposure settings (ISO / aperture /
-     *  shutter speed). CCAPI: true (endpoints exist; the UI tab is parked).
-     *  Canon direct-BLE: false (protocol has no settings endpoints). */
+     *  shutter speed). CCAPI: true (endpoints exist; the camera-params UI
+     *  tab is parked). */
     val supportsSettings: Boolean
 
     /** Transport can serve a live-view JPEG stream. CCAPI: true (used by
-     *  Star Focus). Canon direct-BLE: false. */
+     *  Star Focus). */
     val supportsLiveView: Boolean
 
     /** Transport can report what lens is mounted (name, focal length).
-     *  Used by the Astro wizard's focal-length auto-fill. CCAPI: true.
-     *  Canon direct-BLE: false. */
+     *  Used by the Astro wizard's focal-length auto-fill. CCAPI: true. */
     val supportsLensInfo: Boolean
 
     /** Transport can report camera battery state for the run-screen chip.
-     *  CCAPI: true (event polling + `/devicestatus/battery`). Canon
-     *  direct-BLE: false. */
+     *  CCAPI: true (event polling + `/devicestatus/battery`). */
     val supportsBatteryReadout: Boolean
 }
 
-enum class TransportKind { BLE_ESP, CCAPI, CANON_BLE }
+enum class TransportKind { BLE_ESP, CCAPI }
