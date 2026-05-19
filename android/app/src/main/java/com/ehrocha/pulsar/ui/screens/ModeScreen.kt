@@ -325,6 +325,7 @@ fun SettingsScreen(
                         GpioPinsSectionContent(vm)
                     }
                     SettingsSection.PLANNER -> PlannerSettingsSectionContent(vm)
+                    SettingsSection.BACKGROUND -> BackgroundSectionContent(vm)
                     SettingsSection.BACKUP_RESTORE -> BackupRestoreSectionContent(vm)
                     SettingsSection.UPDATES -> UpdatesSectionContent(vm)
                     SettingsSection.ABOUT -> {

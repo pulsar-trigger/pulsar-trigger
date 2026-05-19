@@ -85,6 +85,12 @@
     <string name="astro2_lens_detected_unknown">Detectado en la cámara</string>
     <string name="astro2_lens_use_focal">Usar %1$d mm</string>
     <string name="astro2_lens_not_mounted">No se detecta objetivo en la cámara.</string>
+    <string name="section_background">Actividad en segundo plano</string>
+    <string name="background_help">Las sesiones astro largas con la pantalla apagada pueden ser interrumpidas por el modo Doze de Android. Permitir la actividad en segundo plano mantiene Pulsar funcionando hasta el final.</string>
+    <string name="background_status_allowed">Actividad en segundo plano permitida</string>
+    <string name="background_status_blocked">Actividad en segundo plano restringida</string>
+    <string name="background_status_hint">Doze puede pausar notificaciones BLE y polling CCAPI cuando la pantalla lleva tiempo apagada.</string>
+    <string name="background_request_btn">Permitir actividad en segundo plano</string>
     <string name="canon_setup_title">Activar Camera Control API</string>
     <string name="canon_setup_intro">Pulsar necesita CCAPI activado en tu cámara. La mayoría de los cuerpos R requieren una activación única:</string>
     <string name="canon_setup_step_1">1. Descarga la CCAPI Activation Tool desde el portal de desarrolladores de Canon.</string>

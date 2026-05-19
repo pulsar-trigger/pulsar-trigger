@@ -85,6 +85,12 @@
     <string name="astro2_lens_detected_unknown">从相机检测</string>
     <string name="astro2_lens_use_focal">使用 %1$d mm</string>
     <string name="astro2_lens_not_mounted">相机未检测到镜头。</string>
+    <string name="section_background">后台运行</string>
+    <string name="background_help">关闭屏幕进行长时间天体拍摄时，Android 的 Doze 模式可能限制后台运行。允许后台运行可让 Pulsar 稳定运行至拍摄结束。</string>
+    <string name="background_status_allowed">已允许后台运行</string>
+    <string name="background_status_blocked">后台运行受限</string>
+    <string name="background_status_hint">屏幕长时间关闭时，Doze 可能暂停 BLE 通知和 CCAPI 轮询。</string>
+    <string name="background_request_btn">允许后台运行</string>
     <string name="canon_setup_title">启用 Camera Control API</string>
     <string name="canon_setup_intro">Pulsar 需要相机启用 CCAPI。大多数 R 系列机身需要一次性激活：</string>
     <string name="canon_setup_step_1">1. 在佳能开发者门户下载 CCAPI Activation Tool。</string>

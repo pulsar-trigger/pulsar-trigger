@@ -59,6 +59,7 @@ import androidx.compose.material.icons.filled.DeveloperBoard
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material.icons.filled.SaveAlt
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -975,6 +976,7 @@ enum class SettingsSection(val icon: ImageVector, @StringRes val titleRes: Int) 
     LANGUAGE(Icons.Default.Language, R.string.section_language),
     DEVICE(Icons.Default.PhoneAndroid, R.string.section_device),
     PLANNER(Icons.Default.CalendarMonth, R.string.section_planner),
+    BACKGROUND(Icons.Default.BatteryFull, R.string.section_background),
     BACKUP_RESTORE(Icons.Default.SaveAlt, R.string.section_backup_restore),
     UPDATES(Icons.Default.SystemUpdate, R.string.section_updates),
     ABOUT(Icons.Outlined.Info, R.string.section_about),
@@ -1230,6 +1232,72 @@ internal fun GpioPinsSectionContent(vm: PulsarViewModel) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+@Composable
+internal fun BackgroundSectionContent(vm: PulsarViewModel) {
+    val context = LocalContext.current
+    // Re-checked on every recomposition; the user can flip the OS setting
+    // while the screen is open and we want to reflect it.
+    var isExempt by remember { mutableStateOf(vm.isIgnoringBatteryOptimizations()) }
+    LaunchedEffect(Unit) {
+        // Refresh once on screen enter (covers the case where the user
+        // returned from the system Settings activity we launched).
+        isExempt = vm.isIgnoringBatteryOptimizations()
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        PanelHelpHeader(
+            title = stringResource(R.string.section_background),
+            helpText = stringResource(R.string.background_help),
+        )
+        Surface(
+            color = if (isExempt) MaterialTheme.colorScheme.primaryContainer
+                    else MaterialTheme.colorScheme.surfaceContainer,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    Icons.Default.BatteryFull,
+                    contentDescription = null,
+                    tint = if (isExempt) MaterialTheme.colorScheme.primary
+                           else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(
+                            if (isExempt) R.string.background_status_allowed
+                            else R.string.background_status_blocked
+                        ),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        stringResource(R.string.background_status_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        if (!isExempt) {
+            Button(
+                onClick = {
+                    runCatching { context.startActivity(vm.batteryOptimisationRequestIntent()) }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+            ) {
+                Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.background_request_btn))
+            }
         }
     }
 }

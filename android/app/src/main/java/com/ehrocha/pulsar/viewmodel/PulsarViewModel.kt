@@ -687,6 +687,27 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { transport.stopLiveView() }
     }
 
+    // ── Doze / battery optimisation ──────────────────────────────────────
+
+    /** True when Pulsar is on the OS's battery-optimisation allow-list, so
+     *  long-running flows aren't throttled by Doze. Re-read every time the
+     *  Settings screen is opened (no broadcast for changes — the user can
+     *  flip it in system Settings without us knowing). */
+    fun isIgnoringBatteryOptimizations(): Boolean {
+        val pm = getApplication<Application>()
+            .getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager ?: return false
+        return pm.isIgnoringBatteryOptimizations(getApplication<Application>().packageName)
+    }
+
+    /** Intent that opens the system "Request to ignore battery optimisations"
+     *  dialog targeting Pulsar. Caller should `startActivity` it. */
+    fun batteryOptimisationRequestIntent(): Intent {
+        val pkg = getApplication<Application>().packageName
+        return Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+            .setData(android.net.Uri.parse("package:$pkg"))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+
     private fun loadCanonCreds(udn: String):
             com.ehrocha.pulsar.transport.ccapi.CcapiClient.Credentials? {
         val user = canonCredsPrefs.getString("u:$udn", null) ?: return null
