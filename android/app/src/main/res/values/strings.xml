@@ -16,6 +16,12 @@
     <string name="section_usb_cameras">USB CAMERAS</string>
     <string name="usb_cameras_subtitle">Connected via USB-C</string>
     <string name="usb_camera_subtitle">PTP over USB</string>
+    <string name="ptp_connected_hint">Connected via USB — bulb modes need Bulb selected on the camera dial.</string>
+    <string name="ptp_reconnecting_hint">Reconnecting to USB camera…</string>
+    <string name="ptp_err_permission_denied">USB permission denied. Tap the camera again to retry.</string>
+    <string name="ptp_err_open_failed">Couldn\'t open the USB camera. Try replugging the cable.</string>
+    <string name="ptp_err_session_failed">Camera found but PTP session failed. Make sure no other app is using the camera.</string>
+    <string name="ptp_err_generic">USB camera error (%1$s).</string>
     <string name="use_simulator">Use Simulator</string>
     <string name="simulator_description">Explore the app without a real device</string>
     <string name="unknown_device">Unknown Device</string>

@@ -114,6 +114,12 @@
     <string name="section_usb_cameras">USBカメラ</string>
     <string name="usb_cameras_subtitle">USB-C で接続</string>
     <string name="usb_camera_subtitle">USB 経由の PTP</string>
+    <string name="ptp_connected_hint">USB 接続中 — バルブモードはカメラのダイヤルで Bulb を選択してください。</string>
+    <string name="ptp_reconnecting_hint">USB カメラへ再接続中…</string>
+    <string name="ptp_err_permission_denied">USB の権限が拒否されました。カメラを再度タップしてやり直してください。</string>
+    <string name="ptp_err_open_failed">USB カメラを開けませんでした。ケーブルを抜き差ししてみてください。</string>
+    <string name="ptp_err_session_failed">カメラを検出しましたが PTP セッションを開始できません。他のアプリがカメラを使用していないかご確認ください。</string>
+    <string name="ptp_err_generic">USB カメラエラー (%1$s)。</string>
     <string name="use_simulator">シミュレーターを使用</string>
     <string name="simulator_description">実機なしでアプリを体験できます</string>
     <string name="unknown_device">不明なデバイス</string>

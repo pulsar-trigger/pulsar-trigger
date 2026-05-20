@@ -239,14 +239,29 @@ class PtpTransport private constructor(
         }
     }
 
-    /** Phase 2: no-op. The Canon PTP "set shutter speed to Bulb" property
-     *  value is body-specific (typically 0x0C for R-series but unverified
-     *  across the lineup), so the user is expected to set Bulb on the body
-     *  before running a bulb-based flow. The wire-level press/release in
-     *  [startBulb] / [stopBulb] is what actually fires the exposure;
-     *  setShutterMode is informational only. */
-    override suspend fun setShutterMode(bulb: Boolean) {
-        // Programmatic shutter-speed change is a Phase 3 polish item.
+    /** Best-effort programmatic Bulb selection. Canon's shutter-speed
+     *  property (`0xD102`) takes a body-specific UINT16 code for "Bulb"
+     *  (`0x000C` on R-class). We try that code; if the body rejects it
+     *  (different value table, body not in Manual mode, etc.), we log and
+     *  fall back to assuming the user pre-selected Bulb on the dial — the
+     *  press / release in [startBulb] / [stopBulb] still fires the
+     *  exposure, just with whatever shutter speed the body has set. */
+    override suspend fun setShutterMode(bulb: Boolean) = wireMutex.withLock<Unit> {
+        if (!_connected.value || !bulb) return@withLock
+        withContext(Dispatchers.IO) {
+            try {
+                // UINT16, little-endian: low byte first.
+                val v = PtpClient.CANON_SHUTTER_SPEED_BULB
+                val data = byteArrayOf((v and 0xFF).toByte(), ((v ushr 8) and 0xFF).toByte())
+                val r = client.setDevicePropValue(PtpClient.PROP_CANON_SHUTTER_SPEED, data)
+                if (!r.ok) {
+                    Log.w(TAG, "SetShutterSpeed→Bulb rc=0x${"%04X".format(r.code)} — " +
+                              "user may need to set Bulb on body dial")
+                }
+            } catch (e: PtpClient.ProtocolException) {
+                Log.w(TAG, "setShutterMode threw (non-fatal): ${e.message}")
+            }
+        }
     }
 
     override suspend fun startBulb(af: Boolean) = wireMutex.withLock {

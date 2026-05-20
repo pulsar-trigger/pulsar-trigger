@@ -123,6 +123,13 @@ class PtpClient(
     suspend fun getDevicePropValue(propCode: Int): Response =
         transact(OP_GET_DEVICE_PROP_VALUE, intArrayOf(propCode), expectDataIn = true)
 
+    /** PTP `SetDevicePropValue` — write a new value to a device property.
+     *  Caller pre-encodes the value bytes for the property's known type
+     *  (UINT8, UINT16, STR, etc.). Returns the response code. */
+    suspend fun setDevicePropValue(propCode: Int, valueBytes: ByteArray): Response =
+        transact(OP_SET_DEVICE_PROP_VALUE, intArrayOf(propCode),
+                 dataOut = valueBytes, expectDataIn = false)
+
     // ── Result types ────────────────────────────────────────────────────
 
     /** A complete transaction's outcome: response code, any returned params,
@@ -316,6 +323,7 @@ class PtpClient(
         const val OP_CLOSE_SESSION = 0x1003
         const val OP_INITIATE_CAPTURE = 0x100E
         const val OP_GET_DEVICE_PROP_VALUE = 0x1015
+        const val OP_SET_DEVICE_PROP_VALUE = 0x1016
 
         // ── PTP standard device properties (subset) ──────────────────────
         const val PROP_BATTERY_LEVEL = 0x5001  // UINT8 percentage 0-100
@@ -324,6 +332,13 @@ class PtpClient(
         // Lens model name (PTP STR). Used by the Astro wizard to auto-fill
         // focal length the same way CCAPI does via `/devicestatus/lens`.
         const val PROP_CANON_LENS_NAME = 0xD157
+        // Shutter speed (UINT16). The "Bulb" code is body-specific; on
+        // R-class bodies it is typically 0x000C — verified empirically per
+        // body. Pulsar tries this value as a best-effort to flip Bulb on
+        // before a bulb-mode flow; if it fails the user falls back to
+        // selecting Bulb on the camera dial.
+        const val PROP_CANON_SHUTTER_SPEED = 0xD102
+        const val CANON_SHUTTER_SPEED_BULB = 0x000C
 
         // ── Canon EOS vendor operations (vendor extension ID 11) ─────────
         // Documented in Canon's PTP Reference; Pulsar may use these in Phase 2.

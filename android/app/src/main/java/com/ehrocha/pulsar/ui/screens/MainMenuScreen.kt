@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Stars
+import androidx.compose.material.icons.filled.Usb
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Visibility
@@ -188,7 +189,10 @@ fun MainMenuScreen(
                     val canonTransport by vm.canonTransport.collectAsState()
                     val canonReconnecting by vm.canonReconnecting.collectAsState()
                     val canonSupportsBulb by vm.canonSupportsBulb.collectAsState()
+                    val ptpTransport by vm.ptpTransport.collectAsState()
+                    val ptpReconnecting by vm.ptpReconnecting.collectAsState()
                     val onCanon = canonTransport != null
+                    val onPtp = ptpTransport != null
                     // PowerShot / older R-bodies don't expose /shutterbutton/manual.
                     // Without it the bulb-based modes can't run; hide them.
                     val bulbBlocked = onCanon && !canonSupportsBulb
@@ -226,6 +230,10 @@ fun MainMenuScreen(
                                 reconnecting = canonReconnecting,
                                 bulbUnsupported = bulbBlocked,
                             )
+                            Spacer(Modifier.height(8.dp))
+                        }
+                        if (onPtp || ptpReconnecting) {
+                            PtpBanner(reconnecting = ptpReconnecting)
                             Spacer(Modifier.height(8.dp))
                         }
                         LauncherGrid(builtIns + userTiles)
@@ -344,6 +352,47 @@ private fun CanonBulbBanner(
             } else {
                 Icon(
                     Icons.Default.Wifi,
+                    contentDescription = null,
+                    tint = onContainer,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(copyRes),
+                style = MaterialTheme.typography.labelMedium,
+                color = onContainer,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PtpBanner(reconnecting: Boolean) {
+    val containerColor = if (reconnecting) MaterialTheme.colorScheme.errorContainer
+                        else MaterialTheme.colorScheme.secondaryContainer
+    val onContainer = if (reconnecting) MaterialTheme.colorScheme.onErrorContainer
+                     else MaterialTheme.colorScheme.onSecondaryContainer
+    val copyRes = if (reconnecting) R.string.ptp_reconnecting_hint
+                  else R.string.ptp_connected_hint
+    Surface(
+        color = containerColor,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (reconnecting) {
+                CircularProgressIndicator(
+                    strokeWidth = 2.dp,
+                    color = onContainer,
+                    modifier = Modifier.size(16.dp),
+                )
+            } else {
+                Icon(
+                    Icons.Default.Usb,
                     contentDescription = null,
                     tint = onContainer,
                     modifier = Modifier.size(20.dp),

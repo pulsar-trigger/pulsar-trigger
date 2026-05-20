@@ -7,6 +7,7 @@ package com.ehrocha.pulsar.ui.screens
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -75,6 +76,10 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
     val ptpCameras by vm.ptpCameras.collectAsState()
     val ptpConnecting by vm.ptpConnecting.collectAsState()
     val ptpError by vm.ptpError.collectAsState()
+    val ptpErrorPermissionDenied = stringResource(R.string.ptp_err_permission_denied)
+    val ptpErrorOpenFailed = stringResource(R.string.ptp_err_open_failed)
+    val ptpErrorSessionFailed = stringResource(R.string.ptp_err_session_failed)
+    val ptpErrorGeneric = stringResource(R.string.ptp_err_generic)
     val connected by vm.connected.collectAsState()
     val canonConnecting by vm.canonConnecting.collectAsState()
     val canonError by vm.canonError.collectAsState()
@@ -90,6 +95,22 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
 
     if (connected) {
         LaunchedEffect(Unit) { onConnected() }
+    }
+
+    // Surface PTP connection failures as a Toast so the user knows why a
+    // tap didn't go through. The viewmodel keeps the error sticky in the
+    // flow; we clear it once the toast is in flight.
+    val toastCtx = LocalContext.current
+    LaunchedEffect(ptpError) {
+        val e = ptpError ?: return@LaunchedEffect
+        val msg = when (e) {
+            "permission_denied" -> ptpErrorPermissionDenied
+            "open_failed" -> ptpErrorOpenFailed
+            "session_failed" -> ptpErrorSessionFailed
+            else -> ptpErrorGeneric.format(e)
+        }
+        android.widget.Toast.makeText(toastCtx, msg, android.widget.Toast.LENGTH_LONG).show()
+        vm.clearPtpError()
     }
 
     var showLanguageDialog by remember { mutableStateOf(false) }

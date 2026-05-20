@@ -202,6 +202,16 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val _ptpError = MutableStateFlow<String?>(null)
     val ptpError: StateFlow<String?> = _ptpError
 
+    /** True while a USB camera that was connected has lost its cable and
+     *  the auto-reconnect logic is waiting for it to reappear. The UI
+     *  shows a banner like the CCAPI Wi-Fi reconnect indicator. Cleared
+     *  by either a successful reconnect or an explicit user disconnect. */
+    private val _ptpReconnecting = MutableStateFlow(false)
+    val ptpReconnecting: StateFlow<Boolean> = _ptpReconnecting
+
+    /** Called by the scan-screen Snackbar after surfacing the error. */
+    fun clearPtpError() { _ptpError.value = null }
+
     /** Vendor + product ID of the camera we were last *intentionally*
      *  connected to over PTP. Set on successful connect, preserved across
      *  cable-unplug, cleared only on explicit user disconnect or when the
@@ -221,6 +231,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 if (active != null &&
                     attached.none { it.deviceName == active.device.deviceName }) {
                     Log.i(TAG, "USB camera unplugged — disconnecting PTP (auto-reconnect armed)")
+                    // Flip the reconnect banner BEFORE tearing the transport
+                    // down — the UI gate on `ptpReconnecting OR onPtp` keeps
+                    // the banner visible even after _ptpTransport goes null.
+                    _ptpReconnecting.value = true
                     disconnectPtp(clearAutoReconnect = false)
                     return@collect
                 }
@@ -968,6 +982,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 _ptpTransport.value = transport
                 lastPtpAutoReconnect = device.vendorId to device.productId
+                _ptpReconnecting.value = false
                 _deviceName.value = transport.label.value
                 _connected.value = true
                 _status.value = StatusFrame(
@@ -1012,7 +1027,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         ptpPollJob = null
         viewModelScope.launch { transport.release() }
         _ptpTransport.value = null
-        if (clearAutoReconnect) lastPtpAutoReconnect = null
+        if (clearAutoReconnect) {
+            lastPtpAutoReconnect = null
+            _ptpReconnecting.value = false
+        }
         if (!bleController.connected.value && !_simulatorActive.value &&
             _canonTransport.value == null) {
             _connected.value = false

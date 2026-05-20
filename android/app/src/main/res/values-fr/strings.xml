@@ -114,6 +114,12 @@
     <string name="section_usb_cameras">APPAREILS USB</string>
     <string name="usb_cameras_subtitle">Connectés via USB-C</string>
     <string name="usb_camera_subtitle">PTP sur USB</string>
+    <string name="ptp_connected_hint">Connecté via USB — les modes Bulb requièrent Bulb sur la molette de l\'appareil.</string>
+    <string name="ptp_reconnecting_hint">Reconnexion à l\'appareil USB…</string>
+    <string name="ptp_err_permission_denied">Permission USB refusée. Touchez à nouveau l\'appareil pour réessayer.</string>
+    <string name="ptp_err_open_failed">Impossible d\'ouvrir l\'appareil USB. Essayez de débrancher puis rebrancher le câble.</string>
+    <string name="ptp_err_session_failed">Appareil détecté mais la session PTP a échoué. Vérifiez qu\'aucune autre app n\'utilise l\'appareil.</string>
+    <string name="ptp_err_generic">Erreur d\'appareil USB (%1$s).</string>
     <string name="use_simulator">Utiliser le simulateur</string>
     <string name="simulator_description">Explorez l\'application sans appareil réel</string>
     <string name="unknown_device">Appareil inconnu</string>
