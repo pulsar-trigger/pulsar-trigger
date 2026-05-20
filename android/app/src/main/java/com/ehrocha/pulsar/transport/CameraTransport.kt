@@ -92,4 +92,4 @@ interface CameraTransport {
     val supportsBatteryReadout: Boolean
 }
 
-enum class TransportKind { BLE_ESP, CCAPI }
+enum class TransportKind { BLE_ESP, CCAPI, PTP_USB }

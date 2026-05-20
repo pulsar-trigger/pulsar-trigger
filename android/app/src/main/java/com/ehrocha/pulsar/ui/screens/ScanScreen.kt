@@ -34,7 +34,9 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Usb
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -70,6 +72,9 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
     val scanning by vm.scanning.collectAsState()
     val devices by vm.devices.collectAsState()
     val canonCameras by vm.canonCameras.collectAsState()
+    val ptpCameras by vm.ptpCameras.collectAsState()
+    val ptpConnecting by vm.ptpConnecting.collectAsState()
+    val ptpError by vm.ptpError.collectAsState()
     val connected by vm.connected.collectAsState()
     val canonConnecting by vm.canonConnecting.collectAsState()
     val canonError by vm.canonError.collectAsState()
@@ -81,6 +86,7 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
     var capabilitiesCanon by remember { mutableStateOf<com.ehrocha.pulsar.transport.ccapi.CanonCamera?>(null) }
     var showCanonSetupHelp by remember { mutableStateOf(false) }
     var showCanonManualAdd by remember { mutableStateOf(false) }
+    var showDeviceTypesHelp by remember { mutableStateOf(false) }
 
     if (connected) {
         LaunchedEffect(Unit) { onConnected() }
@@ -148,6 +154,21 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        TextButton(
+            onClick = { showDeviceTypesHelp = true },
+            contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp),
+        ) {
+            Icon(
+                Icons.Default.HelpOutline,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                stringResource(R.string.scan_compatible_devices_link),
+                style = MaterialTheme.typography.labelMedium,
+            )
+        }
         Spacer(Modifier.height(8.dp))
         Text(
             stringResource(R.string.scan_pull_hint),
@@ -218,7 +239,31 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
                         )
                     }
                 }
-                if (devices.isEmpty() && canonCameras.isEmpty()) {
+                if (ptpCameras.isNotEmpty()) {
+                    item {
+                        Column(modifier = Modifier.padding(top = 4.dp)) {
+                            Text(
+                                stringResource(R.string.section_usb_cameras),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Text(
+                                stringResource(R.string.usb_cameras_subtitle),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    items(ptpCameras) { device ->
+                        UsbCameraCard(
+                            device = device,
+                            connecting = ptpConnecting,
+                            onClick = { vm.connectPtp(device) },
+                        )
+                    }
+                }
+                if (devices.isEmpty() && canonCameras.isEmpty() && ptpCameras.isEmpty()) {
                     item { PairingProtocolCard() }
                 }
                 item {
@@ -299,6 +344,10 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
 
     if (showCanonSetupHelp) {
         CanonSetupHelpDialog(onDismiss = { showCanonSetupHelp = false })
+    }
+
+    if (showDeviceTypesHelp) {
+        DeviceTypesHelpDialog(onDismiss = { showDeviceTypesHelp = false })
     }
 
     if (showCanonManualAdd) {
@@ -1011,4 +1060,118 @@ private fun boardLabel(kind: com.ehrocha.pulsar.ble.BoardKind): String? = when (
     com.ehrocha.pulsar.ble.BoardKind.M5CORE2 -> stringResource(R.string.board_m5core2)
     com.ehrocha.pulsar.ble.BoardKind.GENERIC_ESP32 -> stringResource(R.string.board_esp32_generic)
     com.ehrocha.pulsar.ble.BoardKind.UNKNOWN -> null
+}
+
+@Composable
+private fun UsbCameraCard(
+    device: android.hardware.usb.UsbDevice,
+    connecting: Boolean,
+    onClick: () -> Unit,
+) {
+    val name = device.productName ?: device.manufacturerName ?: "USB camera"
+    Surface(
+        onClick = if (connecting) ({}) else onClick,
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                modifier = Modifier.size(48.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.Usb,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    stringResource(R.string.usb_camera_subtitle),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    "VID 0x%04X · PID 0x%04X".format(device.vendorId, device.productId),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DeviceTypesHelpDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.scan_help_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                DeviceTypeHelpRow(
+                    icon = Icons.Default.Bluetooth,
+                    title = stringResource(R.string.scan_help_esp_title),
+                    body = stringResource(R.string.scan_help_esp_body),
+                )
+                DeviceTypeHelpRow(
+                    icon = Icons.Default.Wifi,
+                    title = stringResource(R.string.scan_help_ccapi_title),
+                    body = stringResource(R.string.scan_help_ccapi_body),
+                )
+                DeviceTypeHelpRow(
+                    icon = Icons.Default.Usb,
+                    title = stringResource(R.string.scan_help_ptp_title),
+                    body = stringResource(R.string.scan_help_ptp_body),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.ok)) }
+        },
+    )
+}
+
+@Composable
+private fun DeviceTypeHelpRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    body: String,
+) {
+    Row(verticalAlignment = Alignment.Top) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier
+                .padding(end = 12.dp, top = 2.dp)
+                .size(20.dp),
+        )
+        Column(Modifier.weight(1f)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                body,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }

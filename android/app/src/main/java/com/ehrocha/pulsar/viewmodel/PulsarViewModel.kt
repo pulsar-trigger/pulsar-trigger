@@ -184,6 +184,39 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         .map { it?.supportsBulb == true }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    // ── USB PTP transport (Phase 1: Timelapse only) ──────────────────────
+    // The phone drives a Canon (or other PTP-capable) body over USB-C using
+    // Android's USB Host API. Useful for bodies CCAPI can't reach — e.g. the
+    // EOS R, where Pulsar otherwise has no phone-side path. Mutually
+    // exclusive with BLE / CCAPI / simulator; picking one disconnects the
+    // others. Bulb support comes in Phase 2.
+    private val ptpDiscovery = com.ehrocha.pulsar.ptp.PtpDiscovery(app).also { it.start() }
+    val ptpCameras: StateFlow<List<android.hardware.usb.UsbDevice>> = ptpDiscovery.cameras
+
+    private val _ptpTransport =
+        MutableStateFlow<com.ehrocha.pulsar.ptp.PtpTransport?>(null)
+    val ptpTransport: StateFlow<com.ehrocha.pulsar.ptp.PtpTransport?> = _ptpTransport
+
+    private val _ptpConnecting = MutableStateFlow(false)
+    val ptpConnecting: StateFlow<Boolean> = _ptpConnecting
+    private val _ptpError = MutableStateFlow<String?>(null)
+    val ptpError: StateFlow<String?> = _ptpError
+
+    init {
+        // If the currently-connected USB camera gets unplugged, tear down the
+        // transport so the UI returns to the scan screen cleanly. Detach
+        // broadcasts cause ptpDiscovery.cameras to lose the device.
+        viewModelScope.launch {
+            ptpDiscovery.cameras.collect { attached ->
+                val active = _ptpTransport.value ?: return@collect
+                if (attached.none { it.deviceName == active.device.deviceName }) {
+                    Log.i(TAG, "USB camera unplugged — disconnecting PTP")
+                    disconnectPtp()
+                }
+            }
+        }
+    }
+
     /** Per-UDN digest credentials. Each entry lets the next connect to the
      *  same camera skip the auth prompt entirely. */
     /** Encrypted-at-rest prefs file (AES-256, key in Android Keystore) for
@@ -406,9 +439,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         // also writes to it directly while it's running.
         viewModelScope.launch {
             bleController.connected.collect {
-                // Canon takes priority — don't let BLE disconnect kick the
-                // user out of an active Canon session.
-                if (_canonTransport.value != null) return@collect
+                // Canon / PTP take priority — don't let BLE disconnect kick the
+                // user out of an active phone-driven camera session.
+                if (_canonTransport.value != null || _ptpTransport.value != null) return@collect
                 _connected.value = it
                 if (it) {
                     sendAutoOff()
@@ -419,7 +452,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             bleController.status.collect {
-                if (!_simulatorActive.value && _canonTransport.value == null) {
+                if (!_simulatorActive.value && _canonTransport.value == null &&
+                    _ptpTransport.value == null) {
                     _status.value = it
                 }
             }
@@ -494,8 +528,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     @SuppressLint("MissingPermission")
     fun connectTo(device: BluetoothDevice) {
-        // Hang up any active Canon session so transports stay single-valued.
+        // Hang up any active Canon/PTP session so transports stay single-valued.
         if (_canonTransport.value != null) disconnectCanon()
+        if (_ptpTransport.value != null) disconnectPtp()
         _deviceName.value = device.name ?: "Pulsar"
         bleController.connect(device)
     }
@@ -513,6 +548,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             // Hang up any existing BLE link so the UI's notion of "what's
             // connected" stays single-valued.
             if (bleController.connected.value) bleController.disconnect()
+            if (_ptpTransport.value != null) disconnectPtp()
             stopScan()
 
             // Reuse saved digest creds for this camera if the caller didn't
@@ -858,7 +894,73 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         _canonReconnecting.value = false
         viewModelScope.launch { transport.release() }
         _canonTransport.value = null
-        if (!bleController.connected.value && !_simulatorActive.value) {
+        if (!bleController.connected.value && !_simulatorActive.value &&
+            _ptpTransport.value == null) {
+            _connected.value = false
+            _status.value = null
+        }
+    }
+
+    /** Connect to a USB-attached PTP camera. Requests USB permission if
+     *  needed, opens the PTP interface, calls `OpenSession`. Mutually
+     *  exclusive with BLE / CCAPI — both are dropped first. Phase 1 only
+     *  supports Timelapse-mode runs (camera owns exposure). */
+    fun connectPtp(device: android.hardware.usb.UsbDevice) {
+        viewModelScope.launch {
+            _ptpError.value = null
+            _ptpConnecting.value = true
+            try {
+                // Hang up any existing transport so the UI's notion of
+                // "what's connected" stays single-valued.
+                if (bleController.connected.value) bleController.disconnect()
+                if (_canonTransport.value != null) disconnectCanon()
+                stopScan()
+
+                val appCtx = getApplication<Application>()
+                val granted = com.ehrocha.pulsar.ptp.PtpProbe.requestPermission(
+                    appCtx,
+                    appCtx.getSystemService(Context.USB_SERVICE) as android.hardware.usb.UsbManager,
+                    device,
+                )
+                if (!granted) {
+                    _ptpError.value = "permission_denied"
+                    return@launch
+                }
+                val transport = com.ehrocha.pulsar.ptp.PtpTransport.openOn(appCtx, device)
+                if (transport == null) {
+                    _ptpError.value = "open_failed"
+                    return@launch
+                }
+                val ok = transport.connect()
+                if (!ok) {
+                    transport.release()
+                    _ptpError.value = "session_failed"
+                    return@launch
+                }
+                _ptpTransport.value = transport
+                _deviceName.value = transport.label.value
+                _connected.value = true
+                _status.value = StatusFrame(
+                    state = DeviceState.IDLE,
+                    mode = TriggerMode.TIMELAPSE.id,
+                    shotsTaken = 0,
+                    timeRemainingMs = 0L,
+                    batteryPct = 0,
+                    errorCode = 0,
+                    fwVersion = "",
+                )
+            } finally {
+                _ptpConnecting.value = false
+            }
+        }
+    }
+
+    private fun disconnectPtp() {
+        val transport = _ptpTransport.value ?: return
+        viewModelScope.launch { transport.release() }
+        _ptpTransport.value = null
+        if (!bleController.connected.value && !_simulatorActive.value &&
+            _canonTransport.value == null) {
             _connected.value = false
             _status.value = null
         }
@@ -875,6 +977,17 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 _flowCurrentStep.value = -1
             }
             disconnectCanon()
+            return
+        }
+        if (_ptpTransport.value != null) {
+            if (_flowRunning.value) {
+                flowJob?.cancel()
+                flowJob = null
+                _flowRunning.value = false
+                _flowPaused.value = false
+                _flowCurrentStep.value = -1
+            }
+            disconnectPtp()
             return
         }
         if (_simulatorActive.value) {
@@ -1112,11 +1225,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         // Hand the BLE stop off immediately (don't wait on cancellation) so
         // the firmware halts ASAP; then await the flow's own finally to settle
         // _flowRunning / _flowCurrentStep before we stomp _status.
-        if (!_simulatorActive.value && _canonTransport.value == null) {
+        if (!_simulatorActive.value && _canonTransport.value == null &&
+            _ptpTransport.value == null) {
             bleController.sendCommand(CommandBuilder.stop())
         }
         viewModelScope.launch {
             _canonTransport.value?.stop()
+            _ptpTransport.value?.stop()
             flowJob?.cancelAndJoin()
             flowJob = null
             _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
@@ -1137,6 +1252,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             }
             is FlowStep.Intervalometer -> {
                 val canon = _canonTransport.value
+                val ptp = _ptpTransport.value
                 when {
                     canon != null -> {
                         // Timelapse wizard stores its pulse-length sentinel as
@@ -1154,6 +1270,21 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                                 step.intervalMs, step.delayMs, af = step.useAutofocus,
                                 status = _status,
                                 awaitReady = { awaitCanonReady(canon) },
+                            )
+                        }
+                    }
+                    ptp != null -> {
+                        // Phase 1: only Timelapse-style runs (camera owns
+                        // exposure). Bulb-style intervalometer needs Canon
+                        // RemoteRelease ops — Phase 2.
+                        if (step.exposureMs == AppConfig.TIMELAPSE_PULSE_MS) {
+                            com.ehrocha.pulsar.transport.runCanonTimelapse(
+                                ptp, step.shotCount, step.intervalMs, step.delayMs,
+                                af = step.useAutofocus, status = _status,
+                            )
+                        } else {
+                            throw IllegalStateException(
+                                "PTP bulb is Phase 2 — use Timelapse mode (camera owns exposure)"
                             )
                         }
                     }
@@ -1179,6 +1310,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         step.gapMs, step.delayMs, af = step.useAutofocus,
                         status = _status, awaitReady = { awaitCanonReady(canon) },
                     )
+                    _ptpTransport.value != null ->
+                        throw IllegalStateException("Astro needs bulb — PTP bulb is Phase 2 work")
                     _simulatorActive.value -> simulateShots(step.shotCount, expMs, step.gapMs, step.delayMs)
                     else -> {
                         sendModeCommand(
@@ -1196,6 +1329,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         step.gapMs, 0L, af = step.useAutofocus,
                         status = _status, awaitReady = { awaitCanonReady(canon) },
                     )
+                    _ptpTransport.value != null ->
+                        throw IllegalStateException("Dark Frame needs bulb — PTP bulb is Phase 2 work")
                     _simulatorActive.value -> simulateShots(step.shotCount, step.exposureMs, step.gapMs, 0L)
                     else -> {
                         sendModeCommand(
@@ -1210,6 +1345,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             is FlowStep.Ramp -> {
                 val canon = _canonTransport.value
                 val rampSteps = step.steps.coerceAtLeast(2)
+                if (_ptpTransport.value != null && canon == null) {
+                    throw IllegalStateException("Ramp needs bulb — PTP bulb is Phase 2 work")
+                }
                 if (canon != null) {
                     com.ehrocha.pulsar.transport.runCanonRamp(
                         canon, step, rampSteps, af = step.useAutofocus,

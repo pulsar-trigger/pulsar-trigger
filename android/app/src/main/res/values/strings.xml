@@ -4,7 +4,18 @@
     <!-- ScanScreen -->
     <string name="app_tagline">BLE Remote Trigger</string>
     <string name="available_devices">Available Devices</string>
-    <string name="select_device_prompt">Select your Pulsar trigger to begin control session.</string>
+    <string name="select_device_prompt">Pull down to scan for compatible devices: Pulsar ESP32 triggers, CCAPI-compliant Canon cameras, or USB PTP cameras.</string>
+    <string name="scan_compatible_devices_link">Compatible devices</string>
+    <string name="scan_help_title">Compatible devices</string>
+    <string name="scan_help_esp_title">Pulsar ESP32 trigger</string>
+    <string name="scan_help_esp_body">An ESP32 board running Pulsar firmware, connected to your camera via its wired remote-release port. Works with any camera that has a remote port.</string>
+    <string name="scan_help_ccapi_title">CCAPI camera</string>
+    <string name="scan_help_ccapi_body">Canon EOS R-series body with CCAPI activated. Connects over Wi-Fi. Activation requires Canon\'s PC tool — see the camera setup help.</string>
+    <string name="scan_help_ptp_title">USB PTP camera</string>
+    <string name="scan_help_ptp_body">Any PTP-capable camera (Canon, Nikon, Sony, etc.) connected to the phone with a USB-C cable. Useful for bodies that don\'t support CCAPI.</string>
+    <string name="section_usb_cameras">USB CAMERAS</string>
+    <string name="usb_cameras_subtitle">Connected via USB-C</string>
+    <string name="usb_camera_subtitle">PTP over USB</string>
     <string name="use_simulator">Use Simulator</string>
     <string name="simulator_description">Explore the app without a real device</string>
     <string name="unknown_device">Unknown Device</string>
