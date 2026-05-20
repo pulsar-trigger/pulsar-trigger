@@ -202,20 +202,49 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val _ptpError = MutableStateFlow<String?>(null)
     val ptpError: StateFlow<String?> = _ptpError
 
+    /** Vendor + product ID of the camera we were last *intentionally*
+     *  connected to over PTP. Set on successful connect, preserved across
+     *  cable-unplug, cleared only on explicit user disconnect or when the
+     *  user switches to a different transport. Used to auto-reconnect when
+     *  the same camera reappears on the bus. */
+    private var lastPtpAutoReconnect: Pair<Int, Int>? = null
+
     init {
-        // If the currently-connected USB camera gets unplugged, tear down the
-        // transport so the UI returns to the scan screen cleanly. Detach
-        // broadcasts cause ptpDiscovery.cameras to lose the device.
+        // Two flows watched on the discovery channel:
+        //  (1) currently-connected camera vanishes → tear down the transport
+        //      cleanly but remember the device so we can auto-reconnect.
+        //  (2) a previously-connected camera reappears while we're idle →
+        //      auto-reconnect so the user doesn't have to tap again.
         viewModelScope.launch {
             ptpDiscovery.cameras.collect { attached ->
-                val active = _ptpTransport.value ?: return@collect
-                if (attached.none { it.deviceName == active.device.deviceName }) {
-                    Log.i(TAG, "USB camera unplugged — disconnecting PTP")
-                    disconnectPtp()
+                val active = _ptpTransport.value
+                if (active != null &&
+                    attached.none { it.deviceName == active.device.deviceName }) {
+                    Log.i(TAG, "USB camera unplugged — disconnecting PTP (auto-reconnect armed)")
+                    disconnectPtp(clearAutoReconnect = false)
+                    return@collect
+                }
+                val want = lastPtpAutoReconnect
+                if (active == null && want != null && idleAcrossOtherTransports()) {
+                    val match = attached.firstOrNull {
+                        it.vendorId == want.first && it.productId == want.second
+                    }
+                    if (match != null) {
+                        Log.i(TAG, "USB camera reappeared — auto-reconnecting PTP")
+                        connectPtp(match)
+                    }
                 }
             }
         }
     }
+
+    /** True iff no other transport is currently in use — gates auto-reconnect
+     *  so we don't snatch the user away from a deliberate BLE / CCAPI /
+     *  simulator session. */
+    private fun idleAcrossOtherTransports(): Boolean =
+        _canonTransport.value == null &&
+            !bleController.connected.value &&
+            !_simulatorActive.value
 
     /** Per-UDN digest credentials. Each entry lets the next connect to the
      *  same camera skip the auth prompt entirely. */
@@ -938,6 +967,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     return@launch
                 }
                 _ptpTransport.value = transport
+                lastPtpAutoReconnect = device.vendorId to device.productId
                 _deviceName.value = transport.label.value
                 _connected.value = true
                 _status.value = StatusFrame(
@@ -976,12 +1006,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun disconnectPtp() {
+    private fun disconnectPtp(clearAutoReconnect: Boolean = true) {
         val transport = _ptpTransport.value ?: return
         ptpPollJob?.cancel()
         ptpPollJob = null
         viewModelScope.launch { transport.release() }
         _ptpTransport.value = null
+        if (clearAutoReconnect) lastPtpAutoReconnect = null
         if (!bleController.connected.value && !_simulatorActive.value &&
             _canonTransport.value == null) {
             _connected.value = false

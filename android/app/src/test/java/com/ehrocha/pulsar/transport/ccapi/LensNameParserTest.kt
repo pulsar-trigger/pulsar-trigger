@@ -5,6 +5,7 @@
 
 package com.ehrocha.pulsar.transport.ccapi
 
+import com.ehrocha.pulsar.transport.parseFocalFromName
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

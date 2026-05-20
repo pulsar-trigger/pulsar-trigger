@@ -155,18 +155,21 @@ fun AstroMode2Screen(
     val running = runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
     val canonTransport = vm.canonTransport.collectAsState().value
+    val ptpTransport = vm.ptpTransport.collectAsState().value
     val onCanon = canonTransport != null
 
-    // Fetch what lens is on the camera when we land on a CCAPI connection.
-    // For a *fresh* run (no preset loaded) and a prime lens, auto-fill the
-    // focal length. For a loaded preset we leave the saved value alone — the
-    // user explicitly picked it — but still surface the detection chip so
-    // they know what's mounted.
+    // Fetch what lens is on the camera from whichever transport is active —
+    // CCAPI (Wi-Fi) or USB PTP. For a *fresh* run (no preset loaded) and a
+    // prime lens, auto-fill the focal length. For a loaded preset we leave
+    // the saved value alone — the user explicitly picked it — but still
+    // surface the detection chip so they know what's mounted.
     var lensInfo by remember {
-        mutableStateOf<com.ehrocha.pulsar.transport.ccapi.CcapiTransport.LensInfo?>(null)
+        mutableStateOf<com.ehrocha.pulsar.transport.LensInfo?>(null)
     }
-    LaunchedEffect(canonTransport) {
-        val t = canonTransport ?: return@LaunchedEffect
+    LaunchedEffect(canonTransport, ptpTransport) {
+        val t: com.ehrocha.pulsar.transport.CameraTransport =
+            canonTransport ?: ptpTransport ?: return@LaunchedEffect
+        if (!t.supportsLensInfo) return@LaunchedEffect
         val info = t.getLensInfo() ?: return@LaunchedEffect
         lensInfo = info
         if (loadedPreset == null && focalLength == 0 && info.focalMm != null) {
@@ -389,7 +392,7 @@ private fun LensTab(
     cropFactor: Float,
     ruleDivisor: Int,
     maxExpMs: Long,
-    lensInfo: com.ehrocha.pulsar.transport.ccapi.CcapiTransport.LensInfo?,
+    lensInfo: com.ehrocha.pulsar.transport.LensInfo?,
     onFocalChange: (Int) -> Unit,
     onCropChange: (Float) -> Unit,
     onRuleChange: (Int) -> Unit,
@@ -508,7 +511,7 @@ private fun LensTab(
  *  isn't reported by CCAPI, so the user types the value manually. */
 @Composable
 private fun DetectedLensChip(
-    lens: com.ehrocha.pulsar.transport.ccapi.CcapiTransport.LensInfo,
+    lens: com.ehrocha.pulsar.transport.LensInfo,
     currentFocalMm: Int,
     enabled: Boolean,
     onUseFocal: (Int) -> Unit,

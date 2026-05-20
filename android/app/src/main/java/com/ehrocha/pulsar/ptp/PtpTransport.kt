@@ -156,8 +156,11 @@ class PtpTransport private constructor(
     override val supportsSettings: Boolean = deviceInfo.supportedDeviceProperties.isNotEmpty()
     /** Live view over PTP is a Canon vendor op — Phase 3 work. */
     override val supportsLiveView: Boolean = false
-    /** Lens info via Canon vendor properties — Phase 3 work. */
-    override val supportsLensInfo: Boolean = false
+    /** True iff the body advertises the Canon LensName device property
+     *  (`0xD157`). Reading it gives us a string like "RF16mm F2.8 STM" that
+     *  Pulsar parses for the Astro wizard's focal-length auto-fill. */
+    override val supportsLensInfo: Boolean =
+        PtpClient.PROP_CANON_LENS_NAME in deviceInfo.supportedDeviceProperties
     /** True iff the body advertises the standard PTP BatteryLevel
      *  property (`0x5001`). Some Canon bodies expose battery through a
      *  vendor-specific property instead — those would report false here
@@ -273,6 +276,50 @@ class PtpTransport private constructor(
                 Log.w(TAG, "stopBulb threw: ${e.message}")
             }
         }
+    }
+
+    /** Read the Canon LensName property (`0xD157`) and parse the focal
+     *  length from the model string. Reuses the same name-parsing helper
+     *  the CCAPI lens path uses for older bodies that don't report focal
+     *  length natively. Returns null if the body doesn't expose the prop,
+     *  if the read fails, or if no lens is mounted. */
+    override suspend fun getLensInfo(): com.ehrocha.pulsar.transport.LensInfo? = wireMutex.withLock {
+        if (!supportsLensInfo) return@withLock null
+        withContext(Dispatchers.IO) {
+            if (!_connected.value) return@withContext null
+            try {
+                val r = client.getDevicePropValue(PtpClient.PROP_CANON_LENS_NAME)
+                if (!r.ok || r.data == null || r.data.isEmpty()) {
+                    Log.w(TAG, "GetDevicePropValue(LensName) rc=0x${"%04X".format(r.code)}")
+                    return@withContext null
+                }
+                val name = decodePtpString(r.data) ?: return@withContext null
+                val mounted = name.isNotBlank()
+                val (focal, range) = com.ehrocha.pulsar.transport.parseFocalFromName(name)
+                com.ehrocha.pulsar.transport.LensInfo(
+                    mounted = mounted,
+                    name = name,
+                    focalMm = focal,
+                    zoomRangeMm = range,
+                )
+            } catch (e: PtpClient.ProtocolException) {
+                Log.w(TAG, "getLensInfo threw: ${e.message}")
+                null
+            }
+        }
+    }
+
+    /** Decode the data payload from a STR-typed device property:
+     *  1-byte length (UTF-16 code units incl trailing NUL), then UTF-16LE.
+     *  Returns null on a malformed/empty buffer. */
+    private fun decodePtpString(data: ByteArray): String? {
+        if (data.isEmpty()) return null
+        val units = data[0].toInt() and 0xFF
+        if (units == 0) return ""
+        val byteCount = units * 2
+        if (data.size < 1 + byteCount) return null
+        val s = String(data, 1, byteCount, Charsets.UTF_16LE)
+        return if (s.isNotEmpty() && s.last() == ' ') s.dropLast(1) else s
     }
 
     /** Read current battery percentage via PTP property `0x5001`. Returns

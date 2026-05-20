@@ -90,6 +90,11 @@ interface CameraTransport {
     /** Transport can report camera battery state for the run-screen chip.
      *  CCAPI: true (event polling + `/devicestatus/battery`). */
     val supportsBatteryReadout: Boolean
+
+    /** Snapshot of what lens is mounted, used by the Astro wizard to
+     *  auto-fill the focal length. Returns null when [supportsLensInfo] is
+     *  false, the read fails, or no lens is mounted. */
+    suspend fun getLensInfo(): LensInfo? = null
 }
 
 enum class TransportKind { BLE_ESP, CCAPI, PTP_USB }

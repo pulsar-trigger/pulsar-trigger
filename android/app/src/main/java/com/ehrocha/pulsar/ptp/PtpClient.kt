@@ -320,6 +320,11 @@ class PtpClient(
         // ── PTP standard device properties (subset) ──────────────────────
         const val PROP_BATTERY_LEVEL = 0x5001  // UINT8 percentage 0-100
 
+        // ── Canon-specific device properties ─────────────────────────────
+        // Lens model name (PTP STR). Used by the Astro wizard to auto-fill
+        // focal length the same way CCAPI does via `/devicestatus/lens`.
+        const val PROP_CANON_LENS_NAME = 0xD157
+
         // ── Canon EOS vendor operations (vendor extension ID 11) ─────────
         // Documented in Canon's PTP Reference; Pulsar may use these in Phase 2.
         const val OP_CANON_REMOTE_RELEASE_ON = 0x9128
