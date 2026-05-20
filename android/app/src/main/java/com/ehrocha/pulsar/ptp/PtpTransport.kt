@@ -146,8 +146,10 @@ class PtpTransport private constructor(
             0x9008 in ops  // CanonRemoteReleaseOn
     }
 
-    /** Phase 1: no bulb yet. Wire it on when Phase 2 lands. */
-    override val supportsBulb: Boolean = false
+    /** True iff the body advertises the Canon RemoteRelease vendor ops we
+     *  need for bulb. Phase 2 wires startBulb/stopBulb to those ops; the
+     *  wizards gate bulb-based tiles on this flag. */
+    override val supportsBulb: Boolean = advertisesCanonBulb
     /** PTP DeviceInfo lists settings as device-properties. Whether Pulsar
      *  exposes a settings UI is a separate question (camera-params tab is
      *  parked) — the *transport* can support it. */
@@ -159,21 +161,35 @@ class PtpTransport private constructor(
     /** Battery is PTP property 0x5001 — Phase 3 work. */
     override val supportsBatteryReadout: Boolean = false
 
-    /** Open the PTP session. Required before any shutter operation. */
+    /** Whether we successfully entered PC-remote mode at connect time.
+     *  If false, only basic InitiateCapture works (no bulb / settings). */
+    private var pcRemoteActive: Boolean = false
+
+    /** Open the PTP session. Required before any shutter operation. On
+     *  Canon EOS bodies we also enable PC-remote + event mode so the
+     *  RemoteRelease ops become available. */
     suspend fun connect(): Boolean = wireMutex.withLock {
         withContext(Dispatchers.IO) {
             try {
                 val r = client.openSession(1)
-                if (r.ok) {
-                    _connected.value = true
-                    Log.i(TAG, "Session opened")
-                    true
-                } else {
+                if (!r.ok) {
                     Log.w(TAG, "OpenSession failed: rc=0x${"%04X".format(r.code)}")
-                    false
+                    return@withContext false
                 }
+                _connected.value = true
+                Log.i(TAG, "Session opened")
+                if (deviceInfo.vendorExtensionId == PtpClient.VENDOR_EXT_CANON_EOS) {
+                    val rm = runCatching { client.canonSetRemoteMode(1) }.getOrNull()
+                    val em = runCatching { client.canonSetEventMode(1) }.getOrNull()
+                    pcRemoteActive = rm?.ok == true && em?.ok == true
+                    Log.i(TAG, "Canon PC-remote setup: " +
+                        "SetRemoteMode=${rm?.code?.let { "0x%04X".format(it) }} " +
+                        "EventMode=${em?.code?.let { "0x%04X".format(it) }} " +
+                        "active=$pcRemoteActive")
+                }
+                true
             } catch (e: PtpClient.ProtocolException) {
-                Log.w(TAG, "OpenSession threw: ${e.message}")
+                Log.w(TAG, "Connect threw: ${e.message}")
                 false
             }
         }
@@ -182,6 +198,10 @@ class PtpTransport private constructor(
     override suspend fun release() = wireMutex.withLock<Unit> {
         withContext(Dispatchers.IO) {
             if (_connected.value) {
+                if (pcRemoteActive) {
+                    runCatching { client.canonSetRemoteMode(0) }
+                    pcRemoteActive = false
+                }
                 runCatching { client.closeSession() }
                 _connected.value = false
             }
@@ -211,19 +231,43 @@ class PtpTransport private constructor(
         }
     }
 
-    /** Phase 1: no-op. Bulb wiring lands in Phase 2. */
+    /** Phase 2: no-op. The Canon PTP "set shutter speed to Bulb" property
+     *  value is body-specific (typically 0x0C for R-series but unverified
+     *  across the lineup), so the user is expected to set Bulb on the body
+     *  before running a bulb-based flow. The wire-level press/release in
+     *  [startBulb] / [stopBulb] is what actually fires the exposure;
+     *  setShutterMode is informational only. */
     override suspend fun setShutterMode(bulb: Boolean) {
-        // Implemented in Phase 2 via Canon RemoteRelease / SetDeviceProperty.
+        // Programmatic shutter-speed change is a Phase 3 polish item.
     }
 
-    override suspend fun startBulb(af: Boolean) {
-        throw UnsupportedOperationException(
-            "PTP bulb mode is Phase 2 work — use Timelapse mode for now"
-        )
+    override suspend fun startBulb(af: Boolean) = wireMutex.withLock {
+        // The `af` flag is honoured by CCAPI's bulb endpoint; on Canon PTP
+        // the AF behaviour is set body-side (AF/MF switch + autofocus mode).
+        withContext(Dispatchers.IO) {
+            if (!_connected.value) {
+                Log.w(TAG, "startBulb: not connected — ignored")
+                return@withContext
+            }
+            try {
+                val r = client.canonRemoteReleaseOn(mode = 3)
+                if (!r.ok) Log.w(TAG, "RemoteReleaseOn rc=0x${"%04X".format(r.code)}")
+            } catch (e: PtpClient.ProtocolException) {
+                Log.w(TAG, "startBulb threw: ${e.message}")
+            }
+        }
     }
 
-    override suspend fun stopBulb() {
-        // No-op so a `finally { stopBulb() }` from cancelled bulb runs is safe.
+    override suspend fun stopBulb() = wireMutex.withLock<Unit> {
+        withContext(Dispatchers.IO) {
+            if (!_connected.value) return@withContext
+            try {
+                val r = client.canonRemoteReleaseOff(mode = 3)
+                if (!r.ok) Log.w(TAG, "RemoteReleaseOff rc=0x${"%04X".format(r.code)}")
+            } catch (e: PtpClient.ProtocolException) {
+                Log.w(TAG, "stopBulb threw: ${e.message}")
+            }
+        }
     }
 
     override suspend fun stop() {

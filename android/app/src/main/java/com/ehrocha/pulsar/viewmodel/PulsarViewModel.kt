@@ -1274,17 +1274,16 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         }
                     }
                     ptp != null -> {
-                        // Phase 1: only Timelapse-style runs (camera owns
-                        // exposure). Bulb-style intervalometer needs Canon
-                        // RemoteRelease ops — Phase 2.
                         if (step.exposureMs == AppConfig.TIMELAPSE_PULSE_MS) {
                             com.ehrocha.pulsar.transport.runCanonTimelapse(
                                 ptp, step.shotCount, step.intervalMs, step.delayMs,
                                 af = step.useAutofocus, status = _status,
                             )
                         } else {
-                            throw IllegalStateException(
-                                "PTP bulb is Phase 2 — use Timelapse mode (camera owns exposure)"
+                            com.ehrocha.pulsar.transport.runCanonBulb(
+                                ptp, step.shotCount, step.exposureMs,
+                                step.intervalMs, step.delayMs, af = step.useAutofocus,
+                                status = _status,
                             )
                         }
                     }
@@ -1310,8 +1309,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         step.gapMs, step.delayMs, af = step.useAutofocus,
                         status = _status, awaitReady = { awaitCanonReady(canon) },
                     )
-                    _ptpTransport.value != null ->
-                        throw IllegalStateException("Astro needs bulb — PTP bulb is Phase 2 work")
+                    _ptpTransport.value != null -> com.ehrocha.pulsar.transport.runCanonBulb(
+                        _ptpTransport.value!!, step.shotCount, expMs,
+                        step.gapMs, step.delayMs, af = step.useAutofocus,
+                        status = _status,
+                    )
                     _simulatorActive.value -> simulateShots(step.shotCount, expMs, step.gapMs, step.delayMs)
                     else -> {
                         sendModeCommand(
@@ -1329,8 +1331,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         step.gapMs, 0L, af = step.useAutofocus,
                         status = _status, awaitReady = { awaitCanonReady(canon) },
                     )
-                    _ptpTransport.value != null ->
-                        throw IllegalStateException("Dark Frame needs bulb — PTP bulb is Phase 2 work")
+                    _ptpTransport.value != null -> com.ehrocha.pulsar.transport.runCanonBulb(
+                        _ptpTransport.value!!, step.shotCount, step.exposureMs,
+                        step.gapMs, 0L, af = step.useAutofocus,
+                        status = _status,
+                    )
                     _simulatorActive.value -> simulateShots(step.shotCount, step.exposureMs, step.gapMs, 0L)
                     else -> {
                         sendModeCommand(
@@ -1344,14 +1349,17 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             }
             is FlowStep.Ramp -> {
                 val canon = _canonTransport.value
+                val ptp = _ptpTransport.value
                 val rampSteps = step.steps.coerceAtLeast(2)
-                if (_ptpTransport.value != null && canon == null) {
-                    throw IllegalStateException("Ramp needs bulb — PTP bulb is Phase 2 work")
-                }
                 if (canon != null) {
                     com.ehrocha.pulsar.transport.runCanonRamp(
                         canon, step, rampSteps, af = step.useAutofocus,
                         status = _status, awaitReady = { awaitCanonReady(canon) },
+                    )
+                } else if (ptp != null) {
+                    com.ehrocha.pulsar.transport.runCanonRamp(
+                        ptp, step, rampSteps, af = step.useAutofocus,
+                        status = _status,
                     )
                 } else {
                     for (i in 0 until rampSteps) {

@@ -87,6 +87,36 @@ class PtpClient(
         expectDataIn: Boolean = false,
     ): Response = transact(opCode, params, dataOut, expectDataIn)
 
+    // ── Canon EOS vendor operations ─────────────────────────────────────
+    // Canon EOS bodies require the camera to be put into "PC remote
+    // control" mode before they accept RemoteRelease commands. The dance
+    // is: SetRemoteMode(1) -> EventMode(1) at connect time, then
+    // RemoteReleaseOn(3) / RemoteReleaseOff(3) bracket each bulb shot.
+    //
+    // For non-bulb single-shot capture, plain InitiateCapture (PIMA-1001)
+    // still works without this setup.
+
+    /** Canon: enable (mode=1) or disable (mode=0) PC remote-control mode.
+     *  Required before any RemoteRelease op. */
+    suspend fun canonSetRemoteMode(mode: Int = 1): Response =
+        transact(OP_CANON_SET_REMOTE_MODE, intArrayOf(mode), expectDataIn = false)
+
+    /** Canon: enable the event channel so the body accepts subsequent
+     *  remote operations. Pulsar doesn't currently consume the events. */
+    suspend fun canonSetEventMode(mode: Int = 1): Response =
+        transact(OP_CANON_EVENT_MODE, intArrayOf(mode), expectDataIn = false)
+
+    /** Canon: start a remote shutter press. The camera holds the shutter
+     *  open until [canonRemoteReleaseOff] for bulb-mode exposures (body
+     *  must be set to Bulb on its dial). `mode=3` is "full press + AF"
+     *  in Canon's lexicon — the value gphoto2 uses for bulb. */
+    suspend fun canonRemoteReleaseOn(mode: Int = 3): Response =
+        transact(OP_CANON_REMOTE_RELEASE_ON, intArrayOf(mode), expectDataIn = false)
+
+    /** Canon: release the remote shutter press. Pair with [canonRemoteReleaseOn]. */
+    suspend fun canonRemoteReleaseOff(mode: Int = 3): Response =
+        transact(OP_CANON_REMOTE_RELEASE_OFF, intArrayOf(mode), expectDataIn = false)
+
     // ── Result types ────────────────────────────────────────────────────
 
     /** A complete transaction's outcome: response code, any returned params,
