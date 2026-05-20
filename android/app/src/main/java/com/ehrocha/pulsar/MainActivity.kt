@@ -316,6 +316,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
     val deviceRssi by vm.rssi.collectAsState()
     val deviceLatency by vm.latencyMs.collectAsState()
     val runState by vm.runState.collectAsState()
+    val currentFlowStep by vm.currentFlowStep.collectAsState()
 
     // Keep the screen awake while a sequence is running — long timelapses /
     // astro sessions outlast a phone's default sleep timer, and a sleeping
@@ -333,6 +334,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
     CompositionLocalProvider(
         LocalDeviceStatus provides deviceStatus,
         LocalRunState provides runState,
+        com.ehrocha.pulsar.ui.theme.LocalCurrentFlowStep provides currentFlowStep,
         LocalDeviceConnected provides connected,
         LocalDeviceRssi provides deviceRssi,
         LocalDeviceLatency provides deviceLatency,
@@ -409,6 +411,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     onAlignmentSelected = { currentScreen = AppScreen.Alignment },
                     onWhatsUpSelected = { currentScreen = AppScreen.WhatsUp },
                     onStarFocusSelected = { currentScreen = AppScreen.StarFocus },
+                    onTestCameraSelected = { currentScreen = AppScreen.TestCamera },
                     onSettingsSelected = { currentScreen = AppScreen.Settings(SettingsSection.UPDATES) },
                 )
             }
@@ -504,6 +507,13 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
             AppScreen.StarFocus -> {
                 BackHandler { currentScreen = AppScreen.Menu }
                 com.ehrocha.pulsar.ui.screens.StarFocusScreen(
+                    vm = vm,
+                    onBack = { currentScreen = AppScreen.Menu },
+                )
+            }
+            AppScreen.TestCamera -> {
+                BackHandler { currentScreen = AppScreen.Menu }
+                com.ehrocha.pulsar.ui.screens.TestCameraScreen(
                     vm = vm,
                     onBack = { currentScreen = AppScreen.Menu },
                 )
@@ -661,6 +671,7 @@ private sealed class AppScreen {
     data object WhatsUp : AppScreen()
     data object ShotLog : AppScreen()
     data object StarFocus : AppScreen()
+    data object TestCamera : AppScreen()
     data class Intervalometer2(val presetId: String? = null) : AppScreen()
     data class AstroMode2(val presetId: String? = null) : AppScreen()
     data class Timelapse(val presetId: String? = null) : AppScreen()

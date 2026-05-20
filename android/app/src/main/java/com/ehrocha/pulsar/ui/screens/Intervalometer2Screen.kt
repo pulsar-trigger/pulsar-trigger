@@ -5,6 +5,12 @@
 
 package com.ehrocha.pulsar.ui.screens
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
@@ -40,9 +46,12 @@ import com.ehrocha.pulsar.model.FlowStep
 import com.ehrocha.pulsar.model.RunState
 import com.ehrocha.pulsar.ui.components.NumPadDialog
 import com.ehrocha.pulsar.ui.components.PulsarTopBar
+import com.ehrocha.pulsar.ui.theme.LocalCurrentFlowStep
 import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 import com.ehrocha.pulsar.ui.theme.LocalRunState
+import com.ehrocha.pulsar.ui.theme.StatusOrange
+import com.ehrocha.pulsar.ui.theme.StatusRed
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import java.util.Calendar
 import java.util.Locale
@@ -94,6 +103,7 @@ fun Intervalometer2Screen(
     val running = runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
     val onCanon = vm.canonTransport.collectAsState().value != null
+    val canControlAf = onCanon || vm.ptpTransport.collectAsState().value != null
 
     // Jump to the final tab when a preset is loaded — its values are already
     // valid so the user is one tap away from Start.
@@ -254,7 +264,7 @@ fun Intervalometer2Screen(
                             onChange = { shotCount = it },
                             enabled = !running,
                         )
-                        if (onCanon) {
+                        if (canControlAf) {
                             com.ehrocha.pulsar.ui.components.AutofocusToggle(
                                 checked = useAutofocus,
                                 onCheckedChange = { useAutofocus = it },
@@ -524,6 +534,7 @@ internal fun RunningView(plannedShots: Int) {
     val shotsTaken = status?.shotsTaken ?: 0
     val timeRemainingMs = status?.timeRemainingMs ?: 0L
     val batteryPct = status?.batteryPct ?: 0
+    val currentStep = LocalCurrentFlowStep.current
     val continuous = plannedShots == 0
     val progress = if (continuous) 0f
                    else (shotsTaken.toFloat() / plannedShots.coerceAtLeast(1))
@@ -540,6 +551,14 @@ internal fun RunningView(plannedShots: Int) {
                 Spacer(Modifier.width(12.dp))
                 BatteryChip(pct = batteryPct)
             }
+        }
+        // Settings chip for the current step — only meaningful inside a
+        // multi-step flow run (Camera Test, Custom Flow). Single-step
+        // wizards already show their config above the run; for them the
+        // currentStep flow stays null and this no-ops.
+        currentStep?.let { step ->
+            Spacer(Modifier.height(12.dp))
+            CurrentStepChip(step)
         }
         Spacer(Modifier.height(28.dp))
 
@@ -628,24 +647,116 @@ private fun BatteryChip(pct: Int) {
 
 @Composable
 private fun StatusPill(state: DeviceState) {
+    // Use the LED palette from the top-bar indicator so RUN-vs-WAIT is
+    // unambiguous at a glance: red for exposing (shutter open), orange for
+    // the inter-shot gap. The full surface fills with the colour during
+    // exposure + a slow pulse animation so the user can tell from across
+    // the room when the shutter is open.
     val (labelRes, color) = when (state) {
-        DeviceState.RUNNING -> R.string.iv2_state_exposing to MaterialTheme.colorScheme.primary
-        DeviceState.WAITING -> R.string.iv2_state_waiting to MaterialTheme.colorScheme.secondary
+        DeviceState.RUNNING -> R.string.iv2_state_exposing to StatusRed
+        DeviceState.WAITING -> R.string.iv2_state_waiting to StatusOrange
         DeviceState.ERROR   -> R.string.iv2_state_error to MaterialTheme.colorScheme.error
         DeviceState.IDLE    -> R.string.iv2_state_starting to MaterialTheme.colorScheme.onSurfaceVariant
     }
+    val pulsing = state == DeviceState.RUNNING
+    val pulseAlpha = if (pulsing) {
+        val infinite = rememberInfiniteTransition(label = "exposingPulse")
+        val v by infinite.animateFloat(
+            initialValue = 0.55f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 600, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "alpha",
+        )
+        v
+    } else 1f
+    // Fill colour vs background: RUNNING = filled with strong colour (LED on),
+    // WAITING = soft halo, others = original soft halo.
+    val (fillColor, textColor) = when (state) {
+        DeviceState.RUNNING -> color.copy(alpha = pulseAlpha) to androidx.compose.ui.graphics.Color.White
+        else -> color.copy(alpha = 0.15f) to color
+    }
     Surface(
         shape = RoundedCornerShape(20.dp),
-        color = color.copy(alpha = 0.15f),
+        color = fillColor,
     ) {
         Text(
             stringResource(labelRes),
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
-            color = color,
+            color = textColor,
             letterSpacing = 2.sp,
         )
+    }
+}
+
+/** One-line summary chip surfaced under the StatusPill during a multi-step
+ *  flow (Camera Test, Custom Flow). Single-step wizards have their config
+ *  already on-screen so the chip stays null for them — see [LocalCurrentFlowStep]. */
+@Composable
+private fun CurrentStepChip(step: FlowStep) {
+    val summary = stepSummary(step) ?: return
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Text(
+            text = summary,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+@Composable
+private fun stepSummary(step: FlowStep): String? {
+    val s = step
+    return when (s) {
+        is FlowStep.Intervalometer ->
+            if (s.exposureMs == AppConfig.TIMELAPSE_PULSE_MS) {
+                stringResource(
+                    R.string.run_step_timelapse_summary,
+                    s.shotCount, formatMsShort(s.intervalMs),
+                )
+            } else stringResource(
+                R.string.run_step_interval_summary,
+                s.shotCount, formatMsShort(s.exposureMs), formatMsShort(s.intervalMs),
+            )
+        is FlowStep.Astro -> stringResource(
+            R.string.run_step_astro_summary,
+            s.focalLength, s.cropFactor, s.ruleDivisor, s.shotCount,
+            formatMsShort(s.gapMs),
+        )
+        is FlowStep.DarkFrame -> stringResource(
+            R.string.run_step_dark_summary,
+            s.shotCount, formatMsShort(s.exposureMs), formatMsShort(s.gapMs),
+        )
+        is FlowStep.Ramp -> stringResource(
+            R.string.run_step_ramp_summary,
+            s.steps,
+            formatMsShort(s.startExposureMs), formatMsShort(s.endExposureMs),
+            formatMsShort(s.intervalMs),
+        )
+        is FlowStep.Pause -> null
+    }
+}
+
+/** Compact ms formatter: "750ms", "4s", "1m 30s". Used by the per-step
+ *  summary chip; intentionally terse since the chip is a one-liner. */
+private fun formatMsShort(ms: Long): String = when {
+    ms <= 0L -> "0s"
+    ms < 1_000L -> "${ms}ms"
+    ms < 60_000L -> "${(ms + 500) / 1000}s"
+    else -> {
+        val totalSec = (ms + 500) / 1000
+        val m = totalSec / 60
+        val sec = totalSec % 60
+        if (sec == 0L) "${m}m" else "${m}m ${sec}s"
     }
 }
 

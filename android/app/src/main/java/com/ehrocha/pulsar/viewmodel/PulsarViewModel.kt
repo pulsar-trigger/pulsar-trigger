@@ -476,6 +476,16 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         RunState.from(status, running, paused, currentStep, steps)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, RunState.Idle)
 
+    /** The FlowStep currently executing, or null when no flow is running.
+     *  Exposed so the RunningView can render the step's settings (mode,
+     *  exposure, interval, focal length) without each wizard needing to
+     *  pass them in by hand. */
+    val currentFlowStep: StateFlow<FlowStep?> = combine(
+        _flowSteps, _flowCurrentStep, _flowRunning,
+    ) { steps, idx, running ->
+        if (running && idx in steps.indices) steps[idx] else null
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
     init {
         // Forward BLE controller state into the viewmodel's writable flows.
         // [_status] is multiplexed — BLE updates land here, and the simulator
@@ -1204,6 +1214,40 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val allTags: StateFlow<List<String>> = _combinedFlows
         .map { flows -> flows.flatMap { it.tags }.distinct().sorted() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /** Build and start a fixed 5-step diagnostic flow that exercises every
+     *  mode: Timelapse, Intervalometer (bulb), Astro, DarkFrame, Ramp. Five
+     *  shots in each, 4 s exposure / 2 s interval where applicable. Astro
+     *  uses 125 mm at crop 1.0 with the 500-rule, which yields exactly
+     *  4 s. Timelapse runs first to dodge bulb-state contamination from the
+     *  later steps. */
+    fun runCameraTest() {
+        val test = buildList<FlowStep> {
+            add(FlowStep.Intervalometer(
+                intervalMs = 2_000L,
+                exposureMs = AppConfig.TIMELAPSE_PULSE_MS,
+                shotCount = 5, delayMs = 0L, useAutofocus = false,
+            ))
+            add(FlowStep.Intervalometer(
+                intervalMs = 2_000L, exposureMs = 4_000L,
+                shotCount = 5, delayMs = 0L, useAutofocus = false,
+            ))
+            add(FlowStep.Astro(
+                focalLength = 125, cropFactor = 1.0f, ruleDivisor = 500,
+                gapMs = 2_000L, shotCount = 5, delayMs = 0L, useAutofocus = false,
+            ))
+            add(FlowStep.DarkFrame(
+                gapMs = 2_000L, exposureMs = 4_000L,
+                shotCount = 5, useAutofocus = false,
+            ))
+            add(FlowStep.Ramp(
+                startExposureMs = 4_000L, endExposureMs = 4_000L,
+                steps = 5, intervalMs = 2_000L, useAutofocus = false,
+            ))
+        }
+        saveFlowSteps(test)
+        startFlow()
+    }
 
     fun startFlow() {
         val steps = _flowSteps.value

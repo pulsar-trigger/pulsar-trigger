@@ -67,6 +67,7 @@ fun Ramp2Screen(
     val running = runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
     val onCanon = vm.canonTransport.collectAsState().value != null
+    val canControlAf = onCanon || vm.ptpTransport.collectAsState().value != null
 
     var tabIdx by rememberSaveable {
         mutableIntStateOf(if (loadedPreset != null) RampTab.entries.size - 1 else 0)
@@ -209,7 +210,7 @@ fun Ramp2Screen(
                             onChange = { steps = it },
                             enabled = !running,
                         )
-                        if (onCanon) {
+                        if (canControlAf) {
                             com.ehrocha.pulsar.ui.components.AutofocusToggle(
                                 checked = useAutofocus,
                                 onCheckedChange = { useAutofocus = it },

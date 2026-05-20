@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.LensBlur
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.Usb
 import androidx.compose.material.icons.filled.Timer
@@ -61,6 +62,7 @@ fun MainMenuScreen(
     onAlignmentSelected: () -> Unit = {},
     onWhatsUpSelected: () -> Unit = {},
     onStarFocusSelected: () -> Unit = {},
+    onTestCameraSelected: () -> Unit = {},
     onUserModeRun: (com.ehrocha.pulsar.model.UserMode) -> Unit = {},
     onIntervalometer2Selected: () -> Unit = {},
     onAstroMode2Selected: () -> Unit = {},
@@ -258,6 +260,14 @@ fun MainMenuScreen(
                             Icons.Default.Star,
                             enabled = canonOn,
                         ) { onStarFocusSelected() },
+                        // Camera Test — fires all 5 modes in sequence to
+                        // verify the active transport + body end-to-end.
+                        // Disabled in simulator (nothing to verify there).
+                        launcherItem(
+                            R.string.mode_test_camera,
+                            Icons.Default.Science,
+                            enabled = true,
+                        ) { onTestCameraSelected() },
                     )
                     Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                         LauncherGrid(toolItems)

@@ -20,16 +20,20 @@ import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.R
 
 /**
- * Per-shot CCAPI autofocus toggle. When on, Pulsar sends `af: true` on each
- * shutter call so the camera autofocuses before the exposure. When off,
- * `af: false` — the camera shoots at the current focus position without
- * attempting to refocus. For bulb-based astro runs you almost always want
- * this off; for daylight Timelapse runs `on` is usually right.
+ * Per-shot autofocus toggle for the Canon transports (CCAPI and PTP). When
+ * on, Pulsar instructs the camera to autofocus before each exposure. When
+ * off, the camera shoots at the current focus position without attempting
+ * to refocus. For bulb-based astro runs you almost always want this off;
+ * for daylight Timelapse runs `on` is usually right.
  *
- * Only meaningful on the Canon CCAPI transport. Caller should gate on
- * `vm.canonTransport.value != null` and skip rendering otherwise — the
- * ESP32 path doesn't get a say in AF (the body decides based on its own
- * AF mode and the lens AF/MF switch).
+ * Wire mapping:
+ *  - CCAPI: `af: true|false` field on the `/shutterbutton` payload.
+ *  - PTP: Canon `RemoteReleaseOn` mode parameter — mode 3 (full press + AF)
+ *    vs mode 2 (full press, no AF). The ESP32 path doesn't get a say (the
+ *    body decides based on its own AF mode + the lens AF/MF switch).
+ *
+ * Caller should gate on `onCanon || onPtp` and skip rendering on the BLE /
+ * simulator paths where the toggle wouldn't change anything.
  */
 @Composable
 fun AutofocusToggle(

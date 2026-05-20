@@ -124,6 +124,11 @@ val LocalRunState = compositionLocalOf<com.ehrocha.pulsar.model.RunState> {
     com.ehrocha.pulsar.model.RunState.Idle
 }
 
+/** The FlowStep currently executing — null when idle. Read by RunningView to
+ *  render mode-specific settings (exposure, interval, focal length) without
+ *  each wizard passing them in. */
+val LocalCurrentFlowStep = compositionLocalOf<com.ehrocha.pulsar.model.FlowStep?> { null }
+
 /** Global connection flag — true when a BLE device is connected. */
 val LocalDeviceConnected = compositionLocalOf { false }
 

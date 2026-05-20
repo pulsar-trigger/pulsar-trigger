@@ -48,6 +48,15 @@ class PtpTransport private constructor(
     companion object {
         private const val TAG = "PtpTransport"
 
+        // Canon RemoteRelease mode parameter values. Documented in Canon's
+        // PTP spec; verified against gphoto2's canon driver.
+        //   0 = idle / release everything
+        //   1 = half press (AF only)
+        //   2 = full press, no AF
+        //   3 = full press + AF
+        private const val MODE_FULL_PRESS_NO_AF = 2
+        private const val MODE_FULL_PRESS_AF = 3
+
         /** Open the USB device, claim its PTP interface, fetch DeviceInfo.
          *  Returns null if any step fails; the caller has nothing to clean up
          *  in that case (we close internally on failure). */
@@ -264,17 +273,30 @@ class PtpTransport private constructor(
         }
     }
 
+    /** Tracks which Canon RemoteRelease mode value started the current bulb
+     *  exposure, so [stopBulb] releases the same mode. Some bodies require
+     *  the On / Off mode parameters to match; tracking it explicitly avoids
+     *  surprises. */
+    private var lastBulbMode: Int = MODE_FULL_PRESS_NO_AF
+
     override suspend fun startBulb(af: Boolean) = wireMutex.withLock {
-        // The `af` flag is honoured by CCAPI's bulb endpoint; on Canon PTP
-        // the AF behaviour is set body-side (AF/MF switch + autofocus mode).
+        // The Canon RemoteRelease mode parameter directly controls AF:
+        //   mode 2 = full press, no AF (camera holds whatever focus it has)
+        //   mode 3 = full press + AF (body fires AF before the exposure)
+        // Astro / Dark Frame / long-exposure modes default `af=false` from
+        // the wizards so we don't hunt for focus on stars (would drift mid-
+        // run + waste battery on Canon's AF assist beam). Daylight modes
+        // pass `af=true` per the user's per-preset toggle.
         withContext(Dispatchers.IO) {
             if (!_connected.value) {
                 Log.w(TAG, "startBulb: not connected — ignored")
                 return@withContext
             }
             try {
-                val r = client.canonRemoteReleaseOn(mode = 3)
-                if (!r.ok) Log.w(TAG, "RemoteReleaseOn rc=0x${"%04X".format(r.code)}")
+                lastBulbMode = if (af) MODE_FULL_PRESS_AF else MODE_FULL_PRESS_NO_AF
+                val r = client.canonRemoteReleaseOn(mode = lastBulbMode)
+                if (!r.ok) Log.w(TAG, "RemoteReleaseOn(mode=$lastBulbMode) " +
+                                       "rc=0x${"%04X".format(r.code)}")
             } catch (e: PtpClient.ProtocolException) {
                 Log.w(TAG, "startBulb threw: ${e.message}")
             }
@@ -285,8 +307,11 @@ class PtpTransport private constructor(
         withContext(Dispatchers.IO) {
             if (!_connected.value) return@withContext
             try {
-                val r = client.canonRemoteReleaseOff(mode = 3)
-                if (!r.ok) Log.w(TAG, "RemoteReleaseOff rc=0x${"%04X".format(r.code)}")
+                // Release with the same mode value we pressed with — some
+                // bodies require the pair to match.
+                val r = client.canonRemoteReleaseOff(mode = lastBulbMode)
+                if (!r.ok) Log.w(TAG, "RemoteReleaseOff(mode=$lastBulbMode) " +
+                                       "rc=0x${"%04X".format(r.code)}")
             } catch (e: PtpClient.ProtocolException) {
                 Log.w(TAG, "stopBulb threw: ${e.message}")
             }

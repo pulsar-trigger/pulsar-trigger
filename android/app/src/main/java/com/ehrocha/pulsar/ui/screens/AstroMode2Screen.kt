@@ -157,6 +157,9 @@ fun AstroMode2Screen(
     val canonTransport = vm.canonTransport.collectAsState().value
     val ptpTransport = vm.ptpTransport.collectAsState().value
     val onCanon = canonTransport != null
+    val onPtp = ptpTransport != null
+    /** Both Canon transports give us a per-shot AF flag. */
+    val canControlAf = onCanon || onPtp
 
     // Fetch what lens is on the camera from whichever transport is active —
     // CCAPI (Wi-Fi) or USB PTP. For a *fresh* run (no preset loaded) and a
@@ -335,7 +338,7 @@ fun AstroMode2Screen(
                             onChange = { shotCount = it },
                             enabled = !running,
                         )
-                        if (onCanon) {
+                        if (canControlAf) {
                             com.ehrocha.pulsar.ui.components.AutofocusToggle(
                                 checked = useAutofocus,
                                 onCheckedChange = { useAutofocus = it },
