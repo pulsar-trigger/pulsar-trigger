@@ -158,8 +158,13 @@ class PtpTransport private constructor(
     override val supportsLiveView: Boolean = false
     /** Lens info via Canon vendor properties — Phase 3 work. */
     override val supportsLensInfo: Boolean = false
-    /** Battery is PTP property 0x5001 — Phase 3 work. */
-    override val supportsBatteryReadout: Boolean = false
+    /** True iff the body advertises the standard PTP BatteryLevel
+     *  property (`0x5001`). Some Canon bodies expose battery through a
+     *  vendor-specific property instead — those would report false here
+     *  even though battery info is technically available; covering them
+     *  is a future polish item. */
+    override val supportsBatteryReadout: Boolean =
+        PtpClient.PROP_BATTERY_LEVEL in deviceInfo.supportedDeviceProperties
 
     /** Whether we successfully entered PC-remote mode at connect time.
      *  If false, only basic InitiateCapture works (no bulb / settings). */
@@ -266,6 +271,29 @@ class PtpTransport private constructor(
                 if (!r.ok) Log.w(TAG, "RemoteReleaseOff rc=0x${"%04X".format(r.code)}")
             } catch (e: PtpClient.ProtocolException) {
                 Log.w(TAG, "stopBulb threw: ${e.message}")
+            }
+        }
+    }
+
+    /** Read current battery percentage via PTP property `0x5001`. Returns
+     *  null if the body doesn't expose the standard battery prop or if
+     *  the read fails — caller treats null as "unknown". Called from the
+     *  viewmodel's PTP polling loop. */
+    suspend fun readBatteryPercent(): Int? = wireMutex.withLock {
+        if (!supportsBatteryReadout) return@withLock null
+        withContext(Dispatchers.IO) {
+            if (!_connected.value) return@withContext null
+            try {
+                val r = client.getDevicePropValue(PtpClient.PROP_BATTERY_LEVEL)
+                if (!r.ok || r.data == null || r.data.isEmpty()) {
+                    Log.w(TAG, "GetDevicePropValue(0x5001) rc=0x${"%04X".format(r.code)}")
+                    return@withContext null
+                }
+                val pct = (r.data[0].toInt() and 0xFF).coerceIn(0, 100)
+                pct
+            } catch (e: PtpClient.ProtocolException) {
+                Log.w(TAG, "readBatteryPercent threw: ${e.message}")
+                null
             }
         }
     }

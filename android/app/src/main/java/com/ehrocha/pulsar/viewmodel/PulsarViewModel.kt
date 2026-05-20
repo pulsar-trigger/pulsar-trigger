@@ -917,7 +917,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 stopScan()
 
                 val appCtx = getApplication<Application>()
-                val granted = com.ehrocha.pulsar.ptp.PtpProbe.requestPermission(
+                val granted = com.ehrocha.pulsar.ptp.requestUsbPermission(
                     appCtx,
                     appCtx.getSystemService(Context.USB_SERVICE) as android.hardware.usb.UsbManager,
                     device,
@@ -949,14 +949,37 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     errorCode = 0,
                     fwVersion = "",
                 )
+                // Seed the battery chip immediately + poll periodically.
+                if (transport.supportsBatteryReadout) startPtpBatteryPolling(transport)
             } finally {
                 _ptpConnecting.value = false
             }
         }
     }
 
+    /** Periodic PTP battery poll. PTP doesn't push battery events, so we
+     *  ask the body for `BatteryLevel` (0x5001) every 30 s and update the
+     *  run-screen chip. Cancelled in [disconnectPtp]. */
+    private var ptpPollJob: Job? = null
+    private fun startPtpBatteryPolling(transport: com.ehrocha.pulsar.ptp.PtpTransport) {
+        ptpPollJob?.cancel()
+        ptpPollJob = viewModelScope.launch {
+            // Seed immediately so the user doesn't see 0% for 30 s.
+            transport.readBatteryPercent()?.let { pct ->
+                _status.value = _status.value?.copy(batteryPct = pct)
+            }
+            while (isActive) {
+                delay(30_000)
+                val pct = transport.readBatteryPercent() ?: continue
+                _status.value = _status.value?.copy(batteryPct = pct)
+            }
+        }
+    }
+
     private fun disconnectPtp() {
         val transport = _ptpTransport.value ?: return
+        ptpPollJob?.cancel()
+        ptpPollJob = null
         viewModelScope.launch { transport.release() }
         _ptpTransport.value = null
         if (!bleController.connected.value && !_simulatorActive.value &&

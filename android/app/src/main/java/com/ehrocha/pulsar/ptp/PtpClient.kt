@@ -117,6 +117,12 @@ class PtpClient(
     suspend fun canonRemoteReleaseOff(mode: Int = 3): Response =
         transact(OP_CANON_REMOTE_RELEASE_OFF, intArrayOf(mode), expectDataIn = false)
 
+    /** PTP `GetDevicePropValue` — read the current value of a device
+     *  property (battery level, focal length, etc.). Caller decodes the
+     *  data payload based on the property's known type. */
+    suspend fun getDevicePropValue(propCode: Int): Response =
+        transact(OP_GET_DEVICE_PROP_VALUE, intArrayOf(propCode), expectDataIn = true)
+
     // ── Result types ────────────────────────────────────────────────────
 
     /** A complete transaction's outcome: response code, any returned params,
@@ -309,6 +315,10 @@ class PtpClient(
         const val OP_OPEN_SESSION = 0x1002
         const val OP_CLOSE_SESSION = 0x1003
         const val OP_INITIATE_CAPTURE = 0x100E
+        const val OP_GET_DEVICE_PROP_VALUE = 0x1015
+
+        // ── PTP standard device properties (subset) ──────────────────────
+        const val PROP_BATTERY_LEVEL = 0x5001  // UINT8 percentage 0-100
 
         // ── Canon EOS vendor operations (vendor extension ID 11) ─────────
         // Documented in Canon's PTP Reference; Pulsar may use these in Phase 2.

@@ -50,11 +50,6 @@
     <string name="ccapi_af_toggle_on_hint">Kamera fokussiert vor jeder Aufnahme. Ideal für Tagesmotive.</string>
     <string name="ccapi_af_toggle_off_hint">Kamera nimmt mit aktueller Fokuseinstellung auf. Ideal für Astro / Sternenfelder (AF würde Sterne suchen und driften).</string>
     <string name="mode_star_focus">Sternenfokus</string>
-    <string name="mode_usb_probe">USB-Test</string>
-    <string name="usb_probe_title">USB-Kameratest</string>
-    <string name="usb_probe_blurb">Verbinde die Kamera per USB-C-Kabel mit dem Handy, schalte die Kamera ein und starte den Test. Wir senden ein PTP GetDeviceInfo und melden, ob der Protokollpfad offen ist.</string>
-    <string name="usb_probe_run">Test starten</string>
-    <string name="usb_probe_running">Test läuft…</string>
     <string name="star_focus_title">Sternenfokus-Assistent</string>
     <string name="star_focus_starting">Live-View wird gestartet…</string>
     <string name="star_focus_start_failed">Live-View konnte nicht gestartet werden. Bulb-Modus deaktiviert Live-View; auch keine andere App verbunden lassen.</string>

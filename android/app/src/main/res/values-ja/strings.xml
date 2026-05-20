@@ -50,11 +50,6 @@
     <string name="ccapi_af_toggle_on_hint">撮影前にカメラがオートフォーカスします。日中の被写体向け。</string>
     <string name="ccapi_af_toggle_off_hint">現在のピント位置で撮影します。天体・星野撮影向け (AF だと星を追ってピントがずれます)。</string>
     <string name="mode_star_focus">星にピント合わせ</string>
-    <string name="mode_usb_probe">USBテスト</string>
-    <string name="usb_probe_title">USBカメラテスト</string>
-    <string name="usb_probe_blurb">USB-Cケーブルでカメラをスマートフォンに接続し、カメラの電源を入れてからテストを実行してください。PTP GetDeviceInfoを送信し、プロトコル経路が利用可能かを報告します。</string>
-    <string name="usb_probe_run">テスト実行</string>
-    <string name="usb_probe_running">テスト中…</string>
     <string name="star_focus_title">星ピント合わせアシスト</string>
     <string name="star_focus_starting">ライブビューを開始中…</string>
     <string name="star_focus_start_failed">ライブビューを開始できません。カメラがバルブモードになっていないか、他のアプリが接続していないかご確認ください。</string>
