@@ -960,6 +960,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  supports Timelapse-mode runs (camera owns exposure). */
     fun connectPtp(device: android.hardware.usb.UsbDevice) {
         viewModelScope.launch {
+            // Bail if the user picked another transport while this coroutine
+            // was queued — auto-reconnect can land mid-launch and we don't
+            // want it overriding an explicit Simulator / BLE / CCAPI tap.
+            if (_simulatorActive.value) {
+                Log.i(TAG, "connectPtp: simulator active, skipping auto-reconnect")
+                return@launch
+            }
             _ptpError.value = null
             _ptpConnecting.value = true
             try {
@@ -1746,6 +1753,15 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun connectSimulator() {
         stopScan()
+        // Mutual exclusion: simulator is a transport like the others. Tear
+        // down any real session that's running (or armed for auto-reconnect)
+        // so the user's deliberate "simulator" tap isn't immediately
+        // overridden by an in-flight or auto-rearming hardware connect.
+        if (bleController.connected.value) bleController.disconnect()
+        if (_canonTransport.value != null) disconnectCanon()
+        if (_ptpTransport.value != null) disconnectPtp()
+        lastPtpAutoReconnect = null
+        _ptpReconnecting.value = false
         _simulatorActive.value = true
         _deviceName.value = "Pulsar (Simulator)"
         _status.value = StatusFrame(
