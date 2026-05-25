@@ -162,7 +162,7 @@ Package: `com.ehrocha.pulsar`, `minSdk 26`, `compileSdk 35`. Navigation is a man
 
 ## Transports
 
-The viewmodel routes commands through `bleController` or `_canonTransport` depending on which one is active. They're mutually exclusive — tapping a device of one kind disconnects the other.
+Pulsar talks to cameras through three mutually-exclusive transports, all routed through the same viewmodel: `bleController` (BLE-ESP32), `_canonTransport` (Canon CCAPI over Wi-Fi), and `_ptpTransport` (USB PTP). Tapping a device of one kind disconnects the others; the simulator is treated as a fourth transport for mutual-exclusion purposes.
 
 ### BLE / ESP32
 
@@ -175,11 +175,30 @@ The viewmodel routes commands through `bleController` or `_canonTransport` depen
 
 - **Discovery** — SSDP multicast on `239.255.255.250:1900`. Pulsar holds a `WifiManager.MulticastLock` while scanning. Filters on Canon's service URN (`urn:schemas-canon-com:service:ICPO-CameraControlAPIService:1`), then fetches and parses `CameraDevDesc.xml` to get the UDN, friendly name, and the CCAPI `accessUrl`.
 - **Connect** — `GET /ccapi` pins the highest supported version (`ver140` → `ver100`) and caches the endpoint matrix. Capabilities (bulb support, dial-ignore, polling, shooting-mode PUT) are read from the matrix.
-- **Auth** — RFC 7616 digest auth (MD5 / MD5-sess / SHA-256 / SHA-256-sess, with or without `qop=auth`). Hand-rolled on `HttpURLConnection`. First request goes out unauthenticated; on 401, Pulsar parses the `WWW-Authenticate` challenge and retries. Credentials are stored per-UDN in SharedPreferences (`pulsar_canon_creds`).
+- **Auth** — RFC 7616 digest auth (MD5 / MD5-sess / SHA-256 / SHA-256-sess, with or without `qop=auth`). Hand-rolled on `HttpURLConnection`. First request goes out unauthenticated; on 401, Pulsar parses the `WWW-Authenticate` challenge and retries. Credentials are stored per-UDN in EncryptedSharedPreferences (`pulsar_canon_creds`, AES-256, key in Android Keystore).
 - **Polling** — `GET /event/polling?timeout=short` (or `?continue=on` on `ver100` bodies) feeds battery percentage and shot count back into the running UI.
 - **Reconnect** — on a streak of poll failures the session enters reconnect mode, re-probes `/ccapi` for ~2 minutes before giving up.
 
 Full design + endpoint mapping: [docs/ccapi.md](docs/ccapi.md). Camera-side activation walkthrough is in the in-app "Camera setup help" dialog on the scan screen.
+
+### USB PTP
+
+The reason this transport exists: the Canon EOS R doesn't support CCAPI even on the latest firmware (the PC activation tool refuses to enable it), and without it the body has no phone-side automation path other than the ESP32 + remote-release cable. USB PTP fills that gap and works on the EOS RP too as a faster + lower-power alternative to CCAPI.
+
+- **Discovery** — `PtpDiscovery` registers a `BroadcastReceiver` on `USB_DEVICE_ATTACHED` / `DETACHED` and filters for interfaces matching PIMA Still-Image-over-USB (class `0x06`, subclass `0x01`, protocol `0x01`). Vendor-agnostic at the discovery layer — Canon, Nikon, Sony, Fuji all expose the same interface class.
+- **Connect** — Android's `UsbManager` permission dialog → open device → claim PTP interface → find bulk-IN / bulk-OUT endpoints. Then PTP `OpenSession` (op `0x1002`). On Canon EOS bodies (vendor extension `11`), Pulsar follows with `SetRemoteMode(1)` + `EventMode(1)` so the body accepts subsequent `RemoteRelease` ops.
+- **Capture** — `InitiateCapture` (op `0x100E`) for Timelapse (camera owns exposure timing). Canon `RemoteReleaseOn` / `RemoteReleaseOff` (ops `0x9128` / `0x9129`) for bulb modes; mode parameter encodes AF (`2` = no AF, `3` = with AF) and the matching release uses the same mode value.
+- **Properties** — battery percentage via `GetDevicePropValue(0x5001)` polled every 30 s; lens name via Canon `0xD157` parsed into focal length for the Astro wizard's auto-fill (same shared helper as CCAPI). Best-effort programmatic Bulb selection via `SetDevicePropValue(0xD102, 0x000C)` at flow start.
+- **Auto-reconnect** — viewmodel remembers the last successfully-connected camera by `(vendorId, productId)`. If the cable replugs while no other transport is active, Pulsar reconnects automatically. Explicit user disconnect or switching transports clears the auto-reconnect target.
+- **Mid-shoot disconnect** — the reconnect banner shows on cable unplug; in-flight wire calls fail soft (no crash) but the running flow does not currently resume on replug. Full mid-shoot resume is Phase 6 work.
+
+Honest caveats:
+
+- **PC-remote mode locks the body's controls.** Once Pulsar enters PC-remote mode (Canon `SetRemoteMode(1)`), the camera's mode dial and menu show "busy" until Pulsar disconnects. To change Bulb/Manual on the body, disconnect first. Canon's design, not a Pulsar bug.
+- **`0x000C` is the R-class Bulb code.** Other Canon bodies may use a different `SetDevicePropValue(0xD102, ...)` value. Best-effort: if the write returns non-OK, Pulsar logs and falls back to the user-set-on-dial workflow.
+- **Bulb modes only on Canon today.** `InitiateCapture` is universal (works across PTP-capable Nikon / Sony / Fuji bodies for Timelapse), but `RemoteReleaseOn/Off` are Canon vendor ops. Non-Canon bulb needs vendor-specific plumbing.
+
+Full design: [docs/ptp.md](docs/ptp.md). The Tools tab has a "Camera Test" tile that fires 25 shots across all 5 modes to verify the active transport end-to-end.
 
 ---
 
