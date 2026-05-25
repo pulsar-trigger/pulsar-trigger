@@ -221,13 +221,17 @@ class PtpTransport private constructor(
             if (_connected.value) {
                 if (pcRemoteActive) {
                     runCatching { client.canonSetRemoteMode(0) }
+                        .onFailure { Log.d(TAG, "release: SetRemoteMode(0) failed (cable likely gone): ${it.message}") }
                     pcRemoteActive = false
                 }
                 runCatching { client.closeSession() }
+                    .onFailure { Log.d(TAG, "release: CloseSession failed: ${it.message}") }
                 _connected.value = false
             }
             runCatching { connection.releaseInterface(iface) }
+                .onFailure { Log.d(TAG, "release: releaseInterface failed: ${it.message}") }
             runCatching { connection.close() }
+                .onFailure { Log.d(TAG, "release: connection.close failed: ${it.message}") }
             Log.i(TAG, "Released")
         }
     }

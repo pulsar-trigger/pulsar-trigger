@@ -245,7 +245,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     }
                     if (match != null) {
                         Log.i(TAG, "USB camera reappeared — auto-reconnecting PTP")
-                        connectPtp(match)
+                        connectPtp(match, auto = true)
                     }
                 }
             }
@@ -581,9 +581,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     @SuppressLint("MissingPermission")
     fun connectTo(device: BluetoothDevice) {
-        // Hang up any active Canon/PTP session so transports stay single-valued.
+        // Hang up any active session so transports stay single-valued.
         if (_canonTransport.value != null) disconnectCanon()
         if (_ptpTransport.value != null) disconnectPtp()
+        if (_simulatorActive.value) disconnectSimulator()
         _deviceName.value = device.name ?: "Pulsar"
         bleController.connect(device)
     }
@@ -591,17 +592,27 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     /** Open an HTTP session to a Canon CCAPI camera. Pins the API version and
      *  flips [connected] true on success. Mutually exclusive with BLE — any
      *  active BLE session is dropped first. Phase 2: Timelapse only. */
+    /** Tracks the in-flight connectCanon coroutine so disconnectCanon (or
+     *  a second connect attempt) can cancel it cleanly. Without this, a
+     *  user tapping connect, then disconnect, then connect again could
+     *  end up with two coroutines racing on the same `_canonConnecting`
+     *  flag — the UI is already gated, but defending the viewmodel itself
+     *  avoids subtle ordering bugs. Same pattern as [flowJob]. */
+    private var canonConnectJob: Job? = null
+
     fun connectCanon(
         camera: com.ehrocha.pulsar.transport.ccapi.CanonCamera,
         credentials: com.ehrocha.pulsar.transport.ccapi.CcapiClient.Credentials? = null,
     ) {
-        viewModelScope.launch {
+        canonConnectJob?.cancel()
+        canonConnectJob = viewModelScope.launch {
             _canonError.value = null
             _canonConnecting.value = true
-            // Hang up any existing BLE link so the UI's notion of "what's
+            // Hang up any existing session so the UI's notion of "what's
             // connected" stays single-valued.
             if (bleController.connected.value) bleController.disconnect()
             if (_ptpTransport.value != null) disconnectPtp()
+            if (_simulatorActive.value) disconnectSimulator()
             stopScan()
 
             // Reuse saved digest creds for this camera if the caller didn't
@@ -942,6 +953,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun disconnectCanon() {
         val transport = _canonTransport.value ?: return
+        canonConnectJob?.cancel()
+        canonConnectJob = null
         canonPollJob?.cancel()
         canonPollJob = null
         _canonReconnecting.value = false
@@ -958,13 +971,23 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  needed, opens the PTP interface, calls `OpenSession`. Mutually
      *  exclusive with BLE / CCAPI — both are dropped first. Phase 1 only
      *  supports Timelapse-mode runs (camera owns exposure). */
-    fun connectPtp(device: android.hardware.usb.UsbDevice) {
-        viewModelScope.launch {
-            // Bail if the user picked another transport while this coroutine
-            // was queued — auto-reconnect can land mid-launch and we don't
-            // want it overriding an explicit Simulator / BLE / CCAPI tap.
-            if (_simulatorActive.value) {
-                Log.i(TAG, "connectPtp: simulator active, skipping auto-reconnect")
+    /** Connect to a USB-attached camera over PTP. [auto] is true when the
+     *  call originates from the auto-reconnect collector (cable replug);
+     *  false when the user explicitly tapped a USB camera card. The
+     *  distinction matters for simulator interplay:
+     *   - Auto-reconnect must NOT override an active simulator session
+     *     (the user picked simulator deliberately).
+     *   - An explicit user tap on a USB card SHOULD override the
+     *     simulator (same as picking any other transport). */
+    /** In-flight connectPtp coroutine; cancelled on disconnectPtp / on a
+     *  fresh connectPtp call to avoid concurrent USB permission flows. */
+    private var ptpConnectJob: Job? = null
+
+    fun connectPtp(device: android.hardware.usb.UsbDevice, auto: Boolean = false) {
+        ptpConnectJob?.cancel()
+        ptpConnectJob = viewModelScope.launch {
+            if (auto && _simulatorActive.value) {
+                Log.i(TAG, "connectPtp(auto): simulator active, skipping auto-reconnect")
                 return@launch
             }
             _ptpError.value = null
@@ -974,6 +997,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 // "what's connected" stays single-valued.
                 if (bleController.connected.value) bleController.disconnect()
                 if (_canonTransport.value != null) disconnectCanon()
+                if (_simulatorActive.value) disconnectSimulator()
                 stopScan()
 
                 val appCtx = getApplication<Application>()
@@ -1040,6 +1064,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun disconnectPtp(clearAutoReconnect: Boolean = true) {
         val transport = _ptpTransport.value ?: return
+        ptpConnectJob?.cancel()
+        ptpConnectJob = null
         ptpPollJob?.cancel()
         ptpPollJob = null
         viewModelScope.launch { transport.release() }
