@@ -163,8 +163,12 @@ class PtpTransport private constructor(
      *  exposes a settings UI is a separate question (camera-params tab is
      *  parked) — the *transport* can support it. */
     override val supportsSettings: Boolean = deviceInfo.supportedDeviceProperties.isNotEmpty()
-    /** Live view over PTP is a Canon vendor op — Phase 3 work. */
-    override val supportsLiveView: Boolean = false
+    /** True iff the body advertises Canon's `GetViewFinderData` op — the
+     *  ability to stream live-view JPEG frames over USB. Star Focus Assist
+     *  gates on this; PTP-capable bodies without it (PowerShots, older
+     *  DSLRs) fall through to the existing CCAPI-only Star Focus path. */
+    override val supportsLiveView: Boolean =
+        PtpClient.OP_CANON_GET_VIEWFINDER_DATA in deviceInfo.supportedOperations
     /** True iff the body advertises the Canon LensName device property
      *  (`0xD157`). Reading it gives us a string like "RF16mm F2.8 STM" that
      *  Pulsar parses for the Astro wizard's focal-length auto-fill. */
@@ -360,6 +364,155 @@ class PtpTransport private constructor(
         if (data.size < 1 + byteCount) return null
         val s = String(data, 1, byteCount, Charsets.UTF_16LE)
         return if (s.isNotEmpty() && s.last() == ' ') s.dropLast(1) else s
+    }
+
+    // ── Live view + drive-focus (Star Focus wizard) ─────────────────────
+
+    /** Last error from a [startLiveView] attempt. Mirrors [CcapiTransport]
+     *  so the wizard can surface the same diagnostic copy on either path. */
+    @Volatile override var lastLiveViewError: String? = null
+        private set
+
+    /** Switch the body's EVF stream to the USB host so subsequent
+     *  [getLiveViewFrame] calls return JPEG frames. Returns true on success.
+     *  Sends `SetDevicePropValue(0xD1B0, 0x02)` — body must be in a mode
+     *  that allows live view (Manual is fine; **Bulb is not** — Canon
+     *  disables EVF in Bulb). */
+    override suspend fun startLiveView(): Boolean = wireMutex.withLock {
+        if (!_connected.value) {
+            lastLiveViewError = "not connected"
+            return@withLock false
+        }
+        withContext(Dispatchers.IO) {
+            try {
+                // EVF output device is a UINT32, little-endian.
+                val v = PtpClient.CANON_EVF_OUTPUT_PC
+                val data = byteArrayOf(
+                    (v and 0xFF).toByte(),
+                    ((v ushr 8) and 0xFF).toByte(),
+                    ((v ushr 16) and 0xFF).toByte(),
+                    ((v ushr 24) and 0xFF).toByte(),
+                )
+                val r = client.setDevicePropValue(PtpClient.PROP_CANON_EVF_OUTPUT, data)
+                if (r.ok) {
+                    lastLiveViewError = null
+                    true
+                } else {
+                    lastLiveViewError = "SetEvfOutput rc=0x${"%04X".format(r.code)}"
+                    Log.w(TAG, "startLiveView: $lastLiveViewError")
+                    false
+                }
+            } catch (e: PtpClient.ProtocolException) {
+                lastLiveViewError = e.message ?: "protocol error"
+                Log.w(TAG, "startLiveView threw: ${e.message}")
+                false
+            }
+        }
+    }
+
+    /** Stop the EVF stream by setting the output device back to "none". */
+    override suspend fun stopLiveView() = wireMutex.withLock<Unit> {
+        if (!_connected.value) return@withLock
+        withContext(Dispatchers.IO) {
+            try {
+                val v = PtpClient.CANON_EVF_OUTPUT_OFF
+                val data = byteArrayOf(
+                    (v and 0xFF).toByte(),
+                    ((v ushr 8) and 0xFF).toByte(),
+                    ((v ushr 16) and 0xFF).toByte(),
+                    ((v ushr 24) and 0xFF).toByte(),
+                )
+                client.setDevicePropValue(PtpClient.PROP_CANON_EVF_OUTPUT, data)
+            } catch (e: PtpClient.ProtocolException) {
+                Log.w(TAG, "stopLiveView threw: ${e.message}")
+            }
+        }
+    }
+
+    /** Fetch one JPEG frame from the live-view stream. Canon's
+     *  `GetViewFinderData` returns a proprietary wrapper around the JPEG;
+     *  we scan for the JPEG SOI marker (`0xFFD8`) and EOI marker
+     *  (`0xFFD9`) and return that slice. Returns null on transport error
+     *  or if no JPEG was found in the response. */
+    override suspend fun getLiveViewFrame(): ByteArray? = wireMutex.withLock {
+        if (!_connected.value) return@withLock null
+        withContext(Dispatchers.IO) {
+            try {
+                val r = client.canonGetViewFinderData()
+                if (!r.ok || r.data == null) {
+                    Log.w(TAG, "GetViewFinderData rc=0x${"%04X".format(r.code)}")
+                    return@withContext null
+                }
+                extractJpeg(r.data)
+            } catch (e: PtpClient.ProtocolException) {
+                Log.w(TAG, "getLiveViewFrame threw: ${e.message}")
+                null
+            }
+        }
+    }
+
+    /** Drive the focus motor a step. `action` matches CCAPI's vocabulary
+     *  so the wizard can pass through identical strings regardless of
+     *  transport: `near1`/`near2`/`near3` (1 = fine, 3 = coarse),
+     *  `far1`/`far2`/`far3`. */
+    override suspend fun driveFocus(action: String) = wireMutex.withLock<Unit> {
+        if (!_connected.value) return@withLock
+        // Canon's DriveLens param encodes direction + magnitude:
+        //   0x0001..0x0003 = far (small / medium / large)
+        //   0x8001..0x8003 = near
+        // Mapping is from libgphoto2's canon driver.
+        val value = when (action) {
+            "near1" -> 0x8001
+            "near2" -> 0x8002
+            "near3" -> 0x8003
+            "far1" -> 0x0001
+            "far2" -> 0x0002
+            "far3" -> 0x0003
+            else -> {
+                Log.w(TAG, "driveFocus: unknown action '$action'")
+                return@withLock
+            }
+        }
+        withContext(Dispatchers.IO) {
+            try {
+                val r = client.canonDriveLens(value)
+                if (!r.ok) Log.w(TAG, "DriveLens($action=$value) rc=0x${"%04X".format(r.code)}")
+            } catch (e: PtpClient.ProtocolException) {
+                Log.w(TAG, "driveFocus threw: ${e.message}")
+            }
+        }
+    }
+
+    /** Find the JPEG payload inside Canon's GetViewFinderData wrapper.
+     *  The frame is preceded by body-specific TLV-ish headers; we don't
+     *  parse them — we just scan for the JPEG Start-Of-Image marker
+     *  (`0xFFD8`) and the matching End-Of-Image (`0xFFD9`). Robust enough
+     *  for the Star Focus wizard which only needs a decodable JPEG. */
+    private fun extractJpeg(buf: ByteArray): ByteArray? {
+        val start = indexOfJpegSoi(buf) ?: return null
+        val end = indexOfJpegEoi(buf, start) ?: return null
+        // Slice end+2 to include the EOI marker bytes (FF D9).
+        return buf.copyOfRange(start, end + 2)
+    }
+
+    private fun indexOfJpegSoi(buf: ByteArray): Int? {
+        var i = 0
+        val last = buf.size - 1
+        while (i < last) {
+            if (buf[i] == 0xFF.toByte() && buf[i + 1] == 0xD8.toByte()) return i
+            i++
+        }
+        return null
+    }
+
+    private fun indexOfJpegEoi(buf: ByteArray, from: Int): Int? {
+        var i = from + 2
+        val last = buf.size - 1
+        while (i < last) {
+            if (buf[i] == 0xFF.toByte() && buf[i + 1] == 0xD9.toByte()) return i
+            i++
+        }
+        return null
     }
 
     /** Read current battery percentage via PTP property `0x5001`. Returns

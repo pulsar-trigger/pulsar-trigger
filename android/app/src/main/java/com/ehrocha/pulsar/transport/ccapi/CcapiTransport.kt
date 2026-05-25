@@ -152,7 +152,7 @@ class CcapiTransport(
     /** Last error message from a failed [startLiveView] attempt. Cleared on
      *  the next successful start. Surfaced in the UI when live view can't
      *  begin so the user (and us, debugging) can see why. */
-    @Volatile var lastLiveViewError: String? = null
+    @Volatile override var lastLiveViewError: String? = null
         private set
 
     /** Begin a live-view session. Try a sequence of `liveviewsize` values —
@@ -160,7 +160,7 @@ class CcapiTransport(
      *  and `large` too. First one that gets a 200 wins. Returns true on
      *  success; on failure [lastLiveViewError] holds the most informative
      *  response body we saw. */
-    suspend fun startLiveView(): Boolean {
+    override suspend fun startLiveView(): Boolean {
         if (!_connected.value) return false
         // `cameraposition` was introduced in ver110 — ver100 bodies (EOS RP)
         // reject the field as invalid_parameter. Adapt the payload to what
@@ -192,7 +192,7 @@ class CcapiTransport(
     }
 
     /** End the live-view session. */
-    suspend fun stopLiveView() {
+    override suspend fun stopLiveView() {
         if (!_connected.value) return
         val body = JSONObject().put("liveviewsize", "off")
         logResult("liveview stop", client.post(PATH_LIVEVIEW, body))
@@ -201,7 +201,7 @@ class CcapiTransport(
     /** Fetch one JPEG frame from the running live-view session. Returns the
      *  raw bytes or null on transport error. Canon's flip endpoint returns
      *  the most recent frame on each request — the caller paces frame rate. */
-    suspend fun getLiveViewFrame(): ByteArray? {
+    override suspend fun getLiveViewFrame(): ByteArray? {
         if (!_connected.value) return null
         return when (val r = client.getBytes(PATH_LIVEVIEW_FLIP, timeoutMs = 3_000)) {
             is CcapiClient.Result.Ok -> r.value
@@ -213,7 +213,7 @@ class CcapiTransport(
      *  one of `near1`/`near2`/`near3`/`far1`/`far2`/`far3` — 1 is fine, 3 is
      *  coarse. Requires the lens to be in AF mode (motor disconnected when
      *  the lens switch is MF). */
-    suspend fun driveFocus(action: String) {
+    override suspend fun driveFocus(action: String) {
         if (!_connected.value) return
         val body = JSONObject().put("action", action)
         logResult("drivefocus $action", client.post(PATH_DRIVE_FOCUS, body))

@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.R
-import com.ehrocha.pulsar.transport.ccapi.CcapiTransport
+import com.ehrocha.pulsar.transport.CameraTransport
 import com.ehrocha.pulsar.ui.components.PulsarTopBar
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import kotlinx.coroutines.Dispatchers
@@ -80,8 +80,13 @@ fun StarFocusScreen(
     vm: PulsarViewModel,
     onBack: () -> Unit,
 ) {
-    val transport by vm.canonTransport.collectAsState()
-    val t = transport
+    // Star Focus runs on whichever Canon transport is active: CCAPI over
+    // Wi-Fi or PTP over USB-C. The wire-level live view + drive-focus ops
+    // live behind the `CameraTransport` interface; this screen doesn't
+    // care which one is on the other side.
+    val canon by vm.canonTransport.collectAsState()
+    val ptp by vm.ptpTransport.collectAsState()
+    val t: CameraTransport? = canon ?: ptp.takeIf { it?.supportsLiveView == true }
     if (t == null) {
         // Defensive: the menu tile is gated, but if the user disconnects
         // mid-flow we bail.
@@ -269,7 +274,7 @@ private fun PrepStep(onNext: () -> Unit) {
 
 @Composable
 private fun AimStep(
-    transport: CcapiTransport,
+    transport: CameraTransport,
     frame: Bitmap?,
     liveViewError: String?,
     roiCenter: Pair<Int, Int>?,
@@ -312,7 +317,7 @@ private fun AimStep(
 
 @Composable
 private fun FocusStep(
-    transport: CcapiTransport,
+    transport: CameraTransport,
     frame: Bitmap?,
     liveViewError: String?,
     roiCenter: Pair<Int, Int>?,
@@ -576,7 +581,7 @@ private fun BoxScope.RoiOverlay(
 private fun FocusBtn(
     label: String,
     action: String,
-    transport: CcapiTransport,
+    transport: CameraTransport,
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()

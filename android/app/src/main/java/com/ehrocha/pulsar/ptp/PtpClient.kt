@@ -117,6 +117,18 @@ class PtpClient(
     suspend fun canonRemoteReleaseOff(mode: Int = 3): Response =
         transact(OP_CANON_REMOTE_RELEASE_OFF, intArrayOf(mode), expectDataIn = false)
 
+    /** Canon: read one live-view frame. Returns the raw response payload —
+     *  the caller is responsible for finding the JPEG SOI / EOI markers in
+     *  the body-specific wrapper Canon embeds the frame inside. */
+    suspend fun canonGetViewFinderData(): Response =
+        transact(OP_CANON_GET_VIEWFINDER_DATA, intArrayOf(0x00100000), expectDataIn = true)
+
+    /** Canon: step the focus motor. `value` encodes direction and magnitude:
+     *  `0x0001..0x0003` = far (small / medium / large step),
+     *  `0x8001..0x8003` = near. Source: libgphoto2's canon driver. */
+    suspend fun canonDriveLens(value: Int): Response =
+        transact(OP_CANON_DRIVE_LENS, intArrayOf(value), expectDataIn = false)
+
     /** PTP `GetDevicePropValue` — read the current value of a device
      *  property (battery level, focal length, etc.). Caller decodes the
      *  data payload based on the property's known type. */
@@ -340,12 +352,21 @@ class PtpClient(
         const val PROP_CANON_SHUTTER_SPEED = 0xD102
         const val CANON_SHUTTER_SPEED_BULB = 0x000C
 
+        // EVF output device. Set to 0x02 = PC to redirect the EVF stream
+        // to USB so subsequent GetViewFinderData calls return frames; set
+        // back to 0x00 = none on release. Property is UINT32 on R-class.
+        const val PROP_CANON_EVF_OUTPUT = 0xD1B0
+        const val CANON_EVF_OUTPUT_PC = 0x02
+        const val CANON_EVF_OUTPUT_OFF = 0x00
+
         // ── Canon EOS vendor operations (vendor extension ID 11) ─────────
         // Documented in Canon's PTP Reference; Pulsar may use these in Phase 2.
         const val OP_CANON_REMOTE_RELEASE_ON = 0x9128
         const val OP_CANON_REMOTE_RELEASE_OFF = 0x9129
         const val OP_CANON_SET_REMOTE_MODE = 0x9114
         const val OP_CANON_EVENT_MODE = 0x9115
+        const val OP_CANON_GET_VIEWFINDER_DATA = 0x9153
+        const val OP_CANON_DRIVE_LENS = 0x9155
 
         // ── PTP response codes ───────────────────────────────────────────
         const val RC_OK = 0x2001

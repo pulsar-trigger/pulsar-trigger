@@ -95,6 +95,35 @@ interface CameraTransport {
      *  auto-fill the focal length. Returns null when [supportsLensInfo] is
      *  false, the read fails, or no lens is mounted. */
     suspend fun getLensInfo(): LensInfo? = null
+
+    // ── Live view (Star Focus wizard) ────────────────────────────────────
+    // CCAPI calls /shooting/liveview + /shooting/liveview/flip + drivefocus.
+    // PTP calls Canon GetViewFinderData + SetDevicePropValue(EvfOutput) +
+    // DriveLens. Transports that don't support live view (BLE-ESP, older
+    // PTP bodies without 0x9153) leave these as the no-op defaults; the
+    // wizard's tile is gated on [supportsLiveView].
+
+    /** Most recent reason a [startLiveView] attempt failed, or null if the
+     *  last attempt succeeded / none was made. Surfaced by the Star Focus
+     *  wizard so failures are visible on-screen, not just in logcat. */
+    val lastLiveViewError: String? get() = null
+
+    /** Begin the EVF stream. Returns true on success. */
+    suspend fun startLiveView(): Boolean = false
+
+    /** Stop the EVF stream. Idempotent. */
+    suspend fun stopLiveView() {}
+
+    /** Fetch one JPEG frame from the running EVF stream, or null on
+     *  transport error / parse failure. The wizard paces the frame rate. */
+    suspend fun getLiveViewFrame(): ByteArray? = null
+
+    /** Step the focus motor. [action] is one of `near1`/`near2`/`near3`
+     *  (1 = fine, 3 = coarse) or `far1`/`far2`/`far3`. Requires the lens
+     *  to be in AF on the body's AF/MF switch (motor is disconnected
+     *  when the switch is set to MF). No-op if the transport doesn't
+     *  support live view. */
+    suspend fun driveFocus(action: String) {}
 }
 
 enum class TransportKind { BLE_ESP, CCAPI, PTP_USB }

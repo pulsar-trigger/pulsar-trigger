@@ -243,6 +243,13 @@ fun MainMenuScreen(
                 }
                 TAB_TOOLS -> {
                     val canonOn = vm.canonTransport.collectAsState().value != null
+                    // Star Focus needs a live-view-capable Canon transport.
+                    // CCAPI always supplies live view (gated by canonOn);
+                    // PTP supplies it only on bodies that advertise
+                    // GetViewFinderData (`supportsLiveView`).
+                    val ptpForLiveView = vm.ptpTransport.collectAsState().value
+                        ?.takeIf { it.supportsLiveView } != null
+                    val starFocusEnabled = canonOn || ptpForLiveView
                     val toolItems = listOf(
                         launcherItem(R.string.mode_planner, Icons.Default.DateRange) {
                             onPlannerSelected()
@@ -253,12 +260,12 @@ fun MainMenuScreen(
                         launcherItem(R.string.mode_whats_up, Icons.Default.Visibility) {
                             onWhatsUpSelected()
                         },
-                        // CCAPI-only tile; greyed out when on BLE / simulator so
-                        // its absence is discoverable without breaking layout.
+                        // CCAPI or PTP only; greyed out when on BLE / simulator
+                        // so its absence is discoverable without breaking layout.
                         launcherItem(
                             R.string.mode_star_focus,
                             Icons.Default.Star,
-                            enabled = canonOn,
+                            enabled = starFocusEnabled,
                         ) { onStarFocusSelected() },
                         // Camera Test — fires all 5 modes in sequence to
                         // verify the active transport + body end-to-end.
