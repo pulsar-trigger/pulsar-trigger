@@ -177,13 +177,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val _canonCcapiReconnecting = MutableStateFlow(false)
     val canonCcapiReconnecting: StateFlow<Boolean> = _canonCcapiReconnecting
 
-    /** True when the connected Canon body advertises the manual-bulb endpoint.
-     *  Older or PowerShot-class bodies don't — the UI hides bulb-based modes
-     *  for them (only Timelapse / Manual / Custom flow remain useful). */
-    val canonCcapiSupportsBulb: StateFlow<Boolean> = _canonCcapiTransport
-        .map { it?.supportsBulb == true }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
-
     // ── USB PTP transport (Phase 1: Timelapse only) ──────────────────────
     // The phone drives a Canon (or other PTP-capable) body over USB-C using
     // Android's USB Host API. Useful for bodies CCAPI can't reach — e.g. the
@@ -254,22 +247,32 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     /** MAC address of the last Canon BLE camera we successfully connected
      *  to. Persisted in plain SharedPrefs (the BLE bond itself is in the
      *  OS keystore and survives independently). Used to auto-reconnect
-     *  on the same body's re-advertise, including across app restarts. */
+     *  on the same body's re-advertise, including across app restarts.
+     *
+     *  Cached in [_lastCanonBleAddressCache] so the auto-reconnect
+     *  collector — which is invoked on every BLE advertisement, multiple
+     *  times per second — doesn't hit disk on every emission. The setter
+     *  writes through to both the in-memory cache and SharedPrefs. */
     private val canonBlePrefs = app.getSharedPreferences("pulsar_canon_ble", Context.MODE_PRIVATE)
+    @Volatile private var _lastCanonBleAddressCache: String? =
+        canonBlePrefs.getString("last_address", null)
     private var lastCanonBleAddress: String?
-        get() = canonBlePrefs.getString("last_address", null)
+        get() = _lastCanonBleAddressCache
         set(value) {
+            _lastCanonBleAddressCache = value
             canonBlePrefs.edit().apply {
                 if (value == null) remove("last_address") else putString("last_address", value)
             }.apply()
         }
 
     init {
-        // Two flows watched on the discovery channel:
+        // PTP discovery collector. Two flows watched on the discovery channel:
         //  (1) currently-connected camera vanishes → tear down the transport
         //      cleanly but remember the device so we can auto-reconnect.
         //  (2) a previously-connected camera reappears while we're idle →
         //      auto-reconnect so the user doesn't have to tap again.
+        // Parallel collector for Canon BLE lives in the init {} block near
+        // the Canon BLE section below.
         viewModelScope.launch {
             ptpDiscovery.cameras.collect { attached ->
                 val active = _ptpTransport.value
@@ -538,9 +541,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         // also writes to it directly while it's running.
         viewModelScope.launch {
             bleController.connected.collect {
-                // Canon / PTP take priority — don't let BLE disconnect kick the
+                // Phone-driven transports (CCAPI / PTP / Canon BLE) take
+                // priority — don't let an ESP32 BLE state change kick the
                 // user out of an active phone-driven camera session.
-                if (_canonCcapiTransport.value != null || _ptpTransport.value != null) return@collect
+                if (_canonCcapiTransport.value != null ||
+                    _ptpTransport.value != null ||
+                    _canonBleTransport.value != null) return@collect
                 _connected.value = it
                 if (it) {
                     sendAutoOff()
@@ -552,7 +558,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             bleController.status.collect {
                 if (!_simulatorActive.value && _canonCcapiTransport.value == null &&
-                    _ptpTransport.value == null) {
+                    _ptpTransport.value == null && _canonBleTransport.value == null) {
                     _status.value = it
                 }
             }
@@ -1116,11 +1122,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private var canonBleConnectJob: Job? = null
 
     init {
-        // Watch the Canon BLE discovery stream for our last-paired body
-        // reappearing while we're idle. Mirrors the PTP cable-replug
-        // pattern: spontaneous link drop arms `_canonBleReconnecting`,
-        // discovery fires when the body advertises again, this collector
-        // reconnects automatically.
+        // Canon BLE discovery collector. Watches the Canon BLE service-scan
+        // for our last-paired body reappearing while we're idle. Mirrors
+        // the PTP cable-replug pattern in the earlier init {} block:
+        // spontaneous link drop arms `_canonBleReconnecting`, discovery
+        // fires when the body advertises again, this collector reconnects
+        // automatically.
         viewModelScope.launch {
             canonBleDiscovery.cameras.collect { cameras ->
                 val want = lastCanonBleAddress ?: return@collect
@@ -1207,7 +1214,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  drops. Flips the reconnecting banner on and arms the auto-reconnect
      *  collector. We DON'T release the transport here — `connectCanonBle`
      *  will overwrite the StateFlow with a fresh transport on
-     *  re-advertise, and the old transport's `release()` is idempotent. */
+     *  re-advertise, and the old transport's `release()` is idempotent.
+     *
+     *  **Thread**: invoked from Android's GATT binder thread (the BLE
+     *  stack runs `BluetoothGattCallback`s off-main). Everything we touch
+     *  here must be thread-safe: `MutableStateFlow.value` setters are,
+     *  `canonBleDiscovery.start()` is, and `disconnectCanonBle()` launches
+     *  release work on `viewModelScope` rather than running it inline. */
     private fun onCanonBleLinkDropped() {
         Log.i(TAG, "Canon BLE link dropped — arming auto-reconnect")
         _canonBleReconnecting.value = true
@@ -1446,32 +1459,37 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  uses 125 mm at crop 1.0 with the 500-rule, which yields exactly
      *  4 s. Timelapse runs first to dodge bulb-state contamination from the
      *  later steps. */
-    /** Number of steps the next [runCameraTest] would fire against the
-     *  currently active transport. 1 (Timelapse only) when bulb isn't
-     *  supported, 5 (all modes) when it is. Drives the Tools-tab tile
-     *  copy and the post-run summary so the user knows what was tested. */
-    val cameraTestStepCount: StateFlow<Int> = combine(
-        _canonCcapiTransport, _ptpTransport, _canonBleTransport,
-        bleController.connected, _simulatorActive,
-    ) { _, _, _, _, _ -> if (activeTransportSupportsBulb()) 5 else 1 }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, 5)
-
     /** True iff the active transport can run bulb-style modes. ESP32 BLE
      *  and simulator always can (firmware / fake-loop owns timing).
      *  CCAPI / PTP are body-conditional. Canon BLE is hard-coded true.
-     *  When false, [runCameraTest] should fire Timelapse only — the
-     *  bulb-based wizards would either no-op or fail. */
-    private fun activeTransportSupportsBulb(): Boolean {
-        _canonCcapiTransport.value?.let { return it.supportsBulb }
-        _ptpTransport.value?.let { return it.supportsBulb }
-        _canonBleTransport.value?.let { return it.supportsBulb }
-        // ESP32 firmware and simulator both own their run loops and
-        // implement bulb client-side.
-        return true
-    }
+     *  When false, the bulb-based wizards (Astro / DarkFrame / Ramp /
+     *  Intervalometer-bulb / Custom Flow) are dimmed in MainMenu and
+     *  [runCameraTest] fires Timelapse only. Drives the Tools-tab tile
+     *  copy too. */
+    val activeTransportSupportsBulb: StateFlow<Boolean> = combine(
+        _canonCcapiTransport, _ptpTransport, _canonBleTransport,
+    ) { ccapi, ptp, ble ->
+        // First non-null transport wins. ESP32 BLE + simulator paths don't
+        // appear here — neither implements CameraTransport, and both own
+        // their own bulb timing, so the "no phone-side transport" fallback
+        // is true.
+        when {
+            ccapi != null -> ccapi.supportsBulb
+            ptp != null -> ptp.supportsBulb
+            ble != null -> ble.supportsBulb
+            else -> true
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+
+    /** Number of steps the next [runCameraTest] would fire against the
+     *  currently active transport. 1 (Timelapse only) when bulb isn't
+     *  supported, 5 (all modes) when it is. */
+    val cameraTestStepCount: StateFlow<Int> = activeTransportSupportsBulb
+        .map { if (it) 5 else 1 }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 5)
 
     fun runCameraTest() {
-        val canBulb = activeTransportSupportsBulb()
+        val canBulb = activeTransportSupportsBulb.value
         val test = buildList<FlowStep> {
             // Timelapse — always runs. Camera (or simulator/firmware)
             // owns exposure timing; no bulb requirement.
@@ -1595,6 +1613,15 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         _flowPaused.value = false
     }
 
+    /** The active phone-driven camera transport, or null if none. First
+     *  non-null of CCAPI / PTP / Canon BLE wins — these are mutually
+     *  exclusive (see `connect*` mutual-exclusion teardowns), so at most
+     *  one is non-null at a time. ESP32 BLE and the simulator don't
+     *  implement [CameraTransport] and are handled in their own branches
+     *  of [executeFlowStep]. */
+    private fun activeCameraTransport(): com.ehrocha.pulsar.transport.CameraTransport? =
+        _canonCcapiTransport.value ?: _ptpTransport.value ?: _canonBleTransport.value
+
     fun stopFlow() {
         // Hand the BLE stop off immediately (don't wait on cancellation) so
         // the firmware halts ASAP; then await the flow's own finally to settle
@@ -1626,54 +1653,26 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             is FlowStep.Intervalometer -> {
-                val canon = _canonCcapiTransport.value
-                val ptp = _ptpTransport.value
-                val canonBle = _canonBleTransport.value
+                val transport = activeCameraTransport()
                 when {
-                    canon != null -> {
+                    transport != null -> {
                         // Timelapse wizard stores its pulse-length sentinel as
                         // exposureMs; the camera owns timing in that path. Any
-                        // other exposureMs means a bulb-style run.
+                        // other exposureMs means a bulb-style run. awaitReady
+                        // is a no-op for non-CCAPI transports (see
+                        // [awaitCanonReady] — early-returns for PTP / Canon BLE).
                         if (step.exposureMs == AppConfig.TIMELAPSE_PULSE_MS) {
                             com.ehrocha.pulsar.transport.runCanonTimelapse(
-                                canon, step.shotCount, step.intervalMs, step.delayMs,
+                                transport, step.shotCount, step.intervalMs, step.delayMs,
                                 af = step.useAutofocus, status = _status,
-                                awaitReady = { awaitCanonReady(canon) },
+                                awaitReady = { awaitCanonReady(transport) },
                             )
                         } else {
                             com.ehrocha.pulsar.transport.runCanonBulb(
-                                canon, step.shotCount, step.exposureMs,
+                                transport, step.shotCount, step.exposureMs,
                                 step.intervalMs, step.delayMs, af = step.useAutofocus,
                                 status = _status,
-                                awaitReady = { awaitCanonReady(canon) },
-                            )
-                        }
-                    }
-                    ptp != null -> {
-                        if (step.exposureMs == AppConfig.TIMELAPSE_PULSE_MS) {
-                            com.ehrocha.pulsar.transport.runCanonTimelapse(
-                                ptp, step.shotCount, step.intervalMs, step.delayMs,
-                                af = step.useAutofocus, status = _status,
-                            )
-                        } else {
-                            com.ehrocha.pulsar.transport.runCanonBulb(
-                                ptp, step.shotCount, step.exposureMs,
-                                step.intervalMs, step.delayMs, af = step.useAutofocus,
-                                status = _status,
-                            )
-                        }
-                    }
-                    canonBle != null -> {
-                        if (step.exposureMs == AppConfig.TIMELAPSE_PULSE_MS) {
-                            com.ehrocha.pulsar.transport.runCanonTimelapse(
-                                canonBle, step.shotCount, step.intervalMs, step.delayMs,
-                                af = step.useAutofocus, status = _status,
-                            )
-                        } else {
-                            com.ehrocha.pulsar.transport.runCanonBulb(
-                                canonBle, step.shotCount, step.exposureMs,
-                                step.intervalMs, step.delayMs, af = step.useAutofocus,
-                                status = _status,
+                                awaitReady = { awaitCanonReady(transport) },
                             )
                         }
                     }
@@ -1691,23 +1690,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             is FlowStep.Astro -> {
-                val canon = _canonCcapiTransport.value
+                val transport = activeCameraTransport()
                 val expMs = AppConfig.astroExposureMs(step.focalLength, step.cropFactor, step.ruleDivisor)
                 when {
-                    canon != null -> com.ehrocha.pulsar.transport.runCanonBulb(
-                        canon, step.shotCount, expMs,
+                    transport != null -> com.ehrocha.pulsar.transport.runCanonBulb(
+                        transport, step.shotCount, expMs,
                         step.gapMs, step.delayMs, af = step.useAutofocus,
-                        status = _status, awaitReady = { awaitCanonReady(canon) },
-                    )
-                    _ptpTransport.value != null -> com.ehrocha.pulsar.transport.runCanonBulb(
-                        _ptpTransport.value!!, step.shotCount, expMs,
-                        step.gapMs, step.delayMs, af = step.useAutofocus,
-                        status = _status,
-                    )
-                    _canonBleTransport.value != null -> com.ehrocha.pulsar.transport.runCanonBulb(
-                        _canonBleTransport.value!!, step.shotCount, expMs,
-                        step.gapMs, step.delayMs, af = step.useAutofocus,
-                        status = _status,
+                        status = _status, awaitReady = { awaitCanonReady(transport) },
                     )
                     _simulatorActive.value -> simulateShots(step.shotCount, expMs, step.gapMs, step.delayMs)
                     else -> {
@@ -1719,22 +1708,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             is FlowStep.DarkFrame -> {
-                val canon = _canonCcapiTransport.value
+                val transport = activeCameraTransport()
                 when {
-                    canon != null -> com.ehrocha.pulsar.transport.runCanonBulb(
-                        canon, step.shotCount, step.exposureMs,
+                    transport != null -> com.ehrocha.pulsar.transport.runCanonBulb(
+                        transport, step.shotCount, step.exposureMs,
                         step.gapMs, 0L, af = step.useAutofocus,
-                        status = _status, awaitReady = { awaitCanonReady(canon) },
-                    )
-                    _ptpTransport.value != null -> com.ehrocha.pulsar.transport.runCanonBulb(
-                        _ptpTransport.value!!, step.shotCount, step.exposureMs,
-                        step.gapMs, 0L, af = step.useAutofocus,
-                        status = _status,
-                    )
-                    _canonBleTransport.value != null -> com.ehrocha.pulsar.transport.runCanonBulb(
-                        _canonBleTransport.value!!, step.shotCount, step.exposureMs,
-                        step.gapMs, 0L, af = step.useAutofocus,
-                        status = _status,
+                        status = _status, awaitReady = { awaitCanonReady(transport) },
                     )
                     _simulatorActive.value -> simulateShots(step.shotCount, step.exposureMs, step.gapMs, 0L)
                     else -> {
@@ -1748,24 +1727,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             is FlowStep.Ramp -> {
-                val canon = _canonCcapiTransport.value
-                val ptp = _ptpTransport.value
+                val transport = activeCameraTransport()
                 val rampSteps = step.steps.coerceAtLeast(2)
-                val canonBle = _canonBleTransport.value
-                if (canon != null) {
+                if (transport != null) {
                     com.ehrocha.pulsar.transport.runCanonRamp(
-                        canon, step, rampSteps, af = step.useAutofocus,
-                        status = _status, awaitReady = { awaitCanonReady(canon) },
-                    )
-                } else if (ptp != null) {
-                    com.ehrocha.pulsar.transport.runCanonRamp(
-                        ptp, step, rampSteps, af = step.useAutofocus,
-                        status = _status,
-                    )
-                } else if (canonBle != null) {
-                    com.ehrocha.pulsar.transport.runCanonRamp(
-                        canonBle, step, rampSteps, af = step.useAutofocus,
-                        status = _status,
+                        transport, step, rampSteps, af = step.useAutofocus,
+                        status = _status, awaitReady = { awaitCanonReady(transport) },
                     )
                 } else {
                     for (i in 0 until rampSteps) {

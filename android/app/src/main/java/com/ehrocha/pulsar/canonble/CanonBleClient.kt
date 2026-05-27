@@ -93,7 +93,6 @@ class CanonBleClient(
     private val connectSignal = AtomicReference<CompletableDeferred<Boolean>?>(null)
     private val servicesSignal = AtomicReference<CompletableDeferred<Boolean>?>(null)
     private val writeSignal = AtomicReference<CompletableDeferred<Boolean>?>(null)
-    @Volatile private var disconnected = false
     /** True iff the caller explicitly invoked [close]. Disconnect events
      *  that arrive after this is set are expected; don't fire the
      *  spontaneous-disconnect callback in that case. */
@@ -113,7 +112,6 @@ class CanonBleClient(
                     else connectSignal.getAndSet(null)?.complete(false)
                 }
                 BluetoothProfile.STATE_DISCONNECTED -> {
-                    disconnected = true
                     connectSignal.getAndSet(null)?.complete(false)
                     servicesSignal.getAndSet(null)?.complete(false)
                     writeSignal.getAndSet(null)?.complete(false)
@@ -162,7 +160,11 @@ class CanonBleClient(
         val deferred = CompletableDeferred<Boolean>()
         connectSignal.set(deferred)
         servicesSignal.set(CompletableDeferred())
-        disconnected = false
+        // Reset lifecycle flags so a fresh connect on a reused instance
+        // (today this class is single-use, but the contract should be
+        // robust to future refactors) doesn't inherit prior teardown state.
+        releasedByUser = false
+        fullyConnected = false
         gatt = device.connectGatt(ctx, false, callback, BluetoothDevice.TRANSPORT_LE)
         if (gatt == null) {
             connectSignal.set(null)

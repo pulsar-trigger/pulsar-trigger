@@ -103,7 +103,9 @@ fun Intervalometer2Screen(
     val running = runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
     val onCanon = vm.canonCcapiTransport.collectAsState().value != null
-    val canControlAf = onCanon || vm.ptpTransport.collectAsState().value != null
+    val onPtp = vm.ptpTransport.collectAsState().value != null
+    val onCanonBle = vm.canonBleTransport.collectAsState().value != null
+    val canControlAf = onCanon || onPtp || onCanonBle
 
     // Jump to the final tab when a preset is loaded — its values are already
     // valid so the user is one tap away from Start.

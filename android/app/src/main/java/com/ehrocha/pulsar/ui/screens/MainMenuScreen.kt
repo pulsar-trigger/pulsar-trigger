@@ -191,17 +191,21 @@ fun MainMenuScreen(
                     val userModes by vm.userModes.collectAsState()
                     val canonCcapiTransport by vm.canonCcapiTransport.collectAsState()
                     val canonCcapiReconnecting by vm.canonCcapiReconnecting.collectAsState()
-                    val canonCcapiSupportsBulb by vm.canonCcapiSupportsBulb.collectAsState()
                     val ptpTransport by vm.ptpTransport.collectAsState()
                     val ptpReconnecting by vm.ptpReconnecting.collectAsState()
                     val canonBleTransport by vm.canonBleTransport.collectAsState()
                     val canonBleReconnecting by vm.canonBleReconnecting.collectAsState()
+                    val supportsBulb by vm.activeTransportSupportsBulb.collectAsState()
                     val onCanon = canonCcapiTransport != null
                     val onPtp = ptpTransport != null
                     val onCanonBle = canonBleTransport != null
-                    // PowerShot / older R-bodies don't expose /shutterbutton/manual.
-                    // Without it the bulb-based modes can't run; hide them.
-                    val bulbBlocked = onCanon && !canonCcapiSupportsBulb
+                    // Bulb-based modes can't run on a phone-driven transport
+                    // that doesn't advertise bulb: PowerShots / older R-bodies
+                    // over CCAPI (no `/shutterbutton/manual`), Nikon/Sony/Fuji
+                    // over PTP (no Canon RemoteRelease op). Dim those tiles
+                    // so the user doesn't start a flow that'd fail at the
+                    // first bulb call. Canon BLE is hard-true on this flag.
+                    val bulbBlocked = (onCanon || onPtp || onCanonBle) && !supportsBulb
                     val builtIns = listOf(
                         launcherItem(R.string.mode_intervalometer, Icons.Default.Timer,
                             enabled = !bulbBlocked) { onIntervalometer2Selected() },
@@ -258,6 +262,10 @@ fun MainMenuScreen(
                     val ptpForLiveView = vm.ptpTransport.collectAsState().value
                         ?.takeIf { it.supportsLiveView } != null
                     val starFocusEnabled = canonOn || ptpForLiveView
+                    val simulatorActive by vm.simulatorActive.collectAsState()
+                    // Camera Test exists to verify the *real* wire — pulsing
+                    // the simulator would just prove the simulator works.
+                    val cameraTestEnabled = !simulatorActive
                     val toolItems = listOf(
                         launcherItem(R.string.mode_planner, Icons.Default.DateRange) {
                             onPlannerSelected()
@@ -275,13 +283,10 @@ fun MainMenuScreen(
                             Icons.Default.Star,
                             enabled = starFocusEnabled,
                         ) { onStarFocusSelected() },
-                        // Camera Test — fires all 5 modes in sequence to
-                        // verify the active transport + body end-to-end.
-                        // Disabled in simulator (nothing to verify there).
                         launcherItem(
                             R.string.mode_test_camera,
                             Icons.Default.Science,
-                            enabled = true,
+                            enabled = cameraTestEnabled,
                         ) { onTestCameraSelected() },
                     )
                     Box(modifier = Modifier.padding(horizontal = 16.dp)) {
