@@ -244,12 +244,25 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clearCanonBleError() { _canonBleError.value = null }
 
+    /** True while the previously-connected Canon BLE camera has dropped
+     *  the link (powered off, out of range, app backgrounded too long)
+     *  and Pulsar is waiting for it to advertise again. The UI shows a
+     *  reconnect banner — same pattern as PTP cable replug. */
+    private val _canonBleReconnecting = MutableStateFlow(false)
+    val canonBleReconnecting: StateFlow<Boolean> = _canonBleReconnecting
+
     /** MAC address of the last Canon BLE camera we successfully connected
-     *  to. Persisted in plaintext SharedPrefs — the BLE bond itself lives
-     *  in the OS keystore and survives independently; this is just the
-     *  hint "try MAC X first next launch". Phase 3 will use this for
-     *  auto-reconnect on re-advertise. */
-    private var lastCanonBleAddress: String? = null
+     *  to. Persisted in plain SharedPrefs (the BLE bond itself is in the
+     *  OS keystore and survives independently). Used to auto-reconnect
+     *  on the same body's re-advertise, including across app restarts. */
+    private val canonBlePrefs = app.getSharedPreferences("pulsar_canon_ble", Context.MODE_PRIVATE)
+    private var lastCanonBleAddress: String?
+        get() = canonBlePrefs.getString("last_address", null)
+        set(value) {
+            canonBlePrefs.edit().apply {
+                if (value == null) remove("last_address") else putString("last_address", value)
+            }.apply()
+        }
 
     init {
         // Two flows watched on the discovery channel:
@@ -1098,9 +1111,28 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    // ── Canon BLE direct: connect / disconnect ─────────────────────────
+    // ── Canon BLE direct: connect / disconnect / auto-reconnect ────────
 
     private var canonBleConnectJob: Job? = null
+
+    init {
+        // Watch the Canon BLE discovery stream for our last-paired body
+        // reappearing while we're idle. Mirrors the PTP cable-replug
+        // pattern: spontaneous link drop arms `_canonBleReconnecting`,
+        // discovery fires when the body advertises again, this collector
+        // reconnects automatically.
+        viewModelScope.launch {
+            canonBleDiscovery.cameras.collect { cameras ->
+                val want = lastCanonBleAddress ?: return@collect
+                if (!_canonBleReconnecting.value) return@collect
+                if (_canonBleTransport.value != null) return@collect
+                if (!idleAcrossOtherTransports()) return@collect
+                val match = cameras.firstOrNull { it.address == want } ?: return@collect
+                Log.i(TAG, "Canon BLE re-advertise from $want — auto-reconnecting")
+                connectCanonBle(match, auto = true)
+            }
+        }
+    }
 
     /** Begin / refresh the Canon BLE service scan. Called when ScanScreen
      *  becomes visible so the "Canon BLE remotes" section populates
@@ -1113,10 +1145,20 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Connect to a Canon BLE camera. First-time pairing triggers the OS
      *  pair dialog; subsequent connects reuse the bond. Mutually exclusive
-     *  with the other transports — they're dropped first. */
-    fun connectCanonBle(device: android.bluetooth.BluetoothDevice) {
+     *  with the other transports — they're dropped first. [auto] is true
+     *  when the call originates from the auto-reconnect collector (the
+     *  previously-bonded body just re-advertised); false on explicit user
+     *  taps. Auto-reconnect must not override an active simulator. */
+    fun connectCanonBle(
+        device: android.bluetooth.BluetoothDevice,
+        auto: Boolean = false,
+    ) {
         canonBleConnectJob?.cancel()
         canonBleConnectJob = viewModelScope.launch {
+            if (auto && _simulatorActive.value) {
+                Log.i(TAG, "connectCanonBle(auto): simulator active, skipping")
+                return@launch
+            }
             _canonBleError.value = null
             _canonBleConnecting.value = true
             try {
@@ -1125,16 +1167,25 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 if (_ptpTransport.value != null) disconnectPtp()
                 if (_simulatorActive.value) disconnectSimulator()
                 stopScan()
+                // Stop the BLE scan once connected — Android shouldn't be
+                // scanning and connected at the same time on the same radio
+                // (battery + scan-callback noise). The disconnect handler
+                // re-arms scanning so the auto-reconnect collector picks
+                // up the body's next advertisement.
                 stopCanonBleScan()
 
                 val appCtx = getApplication<Application>()
-                val transport = com.ehrocha.pulsar.canonble.CanonBleTransport.connect(appCtx, device)
+                val transport = com.ehrocha.pulsar.canonble.CanonBleTransport.connect(
+                    appCtx, device,
+                    onSpontaneousDisconnect = { onCanonBleLinkDropped() },
+                )
                 if (transport == null) {
                     _canonBleError.value = "connect_failed"
                     return@launch
                 }
                 _canonBleTransport.value = transport
                 lastCanonBleAddress = device.address
+                _canonBleReconnecting.value = false
                 _deviceName.value = transport.label.value
                 _connected.value = true
                 _status.value = StatusFrame(
@@ -1152,12 +1203,39 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun disconnectCanonBle() {
-        val transport = _canonBleTransport.value ?: return
+    /** Called from the BLE GATT callback when a previously-good link
+     *  drops. Flips the reconnecting banner on and arms the auto-reconnect
+     *  collector. We DON'T release the transport here — `connectCanonBle`
+     *  will overwrite the StateFlow with a fresh transport on
+     *  re-advertise, and the old transport's `release()` is idempotent. */
+    private fun onCanonBleLinkDropped() {
+        Log.i(TAG, "Canon BLE link dropped — arming auto-reconnect")
+        _canonBleReconnecting.value = true
+        // Make sure the discovery scanner is running so the collector
+        // in init{} can pick up the body's next advertisement. start()
+        // is a no-op if already scanning.
+        canonBleDiscovery.start()
+        // Tear down the dropped transport's GATT resources, but preserve
+        // lastCanonBleAddress so the collector knows what to reconnect.
+        disconnectCanonBle(clearAutoReconnect = false)
+    }
+
+    private fun disconnectCanonBle(clearAutoReconnect: Boolean = true) {
+        val transport = _canonBleTransport.value ?: run {
+            if (clearAutoReconnect) {
+                lastCanonBleAddress = null
+                _canonBleReconnecting.value = false
+            }
+            return
+        }
         canonBleConnectJob?.cancel()
         canonBleConnectJob = null
         viewModelScope.launch { transport.release() }
         _canonBleTransport.value = null
+        if (clearAutoReconnect) {
+            lastCanonBleAddress = null
+            _canonBleReconnecting.value = false
+        }
         if (!bleController.connected.value && !_simulatorActive.value &&
             _canonCcapiTransport.value == null && _ptpTransport.value == null) {
             _connected.value = false
@@ -1368,29 +1446,62 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  uses 125 mm at crop 1.0 with the 500-rule, which yields exactly
      *  4 s. Timelapse runs first to dodge bulb-state contamination from the
      *  later steps. */
+    /** Number of steps the next [runCameraTest] would fire against the
+     *  currently active transport. 1 (Timelapse only) when bulb isn't
+     *  supported, 5 (all modes) when it is. Drives the Tools-tab tile
+     *  copy and the post-run summary so the user knows what was tested. */
+    val cameraTestStepCount: StateFlow<Int> = combine(
+        _canonCcapiTransport, _ptpTransport, _canonBleTransport,
+        bleController.connected, _simulatorActive,
+    ) { _, _, _, _, _ -> if (activeTransportSupportsBulb()) 5 else 1 }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 5)
+
+    /** True iff the active transport can run bulb-style modes. ESP32 BLE
+     *  and simulator always can (firmware / fake-loop owns timing).
+     *  CCAPI / PTP are body-conditional. Canon BLE is hard-coded true.
+     *  When false, [runCameraTest] should fire Timelapse only — the
+     *  bulb-based wizards would either no-op or fail. */
+    private fun activeTransportSupportsBulb(): Boolean {
+        _canonCcapiTransport.value?.let { return it.supportsBulb }
+        _ptpTransport.value?.let { return it.supportsBulb }
+        _canonBleTransport.value?.let { return it.supportsBulb }
+        // ESP32 firmware and simulator both own their run loops and
+        // implement bulb client-side.
+        return true
+    }
+
     fun runCameraTest() {
+        val canBulb = activeTransportSupportsBulb()
         val test = buildList<FlowStep> {
+            // Timelapse — always runs. Camera (or simulator/firmware)
+            // owns exposure timing; no bulb requirement.
             add(FlowStep.Intervalometer(
                 intervalMs = 2_000L,
                 exposureMs = AppConfig.TIMELAPSE_PULSE_MS,
                 shotCount = 5, delayMs = 0L, useAutofocus = false,
             ))
-            add(FlowStep.Intervalometer(
-                intervalMs = 2_000L, exposureMs = 4_000L,
-                shotCount = 5, delayMs = 0L, useAutofocus = false,
-            ))
-            add(FlowStep.Astro(
-                focalLength = 125, cropFactor = 1.0f, ruleDivisor = 500,
-                gapMs = 2_000L, shotCount = 5, delayMs = 0L, useAutofocus = false,
-            ))
-            add(FlowStep.DarkFrame(
-                gapMs = 2_000L, exposureMs = 4_000L,
-                shotCount = 5, useAutofocus = false,
-            ))
-            add(FlowStep.Ramp(
-                startExposureMs = 4_000L, endExposureMs = 4_000L,
-                steps = 5, intervalMs = 2_000L, useAutofocus = false,
-            ))
+            // The remaining 4 modes all require bulb. Skip on transports
+            // that don't support it (e.g. a PowerShot over CCAPI with no
+            // /shutterbutton/manual, or a body whose PTP DeviceInfo
+            // doesn't advertise the Canon RemoteRelease ops).
+            if (canBulb) {
+                add(FlowStep.Intervalometer(
+                    intervalMs = 2_000L, exposureMs = 4_000L,
+                    shotCount = 5, delayMs = 0L, useAutofocus = false,
+                ))
+                add(FlowStep.Astro(
+                    focalLength = 125, cropFactor = 1.0f, ruleDivisor = 500,
+                    gapMs = 2_000L, shotCount = 5, delayMs = 0L, useAutofocus = false,
+                ))
+                add(FlowStep.DarkFrame(
+                    gapMs = 2_000L, exposureMs = 4_000L,
+                    shotCount = 5, useAutofocus = false,
+                ))
+                add(FlowStep.Ramp(
+                    startExposureMs = 4_000L, endExposureMs = 4_000L,
+                    steps = 5, intervalMs = 2_000L, useAutofocus = false,
+                ))
+            }
         }
         saveFlowSteps(test)
         startFlow()

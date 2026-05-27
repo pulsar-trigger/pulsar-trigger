@@ -65,10 +65,25 @@ class CanonBleTransport private constructor(
         /** Open a GATT session, optionally pair-write on first connect.
          *  Returns null on any failure (camera off, out of range, user
          *  denied the OS pair dialog, missing characteristics, etc.).
-         *  Caller has nothing to clean up on null — we close internally. */
+         *  Caller has nothing to clean up on null — we close internally.
+         *
+         *  [onSpontaneousDisconnect] fires when the link drops *after* a
+         *  successful connect (camera powered off, out of range, etc.).
+         *  Not invoked for an explicit [release]. The viewmodel uses this
+         *  to drive the auto-reconnect banner + re-scan. */
         @SuppressLint("MissingPermission")
-        suspend fun connect(ctx: Context, device: BluetoothDevice): CanonBleTransport? {
-            val client = CanonBleClient(ctx, device)
+        suspend fun connect(
+            ctx: Context,
+            device: BluetoothDevice,
+            onSpontaneousDisconnect: () -> Unit = {},
+        ): CanonBleTransport? {
+            // Forward-declare so the lambda can flip the transport's
+            // _connected flag and signal the viewmodel.
+            var transportRef: CanonBleTransport? = null
+            val client = CanonBleClient(ctx, device, onSpontaneousDisconnect = {
+                transportRef?.markDisconnected()
+                onSpontaneousDisconnect()
+            })
             if (!client.connect()) {
                 Log.w(TAG, "GATT connect failed for ${device.address}")
                 client.close()
@@ -90,6 +105,7 @@ class CanonBleTransport private constructor(
             return CanonBleTransport(device, client).also {
                 it._label.value = label
                 it._connected.value = true
+                transportRef = it
             }
         }
     }
@@ -172,6 +188,15 @@ class CanonBleTransport private constructor(
             runCatching { client.writeControl(SHUTTER_RELEASE) }
             bulbOpen = false
         }
+    }
+
+    /** Called by [CanonBleClient]'s disconnect callback on a spontaneous
+     *  link drop. Flips [connected] false so the viewmodel can react;
+     *  doesn't release the underlying client (auto-reconnect may want to
+     *  reuse the bond). */
+    internal fun markDisconnected() {
+        _connected.value = false
+        bulbOpen = false
     }
 
     override suspend fun release() {

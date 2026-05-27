@@ -84,7 +84,7 @@ I built this for my own photography, but figured if it's useful to me it might b
    └────────┘                              └─────────────────┘
 ```
 
-The viewmodel has both a `bleController` and a `_canonTransport`; whichever the user picks in the scan screen is the active transport. Wizards observe `vm.runState` and call `vm.startFlow()` — they don't reach down to either transport directly.
+The viewmodel holds one StateFlow per transport (`bleController` for Pulsar ESP32, `_canonCcapiTransport`, `_ptpTransport`, `_canonBleTransport`); whichever the user picks in the scan screen is the active transport. Wizards observe `vm.runState` and call `vm.startFlow()` — they don't reach down to any individual transport directly.
 
 ### Firmware (ESP32 / PlatformIO / Arduino framework)
 
@@ -162,7 +162,7 @@ Package: `com.ehrocha.pulsar`, `minSdk 26`, `compileSdk 35`. Navigation is a man
 
 ## Transports
 
-Pulsar talks to cameras through three mutually-exclusive transports, all routed through the same viewmodel: `bleController` (BLE-ESP32), `_canonTransport` (Canon CCAPI over Wi-Fi), and `_ptpTransport` (USB PTP). Tapping a device of one kind disconnects the others; the simulator is treated as a fourth transport for mutual-exclusion purposes.
+Pulsar talks to cameras through four mutually-exclusive transports, all routed through the same viewmodel: `bleController` (Pulsar ESP32 over BLE), `_canonCcapiTransport` (Canon CCAPI over Wi-Fi), `_ptpTransport` (USB PTP), and `_canonBleTransport` (Canon's own BR-E1 BLE protocol). Tapping a device of one kind disconnects the others; the simulator is treated as a fifth transport for mutual-exclusion purposes.
 
 ### BLE / ESP32
 
@@ -200,6 +200,24 @@ Honest caveats:
 - **Bulb modes only on Canon today.** `InitiateCapture` is universal (works across PTP-capable Nikon / Sony / Fuji bodies for Timelapse), but `RemoteReleaseOn/Off` are Canon vendor ops. Non-Canon bulb needs vendor-specific plumbing.
 
 Full design: [docs/ptp.md](docs/ptp.md). The Tools tab has a "Camera Test" tile that fires 25 shots across all 5 modes to verify the active transport end-to-end.
+
+### Canon BLE direct
+
+The reason this transport exists: pair Pulsar with a Canon body and trigger it wirelessly with no Pulsar hardware and no Wi-Fi setup. Pulsar speaks Canon's own BR-E1 BLE protocol to the body. Capability is bulb-class: every Pulsar mode that the firmware-driven path supports works here too (Timelapse, Intervalometer bulb, Astro, Dark Frame, Ramp), but live view, lens info, and battery readout aren't in the protocol and aren't supported.
+
+- **Discovery** — `BluetoothLeScanner` filtered on Canon's BR-E1 service UUID (`00050000-0000-1000-0000-d8492fffa821`). Any BR-E1-compatible body in pair-or-remote mode shows up. Vendor-agnostic by design (UUID is Canon-specific, no need to filter further).
+- **Pair** — put the camera in Bluetooth → Remote pair mode on the body. On the phone, tap the camera's card; Pulsar opens GATT, writes `[0x03, "Pulsar"]` to the pair characteristic (`00050002-…`), and Android's system pair dialog appears to confirm the MITM bond. After that the bond lives in the OS keystore.
+- **Capture** — single byte writes to the control characteristic (`00050003-…`). `0x8C` = full press, `0x0C` = release, `0x4C` = AF half-press. Bulb is press → host-side `delay(exposureMs)` → release; user must set Bulb on the body's mode dial. AF flag picks half-press → release → full-press vs bare full-press.
+- **Auto-reconnect** — viewmodel persists the last-good MAC in SharedPrefs. Spontaneous link drop flips the reconnect banner on, restarts the BLE scan, and reconnects when the same MAC re-advertises. Bond survives app restart.
+
+Honest caveats:
+
+- **Mode dial is on the body.** Protocol has no shutter-speed write. Bulb modes need the user to set Bulb manually.
+- **No live view / lens info / battery readout.** The BR-E1 protocol is one-way (phone → camera). Star Focus, lens auto-fill, and the battery chip are gated off on this transport. Use CCAPI or PTP if you need them.
+
+Compatibility: every body on Canon's BR-E1 compatibility list — EOS R, RP, R5, R6, Ra, 6D Mark II, 77D, 800D, 200D, 850D, M50, M200, plus G7X III / G5X II. Bodies without BR-E1 support won't advertise the service UUID and won't appear in the Canon-BLE-remotes section.
+
+Full design: [docs/canon-ble.md](docs/canon-ble.md).
 
 ---
 

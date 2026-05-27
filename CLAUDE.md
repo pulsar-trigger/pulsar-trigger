@@ -4,10 +4,11 @@ Quick reference for AI assistants working on this project. See README.md for ful
 
 ## Project
 
-Open-source camera intervalometer + trigger. Three transports:
-- **ESP32 firmware** ↔ BLE (`bleController` in the app)
-- **Canon CCAPI** ↔ Wi-Fi (`_canonTransport`, for EOS R-series with CCAPI activated)
+Open-source camera intervalometer + trigger. Four transports:
+- **Pulsar ESP32 firmware** ↔ BLE (`bleController` in the app — universal, any camera with a wired remote port)
+- **Canon CCAPI** ↔ Wi-Fi (`_canonCcapiTransport`, for EOS R-series with CCAPI activated — adds live view + Star Focus + lens info + battery)
 - **USB PTP** ↔ USB-C (`_ptpTransport`, for Canon EOS R/RP and any PTP-capable body — the only phone-side path for the EOS R since CCAPI doesn't activate there)
+- **Canon BLE direct** ↔ BLE (`_canonBleTransport`, speaks Canon's own BR-E1 protocol — wireless, no hardware, every BR-E1-compatible body. Capability is bulb-class; no live view / lens / battery)
 
 License: GPL-3.0-or-later. Repo branch: `master`. Canon SDK PDFs live outside the repo at `../Canon-API/` (NDA — do not commit, do not copy verbatim).
 
@@ -29,9 +30,9 @@ License: GPL-3.0-or-later. Repo branch: `master`. Canon SDK PDFs live outside th
 
 ## Key Gotchas
 
-- **Three transports, one viewmodel.** Almost every viewmodel method that touches the wire has a BLE branch + CCAPI branch + PTP branch + simulator branch in `executeFlowStep`. When adding a new wire call think through all four paths.
+- **Four transports, one viewmodel.** Almost every viewmodel method that touches the wire has a Pulsar-BLE branch + CCAPI branch + PTP branch + Canon-BLE branch + simulator branch in `executeFlowStep`. When adding a new wire call think through all five paths. The three transports that implement `CameraTransport` (CCAPI, PTP, Canon BLE) share `CanonRunner.kt`'s `runCanonBulb` / `runCanonTimelapse` / `runCanonRamp`; ESP32 firmware owns its own run loop.
 - **Run loops are transport-agnostic.** `transport/CanonRunner.kt` (`runCanonTimelapse` / `runCanonBulb` / `runCanonRamp`) takes a `CameraTransport`. Both `CcapiTransport` and `PtpTransport` implement it; ESP32 has its own firmware-side run loop and doesn't go through this. Despite the name, the runners are not Canon-specific — they're the phone-driven-shot-timing pattern.
-- **CCAPI / PTP bulb capability is body-dependent.** `_canonTransport.value?.supportsBulb` (CCAPI: `/shutterbutton/manual` in endpoint matrix) and `_ptpTransport.value?.supportsBulb` (PTP: Canon `RemoteRelease` ops `0x9128` / `0x9125` advertised in `GetDeviceInfo`). UI dims bulb-based tiles when false.
+- **CCAPI / PTP bulb capability is body-dependent.** `_canonCcapiTransport.value?.supportsBulb` (CCAPI: `/shutterbutton/manual` in endpoint matrix) and `_ptpTransport.value?.supportsBulb` (PTP: Canon `RemoteRelease` ops `0x9128` / `0x9125` advertised in `GetDeviceInfo`). UI dims bulb-based tiles when false. Canon BLE always reports `supportsBulb = true` — the press-and-hold pattern works on every BR-E1-compatible body.
 - **Intervalometer gap semantics** — `intervalMs` is the GAP between exposures (expose → wait gap → repeat), NOT the total cycle time. Cycle = `exposureMs + intervalMs`.
 - **Timelapse vs Intervalometer on Canon transports** — both produce `FlowStep.Intervalometer`. Timelapse stores `exposureMs = AppConfig.TIMELAPSE_PULSE_MS` as a sentinel; `executeFlowStep` dispatches on that to pick single-shot path (`fireShutter` → `InitiateCapture` on PTP, `/shutterbutton` on CCAPI) vs. bulb path (`startBulb`/`stopBulb`).
 - **PTP locks the body's controls.** Canon's `SetRemoteMode(1)` puts the body in PC-remote mode — the dial and menu show "busy" until Pulsar disconnects. The user has to disconnect to change Bulb/Manual on the body. Document this in `ptp_connected_hint` copy.
@@ -41,8 +42,8 @@ License: GPL-3.0-or-later. Repo branch: `master`. Canon SDK PDFs live outside th
 - **BLE packets are TLV** — not 20-byte fixed any more. Use `CommandBuilder` / `TlvReader`. The old fixed-frame doc is gone.
 - **State is authoritative on firmware for BLE** — the app reads via TLV status notifications. For CCAPI + PTP, the app owns the run loop and writes `_status` simulator-style.
 - **Simulator mode** — all command methods check `_simulatorActive` before touching BLE. Canon / PTP transports are similarly gated.
-- **Mutual exclusion symmetry.** `connectTo` (BLE), `connectCanon`, `connectPtp`, `connectSimulator` must each disconnect the others. `connectSimulator` originally didn't — the v0.253 fix added it.
-- **Per-UDN / per-vendor-product persistence.** Canon CCAPI credentials (`pulsar_canon_creds`) and nicknames (`pulsar_canon_nicks`) are keyed by UDN. PTP auto-reconnect target is keyed by `(vendorId, productId)`, in-memory only (not persisted across process death).
+- **Mutual exclusion symmetry.** `connectTo` (Pulsar BLE), `connectCanonCcapi`, `connectPtp`, `connectCanonBle`, `connectSimulator` must each disconnect the others. `connectSimulator` originally didn't — the v0.253 fix added it. New transports should mirror this teardown in their `connect*` and be torn down from every other `connect*`.
+- **Per-UDN / per-vendor-product / per-MAC persistence.** Canon CCAPI credentials (`pulsar_canon_creds`) and nicknames (`pulsar_canon_nicks`) are keyed by UDN, encrypted. PTP auto-reconnect target is keyed by `(vendorId, productId)`, in-memory only. Canon BLE auto-reconnect target is the last-good MAC (`pulsar_canon_ble.last_address`), plain SharedPrefs (the bond itself is in the OS keystore; this is just the hint).
 
 ## Build
 
@@ -118,6 +119,7 @@ cd firmware
 - [docs/ble-protocol.md](docs/ble-protocol.md) — BLE TLV wire format
 - [docs/ccapi.md](docs/ccapi.md) — Canon CCAPI integration design
 - [docs/ptp.md](docs/ptp.md) — USB PTP transport design (Canon EOS R + RP)
+- [docs/canon-ble.md](docs/canon-ble.md) — Canon BLE direct transport (BR-E1 protocol, all BR-E1-compatible bodies)
 - [docs/mode-schema.md](docs/mode-schema.md) — user-mode preset JSON schema
 - [docs/wiring.md](docs/wiring.md) — hardware schematics
 - [.github/copilot-instructions.md](.github/copilot-instructions.md) — AI assistant conventions

@@ -141,22 +141,24 @@ class MainActivity : AppCompatActivity() {
                     color = MaterialTheme.colorScheme.background,
                 ) {
                     // Permission list has to match the manifest's <uses-permission>
-                    // SDK gates exactly. Asking for a permission that isn't in the
-                    // merged manifest is a silent no-op — the user sees no system
-                    // dialog and `allPermissionsGranted` stays false forever,
-                    // stranding them on the gate screen. Specifically:
-                    //   - BLUETOOTH_SCAN / BLUETOOTH_CONNECT are Android 12+ only
-                    //   - ACCESS_*_LOCATION is capped at SDK 30 (pre-12 BLE
-                    //     scanning needed it; 12+ uses neverForLocation flag)
+                    // SDK gates. Asking for a permission that isn't in the merged
+                    // manifest is a silent no-op — the user sees no system dialog
+                    // and `allPermissionsGranted` stays false forever, stranding
+                    // them on the gate screen.
+                    //   - BLUETOOTH_SCAN / BLUETOOTH_CONNECT: Android 12+ only.
+                    //   - ACCESS_*_LOCATION: needed on every SDK because the
+                    //     astro dashboard / polar-align / What's Up Tonight read
+                    //     GPS for Bortle / moon / Polaris hour-angle. On 12+ the
+                    //     BLE scanner uses `neverForLocation` so BLE doesn't
+                    //     drive this any more — astro features do.
                     val permissions = rememberMultiplePermissionsState(
                         buildList {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                                 add(android.Manifest.permission.BLUETOOTH_SCAN)
                                 add(android.Manifest.permission.BLUETOOTH_CONNECT)
-                            } else {
-                                add(android.Manifest.permission.ACCESS_FINE_LOCATION)
-                                add(android.Manifest.permission.ACCESS_COARSE_LOCATION)
                             }
+                            add(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                            add(android.Manifest.permission.ACCESS_COARSE_LOCATION)
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 add(android.Manifest.permission.POST_NOTIFICATIONS)
                             }

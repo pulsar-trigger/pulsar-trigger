@@ -29,6 +29,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -56,6 +57,8 @@ import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     val runState = LocalRunState.current
     val running = runState !is RunState.Idle
+    val stepCount by vm.cameraTestStepCount.collectAsState()
+    val fullSequence = stepCount >= 5
 
     Scaffold(
         topBar = {
@@ -98,7 +101,10 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Text(
-                    stringResource(R.string.test_camera_blurb),
+                    stringResource(
+                        if (fullSequence) R.string.test_camera_blurb
+                        else R.string.test_camera_blurb_timelapse_only,
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Surface(
@@ -115,10 +121,12 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                             fontWeight = FontWeight.Bold,
                         )
                         Text(stringResource(R.string.test_camera_step_timelapse))
-                        Text(stringResource(R.string.test_camera_step_intervalometer))
-                        Text(stringResource(R.string.test_camera_step_astro))
-                        Text(stringResource(R.string.test_camera_step_dark))
-                        Text(stringResource(R.string.test_camera_step_ramp))
+                        if (fullSequence) {
+                            Text(stringResource(R.string.test_camera_step_intervalometer))
+                            Text(stringResource(R.string.test_camera_step_astro))
+                            Text(stringResource(R.string.test_camera_step_dark))
+                            Text(stringResource(R.string.test_camera_step_ramp))
+                        }
                     }
                 }
                 Text(

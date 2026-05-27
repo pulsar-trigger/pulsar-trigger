@@ -120,10 +120,12 @@
     <string name="canon_ble_camera_fallback_name">Canon BLE カメラ</string>
     <string name="canon_ble_err_connect_failed">Canon BLE カメラに接続できませんでした。ボディのペアリングモードを確認してもう一度お試しください。</string>
     <string name="canon_ble_connected_hint">Canon BLE 経由で接続中 — バルブ撮影にはボディのモードダイヤルを Bulb に合わせてください。ライブビュー、レンズ情報、バッテリー読み取りはこのトランスポートでは利用できません。</string>
+    <string name="canon_ble_reconnecting_hint">Canon BLE のリンクが切れました — カメラの再アドバタイズを待っています。電源を入れる/スリープを解除すると自動的に再接続します。</string>
     <string name="ptp_connected_hint">USB 接続中 — Pulsar が PTP セッションを保持している間、カメラの設定は固定されます。本体のバルブ／マニュアル切替には一旦切断してください。</string>
     <string name="mode_test_camera">カメラテスト</string>
     <string name="test_camera_title">カメラテスト</string>
-    <string name="test_camera_blurb">5 つのモードすべてで合計 25 ショットを撮影し、アクティブなトランスポート (BLE、CCAPI、または USB PTP) を端から端まで検証します。</string>
+    <string name="test_camera_blurb">5 つのモードすべてで合計 25 ショットを撮影し、アクティブなトランスポート (Pulsar BLE、CCAPI、USB PTP、または Canon BLE) を端から端まで検証します。</string>
+    <string name="test_camera_blurb_timelapse_only">タイムラプスで 5 ショットを撮影します。接続中のカメラがこのトランスポートでバルブをサポートしないため、バルブベースのモード (インターバロメーター-バルブ、天体、ダークフレーム、ランプ) はスキップされます。</string>
     <string name="test_camera_sequence_title">シーケンス</string>
     <string name="test_camera_step_timelapse">1. タイムラプス — 5 ショット、間隔 2 秒</string>
     <string name="test_camera_step_intervalometer">2. インターバロメーター (バルブ) — 5 × 4 秒、間隔 2 秒</string>
@@ -500,11 +502,11 @@
     <!-- User Guide -->
     <string name="section_user_guide">ユーザーガイド</string>
     <string name="guide_overview_title">概要</string>
-    <string name="guide_overview_body">Pulsar Triggerは、3つの独立した接続方法でスマートフォンを強力なカメラコントローラーに変えます：\n\n• BLE — カメラのシャッターポートに接続されたPulsar ESP32ハードウェアモジュールとペアリング。リモートレリーズ端子を持つあらゆるカメラに対応。\n• Wi-Fi（CCAPI） — Canon EOS RシリーズをWi-Fi APIで直接制御。追加ハードウェア不要。\n• USB-C（PTP） — Canon機（および大部分のPTP対応カメラ）をスマートフォンからのUSB-Cケーブルで直接制御。CCAPIを有効化できないCanon EOS Rでは唯一のスマートフォン側接続経路。\n\nアプリは、選択したトランスポートで露出、インターバル、バルブシーケンス、複雑なマルチステップフローを正確に制御できます — これらは相互排他：1つに接続すると他は切断されます。</string>
+    <string name="guide_overview_body">Pulsar Triggerは、4つの独立した接続方法でスマートフォンを強力なカメラコントローラーに変えます：\n\n• Pulsar BLE — カメラのシャッターポートに接続されたPulsar ESP32ハードウェアモジュールとペアリング。リモートレリーズ端子を持つあらゆるカメラに対応。\n• Wi-Fi（CCAPI） — Canon EOS RシリーズをWi-Fi APIで直接制御。追加ハードウェア不要。\n• USB-C（PTP） — Canon機（および大部分のPTP対応カメラ）をスマートフォンからのUSB-Cケーブルで直接制御。CCAPIを有効化できないCanon EOS Rでは唯一のスマートフォン側接続経路。\n• Canon BLE — Canon独自の BR-E1 BLE プロトコルでカメラと直接通信。ワイヤレス、Pulsar ハードウェア不要。\n\nアプリは、選択したトランスポートで露出、インターバル、バルブシーケンス、複雑なマルチステップフローを正確に制御できます — これらは相互排他：1つに接続すると他は切断されます。</string>
     <string name="guide_getting_started_title">はじめに</string>
     <string name="guide_getting_started_body">1. 初回起動時に要求される権限（Bluetooth、位置情報、USB）を許可してください。\n2. スキャン画面を開いて接続方法を選択：\n   • Pulsar ESP32モジュール：電源を入れ、「Bluetoothデバイス」のカードをタップ。\n   • Wi-Fi経由のCanon：カメラでCCAPIを有効化（初回のみPC操作が必要）、カメラのネットワークに参加し、「Canonカメラ」のカードをタップ。\n   • USB-C経由のCanon：ケーブルを接続し、Android権限ダイアログを許可、「USBカメラ」のカードをタップ。\n3. 接続後、そのトランスポートで使用可能な撮影モードがメニューに表示されます。\n\nヒント：スキャン画面の「カメラセットアップヘルプ」ボタンに、Canon経路のボディ別手順があります。</string>
     <string name="guide_transports_title">トランスポート</string>
-    <string name="guide_transports_body">カメラを操作する3つの方法。お使いの機材に合わせて選んでください：\n\n• BLE（ESP32モジュール） — 汎用：有線リモートポートを持つあらゆるカメラに対応。カメラ側の電池消費が最も少ない。ファームウェアが撮影ループを保持するため、フロー中にスマートフォンがスリープ可能。\n• CCAPI（Wi-Fi） — CCAPIを有効化したCanon EOS Rシリーズ。ライブビュー、Star Focus、レンズ検出、バッテリー読み取りに対応。ボディのWi-Fiが常時オンとなり、カメラの電池消費はほぼ倍に — 長時間セッションではUSB-Cダミーバッテリーの併用を検討。\n• PTP（USB-C） — Canon EOS R / RPおよび大部分のPTPカメラ。3つの中で最低レイテンシー（1ショット約10〜30ms）。Wi-Fiオフのため、カメラの消費は約5%/h。CCAPIが有効化されないEOS Rでは必須。注意：PCリモートモードではボディのモードダイヤルが切断するまでロックされます。\n\nスキャン画面の「シミュレーター」エントリで、ハードウェアなしでUIとフローを試せます。</string>
+    <string name="guide_transports_body">カメラを操作する4つの方法。お使いの機材に合わせて選んでください：\n\n• Pulsar BLE（ESP32モジュール） — 汎用：有線リモートポートを持つあらゆるカメラに対応。カメラ側の電池消費が最も少ない。ファームウェアが撮影ループを保持するため、フロー中にスマートフォンがスリープ可能。\n• CCAPI（Wi-Fi） — CCAPIを有効化したCanon EOS Rシリーズ。ライブビュー、Star Focus、レンズ検出、バッテリー読み取りに対応。ボディのWi-Fiが常時オンとなり、カメラの電池消費はほぼ倍に — 長時間セッションではUSB-Cダミーバッテリーの併用を検討。\n• PTP（USB-C） — Canon EOS R / RPおよび大部分のPTPカメラ。最低レイテンシー（1ショット約10〜30ms）。Wi-Fiオフのため、カメラの消費は約5%/h。CCAPIが有効化されないEOS Rでは必須。注意：PCリモートモードではボディのモードダイヤルが切断するまでロックされます。\n• Canon BLE — Canonの BR-E1 プロトコルでカメラと直接通信。ワイヤレス、Pulsar ハードウェア不要、Wi-Fi 設定不要。BR-E1 互換のすべてのボディ（EOS R/RP/R5/R6/Ra、6D II、77D、200D、800D、850D、M50、M200、加えて G7X III / G5X II）に対応。バルブは長押しと解放で動作。ライブビュー、レンズ情報、バッテリー読み取りは BR-E1 プロトコルに含まれていないため利用できません。\n\nスキャン画面の「シミュレーター」エントリで、ハードウェアなしでUIとフローを試せます。</string>
     <string name="guide_intervalometer_title">インターバロメーター</string>
     <string name="guide_intervalometer_body">一定間隔で連続撮影します — タイムラプスに最適です。\n\n• 露出：各ショットでシャッターが開いている時間。\n• インターバル（間隔）：前の露出終了から次の露出開始までの待機時間。\n• ショット数：撮影する総枚数（0 = 無制限）。\n\n1フレームあたりの合計サイクル時間 = 露出 + インターバル。\n\nCanonトランスポート（Wi-FiまたはUSB-C）では、露出を約1秒未満に設定するとアプリが単発撮影を発火しカメラがタイミングを保持、それ以上の露出はバルブを使用します。バルブ撮影ではカメラ本体のモードダイヤルをBulbに合わせてください。</string>
     <string name="guide_astro_title">天体モード</string>

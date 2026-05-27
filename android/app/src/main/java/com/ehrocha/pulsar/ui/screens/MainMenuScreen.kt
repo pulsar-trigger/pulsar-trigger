@@ -17,6 +17,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
@@ -193,8 +194,11 @@ fun MainMenuScreen(
                     val canonCcapiSupportsBulb by vm.canonCcapiSupportsBulb.collectAsState()
                     val ptpTransport by vm.ptpTransport.collectAsState()
                     val ptpReconnecting by vm.ptpReconnecting.collectAsState()
+                    val canonBleTransport by vm.canonBleTransport.collectAsState()
+                    val canonBleReconnecting by vm.canonBleReconnecting.collectAsState()
                     val onCanon = canonCcapiTransport != null
                     val onPtp = ptpTransport != null
+                    val onCanonBle = canonBleTransport != null
                     // PowerShot / older R-bodies don't expose /shutterbutton/manual.
                     // Without it the bulb-based modes can't run; hide them.
                     val bulbBlocked = onCanon && !canonCcapiSupportsBulb
@@ -236,6 +240,10 @@ fun MainMenuScreen(
                         }
                         if (onPtp || ptpReconnecting) {
                             PtpBanner(reconnecting = ptpReconnecting)
+                            Spacer(Modifier.height(8.dp))
+                        }
+                        if (onCanonBle || canonBleReconnecting) {
+                            CanonBleBanner(reconnecting = canonBleReconnecting)
                             Spacer(Modifier.height(8.dp))
                         }
                         LauncherGrid(builtIns + userTiles)
@@ -369,6 +377,47 @@ private fun CanonBulbBanner(
             } else {
                 Icon(
                     Icons.Default.Wifi,
+                    contentDescription = null,
+                    tint = onContainer,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(copyRes),
+                style = MaterialTheme.typography.labelMedium,
+                color = onContainer,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CanonBleBanner(reconnecting: Boolean) {
+    val containerColor = if (reconnecting) MaterialTheme.colorScheme.errorContainer
+                        else MaterialTheme.colorScheme.secondaryContainer
+    val onContainer = if (reconnecting) MaterialTheme.colorScheme.onErrorContainer
+                     else MaterialTheme.colorScheme.onSecondaryContainer
+    val copyRes = if (reconnecting) R.string.canon_ble_reconnecting_hint
+                  else R.string.canon_ble_connected_hint
+    Surface(
+        color = containerColor,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (reconnecting) {
+                CircularProgressIndicator(
+                    strokeWidth = 2.dp,
+                    color = onContainer,
+                    modifier = Modifier.size(16.dp),
+                )
+            } else {
+                Icon(
+                    Icons.Default.Bluetooth,
                     contentDescription = null,
                     tint = onContainer,
                     modifier = Modifier.size(20.dp),

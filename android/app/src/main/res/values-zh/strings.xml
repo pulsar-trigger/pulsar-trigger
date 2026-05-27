@@ -120,10 +120,12 @@
     <string name="canon_ble_camera_fallback_name">佳能 BLE 相机</string>
     <string name="canon_ble_err_connect_failed">无法连接到佳能 BLE 相机。请检查机身上的配对模式后重试。</string>
     <string name="canon_ble_connected_hint">已通过佳能 BLE 连接 — 请将机身模式拨盘设为 Bulb 以进行 B 门流程。此传输方式不支持实时取景、镜头信息和电池读取。</string>
+    <string name="canon_ble_reconnecting_hint">佳能 BLE 连接已断开 — 等待相机重新广播。开启相机或将其唤醒可自动重新连接。</string>
     <string name="ptp_connected_hint">已通过 USB 连接 — Pulsar 持有 PTP 会话时相机设置被锁定。需要在机身上切换 Bulb/手动模式时请先断开连接。</string>
     <string name="mode_test_camera">相机测试</string>
     <string name="test_camera_title">相机测试</string>
-    <string name="test_camera_blurb">在所有 5 个模式下共拍 25 张照片，端到端验证当前传输 (BLE、CCAPI 或 USB PTP)。</string>
+    <string name="test_camera_blurb">在所有 5 个模式下共拍 25 张照片，端到端验证当前传输 (Pulsar BLE、CCAPI、USB PTP 或佳能 BLE)。</string>
+    <string name="test_camera_blurb_timelapse_only">在 Timelapse 模式下拍 5 张照片。已连接的相机在此传输上不公布 B 门支持，因此基于 B 门的模式（间隔计-B 门、天文、暗场、渐变）将被跳过。</string>
     <string name="test_camera_sequence_title">序列</string>
     <string name="test_camera_step_timelapse">1. 延时 — 5 张，间隔 2 秒</string>
     <string name="test_camera_step_intervalometer">2. 间隔仪 (Bulb) — 5 × 4 秒，间隔 2 秒</string>
@@ -500,11 +502,11 @@
     <!-- User Guide -->
     <string name="section_user_guide">用户指南</string>
     <string name="guide_overview_title">概述</string>
-    <string name="guide_overview_body">Pulsar Trigger 将您的手机变成强大的相机控制器，提供三种独立的连接方式：\n\n• BLE——与连接到相机快门端口的 Pulsar ESP32 硬件模块配对。适用于任何带有遥控快门接口的相机。\n• Wi-Fi（CCAPI）——通过内置 Wi-Fi API 直接控制佳能 EOS R 系列机身。无需额外硬件。\n• USB-C（PTP）——通过 USB-C 数据线从手机直接控制佳能机身（及大多数 PTP 兼容相机）。对于无法激活 CCAPI 的佳能 EOS R，这是唯一的手机端接入方式。\n\n应用程序在您选择的传输方式下提供对曝光、间隔、B 门序列和复杂多步骤流程的精确控制——它们互斥：连接一个会断开其他。</string>
+    <string name="guide_overview_body">Pulsar Trigger 将您的手机变成强大的相机控制器，提供四种独立的连接方式：\n\n• Pulsar BLE——与连接到相机快门端口的 Pulsar ESP32 硬件模块配对。适用于任何带有遥控快门接口的相机。\n• Wi-Fi（CCAPI）——通过内置 Wi-Fi API 直接控制佳能 EOS R 系列机身。无需额外硬件。\n• USB-C（PTP）——通过 USB-C 数据线从手机直接控制佳能机身（及大多数 PTP 兼容相机）。对于无法激活 CCAPI 的佳能 EOS R，这是唯一的手机端接入方式。\n• 佳能 BLE——直接用佳能自家的 BR-E1 BLE 协议与机身通信。无线、无需 Pulsar 硬件。\n\n应用程序在您选择的传输方式下提供对曝光、间隔、B 门序列和复杂多步骤流程的精确控制——它们互斥：连接一个会断开其他。</string>
     <string name="guide_getting_started_title">快速入门</string>
     <string name="guide_getting_started_body">1. 在首次启动时授予应用请求的权限（蓝牙、定位、USB）。\n2. 打开扫描屏幕，选择您想要的连接方式：\n   • Pulsar ESP32 模块：开机，点击"蓝牙设备"下的卡片。\n   • Wi-Fi 连接佳能：在相机上启用 CCAPI（需要一次性 PC 端激活），加入相机的网络，然后点击"佳能相机"下的卡片。\n   • USB-C 连接佳能：插入数据线，接受 Android 权限对话框，点击"USB 相机"下的相机卡片。\n3. 连接后，菜单会显示该传输方式可用的拍摄模式。\n\n提示：扫描屏幕上有一个"相机设置帮助"按钮，提供针对佳能路径的机身专属说明。</string>
     <string name="guide_transports_title">传输方式</string>
-    <string name="guide_transports_body">三种控制相机的方式。根据您的设备选择：\n\n• BLE（ESP32 模块）——通用：任何具有有线遥控端口的相机。相机端电池消耗最低。固件拥有运行循环，因此手机可以在流程进行中睡眠。\n• CCAPI（Wi-Fi）——已激活 CCAPI 的佳能 EOS R 系列。增加实时取景、星点对焦、镜头检测和电池读取。由于机身 Wi-Fi 保持开启，相机电池消耗大致翻倍；长时间会话请考虑 USB-C 假电池直通供电。\n• PTP（USB-C）——佳能 EOS R / RP 及大多数 PTP 相机。三种中延迟最低（每张约 10–30 毫秒）。由于 Wi-Fi 关闭，相机仅消耗约 5%/小时。对于 CCAPI 无法激活的 EOS R 是必需的。注意：在 PC 远程模式下，机身的模式拨盘在断开前会锁定。\n\n扫描屏幕上的"模拟器"条目让您在没有任何硬件连接的情况下试用界面和流程。</string>
+    <string name="guide_transports_body">四种控制相机的方式。根据您的设备选择：\n\n• Pulsar BLE（ESP32 模块）——通用：任何具有有线遥控端口的相机。相机端电池消耗最低。固件拥有运行循环，因此手机可以在流程进行中睡眠。\n• CCAPI（Wi-Fi）——已激活 CCAPI 的佳能 EOS R 系列。增加实时取景、星点对焦、镜头检测和电池读取。由于机身 Wi-Fi 保持开启，相机电池消耗大致翻倍；长时间会话请考虑 USB-C 假电池直通供电。\n• PTP（USB-C）——佳能 EOS R / RP 及大多数 PTP 相机。延迟最低（每张约 10–30 毫秒）。由于 Wi-Fi 关闭，相机仅消耗约 5%/小时。对于 CCAPI 无法激活的 EOS R 是必需的。注意：在 PC 远程模式下，机身的模式拨盘在断开前会锁定。\n• 佳能 BLE——直接使用佳能的 BR-E1 协议。无线、无需 Pulsar 硬件、无需 Wi-Fi 设置。任何 BR-E1 兼容机身（EOS R/RP/R5/R6/Ra、6D II、77D、200D、800D、850D、M50、M200，加上 G7X III / G5X II）。B 门通过按下保持-释放工作。无实时取景、镜头信息或电池读取——这些都不在 BR-E1 协议中。\n\n扫描屏幕上的"模拟器"条目让您在没有任何硬件连接的情况下试用界面和流程。</string>
     <string name="guide_intervalometer_title">间隔计</string>
     <string name="guide_intervalometer_body">以固定间隔拍摄一系列照片——非常适合延时摄影。\n\n• 曝光：每次拍摄时快门打开的时间。\n• 间隔（间隙）：一次曝光结束到下一次开始之间的暂停时间。\n• 张数：要拍摄的总照片数（0 = 无限制）。\n\n每帧总周期时间 = 曝光 + 间隔。\n\n在佳能传输方式（Wi-Fi 或 USB-C）上，如果曝光时间设置为约 1 秒以下，应用会发起单张拍摄，由相机控制时间；较长的曝光使用 B 门。B 门运行请将机身模式拨盘设置为 Bulb。</string>
     <string name="guide_astro_title">天文模式</string>

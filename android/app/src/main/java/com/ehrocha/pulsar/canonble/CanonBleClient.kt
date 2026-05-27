@@ -43,6 +43,11 @@ import java.util.concurrent.atomic.AtomicReference
 class CanonBleClient(
     private val ctx: Context,
     private val device: BluetoothDevice,
+    /** Invoked when the GATT link drops spontaneously (camera powered off,
+     *  bond cleared, body went out of range, etc.). NOT invoked for the
+     *  ordinary [close] path. The viewmodel uses this to flip the
+     *  reconnecting banner and re-arm the BLE scan. */
+    private val onSpontaneousDisconnect: () -> Unit = {},
 ) {
 
     companion object {
@@ -89,6 +94,14 @@ class CanonBleClient(
     private val servicesSignal = AtomicReference<CompletableDeferred<Boolean>?>(null)
     private val writeSignal = AtomicReference<CompletableDeferred<Boolean>?>(null)
     @Volatile private var disconnected = false
+    /** True iff the caller explicitly invoked [close]. Disconnect events
+     *  that arrive after this is set are expected; don't fire the
+     *  spontaneous-disconnect callback in that case. */
+    @Volatile private var releasedByUser = false
+    /** True once we've reached the post-services-discovered state, so we
+     *  know any later STATE_DISCONNECTED is a real link drop (not just a
+     *  failed initial connect — those are handled by the connect deferred). */
+    @Volatile private var fullyConnected = false
 
     private val callback = object : BluetoothGattCallback() {
         @SuppressLint("MissingPermission")
@@ -104,6 +117,12 @@ class CanonBleClient(
                     connectSignal.getAndSet(null)?.complete(false)
                     servicesSignal.getAndSet(null)?.complete(false)
                     writeSignal.getAndSet(null)?.complete(false)
+                    // Distinguish "link drop in flight" (auto-reconnect
+                    // candidate) from "caller asked to close" (terminal).
+                    if (fullyConnected && !releasedByUser) {
+                        Log.i(TAG, "spontaneous disconnect from ${device.address}")
+                        runCatching { onSpontaneousDisconnect() }
+                    }
                 }
             }
         }
@@ -119,6 +138,7 @@ class CanonBleClient(
             pairChar = service.getCharacteristic(PAIR_CHAR_UUID)
             val ok = controlChar != null && pairChar != null
             if (!ok) Log.w(TAG, "missing char: control=${controlChar != null} pair=${pairChar != null}")
+            if (ok) fullyConnected = true
             servicesSignal.getAndSet(null)?.complete(ok)
             connectSignal.getAndSet(null)?.complete(ok)
         }
@@ -214,6 +234,8 @@ class CanonBleClient(
 
     @SuppressLint("MissingPermission")
     fun close() {
+        releasedByUser = true
+        fullyConnected = false
         try {
             gatt?.disconnect()
             gatt?.close()
