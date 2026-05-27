@@ -1441,6 +1441,12 @@ internal fun UserGuideSectionContent() {
             body = stringResource(R.string.guide_transports_body),
         )
 
+        // ── Canon BLE in detail ─────────────────────────────────────────
+        GuideSection(
+            title = stringResource(R.string.guide_canon_ble_title),
+            body = stringResource(R.string.guide_canon_ble_body),
+        )
+
         // ── Intervalometer ──────────────────────────────────────────────
         GuideSection(
             title = stringResource(R.string.guide_intervalometer_title),

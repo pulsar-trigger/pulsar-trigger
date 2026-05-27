@@ -382,7 +382,7 @@ Uses the phone's compass + Polaris position calculation to help align an equator
 
 ### Star Focus Assist (CCAPI + PTP)
 
-Four-step guided wizard for nailing pinpoint focus on stars before kicking off an astro run. Works on both Canon transports — `StarFocusScreen` takes a `CameraTransport` and reads from whichever Canon transport is active (CCAPI over Wi-Fi, or PTP over USB on bodies that advertise the live-view op). Live view streams from the camera, the user taps a bright star, and a peak-luminance sharpness readout updates per frame as they walk focus with six drive-focus buttons (`«««` / `««` / `«` / `»` / `»»` / `»»»`). Auto-stops live view on screen leave or disconnect to save battery. See [docs/ccapi.md](docs/ccapi.md#star-focus-assist-tools-tab).
+Four-step guided wizard for nailing pinpoint focus on stars before kicking off an astro run. Works on the two Canon transports that support live view — `StarFocusScreen` takes a `CameraTransport` and reads from whichever transport is active (CCAPI over Wi-Fi, or PTP over USB on bodies that advertise the live-view op). Not available on Canon BLE direct: the BR-E1 protocol has no live-view endpoint. Live view streams from the camera, the user taps a bright star, and a peak-luminance sharpness readout updates per frame as they walk focus with six drive-focus buttons (`«««` / `««` / `«` / `»` / `»»` / `»»»`). Auto-stops live view on screen leave or disconnect to save battery. See [docs/ccapi.md](docs/ccapi.md#star-focus-assist-tools-tab).
 
 ### Shot Log
 
