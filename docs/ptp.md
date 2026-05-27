@@ -4,7 +4,7 @@ Pulsar's third transport: drive a Canon body (or any PTP-capable camera) directl
 
 The PTP transport's reason to exist: Canon's EOS R doesn't support CCAPI even on the latest firmware, and there is no PC activation path that fixes it. PTP is the only phone-side automation Pulsar can offer on that body. As a bonus it's also the lowest-latency transport overall — bulk USB writes are ~10-30 ms vs CCAPI's ~100-200 ms HTTP RTT — and the camera draws ~5 %/h instead of ~30 %/h, because the body's Wi-Fi radio stays off.
 
-## What works (Phase 1–5d shipped)
+## What works (Phase 1–6 shipped)
 
 | Feature | Status | Notes |
 |---|---|---|
@@ -16,8 +16,8 @@ The PTP transport's reason to exist: Canon's EOS R doesn't support CCAPI even on
 | Battery readout | ✅ | PTP `GetDevicePropValue(0x5001)`, polled every 30 s |
 | Lens info | ✅ | Canon `LensName` property `0xD157`; focal length parsed from name |
 | All wizard modes (Intervalometer, Astro, DarkFrame, Ramp, Timelapse) | ✅ | Routed through `runCanonBulb` / `runCanonTimelapse` / `runCanonRamp` |
-| Mid-cable-pull recovery | ⚠️ | Banner shows, transport tears down cleanly. *Not* a true resume — user must restart the flow after replug. Phase 6 work. |
-| Live view / Star Focus | ❌ | Phase 6 work; ESP32 wizards do not need it |
+| Live view / Star Focus | ✅ | Canon `GetViewFinderData` (op `0x9153`) + `DriveLens` (op `0x9155`) + `SetDevicePropValue(EvfOutput 0xD1B0)`; `StarFocusScreen` reads from whichever Canon transport is active |
+| Mid-cable-pull recovery | ⚠️ | Banner shows, transport tears down cleanly. *Not* a true resume — user must restart the flow after replug. Future work. |
 
 ## Tested bodies
 
@@ -139,7 +139,8 @@ override val supportsBulb: Boolean =
     0x9125 in deviceInfo.supportedOperations  // older Canon bulb op
 override val supportsSettings: Boolean =
     deviceInfo.supportedDeviceProperties.isNotEmpty()
-override val supportsLiveView: Boolean = false      // Phase 6 work
+override val supportsLiveView: Boolean =
+    OP_CANON_GET_VIEWFINDER_DATA in deviceInfo.supportedOperations
 override val supportsLensInfo: Boolean =
     PROP_CANON_LENS_NAME in deviceInfo.supportedDeviceProperties
 override val supportsBatteryReadout: Boolean =
@@ -189,10 +190,9 @@ Strings in PTP are UTF-16LE with a 1-byte length prefix (count of UTF-16 code un
 - `libgphoto2`'s `canon` driver — concrete reference for Canon vendor ops (`0x9114` / `0x9115` / `0x9128` / `0x9129`).
 - Canon EDSDK / PTP extensions reference — NDA-covered, lives under `../Canon-API/` outside the repo.
 
-## Known issues / Phase 6+ work
+## Known issues / future work
 
 1. **No mid-shoot resume.** Cable replug requires manual restart.
 2. **Bulb code `0x000C` is R-class specific.** Other Canon bodies may need a different value for `SetDevicePropValue(0xD102, ...)`. We'd want a per-body table or query the supported value range via `GetDevicePropDesc`.
 3. **Body locked in Bulb after a bulb flow.** Disconnect-and-reconnect is the workaround. A `setShutterMode(bulb = false)` that writes a known-safe Manual code would be cleaner.
-4. **Live view + Star Focus** — Canon vendor ops `EnableLiveView` / `GetViewFinderImage`. The existing `StarFocusScreen` JPEG decoder doesn't care about transport; just need to wire the ops.
-5. **Non-Canon PTP bulb.** `InitiateCapture` is universal; bulb is vendor-specific. Nikon / Sony / Fuji each need their own bulb opcodes.
+4. **Non-Canon PTP bulb.** `InitiateCapture` is universal; bulb is vendor-specific. Nikon / Sony / Fuji each need their own bulb opcodes.

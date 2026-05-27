@@ -188,16 +188,16 @@ fun MainMenuScreen(
                 }
                 TAB_TRIGGER -> {
                     val userModes by vm.userModes.collectAsState()
-                    val canonTransport by vm.canonTransport.collectAsState()
-                    val canonReconnecting by vm.canonReconnecting.collectAsState()
-                    val canonSupportsBulb by vm.canonSupportsBulb.collectAsState()
+                    val canonCcapiTransport by vm.canonCcapiTransport.collectAsState()
+                    val canonCcapiReconnecting by vm.canonCcapiReconnecting.collectAsState()
+                    val canonCcapiSupportsBulb by vm.canonCcapiSupportsBulb.collectAsState()
                     val ptpTransport by vm.ptpTransport.collectAsState()
                     val ptpReconnecting by vm.ptpReconnecting.collectAsState()
-                    val onCanon = canonTransport != null
+                    val onCanon = canonCcapiTransport != null
                     val onPtp = ptpTransport != null
                     // PowerShot / older R-bodies don't expose /shutterbutton/manual.
                     // Without it the bulb-based modes can't run; hide them.
-                    val bulbBlocked = onCanon && !canonSupportsBulb
+                    val bulbBlocked = onCanon && !canonCcapiSupportsBulb
                     val builtIns = listOf(
                         launcherItem(R.string.mode_intervalometer, Icons.Default.Timer,
                             enabled = !bulbBlocked) { onIntervalometer2Selected() },
@@ -229,7 +229,7 @@ fun MainMenuScreen(
                     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                         if (onCanon) {
                             CanonBulbBanner(
-                                reconnecting = canonReconnecting,
+                                reconnecting = canonCcapiReconnecting,
                                 bulbUnsupported = bulbBlocked,
                             )
                             Spacer(Modifier.height(8.dp))
@@ -242,7 +242,7 @@ fun MainMenuScreen(
                     }
                 }
                 TAB_TOOLS -> {
-                    val canonOn = vm.canonTransport.collectAsState().value != null
+                    val canonOn = vm.canonCcapiTransport.collectAsState().value != null
                     // Star Focus needs a live-view-capable Canon transport.
                     // CCAPI always supplies live view (gated by canonOn);
                     // PTP supplies it only on bodies that advertise

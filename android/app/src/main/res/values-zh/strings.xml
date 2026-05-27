@@ -114,6 +114,12 @@
     <string name="section_usb_cameras">USB相机</string>
     <string name="usb_cameras_subtitle">通过USB-C连接</string>
     <string name="usb_camera_subtitle">USB上的PTP</string>
+    <string name="section_canon_ble_remotes">佳能 BLE 遥控器</string>
+    <string name="canon_ble_remotes_subtitle">将相机置于蓝牙配对模式以在此处显示</string>
+    <string name="canon_ble_camera_subtitle">基于 BLE 的佳能 BR-E1 协议</string>
+    <string name="canon_ble_camera_fallback_name">佳能 BLE 相机</string>
+    <string name="canon_ble_err_connect_failed">无法连接到佳能 BLE 相机。请检查机身上的配对模式后重试。</string>
+    <string name="canon_ble_connected_hint">已通过佳能 BLE 连接 — 请将机身模式拨盘设为 Bulb 以进行 B 门流程。此传输方式不支持实时取景、镜头信息和电池读取。</string>
     <string name="ptp_connected_hint">已通过 USB 连接 — Pulsar 持有 PTP 会话时相机设置被锁定。需要在机身上切换 Bulb/手动模式时请先断开连接。</string>
     <string name="mode_test_camera">相机测试</string>
     <string name="test_camera_title">相机测试</string>
@@ -494,29 +500,39 @@
     <!-- User Guide -->
     <string name="section_user_guide">用户指南</string>
     <string name="guide_overview_title">概述</string>
-    <string name="guide_overview_body">Pulsar Trigger 通过蓝牙低功耗（BLE）将您的手机变成强大的相机控制器。它连接到相机快门端口上的 Pulsar 模块，让您精确控制曝光、间隔和复杂的拍摄序列——全部无线操作。</string>
+    <string name="guide_overview_body">Pulsar Trigger 将您的手机变成强大的相机控制器，提供三种独立的连接方式：\n\n• BLE——与连接到相机快门端口的 Pulsar ESP32 硬件模块配对。适用于任何带有遥控快门接口的相机。\n• Wi-Fi（CCAPI）——通过内置 Wi-Fi API 直接控制佳能 EOS R 系列机身。无需额外硬件。\n• USB-C（PTP）——通过 USB-C 数据线从手机直接控制佳能机身（及大多数 PTP 兼容相机）。对于无法激活 CCAPI 的佳能 EOS R，这是唯一的手机端接入方式。\n\n应用程序在您选择的传输方式下提供对曝光、间隔、B 门序列和复杂多步骤流程的精确控制——它们互斥：连接一个会断开其他。</string>
     <string name="guide_getting_started_title">快速入门</string>
-    <string name="guide_getting_started_body">1. 将 Pulsar 模块连接到相机的快门端口。\n2. 开机——LED 在广播时闪烁。\n3. 打开应用，在主屏幕上点击"连接"。\n4. 连接后，从菜单中选择拍摄模式。\n\n提示：连接前请开启蓝牙和定位。应用会提示您授予所需权限。</string>
+    <string name="guide_getting_started_body">1. 在首次启动时授予应用请求的权限（蓝牙、定位、USB）。\n2. 打开扫描屏幕，选择您想要的连接方式：\n   • Pulsar ESP32 模块：开机，点击"蓝牙设备"下的卡片。\n   • Wi-Fi 连接佳能：在相机上启用 CCAPI（需要一次性 PC 端激活），加入相机的网络，然后点击"佳能相机"下的卡片。\n   • USB-C 连接佳能：插入数据线，接受 Android 权限对话框，点击"USB 相机"下的相机卡片。\n3. 连接后，菜单会显示该传输方式可用的拍摄模式。\n\n提示：扫描屏幕上有一个"相机设置帮助"按钮，提供针对佳能路径的机身专属说明。</string>
+    <string name="guide_transports_title">传输方式</string>
+    <string name="guide_transports_body">三种控制相机的方式。根据您的设备选择：\n\n• BLE（ESP32 模块）——通用：任何具有有线遥控端口的相机。相机端电池消耗最低。固件拥有运行循环，因此手机可以在流程进行中睡眠。\n• CCAPI（Wi-Fi）——已激活 CCAPI 的佳能 EOS R 系列。增加实时取景、星点对焦、镜头检测和电池读取。由于机身 Wi-Fi 保持开启，相机电池消耗大致翻倍；长时间会话请考虑 USB-C 假电池直通供电。\n• PTP（USB-C）——佳能 EOS R / RP 及大多数 PTP 相机。三种中延迟最低（每张约 10–30 毫秒）。由于 Wi-Fi 关闭，相机仅消耗约 5%/小时。对于 CCAPI 无法激活的 EOS R 是必需的。注意：在 PC 远程模式下，机身的模式拨盘在断开前会锁定。\n\n扫描屏幕上的"模拟器"条目让您在没有任何硬件连接的情况下试用界面和流程。</string>
     <string name="guide_intervalometer_title">间隔计</string>
-    <string name="guide_intervalometer_body">以固定间隔拍摄一系列照片——非常适合延时摄影。\n\n• 曝光：每次拍摄时快门打开的时间。\n• 间隔（间隙）：一次曝光结束到下一次开始之间的暂停时间。\n• 张数：要拍摄的总照片数（0 = 无限制）。\n\n每帧总周期时间 = 曝光 + 间隔。</string>
+    <string name="guide_intervalometer_body">以固定间隔拍摄一系列照片——非常适合延时摄影。\n\n• 曝光：每次拍摄时快门打开的时间。\n• 间隔（间隙）：一次曝光结束到下一次开始之间的暂停时间。\n• 张数：要拍摄的总照片数（0 = 无限制）。\n\n每帧总周期时间 = 曝光 + 间隔。\n\n在佳能传输方式（Wi-Fi 或 USB-C）上，如果曝光时间设置为约 1 秒以下，应用会发起单张拍摄，由相机控制时间；较长的曝光使用 B 门。B 门运行请将机身模式拨盘设置为 Bulb。</string>
     <string name="guide_astro_title">天文模式</string>
-    <string name="guide_astro_body">为天文摄影优化。使用相同的间隔计引擎并添加天文辅助功能。\n\n• 最大曝光时间根据焦距和传感器使用 500 法则、400 法则或 NPF 法则计算。\n• 仪表板显示月相、暮光时间和 Bortle 等级估算。\n• 与会话规划器配合使用，规划多目标夜间拍摄。</string>
+    <string name="guide_astro_body">为天文摄影优化。使用相同的间隔计引擎并添加天文辅助功能。\n\n• 最大曝光时间根据焦距和传感器使用 500 法则、400 法则或 NPF 法则计算。\n• 在佳能传输方式上，焦距会尽可能从已安装的镜头自动填充。\n• 仪表板显示月相、暮光时间和 Bortle 等级估算。\n• 在佳能传输方式上提供逐张自动对焦开关（BLE-ESP 拍摄不单独暴露 AF）。\n• 与会话规划器配合规划多目标夜间拍摄，与星点对焦配合先确定对焦。</string>
     <string name="guide_manual_title">手动模式</string>
-    <string name="guide_manual_body">在屏幕上提供一个简单的快门按钮。\n\n• 点击以配置的曝光时间拍摄一张照片。\n• 长按进入 B 门——按住期间快门保持打开。\n• 非常适合测试设置或单次长曝光。</string>
+    <string name="guide_manual_body">在屏幕上提供一个简单的快门按钮。\n\n• 按住：按住按钮期间快门保持打开。松开关闭。\n• 锁定：点击一次打开快门，再次点击关闭。最适合不想一直按住按钮的长曝光。\n• 通过操作区域中的分段按钮在"按住"和"锁定"之间切换。\n\n非常适合测试您的设置、单次长曝光，或在启动较长流程前验证传输方式。</string>
     <string name="guide_dark_frames_title">暗场</string>
-    <string name="guide_dark_frames_body">盖上镜头盖，使用相同的曝光时间拍摄校准帧。\n\n• 暗场记录传感器噪声，以便堆叠软件可以将其减去。\n• 使用与亮场相同的曝光时间并盖上镜头。\n• 选择要拍摄多少张暗场——20 到 30 张是常见的起点。\n• 提供基于常见曝光时间的内置预设。</string>
+    <string name="guide_dark_frames_body">盖上镜头盖，使用相同的曝光时间拍摄校准帧。\n\n• 暗场记录传感器噪声，以便堆叠软件可以将其减去。\n• 使用与亮场相同的曝光时间并盖上镜头。\n• 选择要拍摄多少张暗场——20 到 30 张是常见的起点。\n• 提供基于常见曝光时间的内置预设。\n\n理想情况下在会话结束时拍摄暗场，以使传感器温度与亮场匹配。</string>
     <string name="guide_ramp_title">曝光渐变</string>
     <string name="guide_ramp_body">在整个序列中逐渐改变曝光时间——非常适合从日落到夜晚的圣杯延时摄影。\n\n• 设置起始和结束曝光时间以及帧数。\n• 应用在两个值之间平滑过渡。\n• 开始前预览渐变曲线。\n• 与工作流功能结合创建多阶段序列。</string>
     <string name="guide_flows_title">工作流与预设</string>
-    <string name="guide_flows_body">工作流允许您将多个拍摄步骤串联成一个自动化序列。\n\n• 每个步骤可以是间隔计、天文、暗场、渐变或暂停。\n• 步骤按顺序执行——非常适合"拍摄 100 张亮场，然后 30 张暗场"的工作流。\n• 将工作流保存到库中并添加标签以便检索。\n• 收藏常用工作流使其显示在最前面。\n• 内置预设为常见场景提供快速起点。</string>
+    <string name="guide_flows_body">工作流允许您将多个拍摄步骤串联成一个自动化序列。\n\n• 每个步骤可以是间隔计、天文、暗场、渐变或暂停。\n• 步骤按顺序执行——非常适合"拍摄 100 张亮场，然后 30 张暗场"的工作流。\n• 将工作流保存到库中并添加标签以便检索。\n• 收藏常用工作流使其显示在最前面。\n• 内置预设为常见场景提供快速起点。\n• 当前步骤的模式和关键参数会显示在运行视图的标签中，让您随时了解正在拍摄的内容。</string>
+    <string name="guide_star_focus_title">星点对焦辅助</string>
+    <string name="guide_star_focus_body">在启动天文运行之前，通过四步引导向导精确对准星点对焦。在佳能传输方式（Wi-Fi 和 USB-C）上，当机身支持该传输方式下的实时取景时可用。\n\n• 准备：镜头 AF/MF 开关设为 AF；模式拨盘设为 M（B 门时实时取景禁用）。\n• 瞄准：实时取景流式传输；点击一颗明亮的恒星以在其上锁定小区域。\n• 对焦：逐帧更新的峰值亮度锐度读数；六个对焦驱动按钮（«««、««、«、»、»»、»»»）步进电机——1 = 精细，3 = 粗略。\n• 锁定：实时取景自动停止以节省电池。如有 MF 开关的镜头切换至 MF；没有开关的镜头保持 AF——Pulsar 已在 B 门运行时发送 af=false。\n\n在佳能机身已连接的情况下，可在工具选项卡中找到。</string>
+    <string name="guide_polar_align_title">极轴对齐</string>
+    <string name="guide_polar_align_body">使用手机的指南针 + GPS 位置 + 当前北极星时角辅助赤道仪极轴对齐。\n\n• 将手机稳定地贴在赤道仪的极轴上（或使用热靴/冷靴支架）。\n• 屏幕上的十字线显示北极星此刻应在极轴镜中的位置。\n• 调整赤道仪的高度和方位旋钮，直至视野匹配。\n\n离线工作——一旦 GPS 定位完成，就不需要网络。</string>
+    <string name="guide_camera_test_title">相机测试</string>
+    <string name="guide_camera_test_body">对当前连接的佳能传输方式（Wi-Fi 或 USB-C）发起 25 张拍摄、横跨全部 5 种拍摄模式的端到端诊断。\n\n• 依次运行延时、间隔计-B 门、天文、暗场和渐变向导。\n• 在更换数据线、切换机身或升级固件后非常有用，可在真正会话前确认有效传输方式端到端工作。\n• 在工具选项卡中找到。请确保相机存储卡有空间，并在测试需要的环节将拨盘设为 Bulb。</string>
     <string name="guide_dashboard_title">天文仪表板</string>
     <string name="guide_dashboard_body">天文摄影师的实时天况面板。\n\n• 月相和照明百分比。\n• 日落、暮光（民用/航海/天文）和日出时间。\n• 基于 GPS 位置的 Bortle 等级估算。\n• 今晚星空：地平线以上的深空天体目录，按高度排序。</string>
     <string name="guide_planner_title">会话规划器</string>
     <string name="guide_planner_body">出发前规划一整晚的拍摄。\n\n• 添加多个目标，各自有独立的曝光、间隔和帧数设置。\n• 拖动重新排列目标。\n• 查看总会话时间和每个目标的估算。\n• 导出计划或直接加载到工作流引擎。\n• 在设置 → 规划器中调整默认光学参数。</string>
+    <string name="guide_shot_log_title">拍摄日志</string>
+    <string name="guide_shot_log_body">每次完成的运行都会生成一条日志条目：模式、曝光、间隔、拍摄张数、状态（已完成 / 已停止）和时间戳。便于回顾您实际拍摄的内容与计划的对比。\n\n通过备份与恢复（Storage Access Framework——Google Drive、OneDrive、本地存储或任何 DocumentsProvider），日志在卸载后仍可保留。</string>
     <string name="guide_settings_title">设置</string>
-    <string name="guide_settings_body">自定义您的 Pulsar 体验。\n\n• 语言：在英语、葡萄牙语、西班牙语、法语、德语、日语和中文之间切换。\n• 设备：重命名 Pulsar 模块，配置自动关机计时器。\n• GPIO 引脚：如果线缆接线不同，重新映射快门和对焦引脚。\n• 规划器：设置默认传感器和焦距预设。\n• 备份/恢复：导出或导入已保存的工作流和设置。\n• 更新：检查新的固件 OTA 或应用更新。\n• 设备信息：查看硬件版本、固件版本和 BLE 地址。</string>
+    <string name="guide_settings_body">自定义您的 Pulsar 体验。\n\n• 语言：在英语、葡萄牙语、西班牙语、法语、德语、日语和中文之间切换。\n• 设备：重命名 Pulsar 模块，配置自动关机计时器。\n• GPIO 引脚：如果线缆接线不同，重新映射快门和对焦引脚。\n• 佳能相机：已保存的机身、相机昵称、SSDP 发现被阻塞时按 IP 添加。凭据加密静态存储。\n• 后台活动：启用 Android 电池优化豁免，防止长时间流程被 Doze 暂停。\n• 规划器：默认传感器和焦距预设。\n• 备份/恢复：通过 Android 的 Storage Access Framework 将工作流、预设、拍摄日志和设置导出或导入为 JSON 文件。\n• 更新：检查新的固件 OTA 或应用更新。\n• 设备信息：硬件版本、固件版本和 BLE 地址。</string>
     <string name="guide_tips_title">提示与技巧</string>
-    <string name="guide_tips_body">• 保持蓝牙开启并将手机放在附近——BLE 范围在室外通常为 10-15 米。\n• 长时间会话使用充满电的电池；反光镜锁定和电子快门可节省电量。\n• 天文摄影请提前到达，在暮光消退时进行极轴对齐。\n• 将常用工作流保存为流程，一键启动会话。\n• 暗场可以在会话结束时拍摄——传感器温度应与亮场相似。\n• 出发前查看仪表板：如果月亮很亮，请计划窄带或广角目标。</string>
+    <string name="guide_tips_body">• BLE 范围在室外通常为 10–15 米——请将手机放在附近。\n• 长时间佳能 Wi-Fi 会话请使用 USB-C 假电池直通供电（例如 EOS RP 上的 DR-E18）。CCAPI 大致使机身电池续航减半。\n• USB-C（PTP）是佳能上最省电的传输方式——相机消耗约 5%/小时，而 Wi-Fi 约 30%/小时。\n• 在 PC 远程模式下（佳能 USB-C）模式拨盘会锁定。要在机身上更改 B 门/手动，请先断开连接。\n• 天文摄影请提前到达，在暮光消退时进行极轴对齐。长曝光运行前使用星点对焦。\n• 将常用工作流保存为流程，一键启动会话。\n• 硬件变更后运行相机测试（工具选项卡），确认传输方式端到端工作。\n• 会话结束时的暗场可使传感器温度与亮场匹配。</string>
 
     <!-- Permissions screen -->
     <string name="permissions_required_title">需要权限</string>

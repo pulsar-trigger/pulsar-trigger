@@ -154,9 +154,9 @@ fun AstroMode2Screen(
     val runState = LocalRunState.current
     val running = runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
-    val canonTransport = vm.canonTransport.collectAsState().value
+    val canonCcapiTransport = vm.canonCcapiTransport.collectAsState().value
     val ptpTransport = vm.ptpTransport.collectAsState().value
-    val onCanon = canonTransport != null
+    val onCanon = canonCcapiTransport != null
     val onPtp = ptpTransport != null
     /** Both Canon transports give us a per-shot AF flag. */
     val canControlAf = onCanon || onPtp
@@ -169,9 +169,9 @@ fun AstroMode2Screen(
     var lensInfo by remember {
         mutableStateOf<com.ehrocha.pulsar.transport.LensInfo?>(null)
     }
-    LaunchedEffect(canonTransport, ptpTransport) {
+    LaunchedEffect(canonCcapiTransport, ptpTransport) {
         val t: com.ehrocha.pulsar.transport.CameraTransport =
-            canonTransport ?: ptpTransport ?: return@LaunchedEffect
+            canonCcapiTransport ?: ptpTransport ?: return@LaunchedEffect
         if (!t.supportsLensInfo) return@LaunchedEffect
         val info = t.getLensInfo() ?: return@LaunchedEffect
         lensInfo = info

@@ -125,7 +125,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     // ── CCAPI (Canon WiFi) discovery ─────────────────────────────────────
     // Runs alongside BLE scan; scan card shows both lists.
     private val ccapiDiscovery = com.ehrocha.pulsar.transport.ccapi.CcapiDiscovery(app)
-    val canonCameras: StateFlow<List<com.ehrocha.pulsar.transport.ccapi.CanonCamera>> =
+    val canonCcapiCameras: StateFlow<List<com.ehrocha.pulsar.transport.ccapi.CanonCamera>> =
         ccapiDiscovery.cameras
 
     /** Current Wi-Fi SSID, or null if not on Wi-Fi / permission missing.
@@ -154,33 +154,33 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     // When non-null, the app talks to a Canon camera over HTTP instead of BLE.
     // Mutually exclusive with BLE & simulator — picking one disconnects the
     // others. Only Timelapse runs are supported in Phase 2.
-    private val _canonTransport =
+    private val _canonCcapiTransport =
         MutableStateFlow<com.ehrocha.pulsar.transport.ccapi.CcapiTransport?>(null)
-    val canonTransport: StateFlow<com.ehrocha.pulsar.transport.ccapi.CcapiTransport?> =
-        _canonTransport
-    private val _canonConnecting = MutableStateFlow(false)
-    val canonConnecting: StateFlow<Boolean> = _canonConnecting
-    private val _canonError = MutableStateFlow<String?>(null)
-    val canonError: StateFlow<String?> = _canonError
+    val canonCcapiTransport: StateFlow<com.ehrocha.pulsar.transport.ccapi.CcapiTransport?> =
+        _canonCcapiTransport
+    private val _canonCcapiConnecting = MutableStateFlow(false)
+    val canonCcapiConnecting: StateFlow<Boolean> = _canonCcapiConnecting
+    private val _canonCcapiError = MutableStateFlow<String?>(null)
+    val canonCcapiError: StateFlow<String?> = _canonCcapiError
 
     /** When non-null, the UI should prompt for username + password — the
      *  previous connect attempt to this camera returned 401. Cleared on
      *  successful connect or cancel. */
-    private val _canonAuthPrompt =
+    private val _canonCcapiAuthPrompt =
         MutableStateFlow<com.ehrocha.pulsar.transport.ccapi.CanonCamera?>(null)
-    val canonAuthPrompt: StateFlow<com.ehrocha.pulsar.transport.ccapi.CanonCamera?> =
-        _canonAuthPrompt
+    val canonCcapiAuthPrompt: StateFlow<com.ehrocha.pulsar.transport.ccapi.CanonCamera?> =
+        _canonCcapiAuthPrompt
 
     /** True while the polling loop has lost contact with the camera and is
      *  trying to reach it again — the UI keeps the session alive (no return
      *  to the scan screen) and shows a reconnecting banner. */
-    private val _canonReconnecting = MutableStateFlow(false)
-    val canonReconnecting: StateFlow<Boolean> = _canonReconnecting
+    private val _canonCcapiReconnecting = MutableStateFlow(false)
+    val canonCcapiReconnecting: StateFlow<Boolean> = _canonCcapiReconnecting
 
     /** True when the connected Canon body advertises the manual-bulb endpoint.
      *  Older or PowerShot-class bodies don't — the UI hides bulb-based modes
      *  for them (only Timelapse / Manual / Custom flow remain useful). */
-    val canonSupportsBulb: StateFlow<Boolean> = _canonTransport
+    val canonCcapiSupportsBulb: StateFlow<Boolean> = _canonCcapiTransport
         .map { it?.supportsBulb == true }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
@@ -219,6 +219,38 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  the same camera reappears on the bus. */
     private var lastPtpAutoReconnect: Pair<Int, Int>? = null
 
+    // ── Canon BLE direct transport (Phase 1: connect + pair + single-shot
+    //    + bulb via press/hold). The phone speaks Canon's BR-E1 BLE
+    //    protocol directly to the camera — no Pulsar ESP32 hardware, no
+    //    Wi-Fi, no cable. Capability is bulb-class: single shot, bulb,
+    //    intervalometer, astro, dark frame, ramp. No live view, no lens
+    //    info, no battery — those aren't in the BR-E1 protocol.
+    //    See `docs/canon-ble.md` for the wire format.
+    private val canonBleDiscovery =
+        com.ehrocha.pulsar.canonble.CanonBleDiscovery(app)
+    val canonBleCameras: StateFlow<List<android.bluetooth.BluetoothDevice>> =
+        canonBleDiscovery.cameras
+
+    private val _canonBleTransport =
+        MutableStateFlow<com.ehrocha.pulsar.canonble.CanonBleTransport?>(null)
+    val canonBleTransport: StateFlow<com.ehrocha.pulsar.canonble.CanonBleTransport?> =
+        _canonBleTransport
+
+    private val _canonBleConnecting = MutableStateFlow(false)
+    val canonBleConnecting: StateFlow<Boolean> = _canonBleConnecting
+
+    private val _canonBleError = MutableStateFlow<String?>(null)
+    val canonBleError: StateFlow<String?> = _canonBleError
+
+    fun clearCanonBleError() { _canonBleError.value = null }
+
+    /** MAC address of the last Canon BLE camera we successfully connected
+     *  to. Persisted in plaintext SharedPrefs — the BLE bond itself lives
+     *  in the OS keystore and survives independently; this is just the
+     *  hint "try MAC X first next launch". Phase 3 will use this for
+     *  auto-reconnect on re-advertise. */
+    private var lastCanonBleAddress: String? = null
+
     init {
         // Two flows watched on the discovery channel:
         //  (1) currently-connected camera vanishes → tear down the transport
@@ -256,7 +288,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  so we don't snatch the user away from a deliberate BLE / CCAPI /
      *  simulator session. */
     private fun idleAcrossOtherTransports(): Boolean =
-        _canonTransport.value == null &&
+        _canonCcapiTransport.value == null &&
+            _canonBleTransport.value == null &&
             !bleController.connected.value &&
             !_simulatorActive.value
 
@@ -268,30 +301,30 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  fails to initialise (extremely rare; would indicate a Keystore fault).
      *  Old plain file is read once on first launch to migrate any saved
      *  creds, then cleared. */
-    private val canonCredsPrefs = buildCanonCredsPrefs(app)
+    private val canonCcapiCredsPrefs = buildCanonCredsPrefs(app)
 
     /** Per-UDN user-set nicknames for Canon cameras. Shown in the scan card
      *  and as the connected device label in place of the body's own name. */
-    private val canonNicknamesPrefs =
+    private val canonCcapiNicknamesPrefs =
         app.getSharedPreferences("pulsar_canon_nicks", Context.MODE_PRIVATE)
-    private val _canonNicknames = MutableStateFlow(loadAllCanonNicknames())
-    val canonNicknames: StateFlow<Map<String, String>> = _canonNicknames
+    private val _canonCcapiNicknames = MutableStateFlow(loadAllCanonNicknames())
+    val canonCcapiNicknames: StateFlow<Map<String, String>> = _canonCcapiNicknames
 
     private fun loadAllCanonNicknames(): Map<String, String> =
-        canonNicknamesPrefs.all
+        canonCcapiNicknamesPrefs.all
             .mapNotNull { (k, v) -> if (v is String && k.isNotEmpty()) k to v else null }
             .toMap()
 
     /** Set or clear (empty string) the user-facing nickname for a Canon camera.
-     *  The new value flows through [canonNicknames]; if this camera is
+     *  The new value flows through [canonCcapiNicknames]; if this camera is
      *  currently active, its [deviceName] is updated immediately. */
-    fun setCanonNickname(udn: String, nickname: String) {
+    fun setCanonCcapiNickname(udn: String, nickname: String) {
         val trimmed = nickname.trim()
-        val edit = canonNicknamesPrefs.edit()
+        val edit = canonCcapiNicknamesPrefs.edit()
         if (trimmed.isEmpty()) edit.remove(udn) else edit.putString(udn, trimmed)
         edit.apply()
-        _canonNicknames.value = loadAllCanonNicknames()
-        val active = _canonTransport.value
+        _canonCcapiNicknames.value = loadAllCanonNicknames()
+        val active = _canonCcapiTransport.value
         if (active != null && active.camera.udn == udn) {
             _deviceName.value = effectiveCanonName(active.camera)
         }
@@ -300,7 +333,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     /** Display name for a Canon camera. Precedence: user nickname > body
      *  nickname > body friendly name. */
     fun effectiveCanonName(camera: com.ehrocha.pulsar.transport.ccapi.CanonCamera): String =
-        _canonNicknames.value[camera.udn]?.takeIf { it.isNotEmpty() }
+        _canonCcapiNicknames.value[camera.udn]?.takeIf { it.isNotEmpty() }
             ?: camera.nickname
             ?: camera.friendlyName
 
@@ -494,7 +527,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             bleController.connected.collect {
                 // Canon / PTP take priority — don't let BLE disconnect kick the
                 // user out of an active phone-driven camera session.
-                if (_canonTransport.value != null || _ptpTransport.value != null) return@collect
+                if (_canonCcapiTransport.value != null || _ptpTransport.value != null) return@collect
                 _connected.value = it
                 if (it) {
                     sendAutoOff()
@@ -505,7 +538,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             bleController.status.collect {
-                if (!_simulatorActive.value && _canonTransport.value == null &&
+                if (!_simulatorActive.value && _canonCcapiTransport.value == null &&
                     _ptpTransport.value == null) {
                     _status.value = it
                 }
@@ -582,7 +615,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     @SuppressLint("MissingPermission")
     fun connectTo(device: BluetoothDevice) {
         // Hang up any active session so transports stay single-valued.
-        if (_canonTransport.value != null) disconnectCanon()
+        if (_canonCcapiTransport.value != null) disconnectCanonCcapi()
+        if (_canonBleTransport.value != null) disconnectCanonBle()
         if (_ptpTransport.value != null) disconnectPtp()
         if (_simulatorActive.value) disconnectSimulator()
         _deviceName.value = device.name ?: "Pulsar"
@@ -592,26 +626,27 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     /** Open an HTTP session to a Canon CCAPI camera. Pins the API version and
      *  flips [connected] true on success. Mutually exclusive with BLE — any
      *  active BLE session is dropped first. Phase 2: Timelapse only. */
-    /** Tracks the in-flight connectCanon coroutine so disconnectCanon (or
+    /** Tracks the in-flight connectCanonCcapi coroutine so disconnectCanonCcapi (or
      *  a second connect attempt) can cancel it cleanly. Without this, a
      *  user tapping connect, then disconnect, then connect again could
-     *  end up with two coroutines racing on the same `_canonConnecting`
+     *  end up with two coroutines racing on the same `_canonCcapiConnecting`
      *  flag — the UI is already gated, but defending the viewmodel itself
      *  avoids subtle ordering bugs. Same pattern as [flowJob]. */
-    private var canonConnectJob: Job? = null
+    private var canonCcapiConnectJob: Job? = null
 
-    fun connectCanon(
+    fun connectCanonCcapi(
         camera: com.ehrocha.pulsar.transport.ccapi.CanonCamera,
         credentials: com.ehrocha.pulsar.transport.ccapi.CcapiClient.Credentials? = null,
     ) {
-        canonConnectJob?.cancel()
-        canonConnectJob = viewModelScope.launch {
-            _canonError.value = null
-            _canonConnecting.value = true
+        canonCcapiConnectJob?.cancel()
+        canonCcapiConnectJob = viewModelScope.launch {
+            _canonCcapiError.value = null
+            _canonCcapiConnecting.value = true
             // Hang up any existing session so the UI's notion of "what's
             // connected" stays single-valued.
             if (bleController.connected.value) bleController.disconnect()
             if (_ptpTransport.value != null) disconnectPtp()
+            if (_canonBleTransport.value != null) disconnectCanonBle()
             if (_simulatorActive.value) disconnectSimulator()
             stopScan()
 
@@ -621,11 +656,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             val effectiveCreds = credentials ?: loadCanonCreds(camera.udn)
             val transport = com.ehrocha.pulsar.transport.ccapi.CcapiTransport(camera, effectiveCreds)
             val result = transport.connect()
-            _canonConnecting.value = false
+            _canonCcapiConnecting.value = false
             when (result) {
                 is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.Ok -> {
-                    _canonTransport.value = transport
-                    _canonAuthPrompt.value = null
+                    _canonCcapiTransport.value = transport
+                    _canonCcapiAuthPrompt.value = null
                     _deviceName.value = effectiveCanonName(camera)
                     _connected.value = true
                     _status.value = StatusFrame(
@@ -651,43 +686,43 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     // Either the camera requires auth from cold start, or
                     // saved creds are stale (user changed password on the
                     // body). Drop the stale entry and prompt fresh.
-                    if (effectiveCreds != null) clearCanonCreds(camera.udn)
-                    _canonAuthPrompt.value = camera
-                    _canonError.value = "auth_required"
+                    if (effectiveCreds != null) clearCanonCcapiCreds(camera.udn)
+                    _canonCcapiAuthPrompt.value = camera
+                    _canonCcapiError.value = "auth_required"
                 }
                 is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.Http ->
-                    _canonError.value = "http_${result.code}"
+                    _canonCcapiError.value = "http_${result.code}"
                 is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.Network ->
-                    _canonError.value = "network"
+                    _canonCcapiError.value = "network"
             }
         }
     }
 
     /** Called from the credentials dialog. Cleans the prior error state then
-     *  re-runs [connectCanon] with the supplied digest credentials. */
+     *  re-runs [connectCanonCcapi] with the supplied digest credentials. */
     fun submitCanonCredentials(
         camera: com.ehrocha.pulsar.transport.ccapi.CanonCamera,
         username: String,
         password: String,
     ) {
-        _canonError.value = null
-        connectCanon(
+        _canonCcapiError.value = null
+        connectCanonCcapi(
             camera,
             com.ehrocha.pulsar.transport.ccapi.CcapiClient.Credentials(username, password),
         )
     }
 
-    fun cancelCanonAuth() {
-        _canonAuthPrompt.value = null
-        _canonError.value = null
+    fun cancelCanonCcapiAuth() {
+        _canonCcapiAuthPrompt.value = null
+        _canonCcapiError.value = null
     }
 
-    fun clearCanonError() { _canonError.value = null }
+    fun clearCanonCcapiError() { _canonCcapiError.value = null }
 
-    private val _canonManualAdding = MutableStateFlow(false)
-    val canonManualAdding: StateFlow<Boolean> = _canonManualAdding
-    private val _canonManualError = MutableStateFlow<String?>(null)
-    val canonManualError: StateFlow<String?> = _canonManualError
+    private val _canonCcapiManualAdding = MutableStateFlow(false)
+    val canonCcapiManualAdding: StateFlow<Boolean> = _canonCcapiManualAdding
+    private val _canonCcapiManualError = MutableStateFlow<String?>(null)
+    val canonCcapiManualError: StateFlow<String?> = _canonCcapiManualError
 
     /** Manually probe `http://<host>[:<port>]/ccapi` and add the camera to
      *  the scan list if it responds. Bypasses SSDP and the UPnP device
@@ -695,12 +730,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  serve `/upnp/CameraDevDesc.xml`, but every CCAPI-active body answers
      *  `GET /ccapi` directly. Metadata (model + serial → stable UDN) comes
      *  from `/deviceinformation` once the probe succeeds. */
-    fun addCanonByHost(rawInput: String, onResult: (Boolean) -> Unit) {
+    fun addCanonCcapiByHost(rawInput: String, onResult: (Boolean) -> Unit) {
         val trimmed = rawInput.trim()
             .removePrefix("http://").removePrefix("https://")
             .substringBefore('/')
         if (trimmed.isEmpty()) {
-            _canonManualError.value = "invalid"
+            _canonCcapiManualError.value = "invalid"
             onResult(false)
             return
         }
@@ -711,8 +746,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         val portsToTry = explicitPort?.let { listOf(it) } ?: listOf(8080, 80, 8612)
 
         viewModelScope.launch {
-            _canonManualError.value = null
-            _canonManualAdding.value = true
+            _canonCcapiManualError.value = null
+            _canonCcapiManualAdding.value = true
             try {
                 for (port in portsToTry) {
                     val accessUrl = "http://$host:$port/ccapi"
@@ -732,10 +767,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     onResult(true)
                     return@launch
                 }
-                _canonManualError.value = "not_found"
+                _canonCcapiManualError.value = "not_found"
                 onResult(false)
             } finally {
-                _canonManualAdding.value = false
+                _canonCcapiManualAdding.value = false
             }
         }
     }
@@ -777,13 +812,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         )
     }
 
-    fun clearCanonManualError() { _canonManualError.value = null }
+    fun clearCanonCcapiManualError() { _canonCcapiManualError.value = null }
 
     /** Fire-and-forget stop of any running Canon live-view session. Safe to
      *  call from non-suspending contexts (e.g. `DisposableEffect.onDispose`)
      *  — runs in the viewmodel scope. */
     fun stopCanonLiveView() {
-        val transport = _canonTransport.value ?: return
+        val transport = _canonCcapiTransport.value ?: return
         viewModelScope.launch { transport.stopLiveView() }
     }
 
@@ -810,8 +845,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun loadCanonCreds(udn: String):
             com.ehrocha.pulsar.transport.ccapi.CcapiClient.Credentials? {
-        val user = canonCredsPrefs.getString("u:$udn", null) ?: return null
-        val pass = canonCredsPrefs.getString("p:$udn", null) ?: return null
+        val user = canonCcapiCredsPrefs.getString("u:$udn", null) ?: return null
+        val pass = canonCcapiCredsPrefs.getString("p:$udn", null) ?: return null
         return com.ehrocha.pulsar.transport.ccapi.CcapiClient.Credentials(user, pass)
     }
 
@@ -819,17 +854,17 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         udn: String,
         creds: com.ehrocha.pulsar.transport.ccapi.CcapiClient.Credentials,
     ) {
-        canonCredsPrefs.edit()
+        canonCcapiCredsPrefs.edit()
             .putString("u:$udn", creds.username)
             .putString("p:$udn", creds.password)
             .apply()
     }
 
-    private fun clearCanonCreds(udn: String) {
-        canonCredsPrefs.edit().remove("u:$udn").remove("p:$udn").apply()
+    private fun clearCanonCcapiCreds(udn: String) {
+        canonCcapiCredsPrefs.edit().remove("u:$udn").remove("p:$udn").apply()
     }
 
-    private var canonPollJob: Job? = null
+    private var canonCcapiPollJob: Job? = null
 
     /** Long-poll `/event/polling` for live battery + shot count. On a streak of
      *  failures the loop enters reconnect mode and re-probes `/ccapi` for up
@@ -838,19 +873,19 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  session for real. The poll is independent of the run loop — it runs
      *  whether or not a flow is active. */
     private fun startCanonPolling(transport: com.ehrocha.pulsar.transport.ccapi.CcapiTransport) {
-        canonPollJob?.cancel()
-        canonPollJob = viewModelScope.launch {
+        canonCcapiPollJob?.cancel()
+        canonCcapiPollJob = viewModelScope.launch {
             var consecutiveFails = 0
             // Tracks shot count via `addedcontents` so the camera's own
             // counter — including any shots fired with the body's hardware
             // button — feeds back into the UI.
             var observedShots = 0
             while (currentCoroutineContext().isActive &&
-                   _canonTransport.value === transport) {
+                   _canonCcapiTransport.value === transport) {
                 when (val r = transport.pollEvents()) {
                     is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.Ok -> {
                         // Healthy poll: clear any prior failure / reconnect state.
-                        if (_canonReconnecting.value) _canonReconnecting.value = false
+                        if (_canonCcapiReconnecting.value) _canonCcapiReconnecting.value = false
                         consecutiveFails = 0
                         observedShots = applyCanonPollUpdate(r.value, observedShots)
                     }
@@ -858,13 +893,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         consecutiveFails += 1
                         if (consecutiveFails >= MAX_CANON_POLL_FAILS) {
                             Log.w(TAG, "Canon polling failed $consecutiveFails× — entering reconnect")
-                            val recovered = attemptCanonReconnect(transport)
+                            val recovered = attemptCanonCcapiReconnect(transport)
                             if (recovered) {
                                 consecutiveFails = 0
                                 continue
                             }
-                            _canonError.value = "dropped"
-                            disconnectCanon()
+                            _canonCcapiError.value = "dropped"
+                            disconnectCanonCcapi()
                             break
                         }
                         // Short backoff before the next long-poll so we don't
@@ -881,14 +916,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  [CANON_RECONNECT_TIMEOUT_MS]. Keeps the existing transport / UI state
      *  intact so the user doesn't get bounced back to the scan screen for a
      *  transient blip. Returns true on recovery, false on giving up. */
-    private suspend fun attemptCanonReconnect(
+    private suspend fun attemptCanonCcapiReconnect(
         transport: com.ehrocha.pulsar.transport.ccapi.CcapiTransport,
     ): Boolean {
-        _canonReconnecting.value = true
+        _canonCcapiReconnecting.value = true
         val deadline = System.currentTimeMillis() + CANON_RECONNECT_TIMEOUT_MS
         try {
             while (System.currentTimeMillis() < deadline &&
-                   _canonTransport.value === transport) {
+                   _canonCcapiTransport.value === transport) {
                 coroutineContext.ensureActive()
                 val r = transport.reconnect()
                 if (r is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.Ok) {
@@ -899,7 +934,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             }
             return false
         } finally {
-            _canonReconnecting.value = false
+            _canonCcapiReconnecting.value = false
         }
     }
 
@@ -951,15 +986,15 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun disconnectCanon() {
-        val transport = _canonTransport.value ?: return
-        canonConnectJob?.cancel()
-        canonConnectJob = null
-        canonPollJob?.cancel()
-        canonPollJob = null
-        _canonReconnecting.value = false
+    private fun disconnectCanonCcapi() {
+        val transport = _canonCcapiTransport.value ?: return
+        canonCcapiConnectJob?.cancel()
+        canonCcapiConnectJob = null
+        canonCcapiPollJob?.cancel()
+        canonCcapiPollJob = null
+        _canonCcapiReconnecting.value = false
         viewModelScope.launch { transport.release() }
-        _canonTransport.value = null
+        _canonCcapiTransport.value = null
         if (!bleController.connected.value && !_simulatorActive.value &&
             _ptpTransport.value == null) {
             _connected.value = false
@@ -996,7 +1031,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 // Hang up any existing transport so the UI's notion of
                 // "what's connected" stays single-valued.
                 if (bleController.connected.value) bleController.disconnect()
-                if (_canonTransport.value != null) disconnectCanon()
+                if (_canonCcapiTransport.value != null) disconnectCanonCcapi()
+                if (_canonBleTransport.value != null) disconnectCanonBle()
                 if (_simulatorActive.value) disconnectSimulator()
                 stopScan()
 
@@ -1062,6 +1098,73 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ── Canon BLE direct: connect / disconnect ─────────────────────────
+
+    private var canonBleConnectJob: Job? = null
+
+    /** Begin / refresh the Canon BLE service scan. Called when ScanScreen
+     *  becomes visible so the "Canon BLE remotes" section populates
+     *  alongside Pulsar ESP32 + Canon Wi-Fi + USB cameras. */
+    fun startCanonBleScan() = canonBleDiscovery.start()
+
+    /** Stop the Canon BLE scan. Called when ScanScreen exits or when a
+     *  connect is in-flight. */
+    fun stopCanonBleScan() = canonBleDiscovery.stop()
+
+    /** Connect to a Canon BLE camera. First-time pairing triggers the OS
+     *  pair dialog; subsequent connects reuse the bond. Mutually exclusive
+     *  with the other transports — they're dropped first. */
+    fun connectCanonBle(device: android.bluetooth.BluetoothDevice) {
+        canonBleConnectJob?.cancel()
+        canonBleConnectJob = viewModelScope.launch {
+            _canonBleError.value = null
+            _canonBleConnecting.value = true
+            try {
+                if (bleController.connected.value) bleController.disconnect()
+                if (_canonCcapiTransport.value != null) disconnectCanonCcapi()
+                if (_ptpTransport.value != null) disconnectPtp()
+                if (_simulatorActive.value) disconnectSimulator()
+                stopScan()
+                stopCanonBleScan()
+
+                val appCtx = getApplication<Application>()
+                val transport = com.ehrocha.pulsar.canonble.CanonBleTransport.connect(appCtx, device)
+                if (transport == null) {
+                    _canonBleError.value = "connect_failed"
+                    return@launch
+                }
+                _canonBleTransport.value = transport
+                lastCanonBleAddress = device.address
+                _deviceName.value = transport.label.value
+                _connected.value = true
+                _status.value = StatusFrame(
+                    state = DeviceState.IDLE,
+                    mode = TriggerMode.TIMELAPSE.id,
+                    shotsTaken = 0,
+                    timeRemainingMs = 0L,
+                    batteryPct = 0,
+                    errorCode = 0,
+                    fwVersion = "",
+                )
+            } finally {
+                _canonBleConnecting.value = false
+            }
+        }
+    }
+
+    private fun disconnectCanonBle() {
+        val transport = _canonBleTransport.value ?: return
+        canonBleConnectJob?.cancel()
+        canonBleConnectJob = null
+        viewModelScope.launch { transport.release() }
+        _canonBleTransport.value = null
+        if (!bleController.connected.value && !_simulatorActive.value &&
+            _canonCcapiTransport.value == null && _ptpTransport.value == null) {
+            _connected.value = false
+            _status.value = null
+        }
+    }
+
     private fun disconnectPtp(clearAutoReconnect: Boolean = true) {
         val transport = _ptpTransport.value ?: return
         ptpConnectJob?.cancel()
@@ -1075,14 +1178,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             _ptpReconnecting.value = false
         }
         if (!bleController.connected.value && !_simulatorActive.value &&
-            _canonTransport.value == null) {
+            _canonCcapiTransport.value == null) {
             _connected.value = false
             _status.value = null
         }
     }
 
     fun disconnect() {
-        if (_canonTransport.value != null) {
+        if (_canonCcapiTransport.value != null) {
             // Cancel any running flow first so the Canon loop stops firing.
             if (_flowRunning.value) {
                 flowJob?.cancel()
@@ -1091,7 +1194,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 _flowPaused.value = false
                 _flowCurrentStep.value = -1
             }
-            disconnectCanon()
+            disconnectCanonCcapi()
             return
         }
         if (_ptpTransport.value != null) {
@@ -1103,6 +1206,17 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 _flowCurrentStep.value = -1
             }
             disconnectPtp()
+            return
+        }
+        if (_canonBleTransport.value != null) {
+            if (_flowRunning.value) {
+                flowJob?.cancel()
+                flowJob = null
+                _flowRunning.value = false
+                _flowPaused.value = false
+                _flowCurrentStep.value = -1
+            }
+            disconnectCanonBle()
             return
         }
         if (_simulatorActive.value) {
@@ -1374,13 +1488,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         // Hand the BLE stop off immediately (don't wait on cancellation) so
         // the firmware halts ASAP; then await the flow's own finally to settle
         // _flowRunning / _flowCurrentStep before we stomp _status.
-        if (!_simulatorActive.value && _canonTransport.value == null &&
-            _ptpTransport.value == null) {
+        if (!_simulatorActive.value && _canonCcapiTransport.value == null &&
+            _ptpTransport.value == null && _canonBleTransport.value == null) {
             bleController.sendCommand(CommandBuilder.stop())
         }
         viewModelScope.launch {
-            _canonTransport.value?.stop()
+            _canonCcapiTransport.value?.stop()
             _ptpTransport.value?.stop()
+            _canonBleTransport.value?.stop()
             flowJob?.cancelAndJoin()
             flowJob = null
             _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
@@ -1400,8 +1515,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             is FlowStep.Intervalometer -> {
-                val canon = _canonTransport.value
+                val canon = _canonCcapiTransport.value
                 val ptp = _ptpTransport.value
+                val canonBle = _canonBleTransport.value
                 when {
                     canon != null -> {
                         // Timelapse wizard stores its pulse-length sentinel as
@@ -1436,6 +1552,20 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                             )
                         }
                     }
+                    canonBle != null -> {
+                        if (step.exposureMs == AppConfig.TIMELAPSE_PULSE_MS) {
+                            com.ehrocha.pulsar.transport.runCanonTimelapse(
+                                canonBle, step.shotCount, step.intervalMs, step.delayMs,
+                                af = step.useAutofocus, status = _status,
+                            )
+                        } else {
+                            com.ehrocha.pulsar.transport.runCanonBulb(
+                                canonBle, step.shotCount, step.exposureMs,
+                                step.intervalMs, step.delayMs, af = step.useAutofocus,
+                                status = _status,
+                            )
+                        }
+                    }
                     _simulatorActive.value -> simulateShots(
                         step.shotCount, step.exposureMs, step.intervalMs, step.delayMs,
                     )
@@ -1450,7 +1580,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             is FlowStep.Astro -> {
-                val canon = _canonTransport.value
+                val canon = _canonCcapiTransport.value
                 val expMs = AppConfig.astroExposureMs(step.focalLength, step.cropFactor, step.ruleDivisor)
                 when {
                     canon != null -> com.ehrocha.pulsar.transport.runCanonBulb(
@@ -1460,6 +1590,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     )
                     _ptpTransport.value != null -> com.ehrocha.pulsar.transport.runCanonBulb(
                         _ptpTransport.value!!, step.shotCount, expMs,
+                        step.gapMs, step.delayMs, af = step.useAutofocus,
+                        status = _status,
+                    )
+                    _canonBleTransport.value != null -> com.ehrocha.pulsar.transport.runCanonBulb(
+                        _canonBleTransport.value!!, step.shotCount, expMs,
                         step.gapMs, step.delayMs, af = step.useAutofocus,
                         status = _status,
                     )
@@ -1473,7 +1608,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             is FlowStep.DarkFrame -> {
-                val canon = _canonTransport.value
+                val canon = _canonCcapiTransport.value
                 when {
                     canon != null -> com.ehrocha.pulsar.transport.runCanonBulb(
                         canon, step.shotCount, step.exposureMs,
@@ -1482,6 +1617,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     )
                     _ptpTransport.value != null -> com.ehrocha.pulsar.transport.runCanonBulb(
                         _ptpTransport.value!!, step.shotCount, step.exposureMs,
+                        step.gapMs, 0L, af = step.useAutofocus,
+                        status = _status,
+                    )
+                    _canonBleTransport.value != null -> com.ehrocha.pulsar.transport.runCanonBulb(
+                        _canonBleTransport.value!!, step.shotCount, step.exposureMs,
                         step.gapMs, 0L, af = step.useAutofocus,
                         status = _status,
                     )
@@ -1497,9 +1637,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
             is FlowStep.Ramp -> {
-                val canon = _canonTransport.value
+                val canon = _canonCcapiTransport.value
                 val ptp = _ptpTransport.value
                 val rampSteps = step.steps.coerceAtLeast(2)
+                val canonBle = _canonBleTransport.value
                 if (canon != null) {
                     com.ehrocha.pulsar.transport.runCanonRamp(
                         canon, step, rampSteps, af = step.useAutofocus,
@@ -1508,6 +1649,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 } else if (ptp != null) {
                     com.ehrocha.pulsar.transport.runCanonRamp(
                         ptp, step, rampSteps, af = step.useAutofocus,
+                        status = _status,
+                    )
+                } else if (canonBle != null) {
+                    com.ehrocha.pulsar.transport.runCanonRamp(
+                        canonBle, step, rampSteps, af = step.useAutofocus,
                         status = _status,
                     )
                 } else {
@@ -1531,7 +1677,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Holds the runner until the active transport is no longer paused, then
-     *  returns. For CCAPI this checks [_canonReconnecting]; any future
+     *  returns. For CCAPI this checks [_canonCcapiReconnecting]; any future
      *  non-CCAPI transport would carry its own pause condition. Throws if a
      *  CCAPI transport was dropped entirely (e.g. reconnect timed out) so the
      *  caller can bail cleanly instead of firing shots into the void. The
@@ -1542,16 +1688,16 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     ) {
         // CCAPI is the only transport with a pause-on-reconnect concept today.
         val ccapi = transport as? com.ehrocha.pulsar.transport.ccapi.CcapiTransport ?: return
-        if (!_canonReconnecting.value && _canonTransport.value === ccapi) return
+        if (!_canonCcapiReconnecting.value && _canonCcapiTransport.value === ccapi) return
         val priorState = _status.value?.state
         try {
             while (true) {
                 coroutineContext.ensureActive()
                 // Bail if the transport was replaced or torn down while we waited.
-                if (_canonTransport.value !== ccapi) {
+                if (_canonCcapiTransport.value !== ccapi) {
                     throw IllegalStateException("Canon transport dropped during pause")
                 }
-                if (!_canonReconnecting.value) return
+                if (!_canonCcapiReconnecting.value) return
                 // Reflect "paused, waiting on camera" in the dashboard.
                 _status.value = _status.value?.copy(state = DeviceState.WAITING)
                 delay(500)
@@ -1701,7 +1847,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun start() {
-        if (_canonTransport.value != null) {
+        if (_canonCcapiTransport.value != null) {
             // Direct start() is the legacy single-mode path; Canon only runs
             // via the flow runner (Timelapse wizard → startFlow()).
             Log.w(TAG, "start() ignored on Canon transport — use Timelapse wizard")
@@ -1720,7 +1866,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             stopFlow()
             return
         }
-        if (_canonTransport.value != null) return
+        if (_canonCcapiTransport.value != null) return
         if (_simulatorActive.value) {
             stopSimulatorRun()
             return
@@ -1746,7 +1892,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Press & Hold: shutter open on down */
     fun shutterDown() {
-        val canon = _canonTransport.value
+        val canon = _canonCcapiTransport.value
         if (canon != null) {
             _status.value = _status.value?.copy(state = DeviceState.RUNNING)
             viewModelScope.launch { canon.startBulb(af = true) }
@@ -1762,7 +1908,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Press & Hold: shutter close on up */
     fun shutterUp() {
-        val canon = _canonTransport.value
+        val canon = _canonCcapiTransport.value
         if (canon != null) {
             viewModelScope.launch { canon.stopBulb() }
             _status.value = _status.value?.copy(state = DeviceState.IDLE)
@@ -1784,7 +1930,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         // so the user's deliberate "simulator" tap isn't immediately
         // overridden by an in-flight or auto-rearming hardware connect.
         if (bleController.connected.value) bleController.disconnect()
-        if (_canonTransport.value != null) disconnectCanon()
+        if (_canonCcapiTransport.value != null) disconnectCanonCcapi()
+        if (_canonBleTransport.value != null) disconnectCanonBle()
         if (_ptpTransport.value != null) disconnectPtp()
         lastPtpAutoReconnect = null
         _ptpReconnecting.value = false

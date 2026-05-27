@@ -126,4 +126,4 @@ interface CameraTransport {
     suspend fun driveFocus(action: String) {}
 }
 
-enum class TransportKind { BLE_ESP, CCAPI, PTP_USB }
+enum class TransportKind { BLE_ESP, CCAPI, PTP_USB, CANON_BLE }

@@ -190,7 +190,8 @@ The reason this transport exists: the Canon EOS R doesn't support CCAPI even on 
 - **Capture** — `InitiateCapture` (op `0x100E`) for Timelapse (camera owns exposure timing). Canon `RemoteReleaseOn` / `RemoteReleaseOff` (ops `0x9128` / `0x9129`) for bulb modes; mode parameter encodes AF (`2` = no AF, `3` = with AF) and the matching release uses the same mode value.
 - **Properties** — battery percentage via `GetDevicePropValue(0x5001)` polled every 30 s; lens name via Canon `0xD157` parsed into focal length for the Astro wizard's auto-fill (same shared helper as CCAPI). Best-effort programmatic Bulb selection via `SetDevicePropValue(0xD102, 0x000C)` at flow start.
 - **Auto-reconnect** — viewmodel remembers the last successfully-connected camera by `(vendorId, productId)`. If the cable replugs while no other transport is active, Pulsar reconnects automatically. Explicit user disconnect or switching transports clears the auto-reconnect target.
-- **Mid-shoot disconnect** — the reconnect banner shows on cable unplug; in-flight wire calls fail soft (no crash) but the running flow does not currently resume on replug. Full mid-shoot resume is Phase 6 work.
+- **Live view + Star Focus** — `StarFocusScreen` reads from whichever Canon transport is active. Over PTP that's Canon `GetViewFinderData` (op `0x9153`) for JPEG frames + `DriveLens` (op `0x9155`) for the focus stepper, gated on the body advertising the live-view op.
+- **Mid-shoot disconnect** — the reconnect banner shows on cable unplug; in-flight wire calls fail soft (no crash) but the running flow does not currently resume on replug. Full mid-shoot resume is future work.
 
 Honest caveats:
 
@@ -361,9 +362,9 @@ What's visible tonight at the planned location/time — Messier and NGC catalog 
 
 Uses the phone's compass + Polaris position calculation to help align an equatorial mount.
 
-### Star Focus Assist (CCAPI)
+### Star Focus Assist (CCAPI + PTP)
 
-Four-step guided wizard for nailing pinpoint focus on stars before kicking off a CCAPI astro run. Live view streams from the camera, the user taps a bright star, and a peak-luminance sharpness readout updates per frame as they walk focus with six drive-focus buttons (`«««` / `««` / `«` / `»` / `»»` / `»»»`). Auto-stops live view on screen leave or disconnect to save battery. See [docs/ccapi.md](docs/ccapi.md#star-focus-assist-tools-tab).
+Four-step guided wizard for nailing pinpoint focus on stars before kicking off an astro run. Works on both Canon transports — `StarFocusScreen` takes a `CameraTransport` and reads from whichever Canon transport is active (CCAPI over Wi-Fi, or PTP over USB on bodies that advertise the live-view op). Live view streams from the camera, the user taps a bright star, and a peak-luminance sharpness readout updates per frame as they walk focus with six drive-focus buttons (`«««` / `««` / `«` / `»` / `»»` / `»»»`). Auto-stops live view on screen leave or disconnect to save battery. See [docs/ccapi.md](docs/ccapi.md#star-focus-assist-tools-tab).
 
 ### Shot Log
 

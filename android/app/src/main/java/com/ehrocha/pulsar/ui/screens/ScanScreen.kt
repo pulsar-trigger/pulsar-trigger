@@ -41,6 +41,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -72,7 +73,7 @@ import com.google.accompanist.permissions.rememberPermissionState
 fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
     val scanning by vm.scanning.collectAsState()
     val devices by vm.devices.collectAsState()
-    val canonCameras by vm.canonCameras.collectAsState()
+    val canonCcapiCameras by vm.canonCcapiCameras.collectAsState()
     val ptpCameras by vm.ptpCameras.collectAsState()
     val ptpConnecting by vm.ptpConnecting.collectAsState()
     val ptpError by vm.ptpError.collectAsState()
@@ -80,11 +81,15 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
     val ptpErrorOpenFailed = stringResource(R.string.ptp_err_open_failed)
     val ptpErrorSessionFailed = stringResource(R.string.ptp_err_session_failed)
     val ptpErrorGeneric = stringResource(R.string.ptp_err_generic)
+    val canonBleCameras by vm.canonBleCameras.collectAsState()
+    val canonBleConnecting by vm.canonBleConnecting.collectAsState()
+    val canonBleError by vm.canonBleError.collectAsState()
+    val canonBleErrorGeneric = stringResource(R.string.canon_ble_err_connect_failed)
     val connected by vm.connected.collectAsState()
-    val canonConnecting by vm.canonConnecting.collectAsState()
-    val canonError by vm.canonError.collectAsState()
-    val canonAuthPrompt by vm.canonAuthPrompt.collectAsState()
-    val canonNicknames by vm.canonNicknames.collectAsState()
+    val canonCcapiConnecting by vm.canonCcapiConnecting.collectAsState()
+    val canonCcapiError by vm.canonCcapiError.collectAsState()
+    val canonCcapiAuthPrompt by vm.canonCcapiAuthPrompt.collectAsState()
+    val canonCcapiNicknames by vm.canonCcapiNicknames.collectAsState()
     val currentSsid by vm.currentWifiSsid.collectAsState()
     var canonInfo by remember { mutableStateOf<com.ehrocha.pulsar.transport.ccapi.CanonCamera?>(null) }
     var renameCanon by remember { mutableStateOf<com.ehrocha.pulsar.transport.ccapi.CanonCamera?>(null) }
@@ -111,6 +116,21 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
         }
         android.widget.Toast.makeText(toastCtx, msg, android.widget.Toast.LENGTH_LONG).show()
         vm.clearPtpError()
+    }
+
+    // Same pattern for Canon BLE connect failures.
+    LaunchedEffect(canonBleError) {
+        if (canonBleError == null) return@LaunchedEffect
+        android.widget.Toast.makeText(toastCtx, canonBleErrorGeneric, android.widget.Toast.LENGTH_LONG).show()
+        vm.clearCanonBleError()
+    }
+
+    // Run a Canon BLE scan while this screen is visible. The Pulsar ESP32
+    // scan and the Canon BLE scan use independent ScanCallbacks with
+    // different filters — they run concurrently.
+    DisposableEffect(Unit) {
+        vm.startCanonBleScan()
+        onDispose { vm.stopCanonBleScan() }
     }
 
     var showLanguageDialog by remember { mutableStateOf(false) }
@@ -232,7 +252,7 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
                 items(devices) { scanned ->
                     DeviceCard(scanned) { vm.connectTo(scanned.device) }
                 }
-                if (canonCameras.isNotEmpty()) {
+                if (canonCcapiCameras.isNotEmpty()) {
                     item {
                         Column(modifier = Modifier.padding(top = 4.dp)) {
                             Text(
@@ -250,10 +270,10 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
                             }
                         }
                     }
-                    items(canonCameras) { camera ->
+                    items(canonCcapiCameras) { camera ->
                         CanonCameraCard(
                             camera = camera,
-                            nickname = canonNicknames[camera.udn],
+                            nickname = canonCcapiNicknames[camera.udn],
                             onClick = { canonInfo = camera },
                             onRename = { renameCanon = camera },
                             onCapabilities = { capabilitiesCanon = camera },
@@ -284,7 +304,32 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
                         )
                     }
                 }
-                if (devices.isEmpty() && canonCameras.isEmpty() && ptpCameras.isEmpty()) {
+                if (canonBleCameras.isNotEmpty()) {
+                    item {
+                        Column(modifier = Modifier.padding(top = 4.dp)) {
+                            Text(
+                                stringResource(R.string.section_canon_ble_remotes),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Text(
+                                stringResource(R.string.canon_ble_remotes_subtitle),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    items(canonBleCameras) { device ->
+                        CanonBleCameraCard(
+                            device = device,
+                            connecting = canonBleConnecting,
+                            onClick = { vm.connectCanonBle(device) },
+                        )
+                    }
+                }
+                if (devices.isEmpty() && canonCcapiCameras.isEmpty() &&
+                    ptpCameras.isEmpty() && canonBleCameras.isEmpty()) {
                     item { PairingProtocolCard() }
                 }
                 item {
@@ -373,14 +418,14 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
 
     if (showCanonManualAdd) {
         CanonManualAddDialog(
-            adding = vm.canonManualAdding.collectAsState().value,
-            error = vm.canonManualError.collectAsState().value,
+            adding = vm.canonCcapiManualAdding.collectAsState().value,
+            error = vm.canonCcapiManualError.collectAsState().value,
             onDismiss = {
                 showCanonManualAdd = false
-                vm.clearCanonManualError()
+                vm.clearCanonCcapiManualError()
             },
             onSubmit = { input ->
-                vm.addCanonByHost(input) { ok ->
+                vm.addCanonCcapiByHost(input) { ok ->
                     if (ok) showCanonManualAdd = false
                 }
             },
@@ -390,10 +435,10 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
     renameCanon?.let { cam ->
         CanonRenameDialog(
             camera = cam,
-            initial = canonNicknames[cam.udn].orEmpty(),
+            initial = canonCcapiNicknames[cam.udn].orEmpty(),
             onDismiss = { renameCanon = null },
             onConfirm = { newName ->
-                vm.setCanonNickname(cam.udn, newName)
+                vm.setCanonCcapiNickname(cam.udn, newName)
                 renameCanon = null
             },
         )
@@ -407,11 +452,11 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
         )
     }
 
-    canonAuthPrompt?.let { cam ->
+    canonCcapiAuthPrompt?.let { cam ->
         CanonAuthDialog(
             camera = cam,
-            connecting = canonConnecting,
-            onCancel = { vm.cancelCanonAuth() },
+            connecting = canonCcapiConnecting,
+            onCancel = { vm.cancelCanonCcapiAuth() },
             onSubmit = { u, p -> vm.submitCanonCredentials(cam, u, p) },
         )
     }
@@ -422,26 +467,26 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
     }
     // Auth dialog takes over once we know credentials are needed — otherwise
     // both dialogs stack on top of each other.
-    LaunchedEffect(canonAuthPrompt) {
-        if (canonAuthPrompt != null) canonInfo = null
+    LaunchedEffect(canonCcapiAuthPrompt) {
+        if (canonCcapiAuthPrompt != null) canonInfo = null
     }
 
     canonInfo?.let { cam ->
         AlertDialog(
-            onDismissRequest = { if (!canonConnecting) { canonInfo = null; vm.clearCanonError() } },
+            onDismissRequest = { if (!canonCcapiConnecting) { canonInfo = null; vm.clearCanonCcapiError() } },
             confirmButton = {
                 TextButton(
-                    onClick = { vm.connectCanon(cam) },
-                    enabled = !canonConnecting,
+                    onClick = { vm.connectCanonCcapi(cam) },
+                    enabled = !canonCcapiConnecting,
                 ) {
                     Text(
-                        if (canonConnecting) stringResource(R.string.canon_connecting)
+                        if (canonCcapiConnecting) stringResource(R.string.canon_connecting)
                         else stringResource(R.string.canon_connect)
                     )
                 }
             },
             dismissButton = {
-                TextButton(onClick = { canonInfo = null; vm.clearCanonError() }) {
+                TextButton(onClick = { canonInfo = null; vm.clearCanonCcapiError() }) {
                     Text(stringResource(R.string.cancel))
                 }
             },
@@ -466,7 +511,7 @@ fun ScanScreen(vm: PulsarViewModel, onConnected: () -> Unit) {
                         stringResource(R.string.canon_camera_join_wifi_hint),
                         style = MaterialTheme.typography.bodySmall,
                     )
-                    canonError?.let { err ->
+                    canonCcapiError?.let { err ->
                         Spacer(Modifier.height(8.dp))
                         Text(
                             text = when (err) {
@@ -1129,6 +1174,63 @@ private fun UsbCameraCard(
                 )
                 Text(
                     "VID 0x%04X · PID 0x%04X".format(device.vendorId, device.productId),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CanonBleCameraCard(
+    device: android.bluetooth.BluetoothDevice,
+    connecting: Boolean,
+    onClick: () -> Unit,
+) {
+    val name = try {
+        @Suppress("MissingPermission") device.name
+    } catch (_: SecurityException) { null }
+        ?: stringResource(R.string.canon_ble_camera_fallback_name)
+    Surface(
+        onClick = if (connecting) ({}) else onClick,
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                modifier = Modifier.size(48.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.Bluetooth,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    stringResource(R.string.canon_ble_camera_subtitle),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    device.address,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

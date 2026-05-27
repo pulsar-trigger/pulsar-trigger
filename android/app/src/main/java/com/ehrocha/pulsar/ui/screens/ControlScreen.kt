@@ -1435,6 +1435,12 @@ internal fun UserGuideSectionContent() {
             body = stringResource(R.string.guide_getting_started_body),
         )
 
+        // ── Transports ──────────────────────────────────────────────────
+        GuideSection(
+            title = stringResource(R.string.guide_transports_title),
+            body = stringResource(R.string.guide_transports_body),
+        )
+
         // ── Intervalometer ──────────────────────────────────────────────
         GuideSection(
             title = stringResource(R.string.guide_intervalometer_title),
@@ -1471,6 +1477,24 @@ internal fun UserGuideSectionContent() {
             body = stringResource(R.string.guide_flows_body),
         )
 
+        // ── Star Focus Assist ───────────────────────────────────────────
+        GuideSection(
+            title = stringResource(R.string.guide_star_focus_title),
+            body = stringResource(R.string.guide_star_focus_body),
+        )
+
+        // ── Polar Alignment ─────────────────────────────────────────────
+        GuideSection(
+            title = stringResource(R.string.guide_polar_align_title),
+            body = stringResource(R.string.guide_polar_align_body),
+        )
+
+        // ── Camera Test ─────────────────────────────────────────────────
+        GuideSection(
+            title = stringResource(R.string.guide_camera_test_title),
+            body = stringResource(R.string.guide_camera_test_body),
+        )
+
         // ── Astro Dashboard ─────────────────────────────────────────────
         GuideSection(
             title = stringResource(R.string.guide_dashboard_title),
@@ -1481,6 +1505,12 @@ internal fun UserGuideSectionContent() {
         GuideSection(
             title = stringResource(R.string.guide_planner_title),
             body = stringResource(R.string.guide_planner_body),
+        )
+
+        // ── Shot Log ────────────────────────────────────────────────────
+        GuideSection(
+            title = stringResource(R.string.guide_shot_log_title),
+            body = stringResource(R.string.guide_shot_log_body),
         )
 
         // ── Settings ────────────────────────────────────────────────────

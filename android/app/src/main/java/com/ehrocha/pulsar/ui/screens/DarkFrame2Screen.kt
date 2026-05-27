@@ -62,7 +62,7 @@ fun DarkFrame2Screen(
     val runState = LocalRunState.current
     val running = runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
-    val onCanon = vm.canonTransport.collectAsState().value != null
+    val onCanon = vm.canonCcapiTransport.collectAsState().value != null
     val canControlAf = onCanon || vm.ptpTransport.collectAsState().value != null
 
     var tabIdx by rememberSaveable {
