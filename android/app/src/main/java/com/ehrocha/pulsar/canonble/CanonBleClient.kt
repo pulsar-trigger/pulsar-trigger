@@ -203,9 +203,15 @@ class CanonBleClient(
         return result
     }
 
-    /** First-time pair-write: `[0x03, <ASCII device name>]` to the pairing
-     *  characteristic. Skip on subsequent connects if the device is
-     *  already bonded — the camera doesn't need to be re-introduced. */
+    /** Arm-write: `[0x03, <ASCII device name>]` to the pairing
+     *  characteristic, sent on every connect to register Pulsar as the
+     *  active remote for the session.
+     *
+     *  Uses **WRITE_NO_RESPONSE** to match `pklaus/canoremote` (the only
+     *  reference that claims EOS R-series support — it writes the pair
+     *  byte with `response=False`). `iebyt/cbremote` uses write-with-
+     *  response and does NOT shoot on Eduardo's EOS R/RP, so the
+     *  with-response path is the suspected R-series divergence. */
     @SuppressLint("MissingPermission")
     suspend fun writePairName(name: String): Boolean = opMutex.withLock {
         val ch = pairChar ?: return@withLock false
@@ -218,19 +224,23 @@ class CanonBleClient(
         @Suppress("DEPRECATION")
         run {
             ch.value = payload
-            ch.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            ch.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
         }
         val deferred = CompletableDeferred<Boolean>()
         writeSignal.set(deferred)
+        Log.d(TAG, "writePairName: sending [0x03, \"$name\"] no-response (${payload.size} bytes)")
         @Suppress("DEPRECATION")
         if (g.writeCharacteristic(ch) != true) {
+            Log.w(TAG, "writePairName: writeCharacteristic() returned false (couldn't queue)")
             writeSignal.set(null)
             return@withLock false
         }
-        // Pair-write can take a long time — the user has to confirm the
-        // Android system pair dialog. 30 s is generous; below that the
-        // user sometimes hasn't tapped Pair yet.
-        withTimeoutOrNull(30_000) { deferred.await() } ?: false
+        // No-response write still raises onCharacteristicWrite (confirms it
+        // left the phone). First connect may also pop the OS pair dialog —
+        // 30 s timeout covers the user tapping through it.
+        val ok = withTimeoutOrNull(30_000) { deferred.await() } ?: false
+        Log.d(TAG, "writePairName: confirmed=$ok")
+        ok
     }
 
     /** Send one byte to the control characteristic (WRITE_NO_RESPONSE).
