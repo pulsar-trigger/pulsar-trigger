@@ -548,6 +548,15 @@
     <string name="pulsar_ble_setup_rescan">再スキャン</string>
     <string name="pulsar_ble_setup_empty">付近に Pulsar モジュールが見つかりません。モジュールの電源と通信圏内を確認して、再スキャンをタップしてください。</string>
     <string name="pulsar_ble_setup_unknown_name">Pulsar（不明）</string>
+    <string name="ccapi_setup_step1">Canon の PC ツール（EOS Utility / EOS Webcam）でカメラの CCAPI を一度だけ有効化してください。以降カメラ側で有効が維持されます。</string>
+    <string name="ccapi_setup_step2">カメラで ワイヤレス通信 → Wi-Fi → ご自宅のネットワークに接続。カメラの IP をメモしてください。</string>
+    <string name="ccapi_setup_step3">この端末をカメラと同じ Wi-Fi ネットワークに接続してください。</string>
+    <string name="ccapi_setup_step4">下にカメラが表示されたら、カードをタップして接続。検出に失敗する場合は下の「IP で追加」を使ってください。</string>
+    <string name="ccapi_setup_cameras_header">Canon カメラ</string>
+    <string name="ccapi_setup_empty">この Wi-Fi に Canon カメラはありません。CCAPI が有効で、両機が同じネットワークにあることを確認し、「再スキャン」または「IP で追加」をタップしてください。</string>
+    <string name="ccapi_setup_wifi_hint">端末はこのネットワークに接続中。カメラも同じネットワークにある必要があります。</string>
+    <string name="ccapi_setup_no_wifi_title">Wi-Fi 未接続</string>
+    <string name="ccapi_setup_no_wifi_hint">カメラを検出するには、この端末をカメラの Wi-Fi に接続してください。</string>
 
     <!-- スキャン入口画面（トランスポート選択） -->
     <string name="scan_landing_pick_transport">トランスポートを選択</string>

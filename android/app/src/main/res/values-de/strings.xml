@@ -548,6 +548,15 @@
     <string name="pulsar_ble_setup_rescan">Erneut suchen</string>
     <string name="pulsar_ble_setup_empty">Kein Pulsar-Modul in der Nähe. Prüfen Sie, ob das Modul eingeschaltet und in Reichweite ist, dann tippen Sie auf Erneut suchen.</string>
     <string name="pulsar_ble_setup_unknown_name">Pulsar (unbekannt)</string>
+    <string name="ccapi_setup_step1">Aktivieren Sie CCAPI an der Kamera einmalig über Canons PC-Tool (EOS Utility / EOS Webcam). CCAPI bleibt danach aktiv.</string>
+    <string name="ccapi_setup_step2">An der Kamera: Drahtlose Kommunikation → WLAN → mit Ihrem Heimnetz verbinden. IP-Adresse der Kamera notieren.</string>
+    <string name="ccapi_setup_step3">Verbinden Sie dieses Telefon mit demselben WLAN wie die Kamera.</string>
+    <string name="ccapi_setup_step4">Wenn die Kamera unten erscheint, tippen Sie auf die Karte zum Verbinden. Wenn die Erkennung fehlschlägt, nutzen Sie unten „Per IP hinzufügen".</string>
+    <string name="ccapi_setup_cameras_header">CANON-KAMERAS</string>
+    <string name="ccapi_setup_empty">Keine Canon-Kamera in diesem WLAN. Prüfen Sie, dass CCAPI aktiv ist und beide Geräte im selben Netz sind, dann „Erneut suchen" oder „Per IP hinzufügen".</string>
+    <string name="ccapi_setup_wifi_hint">Das Telefon ist in diesem Netz. Die Kamera sollte im selben sein.</string>
+    <string name="ccapi_setup_no_wifi_title">Kein WLAN verbunden</string>
+    <string name="ccapi_setup_no_wifi_hint">Verbinden Sie dieses Telefon mit dem WLAN der Kamera, um sie zu finden.</string>
 
     <!-- Such-Landing (Transport-Auswahl) -->
     <string name="scan_landing_pick_transport">Transport wählen</string>

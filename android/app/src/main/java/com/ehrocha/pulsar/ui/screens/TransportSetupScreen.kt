@@ -25,8 +25,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,6 +42,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -128,9 +134,9 @@ private fun TopBar(kind: TransportKind, onBack: () -> Unit) {
 private fun SetupContent(vm: PulsarViewModel, kind: TransportKind) {
     when (kind) {
         TransportKind.BLE_ESP -> PulsarBleSetup(vm)
-        // The other three transports get their own commits in Phase 3. The
-        // landing screen routes them to the legacy ScanScreen for now.
-        TransportKind.CCAPI,
+        TransportKind.CCAPI -> CcapiSetup(vm)
+        // PTP and Canon BLE get their own commits in Phase 3. The landing
+        // screen routes them to the legacy ScanScreen for now.
         TransportKind.PTP_USB,
         TransportKind.CANON_BLE -> {
             // Should never render: the landing routes these elsewhere.
@@ -292,6 +298,211 @@ private fun EmptyState(text: String) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(20.dp),
         )
+    }
+}
+
+// ── Canon CCAPI (Wi-Fi) ───────────────────────────────────────────────────
+
+@Composable
+private fun CcapiSetup(vm: PulsarViewModel) {
+    val cameras by vm.canonCcapiCameras.collectAsState()
+    val connecting by vm.canonCcapiConnecting.collectAsState()
+    val authPrompt by vm.canonCcapiAuthPrompt.collectAsState()
+    val nicknames by vm.canonCcapiNicknames.collectAsState()
+    val ssid by vm.currentWifiSsid.collectAsState()
+    val scrollState = rememberScrollState()
+
+    // Per-screen scan lifecycle. We still call the aggregate startScan() for
+    // now — Phase 4 will split it into start/stopBleEspScan + start/stopCcapiScan
+    // so a CCAPI scan doesn't also kick off a (wasteful) Pulsar-BLE radio
+    // scan and vice versa.
+    DisposableEffect(Unit) {
+        vm.startScan()
+        onDispose { vm.stopScan() }
+    }
+
+    var inspecting by remember { mutableStateOf<com.ehrocha.pulsar.transport.ccapi.CanonCamera?>(null) }
+    var renaming by remember { mutableStateOf<com.ehrocha.pulsar.transport.ccapi.CanonCamera?>(null) }
+    var showingCapabilities by remember { mutableStateOf<com.ehrocha.pulsar.transport.ccapi.CanonCamera?>(null) }
+    var showAddByIp by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Spacer(Modifier.height(8.dp))
+
+        InstructionCard(
+            iconRes = Icons.Default.Wifi,
+            lines = listOf(
+                stringResource(R.string.ccapi_setup_step1),
+                stringResource(R.string.ccapi_setup_step2),
+                stringResource(R.string.ccapi_setup_step3),
+                stringResource(R.string.ccapi_setup_step4),
+            ),
+        )
+
+        // Wi-Fi network indicator: confirms phone is on the camera's net.
+        WifiNetworkRow(ssid = ssid)
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringResource(R.string.ccapi_setup_cameras_header),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = {
+                vm.stopScan(); vm.startScan()
+            }) {
+                Icon(
+                    Icons.Default.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(stringResource(R.string.pulsar_ble_setup_rescan))
+            }
+        }
+
+        if (cameras.isEmpty()) {
+            EmptyState(stringResource(R.string.ccapi_setup_empty))
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                cameras.forEach { camera ->
+                    CanonCameraCard(
+                        camera = camera,
+                        nickname = nicknames[camera.udn],
+                        onClick = { inspecting = camera },
+                        onRename = { renaming = camera },
+                        onCapabilities = { showingCapabilities = camera },
+                    )
+                }
+            }
+        }
+
+        // Add-by-IP fallback — when SSDP discovery is blocked (camera AP
+        // suppresses multicast, or the body skips UPnP). Same UI as before;
+        // moved here from the legacy ScanScreen footer.
+        TextButton(onClick = { showAddByIp = true }) {
+            Icon(
+                Icons.Default.Add,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(stringResource(R.string.canon_manual_add_button))
+        }
+
+        Spacer(Modifier.height(24.dp))
+    }
+
+    // ── CCAPI dialogs ────────────────────────────────────────────────────
+    // All four dialogs reference helpers in the legacy ScanScreen.kt
+    // (made `internal` in this commit). Phase 4 will relocate them to
+    // their final home as ScanScreen.kt goes away.
+
+    inspecting?.let { cam ->
+        CanonCapabilitiesDialog(
+            camera = cam,
+            probe = { vm.probeCanonCapabilities(cam) },
+            onDismiss = {
+                inspecting = null
+                vm.clearCanonCcapiError()
+            },
+        )
+    }
+
+    if (showAddByIp) {
+        CanonManualAddDialog(
+            adding = vm.canonCcapiManualAdding.collectAsState().value,
+            error = vm.canonCcapiManualError.collectAsState().value,
+            onDismiss = {
+                showAddByIp = false
+                vm.clearCanonCcapiManualError()
+            },
+            onSubmit = { input ->
+                vm.addCanonCcapiByHost(input) { ok ->
+                    if (ok) showAddByIp = false
+                }
+            },
+        )
+    }
+
+    renaming?.let { cam ->
+        CanonRenameDialog(
+            camera = cam,
+            initial = nicknames[cam.udn].orEmpty(),
+            onDismiss = { renaming = null },
+            onConfirm = { newName ->
+                vm.setCanonCcapiNickname(cam.udn, newName)
+                renaming = null
+            },
+        )
+    }
+
+    showingCapabilities?.let { cam ->
+        CanonCapabilitiesDialog(
+            camera = cam,
+            probe = { vm.probeCanonCapabilities(cam) },
+            onDismiss = { showingCapabilities = null },
+        )
+    }
+
+    authPrompt?.let { cam ->
+        CanonAuthDialog(
+            camera = cam,
+            connecting = connecting,
+            onCancel = { vm.cancelCanonCcapiAuth() },
+            onSubmit = { user, pass ->
+                vm.submitCanonCredentials(cam, user, pass)
+            },
+        )
+    }
+}
+
+@Composable
+private fun WifiNetworkRow(ssid: String?) {
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                if (ssid != null) Icons.Default.Wifi else Icons.Default.Warning,
+                contentDescription = null,
+                tint = if (ssid != null) onSurface else MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.fillMaxWidth()) {
+                Text(
+                    text = ssid ?: stringResource(R.string.ccapi_setup_no_wifi_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = if (ssid != null) onSurface else MaterialTheme.colorScheme.error,
+                )
+                Text(
+                    text = if (ssid != null) stringResource(R.string.ccapi_setup_wifi_hint)
+                           else stringResource(R.string.ccapi_setup_no_wifi_hint),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = muted,
+                )
+            }
+        }
     }
 }
 

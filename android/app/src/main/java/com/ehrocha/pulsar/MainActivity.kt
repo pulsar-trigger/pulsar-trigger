@@ -380,7 +380,8 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     // still falls through to the legacy combined Scan
                     // until its commit lands.
                     currentScreen = when (kind) {
-                        com.ehrocha.pulsar.transport.TransportKind.BLE_ESP ->
+                        com.ehrocha.pulsar.transport.TransportKind.BLE_ESP,
+                        com.ehrocha.pulsar.transport.TransportKind.CCAPI ->
                             AppScreen.TransportSetup(kind)
                         else -> AppScreen.Scan
                     }

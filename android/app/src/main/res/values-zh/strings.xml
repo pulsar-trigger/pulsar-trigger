@@ -548,6 +548,15 @@
     <string name="pulsar_ble_setup_rescan">重新扫描</string>
     <string name="pulsar_ble_setup_empty">附近没有 Pulsar 模块。请确保模块已开机且在通信范围内，然后点击"重新扫描"。</string>
     <string name="pulsar_ble_setup_unknown_name">Pulsar（未知）</string>
+    <string name="ccapi_setup_step1">通过佳能的 PC 工具（EOS Utility / EOS Webcam）在相机上激活 CCAPI 一次。激活后机身将保持 CCAPI 启用。</string>
+    <string name="ccapi_setup_step2">在相机上选择 无线通讯 → Wi-Fi → 连接到您的家庭网络。记下相机的 IP。</string>
+    <string name="ccapi_setup_step3">将此手机连接到与相机相同的 Wi-Fi 网络。</string>
+    <string name="ccapi_setup_step4">当相机出现在下方时，点击其卡片以连接。如果发现失败，使用底部的"按 IP 添加"。</string>
+    <string name="ccapi_setup_cameras_header">佳能相机</string>
+    <string name="ccapi_setup_empty">此 Wi-Fi 上没有佳能相机。请确认 CCAPI 已启用并且两台设备在同一网络上，然后点击"重新扫描"或"按 IP 添加"。</string>
+    <string name="ccapi_setup_wifi_hint">手机已连接到此网络。相机应在同一网络上。</string>
+    <string name="ccapi_setup_no_wifi_title">未连接 Wi-Fi</string>
+    <string name="ccapi_setup_no_wifi_hint">请将此手机连接到相机的 Wi-Fi 网络以发现它。</string>
 
     <!-- 扫描入口屏幕（传输方式选择） -->
     <string name="scan_landing_pick_transport">选择传输方式</string>

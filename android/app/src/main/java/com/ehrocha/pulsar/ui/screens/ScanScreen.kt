@@ -609,7 +609,7 @@ private fun LanguagePickerDialog(onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun CanonAuthDialog(
+internal fun CanonAuthDialog(
     camera: com.ehrocha.pulsar.transport.ccapi.CanonCamera,
     connecting: Boolean,
     onCancel: () -> Unit,
@@ -686,7 +686,7 @@ private fun CanonAuthDialog(
 }
 
 @Composable
-private fun CanonCapabilitiesDialog(
+internal fun CanonCapabilitiesDialog(
     camera: com.ehrocha.pulsar.transport.ccapi.CanonCamera,
     probe: suspend () -> com.ehrocha.pulsar.viewmodel.PulsarViewModel.CanonCapabilities?,
     onDismiss: () -> Unit,
@@ -759,7 +759,7 @@ private fun CanonCapabilitiesDialog(
 }
 
 @Composable
-private fun CapabilityRow(label: String, supported: Boolean) {
+internal fun CapabilityRow(label: String, supported: Boolean) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = if (supported) Icons.Default.Check else Icons.Default.Close,
@@ -774,7 +774,7 @@ private fun CapabilityRow(label: String, supported: Boolean) {
 }
 
 @Composable
-private fun CanonManualAddDialog(
+internal fun CanonManualAddDialog(
     adding: Boolean,
     error: String?,
     onDismiss: () -> Unit,
@@ -834,7 +834,7 @@ private fun CanonManualAddDialog(
 }
 
 @Composable
-private fun CanonRenameDialog(
+internal fun CanonRenameDialog(
     camera: com.ehrocha.pulsar.transport.ccapi.CanonCamera,
     initial: String,
     onDismiss: () -> Unit,
@@ -873,7 +873,7 @@ private fun CanonRenameDialog(
 }
 
 @Composable
-private fun CanonSetupHelpDialog(onDismiss: () -> Unit) {
+internal fun CanonSetupHelpDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = {
@@ -1019,7 +1019,7 @@ private fun DeviceCard(scanned: com.ehrocha.pulsar.ble.ScannedDevice, onClick: (
 }
 
 @Composable
-private fun CanonCameraCard(
+internal fun CanonCameraCard(
     camera: com.ehrocha.pulsar.transport.ccapi.CanonCamera,
     nickname: String?,
     onClick: () -> Unit,
