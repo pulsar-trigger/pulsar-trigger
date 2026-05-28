@@ -538,6 +538,17 @@
     <string name="guide_tips_title">ヒントとコツ</string>
     <string name="guide_tips_body">• BLEの範囲は屋外で通常10〜15m — スマートフォンを近くに置いてください。Canon BLE 直接でも同様：カメラから ~10 m 以内にいてください。\n• 長時間のCanon Wi-FiセッションではUSB-Cダミーバッテリー（例：EOS RPでDR-E18）を使用してください。CCAPIはカメラ本体の電池寿命をほぼ半減させます。\n• USB-C（PTP）はCanonで最も省電力なトランスポート — カメラの消費は約5%/h、Wi-Fiは約30%/h。Canon BLE 直接もボディの Wi-Fi 無線がオフのままなので低コストです。\n• PCリモートモード（CanonのUSB-C）ではモードダイヤルがロック。ボディでBulb/Manualを変更するには先に切断してください。\n• Canon BLE はモードダイヤルをリモートで変更できません — バルブフロー開始前に、カメラを Manual + Bulb に設定してください。\n• Star Focus には CCAPI（Wi-Fi）または USB-C PTP が必要です — Canon BLE にはライブビューがありません。Canon BLE のみで接続中の場合は、撮影前に手動で合焦してください。\n• 天体写真では早めに到着し、薄明が消える間に極軸合わせを行いましょう。長時間露出開始前にStar Focusを使ってください。\n• お気に入りのワークフローをフローとして保存し、ワンタップでセッションを開始。\n• ハードウェア変更後または新しいカメラの初回ペアリング後はカメラテスト（ツールタブ）を実行し、トランスポートがエンドツーエンドで動作することを確認してください。\n• セッション終了時のダークフレームは、センサー温度をライトと近い状態に保ちます。</string>
 
+    <!-- トランスポート別セットアップ画面（フェーズ 3） -->
+    <string name="transport_setup_instructions_header">セットアップ</string>
+    <string name="pulsar_ble_setup_step1">Pulsar ESP32 モジュールの電源を入れます。アドバタイズ中は LED が点滅します。</string>
+    <string name="pulsar_ble_setup_step2">モジュールから ~10 m 以内にスマートフォンを保ってください — BLE は見通し範囲が必要です。</string>
+    <string name="pulsar_ble_setup_step3">下にモジュールが表示されたら、カードをタップして接続してください。</string>
+    <string name="pulsar_ble_setup_devices_header">デバイス</string>
+    <string name="pulsar_ble_setup_scanning">検索中…</string>
+    <string name="pulsar_ble_setup_rescan">再スキャン</string>
+    <string name="pulsar_ble_setup_empty">付近に Pulsar モジュールが見つかりません。モジュールの電源と通信圏内を確認して、再スキャンをタップしてください。</string>
+    <string name="pulsar_ble_setup_unknown_name">Pulsar（不明）</string>
+
     <!-- スキャン入口画面（トランスポート選択） -->
     <string name="scan_landing_pick_transport">トランスポートを選択</string>
     <string name="scan_landing_subtitle">トランスポートごとにカメラ側の設定が異なります。タップして手順を確認してください。</string>

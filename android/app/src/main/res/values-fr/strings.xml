@@ -538,6 +538,17 @@
     <string name="guide_tips_title">Astuces</string>
     <string name="guide_tips_body">• La portée BLE est typiquement de 10–15 m en extérieur — gardez le téléphone à proximité. Idem pour Canon BLE direct : restez à ~10 m de l\'appareil.\n• Pour les longues sessions Canon en Wi-Fi, utilisez l\'alimentation USB-C par batterie factice (par ex. DR-E18 sur l\'EOS RP). CCAPI divise quasiment par deux l\'autonomie du boîtier.\n• USB-C (PTP) est le transport Canon le plus économe — le boîtier consomme ~5 %/h vs ~30 %/h en Wi-Fi. Canon BLE direct est également peu coûteux car le radio Wi-Fi du boîtier reste éteint.\n• En mode PC-remote (Canon en USB-C) la molette est verrouillée. Pour changer Bulb/Manuel sur le boîtier, déconnectez d\'abord.\n• Canon BLE ne peut pas changer la molette à distance — placez l\'appareil en Manuel + Bulb avant de lancer un flux bulb.\n• Pour le Focus Étoile, il vous faut CCAPI (Wi-Fi) ou USB-C PTP — Canon BLE n\'a pas de live view. Si vous n\'avez que Canon BLE connecté, faites la mise au point manuellement avant la prise.\n• Pour l\'astrophotographie, arrivez tôt et faites la mise en station pendant que le crépuscule s\'estompe. Utilisez le Focus Étoile avant une longue pose.\n• Sauvegardez vos workflows favoris en tant que Flux pour démarrer une session en un seul geste.\n• Lancez le Test Appareil (onglet Outils) après un changement matériel ou après le premier appairage d\'un nouveau boîtier pour confirmer que le transport fonctionne de bout en bout.\n• Les dark frames en fin de session gardent la température du capteur proche de celle des lights.</string>
 
+    <!-- Écrans de configuration par transport (Phase 3) -->
+    <string name="transport_setup_instructions_header">CONFIGURATION</string>
+    <string name="pulsar_ble_setup_step1">Allumez le module Pulsar ESP32. La LED clignote pendant l\'annonce.</string>
+    <string name="pulsar_ble_setup_step2">Gardez le téléphone à ~10 m du module — la portée BLE est en ligne de vue.</string>
+    <string name="pulsar_ble_setup_step3">Quand votre module apparaît ci-dessous, appuyez sur sa carte pour vous connecter.</string>
+    <string name="pulsar_ble_setup_devices_header">APPAREILS</string>
+    <string name="pulsar_ble_setup_scanning">Recherche…</string>
+    <string name="pulsar_ble_setup_rescan">Rechercher</string>
+    <string name="pulsar_ble_setup_empty">Aucun module Pulsar à proximité. Vérifiez que le module est allumé et à portée, puis appuyez sur Rechercher.</string>
+    <string name="pulsar_ble_setup_unknown_name">Pulsar (inconnu)</string>
+
     <!-- Écran d'accueil de recherche (sélecteur de transport) -->
     <string name="scan_landing_pick_transport">Choisissez un transport</string>
     <string name="scan_landing_subtitle">Chaque transport nécessite une configuration différente côté appareil. Appuyez sur l\'un d\'eux pour voir ses instructions.</string>

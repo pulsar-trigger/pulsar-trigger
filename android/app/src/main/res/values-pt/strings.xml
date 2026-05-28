@@ -538,6 +538,17 @@
     <string name="guide_tips_title">Dicas e Truques</string>
     <string name="guide_tips_body">• O alcance BLE é tipicamente 10–15 m ao ar livre — mantenha o celular por perto. O mesmo vale para o Canon BLE direto: fique a até ~10 m da câmera.\n• Em sessões longas via Wi-Fi Canon, use passagem por bateria USB-C (por ex. DR-E18 na EOS RP). O CCAPI praticamente reduz a autonomia do corpo pela metade.\n• USB-C (PTP) é o transporte Canon mais econômico — o corpo consome ~5 %/h vs ~30 %/h via Wi-Fi. O Canon BLE direto também tem custo baixo porque o rádio Wi-Fi do corpo fica desligado.\n• No modo PC-remote (Canon via USB-C) o seletor de modos trava. Para mudar Bulb/Manual no corpo, desconecte antes.\n• O Canon BLE não consegue mudar o seletor de modos remotamente — coloque a câmera em Manual + Bulb antes de iniciar um fluxo de bulb.\n• Para o Foco em Estrela você precisa de CCAPI (Wi-Fi) ou USB-C PTP — o Canon BLE não tem live view. Se só tiver Canon BLE conectado, foque manualmente antes do disparo.\n• Para astrofotografia, chegue cedo e alinhe a polar enquanto o crepúsculo está diminuindo. Use o Foco em Estrela antes de iniciar uma sessão longa.\n• Salve seus fluxos favoritos como Fluxos para iniciar uma sessão com um toque.\n• Rode o Teste da Câmera (aba Ferramentas) após uma mudança de hardware ou após parear uma câmera nova para confirmar que o transporte funciona ponta a ponta.\n• Dark frames ao final da sessão mantêm a temperatura do sensor próxima à dos lights.</string>
 
+    <!-- Telas de configuração por transporte (Fase 3) -->
+    <string name="transport_setup_instructions_header">CONFIGURAÇÃO</string>
+    <string name="pulsar_ble_setup_step1">Ligue o módulo Pulsar ESP32. O LED pisca enquanto anuncia.</string>
+    <string name="pulsar_ble_setup_step2">Mantenha o celular a até ~10 m do módulo — o alcance BLE é em linha de visada.</string>
+    <string name="pulsar_ble_setup_step3">Quando seu módulo aparecer abaixo, toque no card para conectar.</string>
+    <string name="pulsar_ble_setup_devices_header">DISPOSITIVOS</string>
+    <string name="pulsar_ble_setup_scanning">Procurando…</string>
+    <string name="pulsar_ble_setup_rescan">Buscar novamente</string>
+    <string name="pulsar_ble_setup_empty">Nenhum módulo Pulsar por perto. Verifique se o módulo está ligado e dentro do alcance, depois toque em Buscar novamente.</string>
+    <string name="pulsar_ble_setup_unknown_name">Pulsar (desconhecido)</string>
+
     <!-- Tela inicial de busca (seletor de transporte) -->
     <string name="scan_landing_pick_transport">Escolha um transporte</string>
     <string name="scan_landing_subtitle">Cada transporte exige configuração diferente na câmera. Toque em um para ver as instruções.</string>

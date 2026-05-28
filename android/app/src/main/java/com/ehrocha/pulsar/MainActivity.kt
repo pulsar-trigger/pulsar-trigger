@@ -65,6 +65,7 @@ import com.ehrocha.pulsar.ui.screens.MainMenuScreen
 import com.ehrocha.pulsar.ui.screens.ModeScreen
 import com.ehrocha.pulsar.ui.screens.ScanLandingScreen
 import com.ehrocha.pulsar.ui.screens.ScanScreen
+import com.ehrocha.pulsar.ui.screens.TransportSetupScreen
 import com.ehrocha.pulsar.ui.screens.SettingsScreen
 import com.ehrocha.pulsar.ui.screens.SettingsSection
 import com.ehrocha.pulsar.ui.screens.CustomFlowScreen
@@ -373,16 +374,27 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
         when (val screen = currentScreen) {
             AppScreen.ScanLanding -> ScanLandingScreen(
                 vm = vm,
-                onTransportSelected = { _ ->
-                    // Phase 2 interim: every tile routes to the legacy
-                    // combined Scan screen. Phase 3 will replace this
-                    // with per-transport setup screens.
-                    currentScreen = AppScreen.Scan
+                onTransportSelected = { kind ->
+                    // Phase 3: route to the per-transport setup screen for
+                    // transports that have one implemented; everything else
+                    // still falls through to the legacy combined Scan
+                    // until its commit lands.
+                    currentScreen = when (kind) {
+                        com.ehrocha.pulsar.transport.TransportKind.BLE_ESP ->
+                            AppScreen.TransportSetup(kind)
+                        else -> AppScreen.Scan
+                    }
                 },
                 onSimulatorSelected = {
                     vm.connectSimulator()
                     currentScreen = AppScreen.Menu
                 },
+                onConnected = { currentScreen = AppScreen.Menu },
+            )
+            is AppScreen.TransportSetup -> TransportSetupScreen(
+                vm = vm,
+                kind = screen.kind,
+                onBack = { currentScreen = AppScreen.ScanLanding },
                 onConnected = { currentScreen = AppScreen.Menu },
             )
             AppScreen.Scan -> ScanScreen(vm) { currentScreen = AppScreen.Menu }
@@ -679,6 +691,8 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
 private sealed class AppScreen {
     /** Transport-picker landing screen (post-permissions entry point). */
     data object ScanLanding : AppScreen()
+    /** Per-transport setup screen (Phase 3, lands one transport at a time). */
+    data class TransportSetup(val kind: com.ehrocha.pulsar.transport.TransportKind) : AppScreen()
     /** Legacy combined-scan screen. Kept while we phase in per-transport
      *  setup screens (Phase 3). */
     data object Scan : AppScreen()
