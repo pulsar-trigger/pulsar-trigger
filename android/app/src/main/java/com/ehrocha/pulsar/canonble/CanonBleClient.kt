@@ -137,6 +137,22 @@ class CanonBleClient(
             val ok = controlChar != null && pairChar != null
             if (!ok) Log.w(TAG, "missing char: control=${controlChar != null} pair=${pairChar != null}")
             if (ok) fullyConnected = true
+            // Diagnostic snapshot for the docs/canon-ble.md troubleshooting
+            // flow — captured once per connect so a single logcat tells us
+            // the link state, not just the write result.
+            //  - bondState 12 = BONDED, 11 = BONDING, 10 = NONE
+            //  - char properties bitmask: 0x04 = WRITE_NO_RESPONSE,
+            //    0x08 = WRITE (with response), 0x10 = NOTIFY, 0x20 = INDICATE
+            controlChar?.let { c ->
+                Log.d(TAG, "services: control char props=0x%02X (writeNoResp=%b write=%b notify=%b), bondState=%d"
+                    .format(
+                        c.properties,
+                        c.properties and BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE != 0,
+                        c.properties and BluetoothGattCharacteristic.PROPERTY_WRITE != 0,
+                        c.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0,
+                        device.bondState,
+                    ))
+            }
             servicesSignal.getAndSet(null)?.complete(ok)
             connectSignal.getAndSet(null)?.complete(ok)
         }
