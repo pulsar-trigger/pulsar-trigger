@@ -147,6 +147,18 @@ class CanonBleClient(
             characteristic: BluetoothGattCharacteristic,
             status: Int,
         ) {
+            // Logged for the docs/canon-ble.md troubleshooting flow: a
+            // GATT_SUCCESS here on a control write that didn't actually
+            // fire the shutter means the camera accepted-then-ignored the
+            // byte (arm/state issue), vs a non-zero status meaning the
+            // link rejected the write (encryption / CCCD / permission).
+            val charName = when (characteristic.uuid) {
+                CONTROL_CHAR_UUID -> "control"
+                PAIR_CHAR_UUID -> "pair"
+                else -> characteristic.uuid.toString()
+            }
+            Log.d(TAG, "onCharacteristicWrite[$charName] status=$status " +
+                "(${if (status == BluetoothGatt.GATT_SUCCESS) "GATT_SUCCESS" else "FAILURE"})")
             writeSignal.getAndSet(null)?.complete(status == BluetoothGatt.GATT_SUCCESS)
         }
     }
@@ -209,7 +221,10 @@ class CanonBleClient(
      *  Used for every shutter press, release, focus, video toggle. */
     @SuppressLint("MissingPermission")
     suspend fun writeControl(byte: Byte): Boolean = opMutex.withLock {
-        val ch = controlChar ?: return@withLock false
+        val ch = controlChar ?: run {
+            Log.w(TAG, "writeControl: no control characteristic (not connected?)")
+            return@withLock false
+        }
         val g = gatt ?: return@withLock false
         @Suppress("DEPRECATION")
         run {
@@ -218,14 +233,23 @@ class CanonBleClient(
         }
         val deferred = CompletableDeferred<Boolean>()
         writeSignal.set(deferred)
+        Log.d(TAG, "writeControl: sending 0x%02X".format(byte.toInt() and 0xFF))
         @Suppress("DEPRECATION")
         if (g.writeCharacteristic(ch) != true) {
+            // writeCharacteristic returning false = the op couldn't even be
+            // queued (busy, or the link isn't writable). Distinct from a
+            // queued write that later fails in onCharacteristicWrite.
+            Log.w(TAG, "writeControl: writeCharacteristic() returned false (couldn't queue 0x%02X)"
+                .format(byte.toInt() and 0xFF))
             writeSignal.set(null)
             return@withLock false
         }
         // NO_RESPONSE writes still raise onCharacteristicWrite; should
         // return within a few ms. Generous timeout for slow stacks.
-        withTimeoutOrNull(2_000) { deferred.await() } ?: false
+        val ok = withTimeoutOrNull(2_000) { deferred.await() } ?: false
+        if (!ok) Log.w(TAG, "writeControl: 0x%02X did not confirm (timeout or GATT failure)"
+            .format(byte.toInt() and 0xFF))
+        ok
     }
 
     val address: String get() = device.address

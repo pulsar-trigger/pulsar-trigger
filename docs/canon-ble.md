@@ -152,6 +152,61 @@ When all four hold, `connectCanonBle(matchedDevice, auto = true)` runs. The arm-
 - **The OS pair dialog can be missed.** If the user dismisses the system pair prompt the connect fails with `connect_failed`. Re-trying re-pops the dialog.
 - **Two BLE scans share one radio.** Pulsar's ESP32 scan and the Canon BLE scan run concurrently with different filters. Android handles this transparently but each adds to the BLE-scan battery cost; the ESP32 scan is throttled to scan-screen visibility and the Canon BLE scan stops while connected.
 
+## Troubleshooting — "it pairs but won't shoot"
+
+This is the failure mode we hit on the EOS RP + EOS R during bring-up: the Android pair dialog completes, the camera shows "Paired with: Pulsar", but no shutter fires in any mode. Work through these in order.
+
+### 0. Camera-side prerequisites
+
+- **Bluetooth mode = Remote**, not Smartphone. (Wireless communication → Bluetooth → Remote.) Smartphone mode is for Canon's own Camera Connect app / CCAPI — it does *not* speak the BR-E1 remote protocol Pulsar uses, so a body in Smartphone mode pairs but never shoots.
+- Body on **Manual + Bulb** on the mode dial if you're testing a bulb mode (Pulsar can't set this remotely — see Honest caveats).
+- For a single shot, Timelapse mode is the simplest test (camera owns the exposure).
+
+### 1. Capture a logcat while you tap the shutter
+
+The control-write path logs under the tag `CanonBleClient`. With the phone plugged into a computer:
+
+```
+adb logcat -c                          # clear the buffer first
+adb logcat -s CanonBleClient:* CanonBleTransport:*
+```
+
+Then connect the camera in Pulsar and fire a single shot (Timelapse, or Manual → tap). You're looking for the `writeControl` / `onCharacteristicWrite` lines:
+
+```
+D CanonBleClient: writeControl: sending 0x8C
+D CanonBleClient: onCharacteristicWrite[control] status=0 (GATT_SUCCESS)
+D CanonBleClient: writeControl: sending 0x0C
+D CanonBleClient: onCharacteristicWrite[control] status=0 (GATT_SUCCESS)
+```
+
+Interpretation:
+
+| What you see | Meaning | Where the bug is |
+|---|---|---|
+| `writeControl: sending 0x8C` then `status=0 (GATT_SUCCESS)`, but **no shot fires** | The camera *accepted* the byte at the link layer and then ignored it | Arm / state issue — the body doesn't consider Pulsar the active remote for this session. The `[0x03, name]` arm-write either didn't happen or didn't "take". Check the `CanonBleTransport: connected + armed …` line appears on connect. |
+| `onCharacteristicWrite[control] status=` **non-zero** (e.g. 5 = insufficient authentication, 8 = insufficient encryption, 137 = auth failure) | The link **rejected** the write | Encryption / bond / CCCD issue. The bond may not be establishing a secure-enough link, or the control characteristic needs notifications (CCCD) enabled before it accepts writes. |
+| `writeControl: writeCharacteristic() returned false` | Android couldn't even queue the write | The GATT link isn't in a writable state — usually a stale/dropped connection. Check for a `spontaneous disconnect` line just before. |
+| No `writeControl` line at all when you tap | The wizard never reached the transport | Not a BLE bug — check the mode dispatch (`executeFlowStep`) and that `_canonBleTransport` is the active transport. |
+
+Attach the relevant lines and we can pin it precisely.
+
+### 2. Try a different drive mode on the body
+
+A couple of the open-source references hint that some bodies only honour the immediate-release byte (`0x8C`) when the camera's **drive mode** is set to single shot / remote, and that the self-timer path uses the `MODE_DELAY` (`0x04`) bit instead of `MODE_IMMEDIATE` (`0x0C`).
+
+If immediate release does nothing, set the body's **drive mode to the 2-second self-timer** and try again. If the self-timer fires but immediate release doesn't, that tells us this body wants the `MODE_DELAY` byte for triggering — a per-body quirk we'd handle by sending `0x84` (DELAY | RELEASE) instead of `0x8C`, gated on a body whitelist or a user toggle.
+
+### 3. Confirm the arm-write landed
+
+On connect you should see (tag `CanonBleTransport`):
+
+```
+I CanonBleTransport: connected + armed <camera name> (AA:BB:CC:DD:EE:FF)
+```
+
+If instead you see `pair/arm write failed … aborting`, the `[0x03, name]` write to the pair characteristic didn't confirm — the camera isn't being armed, so it'll ignore every shutter byte. That points back at the pair characteristic / encryption rather than the control path.
+
 ## Future work
 
 1. **Manual pair-name field** — let the user override `"Pulsar"` so multiple phones paired to the same camera are distinguishable in the camera's list.
