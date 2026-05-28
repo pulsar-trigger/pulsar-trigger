@@ -228,9 +228,6 @@ class CanonBleClient(
         withTimeoutOrNull(2_000) { deferred.await() } ?: false
     }
 
-    val isBonded: Boolean
-        get() = device.bondState == BluetoothDevice.BOND_BONDED
-
     val address: String get() = device.address
     val name: String? @SuppressLint("MissingPermission") get() = try { device.name } catch (_: SecurityException) { null }
 

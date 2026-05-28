@@ -77,53 +77,34 @@ class CanonBleTransport private constructor(
             device: BluetoothDevice,
             onSpontaneousDisconnect: () -> Unit = {},
         ): CanonBleTransport? {
-            // First-pair path needs a disconnect/reconnect cycle. Canon
-            // BR-E1 bodies stay in "pairing" mode on the link they just
-            // accepted the pair-write on — control writes get silently
-            // ignored. The reference implementations (ESP32 +
-            // canon-bluetooth-remote + cbremote) all close the GATT
-            // after the pair-write and reconnect for steady-state
-            // operation. See docs/canon-ble.md → Connect flow.
-            //
-            // The reconnect path also handles the already-bonded case
-            // uniformly — it's a no-op pair-skip rather than a fresh
-            // pair-then-reconnect.
-            if (device.bondState != BluetoothDevice.BOND_BONDED) {
-                Log.i(TAG, "${device.address} not bonded yet — running pair-write cycle")
-                val pairClient = CanonBleClient(ctx, device)
-                if (!pairClient.connect()) {
-                    Log.w(TAG, "pair-phase GATT connect failed for ${device.address}")
-                    pairClient.close()
-                    return null
-                }
-                if (!pairClient.writePairName(PAIR_NAME)) {
-                    Log.w(TAG, "pair-write failed; aborting")
-                    pairClient.close()
-                    return null
-                }
-                // Close cleanly, give the camera ~500 ms to transition
-                // out of pairing state, then fall through to a fresh
-                // connect that operates as a normal remote session.
-                pairClient.close()
-                delay(500)
-            }
-
-            // Steady-state client: this is the one we keep around for
-            // the lifetime of the transport, with the
-            // spontaneous-disconnect callback hooked up so cable-pull-
-            // equivalent BLE drops drive the reconnect banner.
             var transportRef: CanonBleTransport? = null
             val client = CanonBleClient(ctx, device, onSpontaneousDisconnect = {
                 transportRef?.markDisconnected()
                 onSpontaneousDisconnect()
             })
             if (!client.connect()) {
-                Log.w(TAG, "post-pair GATT connect failed for ${device.address}")
+                Log.w(TAG, "GATT connect failed for ${device.address}")
+                client.close()
+                return null
+            }
+            // Write the BR-E1 pair name on EVERY connection, right after
+            // service discovery, before any control write. This is the
+            // "arm this device as the active remote" step — Canon bodies
+            // expect it each session, not just on first bond. The working
+            // Android reference (iebyt/cbremote) calls its equivalent
+            // `pairAndConnect()` in onServicesDiscovered on every connect;
+            // skipping it (as we did when already-bonded) leaves the camera
+            // OS-bonded but un-armed, so it silently drops shutter writes.
+            // First time this also triggers Android's OS pair dialog;
+            // later connects reuse the bond and the write is silent.
+            // See docs/canon-ble.md → Connect flow.
+            if (!client.writePairName(PAIR_NAME)) {
+                Log.w(TAG, "pair/arm write failed for ${device.address}; aborting")
                 client.close()
                 return null
             }
             val label = client.name?.takeIf { it.isNotBlank() } ?: "Canon BLE camera"
-            Log.i(TAG, "connected to $label (${device.address})")
+            Log.i(TAG, "connected + armed $label (${device.address})")
             return CanonBleTransport(device, client).also {
                 it._label.value = label
                 it._connected.value = true

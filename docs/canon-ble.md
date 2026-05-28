@@ -8,7 +8,7 @@ Its reason to exist: a fully wireless, hardware-free path on Canon bodies that t
 
 | Feature | Status | Notes |
 |---|---|---|
-| Pair / unpair | ✅ | First-time pairing triggers the Android system pair dialog; subsequent connects reuse the bond. Camera must be in Bluetooth → Remote pair mode on first connect. |
+| Pair / unpair | ✅ | First-time pairing triggers the Android system pair dialog; subsequent connects reuse the bond. The `[0x03, name]` arm-write is re-sent on **every** connect (registers Pulsar as the active remote for the session — the camera ignores control writes otherwise). Camera must be in Bluetooth → Remote pair mode on first connect. |
 | Single-shot capture | ✅ | Drives Timelapse. Camera owns the exposure. |
 | Bulb exposure | ✅ | Press → host-side wait → release pattern. **User must put the mode dial on Bulb on the camera body itself** — the protocol has no shutter-speed write. |
 | Per-shot AF control | ✅ | Half-press (`0x4C`) → release → full-press (`0x8C`) when `useAutofocus=true`; bare full-press when false. |
@@ -70,7 +70,7 @@ Concurrent with the Pulsar ESP32 scan (`BleController`) — Android handles mult
 3. **Scan stop** — `canonBleDiscovery.stop()`. Android can't reliably scan + connect on the same radio.
 4. **GATT connect** — `device.connectGatt(ctx, autoConnect=false, callback, TRANSPORT_LE)`.
 5. **Service discovery** — `gatt.discoverServices()`; pulls out the pair characteristic (`00050002-…`) + the control characteristic (`00050003-…`).
-6. **Pair-write (first-time only)** — if `device.bondState != BOND_BONDED`, write `[0x03, ...ASCII "Pulsar"]` to the pair characteristic. The camera demands MITM encryption and Android pops the system pair dialog; the user confirms with the passkey shown on the camera screen. After that the bond is in the OS keystore.
+6. **Arm-write (every connect)** — write `[0x03, ...ASCII "Pulsar"]` to the pair characteristic. **This runs on every connection, not just the first** — it registers Pulsar as the active remote for *this session*. The camera silently ignores control-characteristic writes until it's been armed this way, even when the device is already OS-bonded. (Confirmed against `iebyt/cbremote`, the working Android reference, which writes the same payload in `onServicesDiscovered` every connect.) On the first connect this also triggers Android's MITM pair dialog — the user confirms with the passkey shown on the camera screen, and the bond lands in the OS keystore; later connects reuse the bond and the arm-write is silent.
 7. **Persist MAC** — `lastCanonBleAddress` stored in plain SharedPrefs.
 8. **Done** — `_canonBleTransport.value` flips non-null; the UI navigates to the trigger tab.
 
@@ -140,7 +140,7 @@ The viewmodel's init block watches `canonBleDiscovery.cameras`. Conditions for a
 - `idleAcrossOtherTransports()` (the user hasn't switched to a different transport)
 - A device with `address == lastCanonBleAddress` appears in `cameras`
 
-When all four hold, `connectCanonBle(matchedDevice, auto = true)` runs. The pair-write step is skipped (bond is already in the OS keystore).
+When all four hold, `connectCanonBle(matchedDevice, auto = true)` runs. The arm-write still runs (it runs every connect) but is silent — the OS bond is already in the keystore so no pair dialog appears.
 
 `lastCanonBleAddress` is persisted in SharedPrefs (`pulsar_canon_ble.last_address`), so this survives app restart — open the app, walk into BLE range of the previously-bonded body, scan screen will reconnect on its own.
 
