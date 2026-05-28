@@ -538,6 +538,22 @@
     <string name="guide_tips_title">提示与技巧</string>
     <string name="guide_tips_body">• BLE 范围在室外通常为 10–15 米——请将手机放在附近。佳能 BLE 直连同样如此：请保持距离相机约 10 米以内。\n• 长时间佳能 Wi-Fi 会话请使用 USB-C 假电池直通供电（例如 EOS RP 上的 DR-E18）。CCAPI 大致使机身电池续航减半。\n• USB-C（PTP）是佳能上最省电的传输方式——相机消耗约 5%/小时，而 Wi-Fi 约 30%/小时。佳能 BLE 直连同样低功耗，因为机身的 Wi-Fi 无线电保持关闭。\n• 在 PC 远程模式下（佳能 USB-C）模式拨盘会锁定。要在机身上更改 B 门/手动，请先断开连接。\n• 佳能 BLE 无法远程更改模式拨盘——在启动 B 门流程前，请将相机设为 Manual + Bulb。\n• 星点对焦需要 CCAPI（Wi-Fi）或 USB-C PTP——佳能 BLE 没有实时取景。如果只用佳能 BLE 连接，请在拍摄前手动对焦。\n• 天文摄影请提前到达，在暮光消退时进行极轴对齐。长曝光运行前使用星点对焦。\n• 将常用工作流保存为流程，一键启动会话。\n• 硬件变更后或首次配对新相机后运行相机测试（工具选项卡），确认传输方式端到端工作。\n• 会话结束时的暗场可使传感器温度与亮场匹配。</string>
 
+    <!-- 扫描入口屏幕（传输方式选择） -->
+    <string name="scan_landing_pick_transport">选择传输方式</string>
+    <string name="scan_landing_subtitle">每种传输方式在相机端需要不同的设置。点击查看相应说明。</string>
+    <string name="scan_landing_reconnect_to">重新连接到 %1$s</string>
+    <string name="scan_landing_reconnect_via">上次连接 · %1$s</string>
+    <string name="scan_landing_forget">忘记此设备</string>
+    <string name="scan_landing_use_simulator">使用模拟器</string>
+    <string name="transport_tile_pulsar_ble_title">Pulsar BLE</string>
+    <string name="transport_tile_pulsar_ble_subtitle">连接相机快门端口的 ESP32 模块</string>
+    <string name="transport_tile_ccapi_title">佳能 Wi-Fi</string>
+    <string name="transport_tile_ccapi_subtitle">支持 CCAPI 的 EOS R 系列</string>
+    <string name="transport_tile_ptp_title">佳能 USB-C</string>
+    <string name="transport_tile_ptp_subtitle">USB-C 数据线，任意 PTP 机身</string>
+    <string name="transport_tile_canon_ble_title">佳能 BLE</string>
+    <string name="transport_tile_canon_ble_subtitle">BR-E1 协议，无线</string>
+
     <!-- Permissions screen -->
     <string name="permissions_required_title">需要权限</string>
     <string name="permissions_required_body">Pulsar Trigger 需要蓝牙和位置权限来发现和连接您的 Pulsar 设备。\n\n如果您之前拒绝了权限，请点击"打开设置"并手动启用。</string>

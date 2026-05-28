@@ -63,6 +63,7 @@ import com.ehrocha.pulsar.ui.components.SignalStrengthIndicator
 import com.ehrocha.pulsar.ui.components.NightModeToggle
 import com.ehrocha.pulsar.ui.screens.MainMenuScreen
 import com.ehrocha.pulsar.ui.screens.ModeScreen
+import com.ehrocha.pulsar.ui.screens.ScanLandingScreen
 import com.ehrocha.pulsar.ui.screens.ScanScreen
 import com.ehrocha.pulsar.ui.screens.SettingsScreen
 import com.ehrocha.pulsar.ui.screens.SettingsSection
@@ -234,7 +235,7 @@ private fun PermissionsRequiredScreen(onRequestAgain: () -> Unit) {
 
 @Composable
 fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null) {
-    var currentScreen by remember { mutableStateOf<AppScreen>(AppScreen.Scan) }
+    var currentScreen by remember { mutableStateOf<AppScreen>(AppScreen.ScanLanding) }
     var menuTab by remember { mutableIntStateOf(com.ehrocha.pulsar.ui.screens.TAB_TRIGGER) }
     val connected by vm.connected.collectAsState()
 
@@ -267,7 +268,7 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
     // Go back to scan if disconnected (but not if we arrived via file import)
     var importHandled by remember { mutableStateOf(importJson != null) }
     LaunchedEffect(connected) {
-        if (!connected && !importHandled) currentScreen = AppScreen.Scan
+        if (!connected && !importHandled) currentScreen = AppScreen.ScanLanding
         if (connected) importHandled = false // once connected, normal disconnect-reset resumes
     }
 
@@ -343,7 +344,9 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
     ) {
     Column(Modifier.fillMaxSize()) {
         // ── Persistent top bar (hidden on Scan screen) ───────────────
-        if (currentScreen !is AppScreen.Scan) {
+        // Hide the persistent top bar on the entry screens — both ScanLanding
+        // and the legacy Scan have their own headers.
+        if (currentScreen !is AppScreen.Scan && currentScreen !is AppScreen.ScanLanding) {
             Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -368,6 +371,20 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
         // ── Screen content ───────────────────────────────────────────
         Box(Modifier.weight(1f)) {
         when (val screen = currentScreen) {
+            AppScreen.ScanLanding -> ScanLandingScreen(
+                vm = vm,
+                onTransportSelected = { _ ->
+                    // Phase 2 interim: every tile routes to the legacy
+                    // combined Scan screen. Phase 3 will replace this
+                    // with per-transport setup screens.
+                    currentScreen = AppScreen.Scan
+                },
+                onSimulatorSelected = {
+                    vm.connectSimulator()
+                    currentScreen = AppScreen.Menu
+                },
+                onConnected = { currentScreen = AppScreen.Menu },
+            )
             AppScreen.Scan -> ScanScreen(vm) { currentScreen = AppScreen.Menu }
             AppScreen.Menu -> {
                 MainMenuScreen(
@@ -660,6 +677,10 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
 }
 
 private sealed class AppScreen {
+    /** Transport-picker landing screen (post-permissions entry point). */
+    data object ScanLanding : AppScreen()
+    /** Legacy combined-scan screen. Kept while we phase in per-transport
+     *  setup screens (Phase 3). */
     data object Scan : AppScreen()
     data object Menu : AppScreen()
     data class Mode(val mode: TriggerMode) : AppScreen()

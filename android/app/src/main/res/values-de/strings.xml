@@ -538,6 +538,22 @@
     <string name="guide_tips_title">Tipps und Tricks</string>
     <string name="guide_tips_body">• Die BLE-Reichweite beträgt typisch 10–15 m im Freien — Telefon in Reichweite halten. Gleiches gilt für Canon BLE direkt: bleiben Sie ~10 m an der Kamera.\n• Für lange Canon-WLAN-Sitzungen USB-C-Dummy-Akku verwenden (z. B. DR-E18 an der EOS RP). CCAPI halbiert die Akkulaufzeit des Gehäuses praktisch.\n• USB-C (PTP) ist der akkuschonendste Canon-Transport — das Gehäuse zieht ~5 %/h statt ~30 %/h via WLAN. Canon BLE direkt ist ebenfalls sparsam, da das WLAN-Radio am Gehäuse aus bleibt.\n• Im PC-Remote-Modus (Canon via USB-C) ist das Modusrad gesperrt. Zum Wechseln von Bulb/Manuell zuerst trennen.\n• Canon BLE kann das Modusrad nicht aus der Ferne ändern — stellen Sie die Kamera vor einem Bulb-Ablauf auf Manuell + Bulb.\n• Für Star Focus brauchen Sie CCAPI (WLAN) oder USB-C PTP — Canon BLE hat kein Live-View. Wenn nur Canon BLE verbunden ist, vor der Aufnahme manuell fokussieren.\n• Für Astrofotografie kommen Sie früh und richten Sie die Polachse ein, während die Dämmerung nachlässt. Verwenden Sie Star Focus vor einer langen Belichtung.\n• Speichern Sie Ihre bevorzugten Workflows als Abläufe, um eine Sitzung mit einem Tippen zu starten.\n• Führen Sie nach einer Hardware-Änderung oder dem ersten Pairing einer neuen Kamera den Kameratest (Tab Werkzeuge) aus, um zu prüfen, dass der Transport end-to-end funktioniert.\n• Dark Frames am Ende der Sitzung halten die Sensortemperatur nahe an den Lights.</string>
 
+    <!-- Such-Landing (Transport-Auswahl) -->
+    <string name="scan_landing_pick_transport">Transport wählen</string>
+    <string name="scan_landing_subtitle">Jeder Transport benötigt eine andere Einrichtung an der Kamera. Tippen Sie einen an, um die Anleitung zu sehen.</string>
+    <string name="scan_landing_reconnect_to">Erneut verbinden mit %1$s</string>
+    <string name="scan_landing_reconnect_via">zuletzt verbunden · %1$s</string>
+    <string name="scan_landing_forget">Dieses Gerät vergessen</string>
+    <string name="scan_landing_use_simulator">Simulator verwenden</string>
+    <string name="transport_tile_pulsar_ble_title">Pulsar BLE</string>
+    <string name="transport_tile_pulsar_ble_subtitle">ESP32-Modul am Auslöseranschluss</string>
+    <string name="transport_tile_ccapi_title">Canon WLAN</string>
+    <string name="transport_tile_ccapi_subtitle">EOS R-Serie mit CCAPI</string>
+    <string name="transport_tile_ptp_title">Canon USB-C</string>
+    <string name="transport_tile_ptp_subtitle">USB-C-Kabel, jedes PTP-Gehäuse</string>
+    <string name="transport_tile_canon_ble_title">Canon BLE</string>
+    <string name="transport_tile_canon_ble_subtitle">BR-E1-Protokoll, drahtlos</string>
+
     <!-- Permissions screen -->
     <string name="permissions_required_title">Berechtigungen Erforderlich</string>
     <string name="permissions_required_body">Pulsar Trigger benötigt Bluetooth- und Standortberechtigungen, um Ihr Pulsar-Gerät zu finden und sich damit zu verbinden.\n\nWenn Sie zuvor eine Berechtigung abgelehnt haben, tippen Sie auf „Einstellungen Öffnen" und aktivieren Sie sie manuell.</string>

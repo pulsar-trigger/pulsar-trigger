@@ -115,6 +115,98 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     val shotLog = com.ehrocha.pulsar.model.ShotLog(prefs)
 
+    // ── Last successful connection (drives Scan-landing's reconnect CTA) ─
+    private val lastConnectionPrefs = app.getSharedPreferences(
+        com.ehrocha.pulsar.model.LastConnection.SHARED_PREFS_NAME,
+        Context.MODE_PRIVATE,
+    )
+    private val _lastConnection = MutableStateFlow(
+        com.ehrocha.pulsar.model.LastConnection.deserialise(
+            lastConnectionPrefs.getString(com.ehrocha.pulsar.model.LastConnection.PREF_KEY, null)
+        )
+    )
+    val lastConnection: StateFlow<com.ehrocha.pulsar.model.LastConnection?> = _lastConnection
+
+    private fun recordLastConnection(entry: com.ehrocha.pulsar.model.LastConnection) {
+        _lastConnection.value = entry
+        lastConnectionPrefs.edit()
+            .putString(com.ehrocha.pulsar.model.LastConnection.PREF_KEY, entry.serialise())
+            .apply()
+    }
+
+    /** Clear the persisted last-connection — called from `forgetLastConnection`
+     *  in the UI when the user wants to remove a stale entry (e.g. they sold
+     *  the camera). */
+    fun forgetLastConnection() {
+        _lastConnection.value = null
+        lastConnectionPrefs.edit()
+            .remove(com.ehrocha.pulsar.model.LastConnection.PREF_KEY)
+            .apply()
+    }
+
+    /** One-tap reconnect to whatever [lastConnection] points at. Dispatches
+     *  to the per-transport `connectX` after reconstructing the right device
+     *  handle from the persisted identifier. Whether the connect succeeds
+     *  depends on the device being reachable right now — for BLE bodies
+     *  that's "advertising or already bonded", for CCAPI "on the same
+     *  network", for PTP "cable plugged in".
+     *
+     *  No-op if no entry is persisted. Errors surface through the relevant
+     *  per-transport error flow (`canonCcapiError` / `ptpError` /
+     *  `canonBleError`) the same way an explicit user tap would. */
+    @SuppressLint("MissingPermission")
+    fun reconnectLast() {
+        val last = _lastConnection.value ?: return
+        when (last.kind) {
+            com.ehrocha.pulsar.transport.TransportKind.BLE_ESP -> {
+                val adapter = getApplication<Application>()
+                    .getSystemService(android.bluetooth.BluetoothManager::class.java)
+                    ?.adapter ?: return
+                val device = runCatching { adapter.getRemoteDevice(last.identifier) }.getOrNull()
+                    ?: return
+                connectTo(device)
+            }
+            com.ehrocha.pulsar.transport.TransportKind.CCAPI -> {
+                // identifier = "udn|accessUrl|ipAddress|port|friendlyName"
+                val parts = last.identifier.split('|')
+                if (parts.size < 5) {
+                    forgetLastConnection()
+                    return
+                }
+                val port = parts[3].toIntOrNull() ?: return
+                val camera = com.ehrocha.pulsar.transport.ccapi.CanonCamera(
+                    udn = parts[0],
+                    friendlyName = parts[4],
+                    nickname = canonCcapiNicknames.value[parts[0]],
+                    ipAddress = parts[2],
+                    port = port,
+                    accessUrl = parts[1],
+                )
+                connectCanonCcapi(camera)
+            }
+            com.ehrocha.pulsar.transport.TransportKind.PTP_USB -> {
+                // identifier = "vendorId:productId"
+                val (vid, pid) = last.identifier.split(':').mapNotNull { it.toIntOrNull() }
+                    .takeIf { it.size == 2 } ?: return
+                val device = ptpCameras.value
+                    .firstOrNull { it.vendorId == vid && it.productId == pid }
+                    ?: run {
+                        _ptpError.value = "no_device"
+                        return
+                    }
+                connectPtp(device)
+            }
+            com.ehrocha.pulsar.transport.TransportKind.CANON_BLE -> {
+                val adapter = getApplication<Application>()
+                    .getSystemService(android.bluetooth.BluetoothManager::class.java)
+                    ?.adapter ?: return
+                val device = runCatching { adapter.getRemoteDevice(last.identifier) }.getOrNull()
+                    ?: return
+                connectCanonBle(device)
+            }
+        }
+    }
+
     // ── BLE (scan + connection) ─────────────────────────────────────────
     val bleController = com.ehrocha.pulsar.ble.BleController(app)
     private val bleManager get() = bleController.bleManager
@@ -552,6 +644,15 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     sendAutoOff()
                     // Device info is requested by BleManager.initialize()
                     // after notifications are active — no need to request here.
+                    val mac = pendingBleConnectMac
+                    if (mac != null) {
+                        recordLastConnection(com.ehrocha.pulsar.model.LastConnection(
+                            kind = com.ehrocha.pulsar.transport.TransportKind.BLE_ESP,
+                            label = _deviceName.value,
+                            identifier = mac,
+                        ))
+                        pendingBleConnectMac = null
+                    }
                 }
             }
         }
@@ -632,6 +733,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     @SuppressLint("MissingPermission")
+    /** Remembered while a BLE connect is in flight so the
+     *  [bleController.connected] collector knows what MAC to attribute
+     *  the connection to when recording [lastConnection]. */
+    @Volatile private var pendingBleConnectMac: String? = null
+
     fun connectTo(device: BluetoothDevice) {
         // Hang up any active session so transports stay single-valued.
         if (_canonCcapiTransport.value != null) disconnectCanonCcapi()
@@ -639,6 +745,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         if (_ptpTransport.value != null) disconnectPtp()
         if (_simulatorActive.value) disconnectSimulator()
         _deviceName.value = device.name ?: "Pulsar"
+        pendingBleConnectMac = device.address
         bleController.connect(device)
     }
 
@@ -693,6 +800,18 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     )
                     // Persist creds only once they're known-good.
                     if (credentials != null) saveCanonCreds(camera.udn, credentials)
+                    // Record for the Scan-landing reconnect CTA. We pack
+                    // enough to rebuild a CanonCamera without re-running
+                    // SSDP — UDN as primary key plus the connection-time
+                    // accessUrl / IP / port / friendly name.
+                    recordLastConnection(com.ehrocha.pulsar.model.LastConnection(
+                        kind = com.ehrocha.pulsar.transport.TransportKind.CCAPI,
+                        label = effectiveCanonName(camera),
+                        identifier = listOf(
+                            camera.udn, camera.accessUrl, camera.ipAddress,
+                            camera.port.toString(), camera.friendlyName,
+                        ).joinToString("|"),
+                    ))
                     // Seed battery before the long-poll has a chance to fire
                     // — polling only delivers changed fields, so a static
                     // battery would otherwise show as 0%.
@@ -1081,6 +1200,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 _ptpReconnecting.value = false
                 _deviceName.value = transport.label.value
                 _connected.value = true
+                recordLastConnection(com.ehrocha.pulsar.model.LastConnection(
+                    kind = com.ehrocha.pulsar.transport.TransportKind.PTP_USB,
+                    label = transport.label.value,
+                    identifier = "${device.vendorId}:${device.productId}",
+                ))
                 _status.value = StatusFrame(
                     state = DeviceState.IDLE,
                     mode = TriggerMode.TIMELAPSE.id,
@@ -1195,6 +1319,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 _canonBleReconnecting.value = false
                 _deviceName.value = transport.label.value
                 _connected.value = true
+                recordLastConnection(com.ehrocha.pulsar.model.LastConnection(
+                    kind = com.ehrocha.pulsar.transport.TransportKind.CANON_BLE,
+                    label = transport.label.value,
+                    identifier = device.address,
+                ))
                 _status.value = StatusFrame(
                     state = DeviceState.IDLE,
                     mode = TriggerMode.TIMELAPSE.id,

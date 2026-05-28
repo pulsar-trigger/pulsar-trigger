@@ -538,6 +538,22 @@
     <string name="guide_tips_title">ヒントとコツ</string>
     <string name="guide_tips_body">• BLEの範囲は屋外で通常10〜15m — スマートフォンを近くに置いてください。Canon BLE 直接でも同様：カメラから ~10 m 以内にいてください。\n• 長時間のCanon Wi-FiセッションではUSB-Cダミーバッテリー（例：EOS RPでDR-E18）を使用してください。CCAPIはカメラ本体の電池寿命をほぼ半減させます。\n• USB-C（PTP）はCanonで最も省電力なトランスポート — カメラの消費は約5%/h、Wi-Fiは約30%/h。Canon BLE 直接もボディの Wi-Fi 無線がオフのままなので低コストです。\n• PCリモートモード（CanonのUSB-C）ではモードダイヤルがロック。ボディでBulb/Manualを変更するには先に切断してください。\n• Canon BLE はモードダイヤルをリモートで変更できません — バルブフロー開始前に、カメラを Manual + Bulb に設定してください。\n• Star Focus には CCAPI（Wi-Fi）または USB-C PTP が必要です — Canon BLE にはライブビューがありません。Canon BLE のみで接続中の場合は、撮影前に手動で合焦してください。\n• 天体写真では早めに到着し、薄明が消える間に極軸合わせを行いましょう。長時間露出開始前にStar Focusを使ってください。\n• お気に入りのワークフローをフローとして保存し、ワンタップでセッションを開始。\n• ハードウェア変更後または新しいカメラの初回ペアリング後はカメラテスト（ツールタブ）を実行し、トランスポートがエンドツーエンドで動作することを確認してください。\n• セッション終了時のダークフレームは、センサー温度をライトと近い状態に保ちます。</string>
 
+    <!-- スキャン入口画面（トランスポート選択） -->
+    <string name="scan_landing_pick_transport">トランスポートを選択</string>
+    <string name="scan_landing_subtitle">トランスポートごとにカメラ側の設定が異なります。タップして手順を確認してください。</string>
+    <string name="scan_landing_reconnect_to">%1$s に再接続</string>
+    <string name="scan_landing_reconnect_via">最後に接続 · %1$s</string>
+    <string name="scan_landing_forget">このデバイスを忘れる</string>
+    <string name="scan_landing_use_simulator">シミュレーターを使用</string>
+    <string name="transport_tile_pulsar_ble_title">Pulsar BLE</string>
+    <string name="transport_tile_pulsar_ble_subtitle">シャッターポート上の ESP32 モジュール</string>
+    <string name="transport_tile_ccapi_title">Canon Wi-Fi</string>
+    <string name="transport_tile_ccapi_subtitle">CCAPI 対応の EOS R シリーズ</string>
+    <string name="transport_tile_ptp_title">Canon USB-C</string>
+    <string name="transport_tile_ptp_subtitle">USB-C ケーブル、PTP 対応ボディ</string>
+    <string name="transport_tile_canon_ble_title">Canon BLE</string>
+    <string name="transport_tile_canon_ble_subtitle">BR-E1 プロトコル、ワイヤレス</string>
+
     <!-- Permissions screen -->
     <string name="permissions_required_title">権限が必要です</string>
     <string name="permissions_required_body">Pulsar TriggerはPulsarデバイスを検出・接続するために、Bluetoothと位置情報の権限が必要です。\n\n以前に権限を拒否した場合は、「設定を開く」をタップして手動で有効にしてください。</string>

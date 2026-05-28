@@ -538,6 +538,22 @@
     <string name="guide_tips_title">Astuces</string>
     <string name="guide_tips_body">• La portée BLE est typiquement de 10–15 m en extérieur — gardez le téléphone à proximité. Idem pour Canon BLE direct : restez à ~10 m de l\'appareil.\n• Pour les longues sessions Canon en Wi-Fi, utilisez l\'alimentation USB-C par batterie factice (par ex. DR-E18 sur l\'EOS RP). CCAPI divise quasiment par deux l\'autonomie du boîtier.\n• USB-C (PTP) est le transport Canon le plus économe — le boîtier consomme ~5 %/h vs ~30 %/h en Wi-Fi. Canon BLE direct est également peu coûteux car le radio Wi-Fi du boîtier reste éteint.\n• En mode PC-remote (Canon en USB-C) la molette est verrouillée. Pour changer Bulb/Manuel sur le boîtier, déconnectez d\'abord.\n• Canon BLE ne peut pas changer la molette à distance — placez l\'appareil en Manuel + Bulb avant de lancer un flux bulb.\n• Pour le Focus Étoile, il vous faut CCAPI (Wi-Fi) ou USB-C PTP — Canon BLE n\'a pas de live view. Si vous n\'avez que Canon BLE connecté, faites la mise au point manuellement avant la prise.\n• Pour l\'astrophotographie, arrivez tôt et faites la mise en station pendant que le crépuscule s\'estompe. Utilisez le Focus Étoile avant une longue pose.\n• Sauvegardez vos workflows favoris en tant que Flux pour démarrer une session en un seul geste.\n• Lancez le Test Appareil (onglet Outils) après un changement matériel ou après le premier appairage d\'un nouveau boîtier pour confirmer que le transport fonctionne de bout en bout.\n• Les dark frames en fin de session gardent la température du capteur proche de celle des lights.</string>
 
+    <!-- Écran d'accueil de recherche (sélecteur de transport) -->
+    <string name="scan_landing_pick_transport">Choisissez un transport</string>
+    <string name="scan_landing_subtitle">Chaque transport nécessite une configuration différente côté appareil. Appuyez sur l\'un d\'eux pour voir ses instructions.</string>
+    <string name="scan_landing_reconnect_to">Reconnecter à %1$s</string>
+    <string name="scan_landing_reconnect_via">dernière connexion · %1$s</string>
+    <string name="scan_landing_forget">Oublier cet appareil</string>
+    <string name="scan_landing_use_simulator">Utiliser le simulateur</string>
+    <string name="transport_tile_pulsar_ble_title">Pulsar BLE</string>
+    <string name="transport_tile_pulsar_ble_subtitle">Module ESP32 sur le port déclencheur</string>
+    <string name="transport_tile_ccapi_title">Canon Wi-Fi</string>
+    <string name="transport_tile_ccapi_subtitle">EOS série R avec CCAPI</string>
+    <string name="transport_tile_ptp_title">Canon USB-C</string>
+    <string name="transport_tile_ptp_subtitle">Câble USB-C, tout boîtier PTP</string>
+    <string name="transport_tile_canon_ble_title">Canon BLE</string>
+    <string name="transport_tile_canon_ble_subtitle">Protocole BR-E1, sans fil</string>
+
     <!-- Permissions screen -->
     <string name="permissions_required_title">Autorisations Requises</string>
     <string name="permissions_required_body">Pulsar Trigger a besoin des autorisations Bluetooth et Localisation pour découvrir et se connecter à votre appareil Pulsar.\n\nSi vous avez précédemment refusé une autorisation, appuyez sur « Ouvrir les Paramètres » et activez-les manuellement.</string>
