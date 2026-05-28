@@ -1183,7 +1183,7 @@ internal fun UsbCameraCard(
 }
 
 @Composable
-private fun CanonBleCameraCard(
+internal fun CanonBleCameraCard(
     device: android.bluetooth.BluetoothDevice,
     connecting: Boolean,
     onClick: () -> Unit,

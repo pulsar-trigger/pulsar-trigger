@@ -562,6 +562,12 @@
     <string name="ptp_setup_step3">Die Kamera erscheint unten, sobald das Kabel erkannt ist. Tippen Sie auf die Karte, um zu verbinden.</string>
     <string name="ptp_setup_cameras_header">USB-KAMERAS</string>
     <string name="ptp_setup_empty">Keine USB-Kamera erkannt. Prüfen Sie das Kabel und ob die Kamera eingeschaltet ist. Manche Kabel laden nur — probieren Sie ein anderes, wenn die Kamera nicht erscheint.</string>
+    <string name="canon_ble_setup_step1">An der Kamera: Drahtlose Kommunikation → Bluetooth → Modus „Fernauslöser", dann „Koppeln" wählen.</string>
+    <string name="canon_ble_setup_step2">Bleiben Sie während des Koppelns in ~10 m Nähe zur Kamera.</string>
+    <string name="canon_ble_setup_step3">Tippen Sie unten auf die Kamera — Android öffnet einen Kopplungsdialog. Bestätigen Sie, dass der Passkey mit dem an der Kamera übereinstimmt.</string>
+    <string name="canon_ble_setup_step4">Nach der Kopplung überlebt die Bindung App-Neustarts. Öffnen Sie Pulsar einfach in Kameranähe für automatische Wiederverbindung.</string>
+    <string name="canon_ble_setup_cameras_header">CANON-BLE-KAMERAS</string>
+    <string name="canon_ble_setup_empty">Keine Canon-BLE-Kameras werben. Prüfen Sie, dass die Kamera im Bluetooth-Fernauslöser-Pairing-Modus ist, dann „Erneut suchen".</string>
 
     <!-- Such-Landing (Transport-Auswahl) -->
     <string name="scan_landing_pick_transport">Transport wählen</string>

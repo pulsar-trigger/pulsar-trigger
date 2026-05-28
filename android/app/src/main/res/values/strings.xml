@@ -777,6 +777,12 @@
     <string name="ptp_setup_step3">The camera appears below as soon as the cable is detected. Tap its card to connect.</string>
     <string name="ptp_setup_cameras_header">USB CAMERAS</string>
     <string name="ptp_setup_empty">No USB camera detected. Check the cable and that the camera is powered on. Some cables are charge-only — try a different one if your camera doesn\'t appear.</string>
+    <string name="canon_ble_setup_step1">On the camera: Wireless communication → Bluetooth → set the mode to Remote, then choose Pair.</string>
+    <string name="canon_ble_setup_step2">Stay within ~10 m of the camera while pairing.</string>
+    <string name="canon_ble_setup_step3">Tap the camera below — Android will pop a system pair dialog. Confirm the passkey matches the one shown on the camera.</string>
+    <string name="canon_ble_setup_step4">After pairing, the bond survives app restarts. Just open Pulsar near the camera to auto-reconnect.</string>
+    <string name="canon_ble_setup_cameras_header">CANON BLE CAMERAS</string>
+    <string name="canon_ble_setup_empty">No Canon BLE cameras advertising. Make sure the camera is in Bluetooth → Remote pair mode, then tap Rescan.</string>
 
     <!-- Scan landing screen (transport picker) -->
     <string name="scan_landing_pick_transport">Pick a transport</string>

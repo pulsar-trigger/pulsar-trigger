@@ -560,6 +560,12 @@
     <string name="ptp_setup_step3">La cámara aparece abajo en cuanto se detecta el cable. Toca su tarjeta para conectar.</string>
     <string name="ptp_setup_cameras_header">CÁMARAS USB</string>
     <string name="ptp_setup_empty">No se detecta ninguna cámara USB. Comprueba el cable y que la cámara esté encendida. Algunos cables son solo de carga — prueba otro si la cámara no aparece.</string>
+    <string name="canon_ble_setup_step1">En la cámara: Comunicación inalámbrica → Bluetooth → modo Remoto, luego selecciona Emparejar.</string>
+    <string name="canon_ble_setup_step2">Mantente a ~10 m de la cámara durante el emparejamiento.</string>
+    <string name="canon_ble_setup_step3">Toca la cámara abajo — Android abrirá un diálogo de emparejamiento. Confirma que la clave coincida con la mostrada en la cámara.</string>
+    <string name="canon_ble_setup_step4">Tras emparejar, el vínculo sobrevive a reinicios. Solo abre Pulsar cerca de la cámara para reconectar automáticamente.</string>
+    <string name="canon_ble_setup_cameras_header">CÁMARAS CANON BLE</string>
+    <string name="canon_ble_setup_empty">No hay cámaras Canon BLE anunciando. Asegúrate de que la cámara esté en modo de emparejamiento Bluetooth → Remoto, luego toca Buscar de nuevo.</string>
 
     <!-- Pantalla de inicio de búsqueda (selector de transporte) -->
     <string name="scan_landing_pick_transport">Elige un transporte</string>

@@ -27,10 +27,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Usb
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -137,10 +139,7 @@ private fun SetupContent(vm: PulsarViewModel, kind: TransportKind) {
         TransportKind.BLE_ESP -> PulsarBleSetup(vm)
         TransportKind.CCAPI -> CcapiSetup(vm)
         TransportKind.PTP_USB -> PtpSetup(vm)
-        // Canon BLE gets its own commit (Phase 3d).
-        TransportKind.CANON_BLE -> {
-            // Should never render: the landing routes this elsewhere.
-        }
+        TransportKind.CANON_BLE -> CanonBleSetup(vm)
     }
 }
 
@@ -321,10 +320,21 @@ private fun CcapiSetup(vm: PulsarViewModel) {
         onDispose { vm.stopScan() }
     }
 
-    var inspecting by remember { mutableStateOf<com.ehrocha.pulsar.transport.ccapi.CanonCamera?>(null) }
+    var connectingTo by remember { mutableStateOf<com.ehrocha.pulsar.transport.ccapi.CanonCamera?>(null) }
     var renaming by remember { mutableStateOf<com.ehrocha.pulsar.transport.ccapi.CanonCamera?>(null) }
     var showingCapabilities by remember { mutableStateOf<com.ehrocha.pulsar.transport.ccapi.CanonCamera?>(null) }
     var showAddByIp by remember { mutableStateOf(false) }
+    val canonCcapiError by vm.canonCcapiError.collectAsState()
+
+    // Dismiss the connect dialog automatically once we successfully connect,
+    // and clear it when the auth prompt takes over to avoid stacked dialogs.
+    val connectedState by vm.connected.collectAsState()
+    LaunchedEffect(connectedState, connectingTo) {
+        if (connectedState && connectingTo != null) connectingTo = null
+    }
+    LaunchedEffect(authPrompt) {
+        if (authPrompt != null) connectingTo = null
+    }
 
     Column(
         modifier = Modifier
@@ -380,7 +390,7 @@ private fun CcapiSetup(vm: PulsarViewModel) {
                     CanonCameraCard(
                         camera = camera,
                         nickname = nicknames[camera.udn],
-                        onClick = { inspecting = camera },
+                        onClick = { connectingTo = camera },
                         onRename = { renaming = camera },
                         onCapabilities = { showingCapabilities = camera },
                     )
@@ -409,13 +419,79 @@ private fun CcapiSetup(vm: PulsarViewModel) {
     // (made `internal` in this commit). Phase 4 will relocate them to
     // their final home as ScanScreen.kt goes away.
 
-    inspecting?.let { cam ->
-        CanonCapabilitiesDialog(
-            camera = cam,
-            probe = { vm.probeCanonCapabilities(cam) },
-            onDismiss = {
-                inspecting = null
-                vm.clearCanonCcapiError()
+    connectingTo?.let { cam ->
+        // The original "Connect to <camera>" confirmation dialog from the
+        // legacy ScanScreen — shows the camera's friendly name, IP:port,
+        // and CCAPI accessUrl, with a Connect / Cancel pair of buttons.
+        AlertDialog(
+            onDismissRequest = {
+                if (!connecting) {
+                    connectingTo = null
+                    vm.clearCanonCcapiError()
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { vm.connectCanonCcapi(cam) },
+                    enabled = !connecting,
+                ) {
+                    Text(
+                        if (connecting) stringResource(R.string.canon_connecting)
+                        else stringResource(R.string.canon_connect)
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    connectingTo = null
+                    vm.clearCanonCcapiError()
+                }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+            icon = {
+                Icon(
+                    Icons.Default.CameraAlt,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            },
+            title = { Text(cam.nickname ?: cam.friendlyName) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        cam.friendlyName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        "${cam.ipAddress}:${cam.port}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        cam.accessUrl,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.canon_camera_join_wifi_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    canonCcapiError?.let { err ->
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = when (err) {
+                                "auth_required" -> stringResource(R.string.canon_err_auth)
+                                "network" -> stringResource(R.string.canon_err_network)
+                                else -> stringResource(R.string.canon_err_generic, err)
+                            },
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
             },
         )
     }
@@ -573,6 +649,94 @@ private fun PtpSetup(vm: PulsarViewModel) {
                         device = device,
                         connecting = connecting,
                         onClick = { vm.connectPtp(device) },
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+// ── Canon BLE (BR-E1) ─────────────────────────────────────────────────────
+
+@Composable
+private fun CanonBleSetup(vm: PulsarViewModel) {
+    val cameras by vm.canonBleCameras.collectAsState()
+    val connecting by vm.canonBleConnecting.collectAsState()
+    val canonBleError by vm.canonBleError.collectAsState()
+    val canonBleErrGeneric = stringResource(R.string.canon_ble_err_connect_failed)
+    val toastCtx = androidx.compose.ui.platform.LocalContext.current
+    val scrollState = rememberScrollState()
+
+    // Surface connect failures (mostly the OS pair dialog being denied
+    // or timing out) the same way the legacy ScanScreen did.
+    LaunchedEffect(canonBleError) {
+        if (canonBleError == null) return@LaunchedEffect
+        android.widget.Toast.makeText(toastCtx, canonBleErrGeneric, android.widget.Toast.LENGTH_LONG).show()
+        vm.clearCanonBleError()
+    }
+
+    // Owned scan lifecycle: only scan while this screen is visible. After
+    // a successful connect Pulsar stops the scan internally; on a
+    // spontaneous link drop the viewmodel re-arms it.
+    DisposableEffect(Unit) {
+        vm.startCanonBleScan()
+        onDispose { vm.stopCanonBleScan() }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Spacer(Modifier.height(8.dp))
+
+        InstructionCard(
+            iconRes = Icons.Default.Bluetooth,
+            lines = listOf(
+                stringResource(R.string.canon_ble_setup_step1),
+                stringResource(R.string.canon_ble_setup_step2),
+                stringResource(R.string.canon_ble_setup_step3),
+                stringResource(R.string.canon_ble_setup_step4),
+            ),
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringResource(R.string.canon_ble_setup_cameras_header),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = {
+                vm.stopCanonBleScan(); vm.startCanonBleScan()
+            }) {
+                Icon(
+                    Icons.Default.Refresh,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(stringResource(R.string.pulsar_ble_setup_rescan))
+            }
+        }
+
+        if (cameras.isEmpty()) {
+            EmptyState(stringResource(R.string.canon_ble_setup_empty))
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                cameras.forEach { device ->
+                    CanonBleCameraCard(
+                        device = device,
+                        connecting = connecting,
+                        onClick = { vm.connectCanonBle(device) },
                     )
                 }
             }

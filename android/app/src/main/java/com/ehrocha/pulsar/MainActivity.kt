@@ -379,13 +379,11 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     // transports that have one implemented; everything else
                     // still falls through to the legacy combined Scan
                     // until its commit lands.
-                    currentScreen = when (kind) {
-                        com.ehrocha.pulsar.transport.TransportKind.BLE_ESP,
-                        com.ehrocha.pulsar.transport.TransportKind.CCAPI,
-                        com.ehrocha.pulsar.transport.TransportKind.PTP_USB ->
-                            AppScreen.TransportSetup(kind)
-                        else -> AppScreen.Scan
-                    }
+                    // Phase 3 complete: every transport has its own setup
+                    // screen now. The legacy combined Scan no longer routes
+                    // from the landing — kept only as a fallback / for
+                    // Phase 4's deletion.
+                    currentScreen = AppScreen.TransportSetup(kind)
                 },
                 onSimulatorSelected = {
                     vm.connectSimulator()
