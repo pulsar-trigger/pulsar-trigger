@@ -64,7 +64,6 @@ import com.ehrocha.pulsar.ui.components.NightModeToggle
 import com.ehrocha.pulsar.ui.screens.MainMenuScreen
 import com.ehrocha.pulsar.ui.screens.ModeScreen
 import com.ehrocha.pulsar.ui.screens.ScanLandingScreen
-import com.ehrocha.pulsar.ui.screens.ScanScreen
 import com.ehrocha.pulsar.ui.screens.TransportSetupScreen
 import com.ehrocha.pulsar.ui.screens.SettingsScreen
 import com.ehrocha.pulsar.ui.screens.SettingsSection
@@ -345,9 +344,9 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
     ) {
     Column(Modifier.fillMaxSize()) {
         // ── Persistent top bar (hidden on Scan screen) ───────────────
-        // Hide the persistent top bar on the entry screens — both ScanLanding
-        // and the legacy Scan have their own headers.
-        if (currentScreen !is AppScreen.Scan && currentScreen !is AppScreen.ScanLanding) {
+        // Hide the persistent top bar on ScanLanding — it has its own
+        // brand header. TransportSetup also has its own top bar.
+        if (currentScreen !is AppScreen.ScanLanding && currentScreen !is AppScreen.TransportSetup) {
             Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -397,7 +396,6 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                 onBack = { currentScreen = AppScreen.ScanLanding },
                 onConnected = { currentScreen = AppScreen.Menu },
             )
-            AppScreen.Scan -> ScanScreen(vm) { currentScreen = AppScreen.Menu }
             AppScreen.Menu -> {
                 MainMenuScreen(
                     vm = vm,
@@ -691,11 +689,10 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
 private sealed class AppScreen {
     /** Transport-picker landing screen (post-permissions entry point). */
     data object ScanLanding : AppScreen()
-    /** Per-transport setup screen (Phase 3, lands one transport at a time). */
+    /** Per-transport setup screen. Each transport (Pulsar BLE, CCAPI,
+     *  PTP, Canon BLE) renders its own instructions + scan flow inside
+     *  a shared scaffold in [TransportSetupScreen]. */
     data class TransportSetup(val kind: com.ehrocha.pulsar.transport.TransportKind) : AppScreen()
-    /** Legacy combined-scan screen. Kept while we phase in per-transport
-     *  setup screens (Phase 3). */
-    data object Scan : AppScreen()
     data object Menu : AppScreen()
     data class Mode(val mode: TriggerMode) : AppScreen()
     data class Settings(val initialSection: SettingsSection? = null) : AppScreen()
