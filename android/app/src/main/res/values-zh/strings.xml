@@ -557,6 +557,11 @@
     <string name="ccapi_setup_wifi_hint">手机已连接到此网络。相机应在同一网络上。</string>
     <string name="ccapi_setup_no_wifi_title">未连接 Wi-Fi</string>
     <string name="ccapi_setup_no_wifi_hint">请将此手机连接到相机的 Wi-Fi 网络以发现它。</string>
+    <string name="ptp_setup_step1">用 USB-C 数据线将相机连接到此手机。如有原装佳能数据线，建议使用。</string>
+    <string name="ptp_setup_step2">当 Android 请求访问 USB 设备的权限时，点击"允许"。否则 Pulsar 无法看到相机。</string>
+    <string name="ptp_setup_step3">检测到数据线后，相机将出现在下方。点击其卡片以连接。</string>
+    <string name="ptp_setup_cameras_header">USB 相机</string>
+    <string name="ptp_setup_empty">未检测到 USB 相机。检查数据线和相机电源。某些数据线仅充电 — 如果相机未出现，请尝试另一根。</string>
 
     <!-- 扫描入口屏幕（传输方式选择） -->
     <string name="scan_landing_pick_transport">选择传输方式</string>

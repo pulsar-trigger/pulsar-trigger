@@ -555,6 +555,11 @@
     <string name="ccapi_setup_wifi_hint">El teléfono está en esta red. La cámara debe estar en la misma.</string>
     <string name="ccapi_setup_no_wifi_title">Sin Wi-Fi conectado</string>
     <string name="ccapi_setup_no_wifi_hint">Conecta este teléfono a la red Wi-Fi de la cámara para detectarla.</string>
+    <string name="ptp_setup_step1">Conecta la cámara a este teléfono con un cable USB-C. Usa el propio cable de Canon si lo tienes.</string>
+    <string name="ptp_setup_step2">Cuando Android pida permiso para acceder al dispositivo USB, toca Permitir. Pulsar no puede ver la cámara sin esto.</string>
+    <string name="ptp_setup_step3">La cámara aparece abajo en cuanto se detecta el cable. Toca su tarjeta para conectar.</string>
+    <string name="ptp_setup_cameras_header">CÁMARAS USB</string>
+    <string name="ptp_setup_empty">No se detecta ninguna cámara USB. Comprueba el cable y que la cámara esté encendida. Algunos cables son solo de carga — prueba otro si la cámara no aparece.</string>
 
     <!-- Pantalla de inicio de búsqueda (selector de transporte) -->
     <string name="scan_landing_pick_transport">Elige un transporte</string>

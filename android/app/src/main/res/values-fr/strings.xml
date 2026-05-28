@@ -557,6 +557,11 @@
     <string name="ccapi_setup_wifi_hint">Le téléphone est sur ce réseau. L\'appareil doit être sur le même.</string>
     <string name="ccapi_setup_no_wifi_title">Aucun Wi-Fi connecté</string>
     <string name="ccapi_setup_no_wifi_hint">Connectez ce téléphone au réseau Wi-Fi de l\'appareil pour le détecter.</string>
+    <string name="ptp_setup_step1">Connectez l\'appareil à ce téléphone avec un câble USB-C. Utilisez le câble Canon d\'origine si vous l\'avez.</string>
+    <string name="ptp_setup_step2">Quand Android demande l\'autorisation d\'accéder au périphérique USB, appuyez sur Autoriser. Pulsar ne voit pas l\'appareil sans cela.</string>
+    <string name="ptp_setup_step3">L\'appareil apparaît ci-dessous dès que le câble est détecté. Appuyez sur sa carte pour vous connecter.</string>
+    <string name="ptp_setup_cameras_header">APPAREILS USB</string>
+    <string name="ptp_setup_empty">Aucun appareil USB détecté. Vérifiez le câble et que l\'appareil est allumé. Certains câbles ne servent qu\'à charger — essayez-en un autre si l\'appareil n\'apparaît pas.</string>
 
     <!-- Écran d'accueil de recherche (sélecteur de transport) -->
     <string name="scan_landing_pick_transport">Choisissez un transport</string>

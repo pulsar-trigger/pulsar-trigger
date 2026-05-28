@@ -772,6 +772,11 @@
     <string name="ccapi_setup_wifi_hint">Phone is on this network. Camera should be on the same one.</string>
     <string name="ccapi_setup_no_wifi_title">No Wi-Fi connected</string>
     <string name="ccapi_setup_no_wifi_hint">Connect this phone to your camera\'s Wi-Fi network to discover it.</string>
+    <string name="ptp_setup_step1">Connect the camera to this phone with a USB-C cable. Use Canon\'s own cable if you have it.</string>
+    <string name="ptp_setup_step2">When Android asks for permission to access the USB device, tap Allow. Pulsar can\'t see the camera without it.</string>
+    <string name="ptp_setup_step3">The camera appears below as soon as the cable is detected. Tap its card to connect.</string>
+    <string name="ptp_setup_cameras_header">USB CAMERAS</string>
+    <string name="ptp_setup_empty">No USB camera detected. Check the cable and that the camera is powered on. Some cables are charge-only — try a different one if your camera doesn\'t appear.</string>
 
     <!-- Scan landing screen (transport picker) -->
     <string name="scan_landing_pick_transport">Pick a transport</string>

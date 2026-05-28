@@ -557,6 +557,11 @@
     <string name="ccapi_setup_wifi_hint">端末はこのネットワークに接続中。カメラも同じネットワークにある必要があります。</string>
     <string name="ccapi_setup_no_wifi_title">Wi-Fi 未接続</string>
     <string name="ccapi_setup_no_wifi_hint">カメラを検出するには、この端末をカメラの Wi-Fi に接続してください。</string>
+    <string name="ptp_setup_step1">USB-C ケーブルでカメラとこの端末を接続してください。Canon 純正ケーブルが利用できる場合はそちらを推奨します。</string>
+    <string name="ptp_setup_step2">USB デバイスへのアクセス権限を Android が求めたら「許可」をタップしてください。許可がないと Pulsar はカメラを検出できません。</string>
+    <string name="ptp_setup_step3">ケーブルが認識されると、下にカメラが表示されます。カードをタップして接続してください。</string>
+    <string name="ptp_setup_cameras_header">USB カメラ</string>
+    <string name="ptp_setup_empty">USB カメラが検出されません。ケーブルとカメラの電源を確認してください。充電専用ケーブルもあります — 表示されない場合は別のケーブルをお試しください。</string>
 
     <!-- スキャン入口画面（トランスポート選択） -->
     <string name="scan_landing_pick_transport">トランスポートを選択</string>

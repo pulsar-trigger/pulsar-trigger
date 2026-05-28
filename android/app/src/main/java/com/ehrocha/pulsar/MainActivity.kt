@@ -381,7 +381,8 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                     // until its commit lands.
                     currentScreen = when (kind) {
                         com.ehrocha.pulsar.transport.TransportKind.BLE_ESP,
-                        com.ehrocha.pulsar.transport.TransportKind.CCAPI ->
+                        com.ehrocha.pulsar.transport.TransportKind.CCAPI,
+                        com.ehrocha.pulsar.transport.TransportKind.PTP_USB ->
                             AppScreen.TransportSetup(kind)
                         else -> AppScreen.Scan
                     }

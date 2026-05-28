@@ -1129,7 +1129,7 @@ private fun boardLabel(kind: com.ehrocha.pulsar.ble.BoardKind): String? = when (
 }
 
 @Composable
-private fun UsbCameraCard(
+internal fun UsbCameraCard(
     device: android.hardware.usb.UsbDevice,
     connecting: Boolean,
     onClick: () -> Unit,

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Usb
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.CircularProgressIndicator
@@ -135,11 +136,10 @@ private fun SetupContent(vm: PulsarViewModel, kind: TransportKind) {
     when (kind) {
         TransportKind.BLE_ESP -> PulsarBleSetup(vm)
         TransportKind.CCAPI -> CcapiSetup(vm)
-        // PTP and Canon BLE get their own commits in Phase 3. The landing
-        // screen routes them to the legacy ScanScreen for now.
-        TransportKind.PTP_USB,
+        TransportKind.PTP_USB -> PtpSetup(vm)
+        // Canon BLE gets its own commit (Phase 3d).
         TransportKind.CANON_BLE -> {
-            // Should never render: the landing routes these elsewhere.
+            // Should never render: the landing routes this elsewhere.
         }
     }
 }
@@ -503,6 +503,82 @@ private fun WifiNetworkRow(ssid: String?) {
                 )
             }
         }
+    }
+}
+
+// ── USB PTP (Canon over USB-C) ────────────────────────────────────────────
+
+@Composable
+private fun PtpSetup(vm: PulsarViewModel) {
+    val cameras by vm.ptpCameras.collectAsState()
+    val connecting by vm.ptpConnecting.collectAsState()
+    val ptpError by vm.ptpError.collectAsState()
+    val ptpErrPermDenied = stringResource(R.string.ptp_err_permission_denied)
+    val ptpErrOpenFailed = stringResource(R.string.ptp_err_open_failed)
+    val ptpErrSessionFailed = stringResource(R.string.ptp_err_session_failed)
+    val ptpErrGeneric = stringResource(R.string.ptp_err_generic)
+    val toastCtx = androidx.compose.ui.platform.LocalContext.current
+    val scrollState = rememberScrollState()
+
+    // Same Toast-the-failure pattern as the legacy screen — surfaces
+    // permission_denied / open_failed / session_failed so the user knows
+    // why a tap didn't take effect.
+    LaunchedEffect(ptpError) {
+        val e = ptpError ?: return@LaunchedEffect
+        val msg = when (e) {
+            "permission_denied" -> ptpErrPermDenied
+            "open_failed" -> ptpErrOpenFailed
+            "session_failed" -> ptpErrSessionFailed
+            else -> ptpErrGeneric.format(e)
+        }
+        android.widget.Toast.makeText(toastCtx, msg, android.widget.Toast.LENGTH_LONG).show()
+        vm.clearPtpError()
+    }
+    // PTP discovery is push-based (UsbManager broadcasts on attach/detach)
+    // and starts at viewmodel init time — no per-screen scan lifecycle to
+    // manage. The cameras flow updates the moment a USB device is plugged
+    // or unplugged.
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Spacer(Modifier.height(8.dp))
+
+        InstructionCard(
+            iconRes = Icons.Default.Usb,
+            lines = listOf(
+                stringResource(R.string.ptp_setup_step1),
+                stringResource(R.string.ptp_setup_step2),
+                stringResource(R.string.ptp_setup_step3),
+            ),
+        )
+
+        Text(
+            stringResource(R.string.ptp_setup_cameras_header),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+
+        if (cameras.isEmpty()) {
+            EmptyState(stringResource(R.string.ptp_setup_empty))
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                cameras.forEach { device ->
+                    UsbCameraCard(
+                        device = device,
+                        connecting = connecting,
+                        onClick = { vm.connectPtp(device) },
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
     }
 }
 
