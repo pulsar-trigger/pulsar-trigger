@@ -61,6 +61,14 @@ class CanonBleDiscovery(private val ctx: Context) {
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
+            // Belt-and-suspenders: some BLE stacks don't honour the offloaded
+            // service-UUID ScanFilter and deliver *every* advertisement (phones,
+            // earbuds, etc.). Re-verify the device actually advertises a Canon
+            // service before listing it as a camera.
+            val isCanon = result.scanRecord?.serviceUuids?.any {
+                it.uuid == SERVICE_UUID || it.uuid == SMART_SERVICE_UUID
+            } ?: false
+            if (!isCanon) return
             val dev = result.device
             val current = _cameras.value
             if (current.none { it.address == dev.address }) {

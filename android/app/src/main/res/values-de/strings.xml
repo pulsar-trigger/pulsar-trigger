@@ -165,6 +165,8 @@
     <string name="done">Fertig</string>
     <string name="dismiss">Schließen</string>
     <string name="ok">OK</string>
+    <string name="session_interrupted_title">Sitzung unterbrochen</string>
+    <string name="session_interrupted_body">Die Verbindung zur Kamera ist während der Sitzung abgebrochen, die Aufnahme wurde gestoppt. Prüfen Sie die Kamera — bei einer laufenden Belichtung (Bulb) belichtet sie womöglich noch; drücken Sie zur Sicherheit den Auslöser oder starten Sie sie neu. Verbinden Sie sich dann neu und starten Sie die Sequenz erneut.</string>
     <string name="retry">Wiederholen</string>
     <string name="refresh">Aktualisieren</string>
     <string name="export_label">Exportieren</string>

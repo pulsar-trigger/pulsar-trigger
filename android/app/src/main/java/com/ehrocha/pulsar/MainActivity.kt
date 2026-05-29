@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Badge
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -239,6 +240,22 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
     var menuTab by remember { mutableIntStateOf(com.ehrocha.pulsar.ui.screens.TAB_TRIGGER) }
     val connected by vm.connected.collectAsState()
 
+    // Camera-transport link dropped mid-session (phone-driven run loop can't
+    // continue, and a bulb may be left exposing) — warn the user prominently.
+    val sessionInterrupted by vm.sessionInterrupted.collectAsState()
+    if (sessionInterrupted) {
+        AlertDialog(
+            onDismissRequest = { vm.clearSessionInterrupted() },
+            confirmButton = {
+                TextButton(onClick = { vm.clearSessionInterrupted() }) {
+                    Text(stringResource(R.string.ok))
+                }
+            },
+            title = { Text(stringResource(R.string.session_interrupted_title)) },
+            text = { Text(stringResource(R.string.session_interrupted_body)) },
+        )
+    }
+
     // ── Update-available dialog ──────────────────────────────────────
     val fwState by vm.firmwareManager.state.collectAsState()
     val appState by vm.appUpdateManager.state.collectAsState()
@@ -390,12 +407,18 @@ fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null)
                 },
                 onConnected = { currentScreen = AppScreen.Menu },
             )
-            is AppScreen.TransportSetup -> TransportSetupScreen(
-                vm = vm,
-                kind = screen.kind,
-                onBack = { currentScreen = AppScreen.ScanLanding },
-                onConnected = { currentScreen = AppScreen.Menu },
-            )
+            is AppScreen.TransportSetup -> {
+                // Without this, system-back on a transport-setup panel finishes
+                // the activity (closes the app) instead of returning to the
+                // landing — every other sub-screen has its own BackHandler.
+                BackHandler { currentScreen = AppScreen.ScanLanding }
+                TransportSetupScreen(
+                    vm = vm,
+                    kind = screen.kind,
+                    onBack = { currentScreen = AppScreen.ScanLanding },
+                    onConnected = { currentScreen = AppScreen.Menu },
+                )
+            }
             AppScreen.Menu -> {
                 MainMenuScreen(
                     vm = vm,

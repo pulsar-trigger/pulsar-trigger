@@ -237,6 +237,8 @@
     <string name="done">Done</string>
     <string name="dismiss">Dismiss</string>
     <string name="ok">OK</string>
+    <string name="session_interrupted_title">Session interrupted</string>
+    <string name="session_interrupted_body">The connection to your camera dropped during the session, so shooting stopped. Check the camera — if it was mid-exposure (Bulb), it may still be exposing; press the shutter or power-cycle it to be safe. Then reconnect and restart the run.</string>
     <string name="retry">Retry</string>
     <string name="refresh">Refresh</string>
     <string name="export_label">Export</string>

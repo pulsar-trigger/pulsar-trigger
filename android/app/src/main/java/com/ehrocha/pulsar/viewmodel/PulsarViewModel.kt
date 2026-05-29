@@ -418,6 +418,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 if (active != null &&
                     attached.none { it.deviceName == active.device.deviceName }) {
                     Log.i(TAG, "USB camera unplugged — disconnecting PTP (auto-reconnect armed)")
+                    // A cable pull mid-session can't continue the phone-driven
+                    // run loop — abort it and warn the user.
+                    abortFlowOnTransportDrop()
                     // Flip the reconnect banner BEFORE tearing the transport
                     // down — the UI gate on `ptpReconnecting OR onPtp` keeps
                     // the banner visible even after _ptpTransport goes null.
@@ -654,6 +657,29 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val _flowCurrentStep = MutableStateFlow(-1)
     val flowCurrentStep: StateFlow<Int> = _flowCurrentStep
     private var flowJob: Job? = null
+
+    /** Set when a camera transport's link drops *mid-session*. The phone-driven
+     *  run loop (CCAPI / PTP / Canon BLE) can't continue and can't tell the
+     *  camera to stop, so the flow is aborted and the UI warns the user (a bulb
+     *  exposure open at the drop may still be running on the body). */
+    private val _sessionInterrupted = MutableStateFlow(false)
+    val sessionInterrupted: StateFlow<Boolean> = _sessionInterrupted
+    fun clearSessionInterrupted() { _sessionInterrupted.value = false }
+
+    /** A camera transport dropped while a flow was running: abort the loop
+     *  (it would otherwise keep advancing through delays while silently firing
+     *  nothing) and flag the interruption for the UI warning. */
+    private fun abortFlowOnTransportDrop() {
+        if (!_flowRunning.value) return
+        Log.i(TAG, "camera transport dropped mid-session — aborting flow")
+        flowJob?.cancel()
+        flowJob = null
+        _flowRunning.value = false
+        _flowPaused.value = false
+        _flowCurrentStep.value = -1
+        _sessionInterrupted.value = true
+        _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
+    }
 
     /** Single derived run-state — UI consumers should prefer this over the
      *  individual `status` / `flowRunning` / `flowPaused` / `flowCurrentStep`
@@ -1083,6 +1109,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                                 consecutiveFails = 0
                                 continue
                             }
+                            // Soft recovery gave up — the session is dead.
+                            abortFlowOnTransportDrop()
                             _canonCcapiError.value = "dropped"
                             disconnectCanonCcapi()
                             break
@@ -1419,6 +1447,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  release work on `viewModelScope` rather than running it inline. */
     private fun onCanonBleLinkDropped() {
         Log.i(TAG, "Canon BLE link dropped — arming auto-reconnect")
+        abortFlowOnTransportDrop()
         _canonBleReconnecting.value = true
         val device = lastCanonBleDevice
         // Tear down the dropped transport's GATT resources, but preserve
