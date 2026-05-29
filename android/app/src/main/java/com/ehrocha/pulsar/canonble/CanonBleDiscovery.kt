@@ -65,12 +65,12 @@ class CanonBleDiscovery(private val ctx: Context) {
             val current = _cameras.value
             if (current.none { it.address == dev.address }) {
                 _cameras.value = current + dev
-                Log.d(TAG, "found Canon BLE camera ${dev.address}")
+                CanonBleLog.d(TAG, "found Canon BLE camera ${dev.address}")
             }
         }
 
         override fun onScanFailed(errorCode: Int) {
-            Log.w(TAG, "scan failed code=$errorCode")
+            CanonBleLog.w(TAG, "scan failed code=$errorCode")
             _scanning.value = false
         }
     }
@@ -81,7 +81,7 @@ class CanonBleDiscovery(private val ctx: Context) {
     fun start() {
         if (_scanning.value) return
         val s = scanner ?: run {
-            Log.w(TAG, "no BluetoothLeScanner — adapter off or permission missing")
+            CanonBleLog.w(TAG, "no BluetoothLeScanner — adapter off or permission missing")
             return
         }
         // Scan for BOTH Canon services (OR semantics): BR-E1 remote (00050000)
@@ -99,9 +99,9 @@ class CanonBleDiscovery(private val ctx: Context) {
         try {
             s.startScan(filters, settings, scanCallback)
             _scanning.value = true
-            Log.d(TAG, "scan started (BR-E1 + smartphone service filters)")
+            CanonBleLog.d(TAG, "scan started (BR-E1 + smartphone service filters)")
         } catch (e: SecurityException) {
-            Log.w(TAG, "scan blocked by permission: ${e.message}")
+            CanonBleLog.w(TAG, "scan blocked by permission: ${e.message}")
         }
     }
 
@@ -112,7 +112,7 @@ class CanonBleDiscovery(private val ctx: Context) {
         try {
             scanner?.stopScan(scanCallback)
         } catch (e: SecurityException) {
-            Log.w(TAG, "stopScan blocked: ${e.message}")
+            CanonBleLog.w(TAG, "stopScan blocked: ${e.message}")
         }
         _scanning.value = false
         _cameras.value = emptyList()

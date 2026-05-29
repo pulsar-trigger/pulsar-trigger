@@ -136,6 +136,8 @@
     <string name="test_camera_step_ramp">5. Ramp — 5 Schritte × 4 s (konstant), 2 s Pause</string>
     <string name="test_camera_prereqs">Kamera auf Manuell, Verschluss auf Bulb (für Schritte 2–5). Karte mit Platz für ~25 Aufnahmen.</string>
     <string name="test_camera_start">Test starten</string>
+    <string name="tools_collect_diagnostics">Diagnose sammeln</string>
+    <string name="tools_collect_diagnostics_hint">Exportiert das aktuelle Canon-BLE-Verbindungsprotokoll in eine teilbare Datei — nach einem fehlgeschlagenen Pairing verwenden.</string>
     <string name="test_camera_stop">Test stoppen</string>
     <string name="run_step_timelapse_summary">Timelapse · %1$d Aufnahmen · %2$s Pause</string>
     <string name="run_step_interval_summary">Intervallometer · %1$d × %2$s · %3$s Pause</string>

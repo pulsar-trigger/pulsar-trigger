@@ -32,10 +32,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import com.ehrocha.pulsar.R
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.Date
 import com.ehrocha.pulsar.model.RunState
 import com.ehrocha.pulsar.ui.theme.LocalRunState
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
@@ -59,6 +65,7 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     val running = runState !is RunState.Idle
     val stepCount by vm.cameraTestStepCount.collectAsState()
     val fullSequence = stepCount >= 5
+    val ctx = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -141,7 +148,35 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                 ) {
                     Text(stringResource(R.string.test_camera_start))
                 }
+                OutlinedButton(
+                    onClick = { shareDiagnostics(ctx, vm.canonDiagnosticsText()) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.tools_collect_diagnostics))
+                }
+                Text(
+                    stringResource(R.string.tools_collect_diagnostics_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }
+}
+
+/** Write the diagnostics text to a cache file and open the share sheet. Reuses
+ *  the app's existing FileProvider (`shared/` cache path is whitelisted). */
+private fun shareDiagnostics(ctx: android.content.Context, text: String) {
+    val dir = File(ctx.cacheDir, "shared").apply { mkdirs() }
+    val ts = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
+    val file = File(dir, "pulsar-diagnostics-$ts.txt")
+    file.writeText(text)
+    val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.fileprovider", file)
+    val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(android.content.Intent.EXTRA_STREAM, uri)
+        putExtra(android.content.Intent.EXTRA_SUBJECT, "Pulsar diagnostics")
+        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    ctx.startActivity(android.content.Intent.createChooser(intent, null))
 }

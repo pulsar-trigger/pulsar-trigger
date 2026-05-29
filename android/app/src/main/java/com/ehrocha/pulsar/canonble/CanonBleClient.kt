@@ -163,7 +163,7 @@ class CanonBleClient(
     private val callback = object : BluetoothGattCallback() {
         @SuppressLint("MissingPermission")
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
-            Log.d(TAG, "onConnectionStateChange status=$status newState=$newState")
+            CanonBleLog.d(TAG, "onConnectionStateChange status=$status newState=$newState")
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> {
                     if (status == BluetoothGatt.GATT_SUCCESS) g.discoverServices()
@@ -176,7 +176,7 @@ class CanonBleClient(
                     // Distinguish "link drop in flight" (auto-reconnect
                     // candidate) from "caller asked to close" (terminal).
                     if (fullyConnected && !releasedByUser) {
-                        Log.i(TAG, "spontaneous disconnect from ${device.address}")
+                        CanonBleLog.i(TAG, "spontaneous disconnect from ${device.address}")
                         runCatching { onSpontaneousDisconnect() }
                     }
                 }
@@ -213,7 +213,7 @@ class CanonBleClient(
                     // Arm the pairing-result indication channel BEFORE the
                     // handshake writes so the camera's accept byte can't be missed.
                     if (ok) smartNameChar?.let { enableIndication(g, it) }
-                    Log.i(TAG, "smartphone-mode: protocol=$protocol (name=${smartNameChar != null} " +
+                    CanonBleLog.i(TAG, "smartphone-mode: protocol=$protocol (name=${smartNameChar != null} " +
                         "iden=${smartIdenChar != null} mode=${smartModeChar != null} " +
                         "shutter=${smartShutterChar != null}) bondState=${device.bondState}")
                 }
@@ -223,18 +223,18 @@ class CanonBleClient(
                     protocol = if (controlChar != null && pairChar != null)
                         CanonProtocol.BRE1 else CanonProtocol.NONE
                     ok = protocol == CanonProtocol.BRE1
-                    if (!ok) Log.w(TAG, "BR-E1 service present but missing char: " +
+                    if (!ok) CanonBleLog.w(TAG, "BR-E1 service present but missing char: " +
                         "control=${controlChar != null} pair=${pairChar != null}")
                     // Diagnostic snapshot for the docs/canon-ble.md troubleshooting
                     // flow. bondState 12=BONDED 11=BONDING 10=NONE; char props
                     // bitmask 0x04=WRITE_NO_RESPONSE 0x08=WRITE 0x10=NOTIFY 0x20=INDICATE.
                     controlChar?.let { c ->
-                        Log.d(TAG, "services: BR-E1 control char props=0x%02X, bondState=%d"
+                        CanonBleLog.d(TAG, "services: BR-E1 control char props=0x%02X, bondState=%d"
                             .format(c.properties, device.bondState))
                     }
                 }
                 else -> {
-                    Log.w(TAG, "no Canon service (BR-E1 00050000 or smartphone 00010000) found")
+                    CanonBleLog.w(TAG, "no Canon service (BR-E1 00050000 or smartphone 00010000) found")
                     protocol = CanonProtocol.NONE
                     ok = false
                 }
@@ -255,7 +255,7 @@ class CanonBleClient(
             // (accept) or 0x03 (reject) on the name char once the user
             // confirms the registration on the body.
             if (characteristic.uuid == SMART_NAME_UUID && value.isNotEmpty()) {
-                Log.d(TAG, "smart pairing indication: 0x%02X".format(value[0].toInt() and 0xFF))
+                CanonBleLog.d(TAG, "smart pairing indication: 0x%02X".format(value[0].toInt() and 0xFF))
                 pairResultSignal.getAndSet(null)?.complete(value[0])
             }
         }
@@ -276,7 +276,7 @@ class CanonBleClient(
                 PAIR_CHAR_UUID -> "pair"
                 else -> characteristic.uuid.toString()
             }
-            Log.d(TAG, "onCharacteristicWrite[$charName] status=$status " +
+            CanonBleLog.d(TAG, "onCharacteristicWrite[$charName] status=$status " +
                 "(${if (status == BluetoothGatt.GATT_SUCCESS) "GATT_SUCCESS" else "FAILURE"})")
             writeSignal.getAndSet(null)?.complete(status == BluetoothGatt.GATT_SUCCESS)
         }
@@ -332,10 +332,10 @@ class CanonBleClient(
         }
         val deferred = CompletableDeferred<Boolean>()
         writeSignal.set(deferred)
-        Log.d(TAG, "writePairName: sending [0x03, \"$name\"] no-response (${payload.size} bytes)")
+        CanonBleLog.d(TAG, "writePairName: sending [0x03, \"$name\"] no-response (${payload.size} bytes)")
         @Suppress("DEPRECATION")
         if (g.writeCharacteristic(ch) != true) {
-            Log.w(TAG, "writePairName: writeCharacteristic() returned false (couldn't queue)")
+            CanonBleLog.w(TAG, "writePairName: writeCharacteristic() returned false (couldn't queue)")
             writeSignal.set(null)
             return@withLock false
         }
@@ -343,7 +343,7 @@ class CanonBleClient(
         // left the phone). First connect may also pop the OS pair dialog —
         // 30 s timeout covers the user tapping through it.
         val ok = withTimeoutOrNull(30_000) { deferred.await() } ?: false
-        Log.d(TAG, "writePairName: confirmed=$ok")
+        CanonBleLog.d(TAG, "writePairName: confirmed=$ok")
         ok
     }
 
@@ -352,7 +352,7 @@ class CanonBleClient(
     @SuppressLint("MissingPermission")
     suspend fun writeControl(byte: Byte): Boolean = opMutex.withLock {
         val ch = controlChar ?: run {
-            Log.w(TAG, "writeControl: no control characteristic (not connected?)")
+            CanonBleLog.w(TAG, "writeControl: no control characteristic (not connected?)")
             return@withLock false
         }
         val g = gatt ?: return@withLock false
@@ -363,13 +363,13 @@ class CanonBleClient(
         }
         val deferred = CompletableDeferred<Boolean>()
         writeSignal.set(deferred)
-        Log.d(TAG, "writeControl: sending 0x%02X".format(byte.toInt() and 0xFF))
+        CanonBleLog.d(TAG, "writeControl: sending 0x%02X".format(byte.toInt() and 0xFF))
         @Suppress("DEPRECATION")
         if (g.writeCharacteristic(ch) != true) {
             // writeCharacteristic returning false = the op couldn't even be
             // queued (busy, or the link isn't writable). Distinct from a
             // queued write that later fails in onCharacteristicWrite.
-            Log.w(TAG, "writeControl: writeCharacteristic() returned false (couldn't queue 0x%02X)"
+            CanonBleLog.w(TAG, "writeControl: writeCharacteristic() returned false (couldn't queue 0x%02X)"
                 .format(byte.toInt() and 0xFF))
             writeSignal.set(null)
             return@withLock false
@@ -377,7 +377,7 @@ class CanonBleClient(
         // NO_RESPONSE writes still raise onCharacteristicWrite; should
         // return within a few ms. Generous timeout for slow stacks.
         val ok = withTimeoutOrNull(2_000) { deferred.await() } ?: false
-        if (!ok) Log.w(TAG, "writeControl: 0x%02X did not confirm (timeout or GATT failure)"
+        if (!ok) CanonBleLog.w(TAG, "writeControl: 0x%02X did not confirm (timeout or GATT failure)"
             .format(byte.toInt() and 0xFF))
         ok
     }
@@ -396,7 +396,7 @@ class CanonBleClient(
                 g.writeDescriptor(cccd)
             }
         } catch (e: Exception) {
-            Log.w(TAG, "enableIndication failed: ${e.message}")
+            CanonBleLog.w(TAG, "enableIndication failed: ${e.message}")
         }
     }
 
@@ -409,7 +409,7 @@ class CanonBleClient(
         payload: ByteArray,
         label: String,
     ): Boolean = opMutex.withLock {
-        val c = ch ?: run { Log.w(TAG, "$label: characteristic missing"); return@withLock false }
+        val c = ch ?: run { CanonBleLog.w(TAG, "$label: characteristic missing"); return@withLock false }
         val g = gatt ?: return@withLock false
         @Suppress("DEPRECATION")
         run {
@@ -420,15 +420,40 @@ class CanonBleClient(
         writeSignal.set(deferred)
         @Suppress("DEPRECATION")
         if (g.writeCharacteristic(c) != true) {
-            Log.w(TAG, "$label: writeCharacteristic() returned false (couldn't queue)")
+            CanonBleLog.w(TAG, "$label: writeCharacteristic() returned false (couldn't queue)")
             writeSignal.set(null)
             return@withLock false
         }
         // First write may trigger Android bonding (encrypted-link setup);
         // 30 s covers the OS / on-camera confirmation.
         val ok = withTimeoutOrNull(30_000) { deferred.await() } ?: false
-        Log.d(TAG, "$label: ${payload.joinToString("") { "%02x".format(it) }} confirmed=$ok")
+        CanonBleLog.d(TAG, "$label: ${payload.joinToString("") { "%02x".format(it) }} confirmed=$ok")
         ok
+    }
+
+    /** Ensure the link is OS-bonded before the smartphone handshake. On the
+     *  RP this is required — the registration writes are ignored on an
+     *  unbonded link, and `createBond()` is what makes the camera show its
+     *  pairing-confirm prompt (the equivalent of `bluetoothctl pair`). Calls
+     *  [onAwaitConfirm] so the UI tells the user to confirm on the camera,
+     *  then polls [BluetoothDevice.getBondState] until BONDED or timeout. */
+    @SuppressLint("MissingPermission")
+    suspend fun ensureBonded(onAwaitConfirm: () -> Unit, timeoutMs: Long = 60_000): Boolean {
+        if (device.bondState == BluetoothDevice.BOND_BONDED) {
+            CanonBleLog.i(TAG, "ensureBonded: already BONDED")
+            return true
+        }
+        CanonBleLog.i(TAG, "ensureBonded: bondState=${device.bondState} → createBond() " +
+            "(confirm the pairing on the camera)")
+        onAwaitConfirm()
+        val started = runCatching { device.createBond() }.getOrDefault(false)
+        CanonBleLog.d(TAG, "ensureBonded: createBond() returned $started")
+        val ok = withTimeoutOrNull(timeoutMs) {
+            while (device.bondState != BluetoothDevice.BOND_BONDED) delay(300)
+            true
+        } ?: false
+        CanonBleLog.i(TAG, "ensureBonded: result=${if (ok) "BONDED" else "NOT bonded (state=${device.bondState})"}")
+        return ok
     }
 
     /** Smartphone-mode registration handshake (per furble CanonEOSSmart,
@@ -462,10 +487,10 @@ class CanonBleClient(
         val result = withTimeoutOrNull(confirmTimeoutMs) { pr.await() }
         pairResultSignal.set(null)
         when (result) {
-            SMART_PAIR_ACCEPT -> Log.i(TAG, "smart pairing ACCEPTED (0x02)")
-            SMART_PAIR_REJECT -> { Log.w(TAG, "smart pairing REJECTED (0x03)"); return false }
-            null -> { Log.w(TAG, "smart pairing: no accept within ${confirmTimeoutMs}ms"); return false }
-            else -> Log.w(TAG, "smart pairing: unexpected 0x%02X — proceeding".format(result.toInt() and 0xFF))
+            SMART_PAIR_ACCEPT -> CanonBleLog.i(TAG, "smart pairing ACCEPTED (0x02)")
+            SMART_PAIR_REJECT -> { CanonBleLog.w(TAG, "smart pairing REJECTED (0x03)"); return false }
+            null -> { CanonBleLog.w(TAG, "smart pairing: no accept within ${confirmTimeoutMs}ms"); return false }
+            else -> CanonBleLog.w(TAG, "smart pairing: unexpected 0x%02X — proceeding".format(result.toInt() and 0xFF))
         }
 
         return writeNoResponse(smartIdenChar, byteArrayOf(0x01), "smart ID5 finalize") &&

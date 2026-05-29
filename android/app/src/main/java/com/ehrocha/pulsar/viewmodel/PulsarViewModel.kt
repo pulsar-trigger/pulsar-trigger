@@ -335,6 +335,38 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun clearCanonBleError() { _canonBleError.value = null }
 
+    /** Build a shareable diagnostics report — app/device header, current
+     *  transport state, and the captured Canon BLE wire log. Surfaced via
+     *  Tools → Collect diagnostics so debugging needs no `adb logcat`. */
+    fun canonDiagnosticsText(): String {
+        val transport = when {
+            _canonBleTransport.value != null -> "Canon BLE"
+            _canonCcapiTransport.value != null -> "Canon CCAPI"
+            _ptpTransport.value != null -> "USB PTP"
+            bleController.connected.value -> "Pulsar BLE"
+            _simulatorActive.value -> "Simulator"
+            else -> "none"
+        }
+        val ts = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
+            .format(java.util.Date())
+        val log = com.ehrocha.pulsar.canonble.CanonBleLog.dump()
+        return buildString {
+            appendLine("Pulsar diagnostics")
+            appendLine("app: ${com.ehrocha.pulsar.BuildConfig.VERSION_NAME} " +
+                "(${com.ehrocha.pulsar.BuildConfig.VERSION_CODE})")
+            appendLine("device: ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL} / " +
+                "Android ${android.os.Build.VERSION.RELEASE} (SDK ${android.os.Build.VERSION.SDK_INT})")
+            appendLine("time: $ts")
+            appendLine("active transport: $transport")
+            appendLine("canonBle: connecting=${_canonBleConnecting.value} " +
+                "awaitingConfirm=${_canonBleAwaitingConfirm.value} " +
+                "reconnecting=${_canonBleReconnecting.value} lastError=${_canonBleError.value}")
+            appendLine()
+            appendLine("── Canon BLE wire log ──")
+            append(if (log.isBlank()) "(empty — no Canon BLE activity captured yet)" else log)
+        }
+    }
+
     /** True while the previously-connected Canon BLE camera has dropped
      *  the link (powered off, out of range, app backgrounded too long)
      *  and Pulsar is waiting for it to advertise again. The UI shows a

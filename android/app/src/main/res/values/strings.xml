@@ -38,6 +38,8 @@
     <string name="test_camera_step_ramp">5. Ramp — 5 steps × 4 s (flat), 2 s gap</string>
     <string name="test_camera_prereqs">Camera in Manual, shutter set to Bulb (for steps 2–5). Card with space for ~25 shots.</string>
     <string name="test_camera_start">Run test</string>
+    <string name="tools_collect_diagnostics">Collect diagnostics</string>
+    <string name="tools_collect_diagnostics_hint">Exports the recent Canon BLE connection log to a file you can share — use after a failed pairing.</string>
     <string name="test_camera_stop">Stop test</string>
     <string name="run_step_timelapse_summary">Timelapse · %1$d shots · %2$s gap</string>
     <string name="run_step_interval_summary">Intervalometer · %1$d × %2$s · %3$s gap</string>

@@ -136,6 +136,8 @@
     <string name="test_camera_step_ramp">5. Ramp — 5 步 × 4 秒 (恒定)，间隔 2 秒</string>
     <string name="test_camera_prereqs">相机置于 M 模式，快门设置为 Bulb (用于步骤 2–5)。存储卡需有约 25 张的空间。</string>
     <string name="test_camera_start">运行测试</string>
+    <string name="tools_collect_diagnostics">收集诊断信息</string>
+    <string name="tools_collect_diagnostics_hint">将最近的佳能 BLE 连接日志导出为可分享的文件 — 配对失败后使用。</string>
     <string name="test_camera_stop">停止测试</string>
     <string name="run_step_timelapse_summary">延时 · %1$d 张 · 间隔 %2$s</string>
     <string name="run_step_interval_summary">间隔仪 · %1$d × %2$s · 间隔 %3$s</string>

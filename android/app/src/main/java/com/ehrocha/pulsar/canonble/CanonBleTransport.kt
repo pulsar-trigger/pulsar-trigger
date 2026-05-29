@@ -100,7 +100,7 @@ class CanonBleTransport private constructor(
                 onSpontaneousDisconnect()
             })
             if (!client.connect()) {
-                Log.w(TAG, "GATT connect failed for ${device.address}")
+                CanonBleLog.w(TAG, "GATT connect failed for ${device.address}")
                 client.close()
                 return CanonBleConnectResult.Failed
             }
@@ -112,23 +112,31 @@ class CanonBleTransport private constructor(
                     // iebyt/cbremote's onServicesDiscovered). First time this
                     // also pops the OS pair dialog. See docs/canon-ble.md.
                     if (!client.writePairName(PAIR_NAME)) {
-                        Log.w(TAG, "BR-E1 pair/arm write failed for ${device.address}; aborting")
+                        CanonBleLog.w(TAG, "BR-E1 pair/arm write failed for ${device.address}; aborting")
                         client.close()
                         return CanonBleConnectResult.Failed
                     }
                 }
                 CanonProtocol.SMART -> {
+                    // The RP ignores the registration writes on an unbonded
+                    // link — bond first (this is what makes the camera show its
+                    // pairing-confirm prompt), then run the handshake.
+                    if (!client.ensureBonded(onAwaitConfirm)) {
+                        CanonBleLog.w(TAG, "bond not established for ${device.address}; aborting")
+                        client.close()
+                        return CanonBleConnectResult.Failed
+                    }
                     // Smartphone-mode registration handshake (fires the RP /
                     // R5 / R6 / newer). Needs a persisted identity UUID so
                     // re-connects reuse the same registration.
                     if (!client.armSmart(PAIR_NAME, deviceUuid(ctx), onAwaitConfirm)) {
-                        Log.w(TAG, "smartphone-mode registration failed for ${device.address}")
+                        CanonBleLog.w(TAG, "smartphone-mode registration failed for ${device.address}")
                         client.close()
                         return CanonBleConnectResult.Failed
                     }
                 }
                 CanonProtocol.SMART_NO_SHUTTER -> {
-                    Log.w(TAG, "${device.address} registered in smartphone mode but exposes " +
+                    CanonBleLog.w(TAG, "${device.address} registered in smartphone mode but exposes " +
                         "no 00030000 control service (e.g. 2018 EOS R) — no BLE shutter")
                     client.close()
                     return CanonBleConnectResult.NoBleShutter
@@ -139,7 +147,7 @@ class CanonBleTransport private constructor(
                 }
             }
             val label = client.name?.takeIf { it.isNotBlank() } ?: "Canon BLE camera"
-            Log.i(TAG, "connected + armed $label (${device.address}) via ${client.protocol}")
+            CanonBleLog.i(TAG, "connected + armed $label (${device.address}) via ${client.protocol}")
             val transport = CanonBleTransport(device, client).also {
                 it._label.value = label
                 it._connected.value = true
@@ -224,7 +232,7 @@ class CanonBleTransport private constructor(
      *  mode dial themselves; we log + no-op so the existing runner code
      *  that calls this before every bulb flow doesn't have to know. */
     override suspend fun setShutterMode(bulb: Boolean) {
-        Log.d(TAG, "setShutterMode($bulb): no-op on Canon BLE (set Bulb on the body's dial)")
+        CanonBleLog.d(TAG, "setShutterMode($bulb): no-op on Canon BLE (set Bulb on the body's dial)")
     }
 
     /** Open the shutter for a bulb exposure. With AF: do a quick AF
