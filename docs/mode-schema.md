@@ -17,9 +17,11 @@ actions. Bookmarking surfaces the preset as a tile on the home Trigger
 tab. Tapping a preset opens the wizard for that mode pre-filled with the
 saved values.
 
-Running a preset goes through the active transport — BLE if a Pulsar
-trigger is connected, CCAPI if a Canon body is connected, simulator
-otherwise. The flow runner doesn't care.
+Running a preset goes through the active transport — Pulsar BLE if an
+ESP32 trigger is connected, CCAPI (Wi-Fi) / PTP (USB) / Canon BLE direct
+on a Canon body, simulator otherwise. The flow runner doesn't care; the
+three Canon transports share `runCanonBulb` / `runCanonTimelapse` /
+`runCanonRamp` in `CanonRunner.kt`.
 
 ## Top-level envelope
 
@@ -53,15 +55,21 @@ Multi-mode export wraps an array under a bundle envelope:
 ## `params` by `fwMode`
 
 All five preset-able modes share `intervalMs`, `exposureMs`, `shotCount`,
-`delayMs`. Some carry extras:
+`delayMs`, and `useAutofocus`. Some carry extras:
 
-| `fwMode`         | Required                                           | Extras                                                  |
-| ---------------- | -------------------------------------------------- | ------------------------------------------------------- |
-| `INTERVALOMETER` | `intervalMs`, `exposureMs`, `shotCount`, `delayMs` | —                                                       |
-| `ASTRO`          | same                                               | `focalLength`, `cropFactor`, `ruleDivisor`              |
-| `TIMELAPSE`      | same (`exposureMs` is the pulse sentinel)          | —                                                       |
-| `DARK_FRAME`     | same                                               | —                                                       |
-| `RAMP`           | same                                               | `rampStartExposureMs`, `rampEndExposureMs`, `rampSteps` |
+| `fwMode`         | Required                                                          | Extras                                                  |
+| ---------------- | ----------------------------------------------------------------- | ------------------------------------------------------- |
+| `INTERVALOMETER` | `intervalMs`, `exposureMs`, `shotCount`, `delayMs`, `useAutofocus` | —                                                       |
+| `ASTRO`          | same                                                              | `focalLength`, `cropFactor`, `ruleDivisor`              |
+| `TIMELAPSE`      | same (`exposureMs` is the pulse sentinel)                         | —                                                       |
+| `DARK_FRAME`     | same                                                              | —                                                       |
+| `RAMP`           | same                                                              | `rampStartExposureMs`, `rampEndExposureMs`, `rampSteps` |
+
+`useAutofocus` is honoured only by the Canon transports (CCAPI / PTP / Canon
+BLE direct) — it picks AF-half-press-before-shot vs bare release. The BLE-ESP
+firmware path doesn't expose AF over the wire (the optocoupler is fired
+directly) and ignores the field. Stored on every preset so transport switches
+preserve the setting.
 
 `PRESS_HOLD`, `PRESS_LOCK`, `TRACKER`, `CUSTOM_FLOW` aren't representable as
 presets (imperative or app-orchestrated). Import rejects them.

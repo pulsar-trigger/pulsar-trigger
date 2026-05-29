@@ -70,18 +70,28 @@ CanonBleTransport ── CanonBleClient ── BluetoothGatt (Android)
 
 | File | Purpose |
 |---|---|
-| `canonble/CanonBleDiscovery.kt` | `BluetoothLeScanner` filtered on the BR-E1 service UUID. Surfaces matched `BluetoothDevice`s as a `StateFlow`. Vendor-agnostic — relies on the service UUID, not the device's GATT name. |
-| `canonble/CanonBleClient.kt` | GATT wrapper. Connect, discover services, pair-write, control-write. Operations serialised through a `Mutex` (Android allows one in-flight GATT op per connection). Spontaneous-disconnect callback invoked when the link drops *after* a successful connect. |
-| `canonble/CanonBleTransport.kt` | Implements `CameraTransport`. Owns the bond between Canon BLE and Pulsar's wizards — fireShutter / startBulb / stopBulb / setShutterMode / supportsX flags. |
-| `viewmodel/PulsarViewModel.kt` | `connectCanonBle` / `disconnectCanonBle` / mutual-exclusion / `onCanonBleLinkDropped` / auto-reconnect collector / persistence. |
-| `ui/screens/ScanScreen.kt` | "Canon BLE remotes" section + `CanonBleCameraCard`. Scan starts on screen-visible (`DisposableEffect`), stops on dispose. |
-| `ui/screens/MainMenuScreen.kt` | `CanonBleBanner` on the Trigger tab parallel to `CanonBulbBanner` (CCAPI) and `PtpBanner`. |
+| `canonble/CanonBleDiscovery.kt` | `BluetoothLeScanner` filtered on **both** the BR-E1 and smartphone-mode service UUIDs. Surfaces matched `BluetoothDevice`s as a `StateFlow`; `onScanResult` re-verifies the advertisement to drop phones / unrelated devices some stacks let through. |
+| `canonble/CanonBleClient.kt` | GATT wrapper. Connect, discover services, pair-write, control-write, smartphone-mode handshake, indication subscription for the `0x02` pairing accept. Operations serialised through a `Mutex` (Android allows one in-flight GATT op per connection). Spontaneous-disconnect callback invoked when the link drops *after* a successful connect. |
+| `canonble/CanonBleTransport.kt` | Implements `CameraTransport`. Auto-dispatches between BR-E1 byte writes and smartphone-mode `[00,01]` toggles based on the detected `CanonProtocol`. Reports `Ok` / `Failed` / `NoBleShutter` from `connect()` so the viewmodel can steer the user when an R-series body has no BLE shutter. |
+| `canonble/CanonBleLog.kt` | In-app 600-line ring buffer for every Canon BLE event (connect, handshake, arm, every shutter write, disconnects). Forwarded to `Logcat` AND captured in memory so the user can grab it via **Tools → Diagnostics**. |
+| `viewmodel/PulsarViewModel.kt` | `connectCanonBle` / `disconnectCanonBle` / mutual-exclusion / `onCanonBleLinkDropped` / auto-reconnect collector / persistence / `abortFlowOnTransportDrop` / `canonDiagnosticsText`. |
+| `ui/screens/ScanLandingScreen.kt` | The Reconnect card + Diagnostics shortcut when no device is connected. |
+| `ui/screens/TransportSetupScreen.kt` | Per-transport setup card — the "Canon BLE remotes" section + `CanonBleCameraCard` live here. Scan starts on screen-visible (`DisposableEffect`), stops on dispose. |
+| `ui/screens/MainMenuScreen.kt` | `CanonBleBanner` on the Trigger tab parallel to `CanonBulbBanner` (CCAPI) and `PtpBanner`; the **Diagnostics** tile on the Tools tab. |
+| `ui/screens/DiagnosticsScreen.kt` | Full-screen log viewer (scrollable, selectable, monospace) with Refresh / Copy / Share. Reads `vm.canonDiagnosticsText()`. |
 
 ## Discovery
 
-`CanonBleDiscovery` runs a `BluetoothLeScanner` with `ScanFilter.setServiceUuid(00050000-…-d8492fffa821)`. Any device advertising that service UUID — i.e. any BR-E1-compatible Canon body currently in pair-or-remote mode — shows up as a `BluetoothDevice` in the `cameras` flow.
+`CanonBleDiscovery` runs a `BluetoothLeScanner` with **two** `ScanFilter`s in
+parallel — the BR-E1 service UUID (`00050000-…-d8492fffa821`) and the
+smartphone-mode service UUID (`00010000-…-d8492fffa821`). The latter is
+what R-series bodies advertise in their default Bluetooth-menu state.
 
-No vendor filter beyond the UUID — the service UUID is Canon-specific to BR-E1, so we don't need to also filter by manufacturer.
+Some Android stacks accept the `ScanFilter` but pass through every advertisement
+anyway (we've seen phones, headphones, BR-E1 hardware remotes etc. land in the
+list). To filter, `onScanResult` re-verifies that the advertisement record
+actually carries one of the two Canon service UUIDs — anything else is dropped
+before it reaches the `cameras` flow.
 
 The scan starts when the user opens the Scan screen (DisposableEffect) and stops when they leave it or successfully connect. After a spontaneous disconnect the viewmodel re-arms the scan in the background so the auto-reconnect collector can pick up the next advertisement.
 
@@ -92,10 +102,15 @@ Concurrent with the Pulsar ESP32 scan (`BleController`) — Android handles mult
 1. **User taps a Canon BLE card** on the scan screen. `vm.connectCanonBle(device)` enqueues on the viewmodel scope.
 2. **Mutual exclusion** — any active BLE-ESP / CCAPI / PTP / simulator session is torn down first.
 3. **Scan stop** — `canonBleDiscovery.stop()`. Android can't reliably scan + connect on the same radio.
-4. **GATT connect** — `device.connectGatt(ctx, autoConnect=false, callback, TRANSPORT_LE)`.
-5. **Service discovery** — `gatt.discoverServices()`; pulls out the pair characteristic (`00050002-…`) + the control characteristic (`00050003-…`).
-6. **Arm-write (every connect)** — write `[0x03, ...ASCII "Pulsar"]` to the pair characteristic. **This runs on every connection, not just the first** — it registers Pulsar as the active remote for *this session*. The camera silently ignores control-characteristic writes until it's been armed this way, even when the device is already OS-bonded. (Confirmed against `iebyt/cbremote`, the working Android reference, which writes the same payload in `onServicesDiscovered` every connect.) On the first connect this also triggers Android's MITM pair dialog — the user confirms with the passkey shown on the camera screen, and the bond lands in the OS keystore; later connects reuse the bond and the arm-write is silent.
-7. **Persist MAC** — `lastCanonBleAddress` stored in plain SharedPrefs.
+4. **GATT connect** — `device.connectGatt(ctx, autoConnect=…, callback, TRANSPORT_LE)`. First connect uses `autoConnect=false`; the **reconnect** path (post-link-drop, OS-managed) uses `autoConnect=true` with a 120 s window — Android then completes the connection whenever the bonded body becomes available (including via the directed advertisements a service-UUID scan never sees).
+5. **Service discovery + protocol auto-detect** — `gatt.discoverServices()`. Whichever Canon service is present picks the path (the advertisement is unreliable — an RP in smartphone mode still advertises `00050000`):
+   - **BR-E1** (`00050000` only) → pull the pair (`00050002`) + control (`00050003`) characteristics.
+   - **Smartphone** (`00010000` + `00030000`) → pull the identity chars (`00010006`, `0001000a`), the mode-select (`00030010`), and the shutter toggle (`00030030`). Arm the pairing-result indication on `00010006` so the camera's `0x02` accept byte can't be missed.
+   - **Smartphone but no `00030000`** (the 2018 EOS R) → return `NoBleShutter` to the viewmodel; the UI steers the user to USB / Wi-Fi.
+6. **Arm the protocol.**
+   - **BR-E1** — write `[0x03, ...ASCII "Pulsar"]` to the pair characteristic. **This runs on every connection**, not just the first — it registers Pulsar as the active remote for *this session*. The camera silently ignores control-characteristic writes until armed this way, even when already OS-bonded. (Confirmed against `iebyt/cbremote`.) On the first connect this also triggers Android's MITM pair dialog — the user confirms with the passkey shown on the camera; later connects reuse the bond and the arm-write is silent.
+   - **Smartphone** — `ensureBonded()` first: the RP ignores registration writes on an unbonded link, so we call `device.createBond()` and wait for the OS to drive the pairing prompt **on the camera body** (the user taps Confirm on the camera). Then the smartphone-mode handshake runs: `[01,name]` → `00010006`, `[03,uuid]` → `0001000a`, `[04,name]` → `0001000a`, `[05,02]` → `0001000a`, wait for the camera's `0x02` accept indication (first pair only — reconnects skip), finalize with `[01]` → `0001000a`, and switch to shoot mode with `[MODE_SHOOT]` → `00030010`. The 16-byte device UUID used in step 2 is generated once and persisted in `pulsar_canon_ble.smart_device_uuid` so reconnects reuse the registration.
+7. **Persist MAC** — `lastCanonBleAddress` stored in plain SharedPrefs (the bond itself is in the OS keystore; this is just the reconnect hint).
 8. **Done** — `_canonBleTransport.value` flips non-null; the UI navigates to the trigger tab.
 
 ## Disconnect flow
@@ -113,13 +128,24 @@ The wizards build a `FlowStep`, save it, and `vm.startFlow()` walks the list. Fo
 
 ### Wire calls per mode
 
-| Mode | What `CanonBleTransport` does |
-|---|---|
-| Timelapse (Intervalometer with `TIMELAPSE_PULSE_MS` sentinel) | Per shot: write `0x8C` (full press) → 200 ms delay → write `0x0C` (release). With AF: half-press `0x4C` → 200 ms → release first, then the press/release pair. |
-| Intervalometer (bulb) / Astro / DarkFrame | Per shot: optional AF half-press, then `startBulb` writes `0x8C` → host-side `delay(exposureMs)` → `stopBulb` writes `0x0C`. |
-| Ramp | Same as bulb but `exposureMs` interpolates linearly across steps. |
+`CanonBleTransport` dispatches on the protocol detected at connect time. The
+shutter pattern differs:
+
+| Mode | BR-E1 (older bodies) | Smartphone-mode (R-series) |
+|---|---|---|
+| Timelapse | Per shot: `0x8C` (press) → 200 ms → `0x0C` (release) on `00050003`. AF: `0x4C` → 200 ms → `0x0C` first. | Per shot: `[00,01]` (press / toggle DOWN) → 200 ms → `[00,01]` (release / toggle UP) on `00030030`. AF is folded into the release — no separate half-press. |
+| Intervalometer (bulb) / Astro / DarkFrame | Optional AF half-press, `startBulb` writes `0x8C` → `delay(exposureMs)` → `stopBulb` writes `0x0C`. | `startBulb` writes `[00,01]` (toggle DOWN) → `delay(exposureMs)` → `stopBulb` writes `[00,01]` (toggle UP). |
+| Ramp | Same as bulb; `exposureMs` interpolates linearly. | Same as bulb; `exposureMs` interpolates linearly. |
+
+The smartphone shutter is a true positional toggle (down ↔ up): one `[00,01]`
+write flips the button state. A complete op is therefore *two* toggles back to
+"up". furble's `[00,02]` "release" is inert on the EOS RP — confirmed empirically
+— so both press and release send the same `[00,01]` bytes; see
+[canon-ble-research.md §7](canon-ble-research.md) for the verification log.
 
 ## Wire format primer
+
+### BR-E1 protocol (`00050000`)
 
 Every shutter / focus / video event is a single byte written to the control characteristic (`00050003-…`). The byte packs `mode | button`:
 
@@ -149,24 +175,66 @@ Common byte combos (matches `cbremote`'s `SIGNAL_*` constants — Apache 2.0 ref
 
 For bulb, the host writes `0x8C`, sleeps the desired exposure time, then writes `0x0C`. Same press-and-hold pattern a physical BR-E1 hardware remote uses.
 
-## Pairing characteristic
+### Smartphone-mode protocol (`00010000` + `00030000`)
+
+A richer, two-service protocol used by the R-series. Identity / registration
+on `00010000`, shooting on `00030000`. All writes are `WRITE_NO_RESPONSE`.
+
+| Characteristic | UUID | Direction | Payload |
+|---|---|---|---|
+| `SMART_NAME` | `00010006-…` | write + indicate | Phone-side: `[01, ...ASCII name]`. Camera-side indicate: `0x02` accept / `0x03` reject (fires once the user confirms the pairing on the body). |
+| `SMART_IDEN` | `0001000a-…` | write | The registration handshake: `[03, <16-byte UUID>]`, `[04, ...name]`, `[05, 02]`, then `[01]` to finalize after the camera accepts. |
+| `SMART_MODE` | `00030010-…` | write | `[0x02]` = `MODE_SHOOT` — switches the body into shooting mode after handshake. |
+| `SMART_SHUTTER` | `00030030-…` | write | `[00, 01]` toggles the shutter button (down ↔ up). One toggle = press; two toggles = press + release (back to "up"). Bulb is `[00,01]` → wait → `[00,01]`. |
+
+Auto-focus is folded into the toggle on the camera side — there's no separate
+half-press write. The body uses the focus mode set on the lens / camera at
+release time. `MODE_SHOOT` is set once per session and persists until the GATT
+link drops or the body switches Bluetooth modes.
+
+## Pairing characteristic (BR-E1)
 
 Written exactly once per new bond. Payload format: `[0x03, ...ASCII name...]`. We use `"Pulsar"` so the camera's paired-devices list shows a recognisable entry.
 
-After the OS bond is established, this characteristic isn't needed again.
+After the OS bond is established, this characteristic isn't needed again. The smartphone-mode protocol does **not** use this characteristic at all — see the SMART_NAME / SMART_IDEN registration handshake above.
 
 ## Auto-reconnect on link drop
 
-The viewmodel's init block watches `canonBleDiscovery.cameras`. Conditions for an auto-reconnect:
+Two complementary paths, in priority order:
+
+**1. OS-managed `autoConnect=true` (primary).** `onCanonBleLinkDropped()` fires
+from the GATT callback when the link drops post-success, aborts any running
+flow (the camera may still be exposing — see [Mid-session disconnect](#mid-session-disconnect)),
+releases the old GATT, and re-issues `connectGatt` with `autoConnect=true` and
+a 120 s window. Android then completes the connection whenever the bonded body
+becomes available — **including via directed advertisements that a service-UUID
+scan never sees** (which is how an R-series body re-advertises to its bonded
+phone). This is the path that actually reconnects on Eduardo's RP.
+
+**2. Service-UUID scan + collector (fallback).** The viewmodel's init block
+watches `canonBleDiscovery.cameras`. The collector reconnects when all of:
 
 - `_canonBleReconnecting.value` is true (we lost the link and want it back)
 - `_canonBleTransport.value` is null (we're not already reconnected)
+- `_canonBleConnecting.value` is false (the OS-managed reconnect above isn't already in-flight)
 - `idleAcrossOtherTransports()` (the user hasn't switched to a different transport)
 - A device with `address == lastCanonBleAddress` appears in `cameras`
 
-When all four hold, `connectCanonBle(matchedDevice, auto = true)` runs. The arm-write still runs (it runs every connect) but is silent — the OS bond is already in the keystore so no pair dialog appears.
+The arm-write (BR-E1) or smartphone-mode handshake still runs on every connect
+but is silent — the OS bond is already in the keystore so no pair dialog
+appears, and on the smartphone path `armSmart` shortens the accept wait to 6 s
+(the camera doesn't re-prompt on a known-good registration).
 
-`lastCanonBleAddress` is persisted in SharedPrefs (`pulsar_canon_ble.last_address`), so this survives app restart — open the app, walk into BLE range of the previously-bonded body, scan screen will reconnect on its own.
+`lastCanonBleAddress` is persisted in SharedPrefs (`pulsar_canon_ble.last_address`), so this survives app restart — open the app, walk into BLE range of the previously-bonded body, the scan landing's reconnect card finishes the job on its own.
+
+### Mid-session disconnect
+
+If the link drops while a flow is *running*, `abortFlowOnTransportDrop()`
+cancels the flow job, flips `_sessionInterrupted = true`, and the next time the
+foreground screen is visible a dialog warns the user that the camera **may
+still be holding the exposure** — a bulb that opened before the drop has no way
+to be closed remotely. The auto-reconnect still tries to re-establish the link
+in the background so the next session can start cleanly.
 
 ## Honest caveats
 
@@ -182,20 +250,28 @@ This is the failure mode we hit on the EOS RP + EOS R during bring-up: the Andro
 
 ### 0. Camera-side prerequisites
 
-- **Bluetooth mode = Remote**, not Smartphone. (Wireless communication → Bluetooth → Remote.) Smartphone mode is for Canon's own Camera Connect app / CCAPI — it does *not* speak the BR-E1 remote protocol Pulsar uses, so a body in Smartphone mode pairs but never shoots.
+- **Pick the right Bluetooth mode for your body** (the menu is *Wireless communication → Bluetooth*):
+  - **Older bodies** (M50, M200, 6D II, 77D, 200D / SL2, 800D / Rebel T7i, 850D, PowerShots) → **Remote**. Pulsar speaks the BR-E1 remote protocol.
+  - **R-series with BLE shutter** (RP, R5, R6, …) → **Smartphone**. Pulsar speaks Canon's smartphone-mode protocol — the only path that fires these bodies over BLE.
+  - **EOS R (2018) has no BLE shutter at all** — it registers in smartphone mode but exposes no `00030000` control service. Even Canon's Camera Connect needs Wi-Fi to fire it. Pulsar detects this and reports `no_ble_shutter`; use USB (PTP) or Wi-Fi (CCAPI) instead.
 - Body on **Manual + Bulb** on the mode dial if you're testing a bulb mode (Pulsar can't set this remotely — see Honest caveats).
 - For a single shot, Timelapse mode is the simplest test (camera owns the exposure).
 
-### 1. Capture a logcat while you tap the shutter
+### 1. Capture the connect + shutter trace
 
-The control-write path logs under the tag `CanonBleClient`. With the phone plugged into a computer:
+Pulsar keeps an in-app ring buffer of every Canon BLE event — connect,
+handshake, arm, every shutter / focus / mode write, and any spontaneous
+disconnect. The easiest way to read it:
 
-```
-adb logcat -c                          # clear the buffer first
-adb logcat -s CanonBleClient:* CanonBleTransport:*
-```
+**Tools → Diagnostics → Copy** (or **Share**).
 
-Then connect the camera in Pulsar and fire a single shot (Timelapse, or Manual → tap). You're looking for the `writeControl` / `onCharacteristicWrite` lines:
+That gives you a self-contained text file with app/device/Android versions,
+the active transport, and the recent wire log — paste it into a bug report
+or attach the share-sheet output. The same log lives under the `CanonBleClient`
+/ `CanonBleTransport` tags in `adb logcat -s CanonBleClient:* CanonBleTransport:*`
+if you'd rather work from the cable.
+
+Connect the camera in Pulsar and fire a single shot (Timelapse, or Manual → tap). You're looking for the `writeControl` / `onCharacteristicWrite` lines:
 
 ```
 D CanonBleClient: writeControl: sending 0x8C
@@ -233,10 +309,26 @@ If instead you see `pair/arm write failed … aborting`, the `[0x03, name]` writ
 
 ## Future work
 
-1. **Manual pair-name field** — let the user override `"Pulsar"` so multiple phones paired to the same camera are distinguishable in the camera's list.
-2. **Per-body capability gating.** Today supportsBulb is hard-coded true; a PowerShot bulb-via-BLE may not behave the same as a DSLR. If we hit issues, query `device.name` or a whitelist.
-3. **Multi-camera bonds.** Today `lastCanonBleAddress` is single-valued. Could become a list with a "preferred" entry, like CCAPI's per-UDN nickname map.
-4. **2-second self-timer mode.** `MODE_DELAY (0x04)` is exposed by the wire but not surfaced in Pulsar. Useful for tripod-shake suppression on single shots.
+1. **M-mode single-shot toggle parity (open bug).** In smartphone mode the
+   shutter is a positional toggle. A single shot is press + release (two
+   toggles) — correct in Bulb. In **M** (non-bulb) the same pair causes
+   continuous shooting on at least the RP: the dial mode determines whether
+   one or two toggles is the right single-shot recipe, and BLE can't read the
+   dial. Tracking via the [in-app diagnostics](#1-capture-the-connect--shutter-trace)
+   to decide between a single-toggle M-mode path and a release-reliability fix.
+2. **Per-family BLE mechanism map.** Today `CanonProtocol` is auto-detected at
+   connect time. A small per-family map (`EOS R-series → SMART`, `older →
+   BR-E1`, `2018 EOS R → NO_BLE_SHUTTER`) would let the scan card pre-label the
+   capability before the user even taps connect, and lets us add per-family
+   shutter quirks (e.g. furble's `[00,02]` release variant, untested but
+   documented for the M6, could be opted in for families that need it).
+3. **Manual pair-name field** — let the user override `"Pulsar"` so multiple
+   phones paired to the same camera are distinguishable in the camera's list.
+4. **Multi-camera bonds.** Today `lastCanonBleAddress` is single-valued. Could
+   become a list with a "preferred" entry, like CCAPI's per-UDN nickname map.
+5. **2-second self-timer mode.** `MODE_DELAY (0x04)` is exposed by the BR-E1
+   wire but not surfaced in Pulsar. Useful for tripod-shake suppression on
+   single shots; doesn't apply to the smartphone-mode protocol.
 
 ## External references
 
@@ -248,12 +340,13 @@ If instead you see `pair/arm write failed … aborting`, the `[0x03, name]` writ
 
 Verified against six independent open-source implementations — every byte and UUID below was cross-checked:
 
-- **`maxmacstn/ESP32-Canon-BLE-Remote`** — Arduino / ESP32. Source of the constants in `CanonBleClient`. Tested on EOS M50.
+- **`maxmacstn/ESP32-Canon-BLE-Remote`** — Arduino / ESP32. Source of the BR-E1 constants in `CanonBleClient`. Tested on EOS M50.
 - **`pklaus/canoremote`** — Python `bleak`. README lists the broadest compatibility matrix (EOS R/RP/R5/R6/Ra and many others) — but it's the same simple subset (see research doc §2.4).
-- **`iebyt/cbremote`** — Android app (Apache 2.0). Source of the `SIGNAL_*` byte combos used in our bulb implementation. Tested on EOS 200D.
+- **`iebyt/cbremote`** — Android app (Apache 2.0). Source of the BR-E1 `SIGNAL_*` byte combos used in our bulb implementation. Tested on EOS 200D.
 - **`ArthurFDLR/BR-M5`** — M5Stick C+ / PlatformIO. Tested on EOS M50 Mark I.
-- **`ids1024/cannon-bluetooth-remote`** — Python via `btgatt-client`. Confirmed handle numbers 0xf504 / 0xf506.
-- **`RReverser/eos-remote-web`** — Web Bluetooth (JS). Same simple `0002`+`0003` protocol; touches no extra characteristic.
+- **`ids1024/cannon-bluetooth-remote`** — Python via `btgatt-client`. Confirmed BR-E1 handle numbers 0xf504 / 0xf506.
+- **`RReverser/eos-remote-web`** — Web Bluetooth (JS). Same simple BR-E1 `0002`+`0003` protocol; touches no extra characteristic.
+- **`gkoh/furble`** (GPL-3.0) — ESP32 multi-vendor remote. **Source of the smartphone-mode protocol** (services `00010000` / `00030000`, the identify handshake, MODE_SHOOT). Pulsar empirically verified the `[00,01]` shutter toggle is correct on the EOS RP and that furble's `[00,02]` "release" is inert — both Pulsar press and release send `[00,01]`.
 
 Protocol write-ups:
 
