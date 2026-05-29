@@ -71,7 +71,12 @@ internal suspend fun runCanonTimelapse(
             state = DeviceState.RUNNING, shotsTaken = shot - 1,
             timeRemainingMs = remaining.coerceAtLeast(0),
         )
-        transport.fireShutter(af = af)
+        // fireShutter is a press-delay-release pair on transports that expose
+        // a positional shutter toggle (Canon BLE smartphone mode). A cancel
+        // landing between press and release would leave the toggle DOWN, so
+        // run the tap on a non-cancellable context — the loop still stops on
+        // the next iteration via ensureActive().
+        withContext(NonCancellable) { transport.fireShutter(af = af) }
         status.value = status.value?.copy(
             state = DeviceState.WAITING, shotsTaken = shot,
             timeRemainingMs = (remaining - perShotEstimate).coerceAtLeast(0),

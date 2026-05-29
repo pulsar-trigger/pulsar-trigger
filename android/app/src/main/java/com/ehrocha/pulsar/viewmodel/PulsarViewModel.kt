@@ -1332,6 +1332,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 val want = lastCanonBleAddress ?: return@collect
                 if (!_canonBleReconnecting.value) return@collect
                 if (_canonBleTransport.value != null) return@collect
+                // Don't cancel an OS-managed autoConnect that's already
+                // in-flight (started by onCanonBleLinkDropped) — restarting
+                // with autoConnect=false would churn the connect attempt.
+                if (_canonBleConnecting.value) return@collect
                 if (!idleAcrossOtherTransports()) return@collect
                 val match = cameras.firstOrNull { it.address == want } ?: return@collect
                 Log.i(TAG, "Canon BLE re-advertise from $want — auto-reconnecting")
@@ -2229,10 +2233,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         if (transport != null) {
             viewModelScope.launch {
                 _status.value = _status.value?.copy(state = DeviceState.RUNNING)
-                runCatching { transport.fireShutter(af = false) }
+                val fired = runCatching { transport.fireShutter(af = false) }.isSuccess
                 _status.value = _status.value?.copy(
                     state = DeviceState.IDLE,
-                    shotsTaken = (_status.value?.shotsTaken ?: 0) + 1,
+                    shotsTaken = (_status.value?.shotsTaken ?: 0) + if (fired) 1 else 0,
                 )
             }
             return

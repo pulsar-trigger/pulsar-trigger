@@ -8,7 +8,6 @@ package com.ehrocha.pulsar.canonble
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import android.content.Context
-import android.util.Log
 import com.ehrocha.pulsar.canonble.CanonBleClient.Companion.BUTTON_FOCUS
 import com.ehrocha.pulsar.canonble.CanonBleClient.Companion.MODE_IMMEDIATE
 import com.ehrocha.pulsar.canonble.CanonBleClient.Companion.SHUTTER_PRESS

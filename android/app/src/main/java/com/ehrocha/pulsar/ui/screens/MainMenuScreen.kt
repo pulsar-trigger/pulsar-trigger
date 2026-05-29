@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.LensBlur
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.Usb
@@ -64,6 +65,7 @@ fun MainMenuScreen(
     onWhatsUpSelected: () -> Unit = {},
     onStarFocusSelected: () -> Unit = {},
     onTestCameraSelected: () -> Unit = {},
+    onDiagnosticsSelected: () -> Unit = {},
     onUserModeRun: (com.ehrocha.pulsar.model.UserMode) -> Unit = {},
     onIntervalometer2Selected: () -> Unit = {},
     onAstroMode2Selected: () -> Unit = {},
@@ -288,6 +290,9 @@ fun MainMenuScreen(
                             Icons.Default.Science,
                             enabled = cameraTestEnabled,
                         ) { onTestCameraSelected() },
+                        launcherItem(R.string.mode_diagnostics, Icons.Default.Description) {
+                            onDiagnosticsSelected()
+                        },
                     )
                     Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                         LauncherGrid(toolItems)

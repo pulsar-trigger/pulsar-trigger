@@ -29,3 +29,6 @@ Thumbs.db
 # Copilot memory (local dev context, not for repo)
 .github/copilot-memory/
 .CLAUDE.md
+
+# Claude Code local commands / settings (not for repo)
+.claude/
