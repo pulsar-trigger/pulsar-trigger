@@ -185,6 +185,7 @@
     <string name="chip_hold_mode">Modo segurar</string>
     <string name="chip_lock_mode">Modo travar</string>
     <string name="btn_hold_shutter">Segurar obturador</string>
+    <string name="btn_single_shot">Disparo único</string>
     <string name="btn_release_shutter">Soltar obturador</string>
     <string name="btn_open_shutter">Abrir obturador</string>
     <string name="btn_close_shutter">Fechar obturador</string>

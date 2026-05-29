@@ -185,6 +185,7 @@
     <string name="chip_hold_mode">Haltemodus</string>
     <string name="chip_lock_mode">Sperrmodus</string>
     <string name="btn_hold_shutter">Auslöser halten</string>
+    <string name="btn_single_shot">Einzelaufnahme</string>
     <string name="btn_release_shutter">Auslöser loslassen</string>
     <string name="btn_open_shutter">Verschluss öffnen</string>
     <string name="btn_close_shutter">Verschluss schliessen</string>

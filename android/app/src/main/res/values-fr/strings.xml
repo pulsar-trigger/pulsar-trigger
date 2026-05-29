@@ -185,6 +185,7 @@
     <string name="chip_hold_mode">Mode maintien</string>
     <string name="chip_lock_mode">Mode verrouillage</string>
     <string name="btn_hold_shutter">Maintenir l\'obturateur</string>
+    <string name="btn_single_shot">Prise unique</string>
     <string name="btn_release_shutter">Relâcher l\'obturateur</string>
     <string name="btn_open_shutter">Ouvrir l\'obturateur</string>
     <string name="btn_close_shutter">Fermer l\'obturateur</string>

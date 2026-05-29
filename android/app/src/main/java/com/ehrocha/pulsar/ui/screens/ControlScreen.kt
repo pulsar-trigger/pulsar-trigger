@@ -128,7 +128,8 @@ internal fun ManualActions(vm: PulsarViewModel, mode: TriggerMode) {
         mode = mode,
         onModeSelected = { vm.selectMode(it) },
         onShutterDown = { vm.shutterDown() },
-        onShutterUp = { vm.shutterUp() }
+        onShutterUp = { vm.shutterUp() },
+        onSingleShot = { vm.fireSingle() },
     )
 }
 
@@ -139,6 +140,7 @@ internal fun ManualActionsContent(
     onModeSelected: (TriggerMode) -> Unit,
     onShutterDown: () -> Unit,
     onShutterUp: () -> Unit,
+    onSingleShot: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val isHold = mode == TriggerMode.PRESS_HOLD
@@ -230,6 +232,27 @@ internal fun ManualActionsContent(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+
+        // Big round single-shot button — fires one frame (press+release tap),
+        // independent of the hold/lock press behavior above.
+        Surface(
+            shape = RoundedCornerShape(percent = 50),
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            tonalElevation = 4.dp,
+            modifier = Modifier
+                .size(112.dp)
+                .clickable(enabled = connected) { onSingleShot() },
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    stringResource(R.string.btn_single_shot),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
     }
 }
 

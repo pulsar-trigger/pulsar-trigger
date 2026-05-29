@@ -185,6 +185,7 @@
     <string name="chip_hold_mode">ホールドモード</string>
     <string name="chip_lock_mode">ロックモード</string>
     <string name="btn_hold_shutter">シャッターを押し続ける</string>
+    <string name="btn_single_shot">1枚撮影</string>
     <string name="btn_release_shutter">シャッターを離す</string>
     <string name="btn_open_shutter">シャッターを開く</string>
     <string name="btn_close_shutter">シャッターを閉じる</string>

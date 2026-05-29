@@ -2104,10 +2104,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun start() {
-        if (_canonCcapiTransport.value != null) {
-            // Direct start() is the legacy single-mode path; Canon only runs
-            // via the flow runner (Timelapse wizard → startFlow()).
-            Log.w(TAG, "start() ignored on Canon transport — use Timelapse wizard")
+        if (activeCameraTransport() != null) {
+            // Direct start() is the legacy single-mode (ESP) path. Every
+            // CameraTransport (CCAPI / PTP / Canon BLE) runs via the flow
+            // runner instead (the wizards → startFlow()).
+            Log.w(TAG, "start() ignored on a camera transport — use the wizard / startFlow()")
             return
         }
         if (_simulatorActive.value) {
@@ -2123,7 +2124,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             stopFlow()
             return
         }
-        if (_canonCcapiTransport.value != null) return
+        if (activeCameraTransport() != null) return
         if (_simulatorActive.value) {
             stopSimulatorRun()
             return
@@ -2165,6 +2166,26 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
         sendConfig()
         bleController.sendCommand(CommandBuilder.start())
+    }
+
+    /** Single shot: fire one frame immediately. Transport-aware — a
+     *  CameraTransport (CCAPI / PTP / Canon BLE) does a press+release via
+     *  [fireShutter]; the ESP path sends the single-shot SHUTTER opcode. */
+    fun fireSingle() {
+        val transport = activeCameraTransport()
+        if (transport != null) {
+            viewModelScope.launch {
+                _status.value = _status.value?.copy(state = DeviceState.RUNNING)
+                runCatching { transport.fireShutter(af = false) }
+                _status.value = _status.value?.copy(
+                    state = DeviceState.IDLE,
+                    shotsTaken = (_status.value?.shotsTaken ?: 0) + 1,
+                )
+            }
+            return
+        }
+        if (_simulatorActive.value) return
+        bleController.sendCommand(CommandBuilder.shutter())
     }
 
     /** Press & Hold: shutter close on up */

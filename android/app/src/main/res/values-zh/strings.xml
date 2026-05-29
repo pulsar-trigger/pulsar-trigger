@@ -187,6 +187,7 @@
     <string name="chip_hold_mode">按住模式</string>
     <string name="chip_lock_mode">锁定模式</string>
     <string name="btn_hold_shutter">按住快门</string>
+    <string name="btn_single_shot">单张拍摄</string>
     <string name="btn_release_shutter">释放快门</string>
     <string name="btn_open_shutter">打开快门</string>
     <string name="btn_close_shutter">关闭快门</string>

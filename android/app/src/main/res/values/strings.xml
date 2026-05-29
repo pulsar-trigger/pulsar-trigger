@@ -266,6 +266,7 @@
     <string name="chip_hold_mode">Hold Mode</string>
     <string name="chip_lock_mode">Lock Mode</string>
     <string name="btn_hold_shutter">Hold Shutter</string>
+    <string name="btn_single_shot">Single shot</string>
     <string name="btn_release_shutter">Release Shutter</string>
     <string name="btn_open_shutter">Open Shutter</string>
     <string name="btn_close_shutter">Close Shutter</string>
