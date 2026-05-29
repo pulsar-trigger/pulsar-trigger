@@ -2149,10 +2149,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Press & Hold: shutter open on down */
     fun shutterDown() {
-        val canon = _canonCcapiTransport.value
-        if (canon != null) {
+        // Any CameraTransport (CCAPI / PTP / Canon BLE) drives the manual
+        // press-and-hold via startBulb; only the ESP32 path uses the BLE
+        // start/stop commands. Previously only CCAPI was handled, so manual
+        // mode silently no-opped on PTP and Canon BLE.
+        val transport = activeCameraTransport()
+        if (transport != null) {
             _status.value = _status.value?.copy(state = DeviceState.RUNNING)
-            viewModelScope.launch { canon.startBulb(af = true) }
+            viewModelScope.launch { transport.startBulb(af = true) }
             return
         }
         if (_simulatorActive.value) {
@@ -2165,9 +2169,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Press & Hold: shutter close on up */
     fun shutterUp() {
-        val canon = _canonCcapiTransport.value
-        if (canon != null) {
-            viewModelScope.launch { canon.stopBulb() }
+        val transport = activeCameraTransport()
+        if (transport != null) {
+            viewModelScope.launch { transport.stopBulb() }
             _status.value = _status.value?.copy(state = DeviceState.IDLE)
             return
         }
