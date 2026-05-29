@@ -233,15 +233,20 @@ internal fun ManualActionsContent(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
-        // Big round single-shot button — fires one frame (press+release tap),
-        // independent of the hold/lock press behavior above.
+        // Single shot — full-width button matching the hold/lock control's
+        // shape/height so the panel reads as one consistent set of controls
+        // (one press+release tap, independent of the hold/lock mode).
         Surface(
-            shape = RoundedCornerShape(percent = 50),
+            shape = RoundedCornerShape(32.dp),
             color = MaterialTheme.colorScheme.secondaryContainer,
-            tonalElevation = 4.dp,
+            tonalElevation = 2.dp,
             modifier = Modifier
-                .size(112.dp)
-                .clickable(enabled = connected) { onSingleShot() },
+                .fillMaxWidth()
+                .height(64.dp)
+                .pointerInput(connected) {
+                    if (!connected) return@pointerInput
+                    detectTapGestures(onTap = { onSingleShot() })
+                },
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(

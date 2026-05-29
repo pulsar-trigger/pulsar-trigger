@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -534,13 +535,50 @@ internal fun RunningView(plannedShots: Int) {
     val status = LocalDeviceStatus.current
     val state = status?.state ?: DeviceState.IDLE
     val shotsTaken = status?.shotsTaken ?: 0
-    val timeRemainingMs = status?.timeRemainingMs ?: 0L
+    val statusRemainingMs = status?.timeRemainingMs ?: 0L
     val batteryPct = status?.batteryPct ?: 0
     val currentStep = LocalCurrentFlowStep.current
     val continuous = plannedShots == 0
-    val progress = if (continuous) 0f
-                   else (shotsTaken.toFloat() / plannedShots.coerceAtLeast(1))
-                       .coerceIn(0f, 1f)
+
+    // ── Continuous countdown: the run loop only updates timeRemainingMs at
+    //    shot boundaries, so interpolate locally between updates — the
+    //    remaining-time text and progress bar move smoothly, not in jumps.
+    //    Resync to the authoritative value whenever the status changes. ──
+    var lastUpdateTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var lastRemainingMs by remember { mutableLongStateOf(statusRemainingMs) }
+    var liveRemainingMs by remember { mutableLongStateOf(statusRemainingMs) }
+    // Total duration = the largest remaining we see (the first update at run
+    // start), used to drive a smooth time-based progress bar.
+    var totalMs by remember { mutableLongStateOf(statusRemainingMs) }
+    LaunchedEffect(state) { if (state == DeviceState.IDLE) totalMs = 0L }
+    LaunchedEffect(statusRemainingMs) {
+        lastUpdateTime = System.currentTimeMillis()
+        lastRemainingMs = statusRemainingMs
+        liveRemainingMs = statusRemainingMs
+        if (statusRemainingMs > totalMs) totalMs = statusRemainingMs
+    }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(100L)
+            val elapsed = System.currentTimeMillis() - lastUpdateTime
+            liveRemainingMs = (lastRemainingMs - elapsed).coerceAtLeast(0)
+        }
+    }
+
+    // Human-friendly count: bump to the current shot the instant exposure
+    // starts (1-based) instead of waiting for it to finish — people want to
+    // feel progress. Holds through the trailing gap; never overshoots.
+    val shotsTakenDisplay = when {
+        state == DeviceState.RUNNING && continuous -> shotsTaken + 1
+        state == DeviceState.RUNNING -> (shotsTaken + 1).coerceAtMost(plannedShots)
+        else -> shotsTaken
+    }
+
+    val progress = when {
+        continuous -> 0f
+        totalMs > 0 -> ((totalMs - liveRemainingMs).toFloat() / totalMs).coerceIn(0f, 1f)
+        else -> (shotsTakenDisplay.toFloat() / plannedShots.coerceAtLeast(1)).coerceIn(0f, 1f)
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
@@ -566,7 +604,7 @@ internal fun RunningView(plannedShots: Int) {
 
         Row(verticalAlignment = Alignment.Bottom) {
             Text(
-                "$shotsTaken",
+                "$shotsTakenDisplay",
                 fontSize = 96.sp,
                 fontWeight = FontWeight.Light,
                 color = MaterialTheme.colorScheme.primary,
@@ -586,9 +624,9 @@ internal fun RunningView(plannedShots: Int) {
 
         Spacer(Modifier.height(24.dp))
 
-        if (!continuous && timeRemainingMs > 0) {
+        if (!continuous && liveRemainingMs > 0) {
             Text(
-                iv2FormatHmsPretty(timeRemainingMs),
+                iv2FormatHmsPretty(liveRemainingMs),
                 fontSize = 36.sp,
                 fontWeight = FontWeight.Bold,
             )
