@@ -515,6 +515,29 @@ Design consequence: auto-detect treats **smartphone-mode + no `00030000`** as
 
 ---
 
+## 7b. Body → BLE mechanism map (living)
+
+As more bodies are tested, record which BLE mechanism each uses here, so we can
+spot when auto-detection (by GATT) needs a per-body override. Pulsar currently
+detects the *protocol* from the GATT and assumes the **`[00 01]` toggle** for
+all smartphone-mode bodies (verified on the RP). The open risk: a body that
+exposes `00030000` but wants **press `[00 01]` / release `[00 02]`** instead of
+a toggle (furble's M6 code suggests that encoding exists). If one turns up, add
+a per-body branch in `CanonBleClient.smartShutter` keyed off the model
+(Device Information `0x2a24`/`0x2a26`) or a GATT signature.
+
+| Body | Mode used | GATT signature | Shutter mechanism | Status |
+|---|---|---|---|---|
+| EOS RP | smartphone (`00010000`) | `0001/0002/0003/0004` | `[00 01]` **toggle** → `00030030` | ✅ confirmed firing (Pulsar) |
+| EOS R (2018) | smartphone (`00010000`) | `0001/0002/0004` — **no `00030000`** | none — no BLE shutter (Camera Connect needs Wi-Fi) | ❌ use USB/Wi-Fi |
+| EOS M6 | smartphone | `0001/0003/0004` | furble: press `[00 01]` / release `[00 02]` → `00030030` (toggle-vs-press unverified) | ⚠️ ref-only (gkoh/furble) |
+| EOS R5/R6/R6 II | smartphone (expected) | expected `…/00030000` | expected `[00 01]` toggle (untested) | ❓ likely-works, untested |
+| M50 / 200D / 77D / 800D / DSLRs | Remote / BR-E1 (`00050000`) | `00050002`+`00050003` | `mode\|button` byte → `00050003` | ✅ (older refs; not R-series) |
+
+How to add a row: connect the body, run Tools → Collect diagnostics (or
+`tools/canon_ble_test.py --dump-only`), note the advertised/GATT services + the
+Device-Info model string, and which shutter bytes actually fire it.
+
 ## 8. Licensing note
 
 Reference licenses: `cbremote` Apache-2.0; `BR-M5`, `cannon-bluetooth-remote`
