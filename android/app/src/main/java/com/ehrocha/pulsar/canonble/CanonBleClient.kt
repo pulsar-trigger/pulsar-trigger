@@ -497,11 +497,16 @@ class CanonBleClient(
             writeNoResponse(smartModeChar, byteArrayOf(SMART_MODE_SHOOT), "smart MODE_SHOOT")
     }
 
-    /** Smartphone-mode shutter: `[0x00,0x01]` press / `[0x00,0x02]` release. */
+    /** Smartphone-mode shutter — a **toggle** on `[0x00,0x01]` (button
+     *  down ↔ up), verified on the EOS RP. furble's `[0x00,0x02]` "release"
+     *  is inert on the RP, so BOTH press and release send `[0x00,0x01]`:
+     *  press = button-down (opens / fires), release = button-up (closes).
+     *  A complete shot or bulb is two toggles, returning the button to "up".
+     *  See docs/canon-ble-research.md §7. */
     suspend fun smartShutter(press: Boolean): Boolean = writeNoResponse(
         smartShutterChar,
-        byteArrayOf(0x00, if (press) 0x01 else 0x02),
-        if (press) "smart shutter press" else "smart shutter release",
+        byteArrayOf(0x00, 0x01),
+        if (press) "smart shutter DOWN [00,01]" else "smart shutter UP [00,01]",
     )
 
     val address: String get() = device.address

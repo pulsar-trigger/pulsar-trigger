@@ -410,10 +410,21 @@ name         = the controller's display string
 ### Shutter (after the handshake)
 
 ```
-press   → write [0x00, 0x01] → 00030030
-release → write [0x00, 0x02] → 00030030
+toggle  → write [0x00, 0x01] → 00030030     (button DOWN ↔ UP)
 focus   → no-op (smartphone mode does not split AF; the camera AFs on release)
 ```
+
+**The RP shutter is a TOGGLE on `[00 01]`** (verified 2026-05-29). Each
+`[00 01]` flips the shutter button down↔up: first opens/fires, second
+closes/releases. furble's `[00 02]` "release" (and `[00 00]`) are **inert on
+the RP** — furble's momentary-button usage never noticed because it only taps.
+So a single shot = `[00 01]` (down) → `[00 01]` (up); a bulb = `[00 01]` (down)
+→ hold → `[00 01]` (up). Sending `[00 02]` for release leaves the shutter open
+until the next `[00 01]`, which is the "skip every other shot / release on next
+press" bug an automated intervalometer exposes. Empirical proof: a probe firing
+5 `[00 01]`s (odd) interleaved with inert `[00 02]`/`[00 00]` left the camera
+**still exposed** at the end. Pulsar `smartShutter` therefore sends `[00 01]`
+for both press and release; a complete op is two toggles (back to "up").
 
 ### Geo / time-sync packet (optional, → 00040002, with response)
 

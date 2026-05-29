@@ -470,7 +470,7 @@ async def _smart_teardown(subscribed, client):
             pass
 
 
-async def smart_sequence(client):
+async def smart_sequence(client, shutter_probe=False):
     # furble's secureConnection() — the handshake needs an encrypted/bonded link.
     try:
         ok = await client.pair()
@@ -539,6 +539,32 @@ async def smart_sequence(client):
     await write(client, mode_uuid, [SMART_MODE_SHOOT], response=False, label="MODE_SHOOT")
     await asyncio.sleep(1.0)
     new = await snapshot(client, readable); diff_snapshots(snap, new, "after MODE_SHOOT"); snap = new
+
+    if shutter_probe:
+        # Find the RP's REAL release command. furble's [00 02] presses/fires
+        # but does NOT release on the RP (release only triggers on the next
+        # [00 01]). Try variants; the camera's notify channels (esp. 0x0011 /
+        # 0x0001) objectively show the shutter state, so watch the ◀ INDICATE
+        # lines AND the body for each labelled step.
+        log(f"{_ts()} ╔══ SHUTTER PROBE — for each step: did it SHOOT? is the shutter STILL OPEN? did it RELEASE? ══╗")
+        experiments = [
+            ("A  [00 01] hold 3s, then [00 02]", [([0x00, 0x01], 3.0), ([0x00, 0x02], 3.0)]),
+            ("B  [00 01] only (auto-release?)",   [([0x00, 0x01], 4.0)]),
+            ("C  [00 01] hold 3s, then [00 00]",  [([0x00, 0x01], 3.0), ([0x00, 0x00], 3.0)]),
+            ("D  [00 01] then [00 01] (toggle?)", [([0x00, 0x01], 3.0), ([0x00, 0x01], 3.0)]),
+            ("E  [00 02] then [00 00]",           [([0x00, 0x02], 3.0), ([0x00, 0x00], 3.0)]),
+        ]
+        for label, steps in experiments:
+            log(f"{_ts()} ── EXPERIMENT {label} ──")
+            for payload, wait in steps:
+                await write(client, shutter_uuid, payload, response=False,
+                            label=f"  → {bytes(payload).hex()}")
+                await asyncio.sleep(wait)
+            log(f"{_ts()}   ↑ OBSERVE: shoot? still-open? released?  (3s gap before next)")
+            await asyncio.sleep(3.0)
+        log(f"{_ts()} ╚══ probe done ══╝")
+        await _smart_teardown(subscribed, client)
+        return
 
     log(f"{_ts()} ── SHUTTER ──")
     await write(client, shutter_uuid, [0x00, 0x01], response=False, label="SHUTTER press [00,01]")
@@ -620,7 +646,7 @@ async def do_session(client, args):
     if args.smart:
         # Smartphone-mode (service 00010000) registration + fire, per
         # furble CanonEOSSmart — the likely EOS R-series path.
-        await smart_sequence(client)
+        await smart_sequence(client, shutter_probe=args.shutter_probe)
         log("done. Did the camera fire? (check the body / card)")
         return 0
 
@@ -701,6 +727,11 @@ def main():
                         "pairing on the camera, switch to shoot mode, then fire. "
                         "The likely EOS R-series path. Set camera BT to 'Connect "
                         "to smartphone' / register-a-device first")
+    p.add_argument("--shutter-probe", action="store_true",
+                   help="with --smart: after registration, try several shutter "
+                        "press/release byte variants with pauses, logging the "
+                        "camera's notify channels — to find the RP's real RELEASE "
+                        "command ([00 02] presses but doesn't release on the RP)")
     p.add_argument("--delay-mode", action="store_true",
                    help="use the 2-second-timer mode bit instead of immediate")
     args = p.parse_args()
