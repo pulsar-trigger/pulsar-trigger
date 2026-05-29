@@ -287,6 +287,8 @@
     <string name="ota_update_complete">Update abgeschlossen!</string>
     <string name="ota_rebooting_info">Gerät wird neu gestartet. Du wirst zum Suchbildschirm zurückgeleitet.</string>
     <string name="state_exposing">Belichtung</string>
+    <string name="run_phase_next_shot">Nächste Aufnahme</string>
+    <string name="run_phase_starting">Start</string>
     <string name="state_waiting">Warten</string>
     <string name="status_of_shots">von %1$d Aufnahmen</string>
     <string name="status_remaining">verbleibend</string>

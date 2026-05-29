@@ -287,6 +287,8 @@
     <string name="ota_update_complete">アップデート完了！</string>
     <string name="ota_rebooting_info">デバイスを再起動中です。スキャン画面に戻ります。</string>
     <string name="state_exposing">露出中</string>
+    <string name="run_phase_next_shot">次の撮影</string>
+    <string name="run_phase_starting">開始</string>
     <string name="state_waiting">待機中</string>
     <string name="status_of_shots">/ %1$d ショット</string>
     <string name="status_remaining">残り</string>

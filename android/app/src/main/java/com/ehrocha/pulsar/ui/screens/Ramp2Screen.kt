@@ -185,7 +185,12 @@ fun Ramp2Screen(
             }
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (running) {
-                    RunningView(plannedShots = steps)
+                    // Ramp's exposure changes per step, so only the gap phase
+                    // has a fixed countdown here.
+                    RunningView(
+                        plannedShots = steps,
+                        gapMs = intervalMs,
+                    )
                     return@Box
                 }
                 when (tab) {

@@ -439,6 +439,8 @@
 
     <!-- ModeScreen running status -->
     <string name="state_exposing">Exposing</string>
+    <string name="run_phase_next_shot">Next shot</string>
+    <string name="run_phase_starting">Starting</string>
     <string name="state_waiting">Waiting</string>
     <string name="status_of_shots">of %1$d shots</string>
     <string name="status_remaining">remaining</string>

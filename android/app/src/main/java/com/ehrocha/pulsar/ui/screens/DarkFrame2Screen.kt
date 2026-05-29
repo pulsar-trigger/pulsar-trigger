@@ -169,7 +169,11 @@ fun DarkFrame2Screen(
             }
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (running) {
-                    RunningView(plannedShots = shotCount)
+                    RunningView(
+                        plannedShots = shotCount,
+                        exposureMs = exposureMs,
+                        gapMs = intervalMs,
+                    )
                     return@Box
                 }
                 when (tab) {

@@ -289,6 +289,8 @@
     <string name="ota_update_complete">更新完成！</string>
     <string name="ota_rebooting_info">设备正在重启，稍后将返回扫描界面。</string>
     <string name="state_exposing">曝光中</string>
+    <string name="run_phase_next_shot">下一张</string>
+    <string name="run_phase_starting">开始</string>
     <string name="state_waiting">等待中</string>
     <string name="status_of_shots">共 %1$d 张</string>
     <string name="status_remaining">剩余</string>

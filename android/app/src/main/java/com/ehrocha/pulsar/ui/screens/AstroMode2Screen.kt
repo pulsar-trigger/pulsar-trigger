@@ -305,7 +305,12 @@ fun AstroMode2Screen(
 
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (running) {
-                    RunningView(plannedShots = shotCount)
+                    RunningView(
+                        plannedShots = shotCount,
+                        exposureMs = maxExpMs,
+                        gapMs = intervalMs,
+                        startDelayMs = delayMs,
+                    )
                     return@Box
                 }
                 when (tab) {

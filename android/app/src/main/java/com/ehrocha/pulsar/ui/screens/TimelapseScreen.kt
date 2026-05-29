@@ -188,7 +188,13 @@ fun TimelapseScreen(
 
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (running) {
-                    RunningView(plannedShots = shotCount)
+                    // Timelapse fires a single tap (camera owns the exposure),
+                    // so there's no host-timed exposure phase — only the gap.
+                    RunningView(
+                        plannedShots = shotCount,
+                        gapMs = intervalMs,
+                        startDelayMs = delayMs,
+                    )
                     return@Box
                 }
                 when (tab) {

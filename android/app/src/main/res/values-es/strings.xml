@@ -287,6 +287,8 @@
     <string name="ota_update_complete">¡Actualización Completa!</string>
     <string name="ota_rebooting_info">El dispositivo está reiniciando. Serás redirigido a la pantalla de búsqueda.</string>
     <string name="state_exposing">Exponiendo</string>
+    <string name="run_phase_next_shot">Próxima toma</string>
+    <string name="run_phase_starting">Iniciando</string>
     <string name="state_waiting">Esperando</string>
     <string name="status_of_shots">de %1$d fotos</string>
     <string name="status_remaining">restante</string>

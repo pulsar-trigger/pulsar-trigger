@@ -287,6 +287,8 @@
     <string name="ota_update_complete">Mise à jour terminée !</string>
     <string name="ota_rebooting_info">L\'appareil redémarre. Vous serez redirigé vers l\'écran de recherche.</string>
     <string name="state_exposing">Exposition</string>
+    <string name="run_phase_next_shot">Prochaine photo</string>
+    <string name="run_phase_starting">Démarrage</string>
     <string name="state_waiting">Attente</string>
     <string name="status_of_shots">sur %1$d photos</string>
     <string name="status_remaining">restant</string>

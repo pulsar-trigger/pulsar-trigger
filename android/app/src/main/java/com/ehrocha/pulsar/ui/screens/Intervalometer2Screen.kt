@@ -240,7 +240,12 @@ fun Intervalometer2Screen(
 
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (running) {
-                    RunningView(plannedShots = shotCount)
+                    RunningView(
+                        plannedShots = shotCount,
+                        exposureMs = exposureMs,
+                        gapMs = intervalMs,
+                        startDelayMs = delayMs,
+                    )
                     return@Box
                 }
                 when (tab) {
@@ -535,7 +540,16 @@ private fun recomposeMs(h: Int, m: Int, s: Int, cs: Int): Long =
  * runs the progress bar is indeterminate.
  */
 @Composable
-internal fun RunningView(plannedShots: Int) {
+internal fun RunningView(
+    plannedShots: Int,
+    // Per-phase durations so the run screen can show a live countdown for the
+    // current exposure / gap / start-delay (the status only carries the total).
+    // 0 = "not applicable" (e.g. Timelapse has no host-timed exposure; Ramp's
+    // exposure varies per step) → that phase's countdown is hidden.
+    exposureMs: Long = 0L,
+    gapMs: Long = 0L,
+    startDelayMs: Long = 0L,
+) {
     val status = LocalDeviceStatus.current
     val state = status?.state ?: DeviceState.IDLE
     val shotsTaken = status?.shotsTaken ?: 0
@@ -584,6 +598,30 @@ internal fun RunningView(plannedShots: Int) {
         else -> (shotsTakenDisplay.toFloat() / plannedShots.coerceAtLeast(1)).coerceIn(0f, 1f)
     }
 
+    // ── Per-phase countdown: time left in the CURRENT exposure / gap / start
+    //    delay. The status only carries the total, so we time the phase locally
+    //    from when it began (reset on every status change = a phase boundary).
+    //    Recomposed by the 100ms ticker above (liveRemainingMs changes). ──
+    var phaseStartTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(state, shotsTaken, statusRemainingMs) {
+        phaseStartTime = System.currentTimeMillis()
+    }
+    val phaseDurationMs = when {
+        state == DeviceState.RUNNING -> exposureMs
+        state == DeviceState.WAITING && shotsTaken == 0 -> startDelayMs
+        state == DeviceState.WAITING -> gapMs
+        else -> 0L
+    }
+    val phaseRemainingMs =
+        (phaseDurationMs - (System.currentTimeMillis() - phaseStartTime)).coerceAtLeast(0)
+    val phaseLabel = when {
+        state == DeviceState.RUNNING && exposureMs > 0L -> stringResource(R.string.state_exposing)
+        state == DeviceState.WAITING && shotsTaken == 0 && startDelayMs > 0L ->
+            stringResource(R.string.run_phase_starting)
+        state == DeviceState.WAITING && gapMs > 0L -> stringResource(R.string.run_phase_next_shot)
+        else -> null
+    }
+
     Column(
         modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -626,12 +664,30 @@ internal fun RunningView(plannedShots: Int) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
+        // Current-phase countdown (this exposure / gap / start-delay), colored
+        // by phase so it reads at a glance distinct from the total below.
+        if (phaseLabel != null && phaseRemainingMs > 0) {
+            Spacer(Modifier.height(20.dp))
+            Text(
+                iv2FormatHmsPretty(phaseRemainingMs),
+                fontSize = 44.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (state == DeviceState.RUNNING) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.tertiary,
+            )
+            Text(
+                phaseLabel,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
         Spacer(Modifier.height(24.dp))
 
         if (!continuous && liveRemainingMs > 0) {
             Text(
                 iv2FormatHmsPretty(liveRemainingMs),
-                fontSize = 36.sp,
+                fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
             )
             Text(
