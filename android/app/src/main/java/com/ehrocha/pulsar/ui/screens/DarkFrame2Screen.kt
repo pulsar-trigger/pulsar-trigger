@@ -83,9 +83,13 @@ fun DarkFrame2Screen(
     val subSecondCanon = onCanon && exposureMs in 1L..999L
     val bottomHint = when {
         tab == DfTab.EXPOSURE && exposureMs == 0L -> stringResource(R.string.iv2_set_exposure)
-        tab == DfTab.EXPOSURE && subSecondCanon -> stringResource(R.string.canon_sub_second_warning)
         tab == DfTab.INTERVAL && intervalMs == 0L -> stringResource(R.string.iv2_set_interval)
         tab == DfTab.SHOTS && shotCount == 0 -> stringResource(R.string.df2_set_shots)
+        else -> null
+    }
+    val wizardWarning = when {
+        tab == DfTab.EXPOSURE && subSecondCanon ->
+            stringResource(R.string.canon_sub_second_warning)
         else -> null
     }
 
@@ -176,34 +180,42 @@ fun DarkFrame2Screen(
                     )
                     return@Box
                 }
-                when (tab) {
-                    DfTab.EXPOSURE -> SegmentedTimeEditor(
-                        ms = exposureMs,
-                        onChange = { exposureMs = it },
-                        rangeMs = 0L..86_400_000L,
-                        enabled = !running,
-                    )
-                    DfTab.INTERVAL -> SegmentedTimeEditor(
-                        ms = intervalMs,
-                        onChange = { intervalMs = it },
-                        rangeMs = 0L..3_600_000L,
-                        enabled = !running,
-                    )
-                    DfTab.SHOTS -> Column(
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.padding(horizontal = 24.dp),
-                    ) {
-                        ShotsEditor(
-                            value = shotCount,
-                            onChange = { shotCount = it },
+                Column(modifier = Modifier.fillMaxSize()) {
+                    wizardWarning?.let {
+                        com.ehrocha.pulsar.ui.components.WizardWarning(
+                            it,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
+                    when (tab) {
+                        DfTab.EXPOSURE -> SegmentedTimeEditor(
+                            ms = exposureMs,
+                            onChange = { exposureMs = it },
+                            rangeMs = 0L..86_400_000L,
                             enabled = !running,
                         )
-                        if (canControlAf) {
-                            com.ehrocha.pulsar.ui.components.AutofocusToggle(
-                                checked = useAutofocus,
-                                onCheckedChange = { useAutofocus = it },
+                        DfTab.INTERVAL -> SegmentedTimeEditor(
+                            ms = intervalMs,
+                            onChange = { intervalMs = it },
+                            rangeMs = 0L..3_600_000L,
+                            enabled = !running,
+                        )
+                        DfTab.SHOTS -> Column(
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.padding(horizontal = 24.dp),
+                        ) {
+                            ShotsEditor(
+                                value = shotCount,
+                                onChange = { shotCount = it },
                                 enabled = !running,
                             )
+                            if (canControlAf) {
+                                com.ehrocha.pulsar.ui.components.AutofocusToggle(
+                                    checked = useAutofocus,
+                                    onCheckedChange = { useAutofocus = it },
+                                    enabled = !running,
+                                )
+                            }
                         }
                     }
                 }

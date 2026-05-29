@@ -94,12 +94,16 @@ fun Ramp2Screen(
     val subSecondEnd = canControlAf && endExposureMs in 1L..999L
     val bottomHint = when {
         tab == RampTab.START && startExposureMs == 0L -> stringResource(R.string.ramp2_set_start)
-        tab == RampTab.START && subSecondStart -> stringResource(R.string.canon_sub_second_warning)
         tab == RampTab.END && endExposureMs == 0L -> stringResource(R.string.ramp2_set_end)
-        tab == RampTab.END && subSecondEnd -> stringResource(R.string.canon_sub_second_warning)
         tab == RampTab.INTERVAL && intervalMs == 0L -> stringResource(R.string.iv2_set_interval)
-        tab == RampTab.INTERVAL && intervalMs in 1L..3999L -> stringResource(R.string.interval_short_warning)
         tab == RampTab.STEPS && steps < 2 -> stringResource(R.string.ramp2_set_steps)
+        else -> null
+    }
+    val wizardWarning = when {
+        tab == RampTab.START && subSecondStart -> stringResource(R.string.canon_sub_second_warning)
+        tab == RampTab.END && subSecondEnd -> stringResource(R.string.canon_sub_second_warning)
+        tab == RampTab.INTERVAL && intervalMs in 1L..3999L ->
+            stringResource(R.string.interval_short_warning)
         else -> null
     }
 
@@ -193,40 +197,48 @@ fun Ramp2Screen(
                     )
                     return@Box
                 }
-                when (tab) {
-                    RampTab.START -> SegmentedTimeEditor(
-                        ms = startExposureMs,
-                        onChange = { startExposureMs = it },
-                        rangeMs = 0L..86_400_000L,
-                        enabled = !running,
-                    )
-                    RampTab.END -> SegmentedTimeEditor(
-                        ms = endExposureMs,
-                        onChange = { endExposureMs = it },
-                        rangeMs = 0L..86_400_000L,
-                        enabled = !running,
-                    )
-                    RampTab.INTERVAL -> SegmentedTimeEditor(
-                        ms = intervalMs,
-                        onChange = { intervalMs = it },
-                        rangeMs = 0L..3_600_000L,
-                        enabled = !running,
-                    )
-                    RampTab.STEPS -> Column(
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.padding(horizontal = 24.dp),
-                    ) {
-                        ShotsEditor(
-                            value = steps,
-                            onChange = { steps = it },
+                Column(modifier = Modifier.fillMaxSize()) {
+                    wizardWarning?.let {
+                        com.ehrocha.pulsar.ui.components.WizardWarning(
+                            it,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
+                    when (tab) {
+                        RampTab.START -> SegmentedTimeEditor(
+                            ms = startExposureMs,
+                            onChange = { startExposureMs = it },
+                            rangeMs = 0L..86_400_000L,
                             enabled = !running,
                         )
-                        if (canControlAf) {
-                            com.ehrocha.pulsar.ui.components.AutofocusToggle(
-                                checked = useAutofocus,
-                                onCheckedChange = { useAutofocus = it },
+                        RampTab.END -> SegmentedTimeEditor(
+                            ms = endExposureMs,
+                            onChange = { endExposureMs = it },
+                            rangeMs = 0L..86_400_000L,
+                            enabled = !running,
+                        )
+                        RampTab.INTERVAL -> SegmentedTimeEditor(
+                            ms = intervalMs,
+                            onChange = { intervalMs = it },
+                            rangeMs = 0L..3_600_000L,
+                            enabled = !running,
+                        )
+                        RampTab.STEPS -> Column(
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.padding(horizontal = 24.dp),
+                        ) {
+                            ShotsEditor(
+                                value = steps,
+                                onChange = { steps = it },
                                 enabled = !running,
                             )
+                            if (canControlAf) {
+                                com.ehrocha.pulsar.ui.components.AutofocusToggle(
+                                    checked = useAutofocus,
+                                    onCheckedChange = { useAutofocus = it },
+                                    enabled = !running,
+                                )
+                            }
                         }
                     }
                 }

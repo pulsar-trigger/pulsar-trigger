@@ -98,13 +98,17 @@ fun TimelapseScreen(
     }
     val bottomHint = when {
         tab == TlTab.INTERVAL && intervalMs == 0L -> stringResource(R.string.iv2_set_interval)
-        tab == TlTab.INTERVAL && intervalMs in 1L..3999L -> stringResource(R.string.interval_short_warning)
         tab == TlTab.SHOTS && continuous && configComplete ->
             stringResource(R.string.iv2_continuous_warning)
         tab == TlTab.SHOTS && !configComplete -> stringResource(R.string.iv2_set_interval)
         else -> null
     }
     val hintIsContinuous = continuous && configComplete
+    val wizardWarning = when {
+        tab == TlTab.INTERVAL && intervalMs in 1L..3999L ->
+            stringResource(R.string.interval_short_warning)
+        else -> null
+    }
 
     val editingPreset = remember(editingPresetId, allModes) {
         editingPresetId?.let { id -> allModes.firstOrNull { it.id == id } }
@@ -197,34 +201,42 @@ fun TimelapseScreen(
                     )
                     return@Box
                 }
-                when (tab) {
-                    TlTab.INTERVAL -> SegmentedTimeEditor(
-                        ms = intervalMs,
-                        onChange = { intervalMs = it },
-                        rangeMs = 0L..3_600_000L,
-                        enabled = !running,
-                    )
-                    TlTab.DELAY -> SegmentedTimeEditor(
-                        ms = delayMs,
-                        onChange = { delayMs = it },
-                        rangeMs = 0L..3_600_000L,
-                        enabled = !running,
-                    )
-                    TlTab.SHOTS -> Column(
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.padding(horizontal = 24.dp),
-                    ) {
-                        ShotsEditor(
-                            value = shotCount,
-                            onChange = { shotCount = it },
+                Column(modifier = Modifier.fillMaxSize()) {
+                    wizardWarning?.let {
+                        com.ehrocha.pulsar.ui.components.WizardWarning(
+                            it,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
+                    when (tab) {
+                        TlTab.INTERVAL -> SegmentedTimeEditor(
+                            ms = intervalMs,
+                            onChange = { intervalMs = it },
+                            rangeMs = 0L..3_600_000L,
                             enabled = !running,
                         )
-                        if (canControlAf) {
-                            com.ehrocha.pulsar.ui.components.AutofocusToggle(
-                                checked = useAutofocus,
-                                onCheckedChange = { useAutofocus = it },
+                        TlTab.DELAY -> SegmentedTimeEditor(
+                            ms = delayMs,
+                            onChange = { delayMs = it },
+                            rangeMs = 0L..3_600_000L,
+                            enabled = !running,
+                        )
+                        TlTab.SHOTS -> Column(
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.padding(horizontal = 24.dp),
+                        ) {
+                            ShotsEditor(
+                                value = shotCount,
+                                onChange = { shotCount = it },
                                 enabled = !running,
                             )
+                            if (canControlAf) {
+                                com.ehrocha.pulsar.ui.components.AutofocusToggle(
+                                    checked = useAutofocus,
+                                    onCheckedChange = { useAutofocus = it },
+                                    enabled = !running,
+                                )
+                            }
                         }
                     }
                 }

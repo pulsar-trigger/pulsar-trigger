@@ -138,14 +138,20 @@ fun Intervalometer2Screen(
     val subSecondCanon = canControlAf && exposureMs in 1L..999L
     val bottomHint = when {
         tab == IvTab.EXPOSURE && exposureMs == 0L -> stringResource(R.string.iv2_set_exposure)
-        tab == IvTab.EXPOSURE && subSecondCanon -> stringResource(R.string.canon_sub_second_warning)
         tab == IvTab.INTERVAL && intervalMs == 0L -> stringResource(R.string.iv2_set_interval)
-        tab == IvTab.INTERVAL && intervalMs in 1L..3999L -> stringResource(R.string.interval_short_warning)
         isContinuous && tab == IvTab.SHOTS -> stringResource(R.string.iv2_continuous_warning)
         !configComplete && tab == IvTab.SHOTS -> stringResource(R.string.iv2_set_exposure_and_interval)
         else -> null
     }
     val hintIsContinuous = isContinuous && configComplete
+    // In-content caution strips — rendered above the editor via WizardWarning.
+    // Reserved for correctness risks the user can proceed past (we just warn),
+    // distinct from the "set X to start" set-help in bottomHint above.
+    val wizardWarning = when {
+        tab == IvTab.EXPOSURE && subSecondCanon -> stringResource(R.string.canon_sub_second_warning)
+        tab == IvTab.INTERVAL && intervalMs in 1L..3999L -> stringResource(R.string.interval_short_warning)
+        else -> null
+    }
 
     val editingPreset = remember(editingPresetId, allModes) {
         editingPresetId?.let { id -> allModes.firstOrNull { it.id == id } }
@@ -248,40 +254,48 @@ fun Intervalometer2Screen(
                     )
                     return@Box
                 }
-                when (tab) {
-                    IvTab.EXPOSURE -> SegmentedTimeEditor(
-                        ms = exposureMs,
-                        onChange = { exposureMs = it },
-                        rangeMs = 0L..86_400_000L,
-                        enabled = !running,
-                    )
-                    IvTab.INTERVAL -> SegmentedTimeEditor(
-                        ms = intervalMs,
-                        onChange = { intervalMs = it },
-                        rangeMs = 0L..3_600_000L,
-                        enabled = !running,
-                    )
-                    IvTab.DELAY -> SegmentedTimeEditor(
-                        ms = delayMs,
-                        onChange = { delayMs = it },
-                        rangeMs = 0L..3_600_000L,
-                        enabled = !running,
-                    )
-                    IvTab.SHOTS -> Column(
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.padding(horizontal = 24.dp),
-                    ) {
-                        ShotsEditor(
-                            value = shotCount,
-                            onChange = { shotCount = it },
+                Column(modifier = Modifier.fillMaxSize()) {
+                    wizardWarning?.let {
+                        com.ehrocha.pulsar.ui.components.WizardWarning(
+                            it,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                    }
+                    when (tab) {
+                        IvTab.EXPOSURE -> SegmentedTimeEditor(
+                            ms = exposureMs,
+                            onChange = { exposureMs = it },
+                            rangeMs = 0L..86_400_000L,
                             enabled = !running,
                         )
-                        if (canControlAf) {
-                            com.ehrocha.pulsar.ui.components.AutofocusToggle(
-                                checked = useAutofocus,
-                                onCheckedChange = { useAutofocus = it },
+                        IvTab.INTERVAL -> SegmentedTimeEditor(
+                            ms = intervalMs,
+                            onChange = { intervalMs = it },
+                            rangeMs = 0L..3_600_000L,
+                            enabled = !running,
+                        )
+                        IvTab.DELAY -> SegmentedTimeEditor(
+                            ms = delayMs,
+                            onChange = { delayMs = it },
+                            rangeMs = 0L..3_600_000L,
+                            enabled = !running,
+                        )
+                        IvTab.SHOTS -> Column(
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.padding(horizontal = 24.dp),
+                        ) {
+                            ShotsEditor(
+                                value = shotCount,
+                                onChange = { shotCount = it },
                                 enabled = !running,
                             )
+                            if (canControlAf) {
+                                com.ehrocha.pulsar.ui.components.AutofocusToggle(
+                                    checked = useAutofocus,
+                                    onCheckedChange = { useAutofocus = it },
+                                    enabled = !running,
+                                )
+                            }
                         }
                     }
                 }
