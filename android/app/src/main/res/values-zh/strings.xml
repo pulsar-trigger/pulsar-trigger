@@ -593,6 +593,9 @@
     <string name="scan_landing_reconnect_via">上次连接 · %1$s</string>
     <string name="scan_landing_forget">忘记此设备</string>
     <string name="scan_landing_use_simulator">使用模拟器</string>
+    <string name="scan_landing_known_devices">已知设备</string>
+    <string name="transport_tile_simulator_title">模拟器</string>
+    <string name="transport_tile_simulator_subtitle">无硬件试用</string>
     <string name="transport_tile_pulsar_ble_title">Pulsar BLE</string>
     <string name="transport_tile_pulsar_ble_subtitle">连接相机快门端口的 ESP32 模块</string>
     <string name="transport_tile_ccapi_title">佳能 Wi-Fi</string>

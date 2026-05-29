@@ -808,6 +808,9 @@
     <string name="scan_landing_reconnect_via">last connected · %1$s</string>
     <string name="scan_landing_forget">Forget this device</string>
     <string name="scan_landing_use_simulator">Use simulator</string>
+    <string name="scan_landing_known_devices">Known devices</string>
+    <string name="transport_tile_simulator_title">Simulator</string>
+    <string name="transport_tile_simulator_subtitle">Try without hardware</string>
     <string name="transport_tile_pulsar_ble_title">Pulsar BLE</string>
     <string name="transport_tile_pulsar_ble_subtitle">ESP32 module on the camera\'s shutter port</string>
     <string name="transport_tile_ccapi_title">Canon Wi-Fi</string>

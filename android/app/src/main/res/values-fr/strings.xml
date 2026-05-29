@@ -593,6 +593,9 @@
     <string name="scan_landing_reconnect_via">dernière connexion · %1$s</string>
     <string name="scan_landing_forget">Oublier cet appareil</string>
     <string name="scan_landing_use_simulator">Utiliser le simulateur</string>
+    <string name="scan_landing_known_devices">Appareils connus</string>
+    <string name="transport_tile_simulator_title">Simulateur</string>
+    <string name="transport_tile_simulator_subtitle">Essayer sans matériel</string>
     <string name="transport_tile_pulsar_ble_title">Pulsar BLE</string>
     <string name="transport_tile_pulsar_ble_subtitle">Module ESP32 sur le port déclencheur</string>
     <string name="transport_tile_ccapi_title">Canon Wi-Fi</string>

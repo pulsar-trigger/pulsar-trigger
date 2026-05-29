@@ -593,6 +593,9 @@
     <string name="scan_landing_reconnect_via">最後に接続 · %1$s</string>
     <string name="scan_landing_forget">このデバイスを忘れる</string>
     <string name="scan_landing_use_simulator">シミュレーターを使用</string>
+    <string name="scan_landing_known_devices">既知のデバイス</string>
+    <string name="transport_tile_simulator_title">シミュレーター</string>
+    <string name="transport_tile_simulator_subtitle">ハードウェアなしで試す</string>
     <string name="transport_tile_pulsar_ble_title">Pulsar BLE</string>
     <string name="transport_tile_pulsar_ble_subtitle">シャッターポート上の ESP32 モジュール</string>
     <string name="transport_tile_ccapi_title">Canon Wi-Fi</string>

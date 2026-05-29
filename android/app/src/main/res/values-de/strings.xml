@@ -593,6 +593,9 @@
     <string name="scan_landing_reconnect_via">zuletzt verbunden · %1$s</string>
     <string name="scan_landing_forget">Dieses Gerät vergessen</string>
     <string name="scan_landing_use_simulator">Simulator verwenden</string>
+    <string name="scan_landing_known_devices">Bekannte Geräte</string>
+    <string name="transport_tile_simulator_title">Simulator</string>
+    <string name="transport_tile_simulator_subtitle">Ohne Hardware testen</string>
     <string name="transport_tile_pulsar_ble_title">Pulsar BLE</string>
     <string name="transport_tile_pulsar_ble_subtitle">ESP32-Modul am Auslöseranschluss</string>
     <string name="transport_tile_ccapi_title">Canon WLAN</string>

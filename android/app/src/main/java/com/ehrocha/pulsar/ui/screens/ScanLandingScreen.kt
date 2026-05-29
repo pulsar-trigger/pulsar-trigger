@@ -19,11 +19,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.History
@@ -98,6 +97,7 @@ fun ScanLandingScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp)
     ) {
         Spacer(Modifier.height(64.dp))
@@ -144,17 +144,6 @@ fun ScanLandingScreen(
 
         Spacer(Modifier.height(40.dp))
 
-        // ── Reconnect CTA ────────────────────────────────────────────────
-        lastConnection?.let { last ->
-            ReconnectCard(
-                last = last,
-                reconnecting = reconnecting,
-                onReconnect = { vm.reconnectLast() },
-                onForget = { vm.forgetLastConnection() },
-            )
-            Spacer(Modifier.height(20.dp))
-        }
-
         Text(
             stringResource(R.string.scan_landing_pick_transport),
             style = MaterialTheme.typography.titleLarge,
@@ -167,8 +156,8 @@ fun ScanLandingScreen(
         )
         Spacer(Modifier.height(16.dp))
 
-        // ── 2×2 transport tile grid ──────────────────────────────────────
-        val tiles = listOf(
+        // ── Transport tiles: 2×2 grid + wide simulator tile below ─────────
+        val transportTiles = listOf(
             TileSpec(
                 kind = TransportKind.BLE_ESP,
                 icon = Icons.Default.Bluetooth,
@@ -194,30 +183,42 @@ fun ScanLandingScreen(
                 subtitleRes = R.string.transport_tile_canon_ble_subtitle,
             ),
         )
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            contentPadding = PaddingValues(0.dp),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            items(tiles, key = { it.kind.name }) { spec ->
-                TransportTile(spec) { onTransportSelected(spec.kind) }
+        transportTiles.chunked(2).forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                row.forEach { spec ->
+                    TransportTile(spec, modifier = Modifier.weight(1f)) {
+                        onTransportSelected(spec.kind)
+                    }
+                }
             }
+            Spacer(Modifier.height(12.dp))
+        }
+
+        // Simulator: same tile family, wider/shorter so it reads as a peer
+        // option but visually distinct from the four real transports.
+        SimulatorTile(onClick = onSimulatorSelected)
+
+        // ── Known devices ─────────────────────────────────────────────────
+        lastConnection?.let { last ->
+            Spacer(Modifier.height(28.dp))
+            Text(
+                stringResource(R.string.scan_landing_known_devices),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(8.dp))
+            ReconnectCard(
+                last = last,
+                reconnecting = reconnecting,
+                onReconnect = { vm.reconnectLast() },
+                onForget = { vm.forgetLastConnection() },
+            )
         }
 
         Spacer(Modifier.height(20.dp))
-
-        // ── Simulator link (de-emphasised; dev/demo tool, not a real transport)
-        TextButton(onClick = onSimulatorSelected) {
-            Icon(
-                Icons.Default.Science,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.scan_landing_use_simulator))
-        }
 
         // ── Collect diagnostics — reachable while disconnected, so connection
         //    issues (e.g. a failed reconnect) can be captured without adb.
@@ -229,6 +230,7 @@ fun ScanLandingScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+        Spacer(Modifier.height(24.dp))
     }
 }
 
@@ -240,15 +242,13 @@ private data class TileSpec(
 )
 
 @Composable
-private fun TransportTile(spec: TileSpec, onClick: () -> Unit) {
+private fun TransportTile(spec: TileSpec, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(1f),
+        modifier = modifier.aspectRatio(1f),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -277,6 +277,55 @@ private fun TransportTile(spec: TileSpec, onClick: () -> Unit) {
                 Spacer(Modifier.height(2.dp))
                 Text(
                     stringResource(spec.subtitleRes),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+/** Wide horizontal tile for the simulator option. Same surface family as the
+ *  transport tiles but laid out icon-left / text-right at half the height —
+ *  signals "peer option" without competing for visual weight with the four
+ *  real transports above it. */
+@Composable
+private fun SimulatorTile(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                modifier = Modifier.size(44.dp),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.Science,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(26.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.transport_tile_simulator_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    stringResource(R.string.transport_tile_simulator_subtitle),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
