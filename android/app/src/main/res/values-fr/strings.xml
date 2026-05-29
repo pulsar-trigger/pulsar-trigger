@@ -45,7 +45,7 @@
     <string name="canon_cap_shooting_mode">Mode de prise (bulb / m)</string>
     <string name="canon_cap_dial_ignore">Outrepasser la molette physique</string>
     <string name="canon_cap_polling">Polling d\'événements (/event/polling)</string>
-    <string name="canon_sub_second_warning">La latence WiFi rend les poses bulb sous 1 s peu fiables. Utilisez Timelapse (l\'appareil gère la pose) ou le transport ESP32.</string>
+    <string name="canon_sub_second_warning">Les expositions de moins d\'1 s ne peuvent pas être chronométrées de façon fiable via la connexion à l\'appareil. Réglez la vitesse d\'obturation sur l\'appareil (mode Timelapse) ou utilisez le transport ESP32 pour des poses courtes précises.</string>
     <string name="ccapi_af_toggle_label">Autofocus par prise</string>
     <string name="ccapi_af_toggle_on_hint">L\'appareil fait la mise au point avant chaque prise. Idéal en plein jour.</string>
     <string name="ccapi_af_toggle_off_hint">L\'appareil prend à la mise au point actuelle. Idéal pour l\'astro / champs d\'étoiles (l\'AF tenterait de focaliser sur les étoiles et dériverait).</string>
@@ -581,6 +581,7 @@
     <string name="scan_landing_pick_transport">Choisissez un transport</string>
     <string name="scan_landing_subtitle">Chaque transport nécessite une configuration différente côté appareil. Appuyez sur l\'un d\'eux pour voir ses instructions.</string>
     <string name="scan_landing_reconnect_to">Reconnecter à %1$s</string>
+    <string name="scan_landing_reconnecting">Reconnexion à %1$s…</string>
     <string name="scan_landing_reconnect_via">dernière connexion · %1$s</string>
     <string name="scan_landing_forget">Oublier cet appareil</string>
     <string name="scan_landing_use_simulator">Utiliser le simulateur</string>

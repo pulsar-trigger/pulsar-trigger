@@ -45,7 +45,7 @@
     <string name="canon_cap_shooting_mode">Modo de captura (bulb / m)</string>
     <string name="canon_cap_dial_ignore">Sobrescribir dial físico</string>
     <string name="canon_cap_polling">Polling de eventos (/event/polling)</string>
-    <string name="canon_sub_second_warning">La latencia WiFi hace que el bulb por debajo de 1 s sea poco fiable. Usa Timelapse (la cámara controla la exposición) o el transporte ESP32.</string>
+    <string name="canon_sub_second_warning">Las exposiciones de menos de 1 s no se pueden cronometrar de forma fiable por la conexión con la cámara. Ajusta la velocidad de obturación en la cámara (modo Timelapse) o usa el transporte ESP32 para exposiciones cortas precisas.</string>
     <string name="ccapi_af_toggle_label">Autoenfoque por disparo</string>
     <string name="ccapi_af_toggle_on_hint">La cámara enfoca antes de cada disparo. Ideal para escenas diurnas.</string>
     <string name="ccapi_af_toggle_off_hint">La cámara dispara con el enfoque actual. Ideal para astro / campos de estrellas (el AF intentaría enfocar las estrellas y derivaría).</string>
@@ -579,6 +579,7 @@
     <string name="scan_landing_pick_transport">Elige un transporte</string>
     <string name="scan_landing_subtitle">Cada transporte requiere configuración distinta en la cámara. Toca uno para ver sus instrucciones.</string>
     <string name="scan_landing_reconnect_to">Reconectar a %1$s</string>
+    <string name="scan_landing_reconnecting">Reconectando a %1$s…</string>
     <string name="scan_landing_reconnect_via">última conexión · %1$s</string>
     <string name="scan_landing_forget">Olvidar este dispositivo</string>
     <string name="scan_landing_use_simulator">Usar simulador</string>

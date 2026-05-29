@@ -87,8 +87,11 @@ fun Ramp2Screen(
         RampTab.INTERVAL -> intervalMs > 0L
         RampTab.STEPS -> steps >= 2
     }
-    val subSecondStart = onCanon && startExposureMs in 1L..999L
-    val subSecondEnd = onCanon && endExposureMs in 1L..999L
+    // Sub-second host-timed bulb is unreliable on any camera transport (the
+    // press/release round-trip can't bracket a <1s exposure); the ESP32/wired
+    // path can. See canon_sub_second_warning.
+    val subSecondStart = canControlAf && startExposureMs in 1L..999L
+    val subSecondEnd = canControlAf && endExposureMs in 1L..999L
     val bottomHint = when {
         tab == RampTab.START && startExposureMs == 0L -> stringResource(R.string.ramp2_set_start)
         tab == RampTab.START && subSecondStart -> stringResource(R.string.canon_sub_second_warning)

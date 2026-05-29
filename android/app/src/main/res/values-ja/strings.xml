@@ -45,7 +45,7 @@
     <string name="canon_cap_shooting_mode">撮影モード (バルブ / M)</string>
     <string name="canon_cap_dial_ignore">物理モードダイヤルを上書き</string>
     <string name="canon_cap_polling">イベントポーリング (/event/polling)</string>
-    <string name="canon_sub_second_warning">WiFi の遅延により、1 秒未満のバルブ露光は不安定になります。Timelapse モード (カメラがシャッター制御) か ESP32 経路を使ってください。</string>
+    <string name="canon_sub_second_warning">1 秒未満の露光はカメラ接続経由では正確に計測できません。カメラ側でシャッター速度を設定するか (Timelapse モード)、正確な短時間露光には ESP32 経路を使ってください。</string>
     <string name="ccapi_af_toggle_label">撮影ごとにオートフォーカス</string>
     <string name="ccapi_af_toggle_on_hint">撮影前にカメラがオートフォーカスします。日中の被写体向け。</string>
     <string name="ccapi_af_toggle_off_hint">現在のピント位置で撮影します。天体・星野撮影向け (AF だと星を追ってピントがずれます)。</string>
@@ -581,6 +581,7 @@
     <string name="scan_landing_pick_transport">トランスポートを選択</string>
     <string name="scan_landing_subtitle">トランスポートごとにカメラ側の設定が異なります。タップして手順を確認してください。</string>
     <string name="scan_landing_reconnect_to">%1$s に再接続</string>
+    <string name="scan_landing_reconnecting">%1$s に再接続中…</string>
     <string name="scan_landing_reconnect_via">最後に接続 · %1$s</string>
     <string name="scan_landing_forget">このデバイスを忘れる</string>
     <string name="scan_landing_use_simulator">シミュレーターを使用</string>

@@ -91,7 +91,7 @@
     <string name="canon_cap_shooting_mode">Shooting mode (bulb / m)</string>
     <string name="canon_cap_dial_ignore">Override physical mode dial</string>
     <string name="canon_cap_polling">Event polling (/event/polling)</string>
-    <string name="canon_sub_second_warning">WiFi RTT makes sub-second bulb timing unreliable. Use Timelapse mode (camera owns exposure) or the ESP32 transport instead.</string>
+    <string name="canon_sub_second_warning">Sub-second exposures can\'t be timed reliably over the camera connection. Set the shutter speed on the camera (Timelapse mode) or use the ESP32 transport for precise short exposures.</string>
     <string name="ccapi_af_toggle_label">Autofocus per shot</string>
     <string name="ccapi_af_toggle_on_hint">Camera autofocuses before each shot. Best for daylight subjects.</string>
     <string name="ccapi_af_toggle_off_hint">Camera shoots at the current focus position. Best for astro / star fields (AF would hunt on stars and drift).</string>
@@ -796,6 +796,7 @@
     <string name="scan_landing_pick_transport">Pick a transport</string>
     <string name="scan_landing_subtitle">Each transport needs different setup on the camera side. Tap one to see its instructions.</string>
     <string name="scan_landing_reconnect_to">Reconnect to %1$s</string>
+    <string name="scan_landing_reconnecting">Reconnecting to %1$s…</string>
     <string name="scan_landing_reconnect_via">last connected · %1$s</string>
     <string name="scan_landing_forget">Forget this device</string>
     <string name="scan_landing_use_simulator">Use simulator</string>

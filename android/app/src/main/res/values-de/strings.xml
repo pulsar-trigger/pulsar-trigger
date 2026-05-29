@@ -45,7 +45,7 @@
     <string name="canon_cap_shooting_mode">Aufnahmemodus (bulb / m)</string>
     <string name="canon_cap_dial_ignore">Physisches Moduswahlrad übergehen</string>
     <string name="canon_cap_polling">Ereignis-Polling (/event/polling)</string>
-    <string name="canon_sub_second_warning">WiFi-Latenz macht Bulb-Zeiten unter 1 s unzuverlässig. Nutze Timelapse (Kamera steuert Belichtung) oder den ESP32-Transport.</string>
+    <string name="canon_sub_second_warning">Belichtungen unter 1 s lassen sich über die Kameraverbindung nicht zuverlässig timen. Stellen Sie die Verschlusszeit an der Kamera ein (Timelapse-Modus) oder nutzen Sie den ESP32-Transport für präzise kurze Belichtungen.</string>
     <string name="ccapi_af_toggle_label">Autofokus pro Aufnahme</string>
     <string name="ccapi_af_toggle_on_hint">Kamera fokussiert vor jeder Aufnahme. Ideal für Tagesmotive.</string>
     <string name="ccapi_af_toggle_off_hint">Kamera nimmt mit aktueller Fokuseinstellung auf. Ideal für Astro / Sternenfelder (AF würde Sterne suchen und driften).</string>
@@ -581,6 +581,7 @@
     <string name="scan_landing_pick_transport">Transport wählen</string>
     <string name="scan_landing_subtitle">Jeder Transport benötigt eine andere Einrichtung an der Kamera. Tippen Sie einen an, um die Anleitung zu sehen.</string>
     <string name="scan_landing_reconnect_to">Erneut verbinden mit %1$s</string>
+    <string name="scan_landing_reconnecting">Verbinde erneut mit %1$s…</string>
     <string name="scan_landing_reconnect_via">zuletzt verbunden · %1$s</string>
     <string name="scan_landing_forget">Dieses Gerät vergessen</string>
     <string name="scan_landing_use_simulator">Simulator verwenden</string>

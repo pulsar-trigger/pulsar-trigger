@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Usb
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -78,6 +79,17 @@ fun ScanLandingScreen(
 ) {
     val connected by vm.connected.collectAsState()
     val lastConnection by vm.lastConnection.collectAsState()
+    val canonBleConnecting by vm.canonBleConnecting.collectAsState()
+    val ptpConnecting by vm.ptpConnecting.collectAsState()
+    val ccapiConnecting by vm.canonCcapiConnecting.collectAsState()
+    // Reconnect is in flight for the last-used transport — drive the card's
+    // spinner so a tap isn't ambiguous (Canon BLE autoConnect can wait a while).
+    val reconnecting = when (lastConnection?.kind) {
+        TransportKind.CANON_BLE -> canonBleConnecting
+        TransportKind.PTP_USB -> ptpConnecting
+        TransportKind.CCAPI -> ccapiConnecting
+        else -> false
+    }
     if (connected) {
         LaunchedEffect(Unit) { onConnected() }
     }
@@ -136,6 +148,7 @@ fun ScanLandingScreen(
         lastConnection?.let { last ->
             ReconnectCard(
                 last = last,
+                reconnecting = reconnecting,
                 onReconnect = { vm.reconnectLast() },
                 onForget = { vm.forgetLastConnection() },
             )
@@ -275,6 +288,7 @@ private fun TransportTile(spec: TileSpec, onClick: () -> Unit) {
 @Composable
 private fun ReconnectCard(
     last: LastConnection,
+    reconnecting: Boolean,
     onReconnect: () -> Unit,
     onForget: () -> Unit,
 ) {
@@ -287,7 +301,9 @@ private fun ReconnectCard(
         }
     )
     Surface(
-        onClick = onReconnect,
+        // Swallow taps while a reconnect is already in flight so the user
+        // can't stack attempts; the spinner shows it's working.
+        onClick = { if (!reconnecting) onReconnect() },
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.primaryContainer,
         modifier = Modifier.fillMaxWidth(),
@@ -296,16 +312,27 @@ private fun ReconnectCard(
             modifier = Modifier.padding(20.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                Icons.Default.History,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.size(28.dp),
-            )
+            if (reconnecting) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(28.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            } else {
+                Icon(
+                    Icons.Default.History,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(28.dp),
+                )
+            }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.fillMaxWidth()) {
                 Text(
-                    stringResource(R.string.scan_landing_reconnect_to, last.label),
+                    if (reconnecting)
+                        stringResource(R.string.scan_landing_reconnecting, last.label)
+                    else
+                        stringResource(R.string.scan_landing_reconnect_to, last.label),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,

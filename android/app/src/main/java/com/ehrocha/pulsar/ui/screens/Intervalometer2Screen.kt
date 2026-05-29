@@ -132,7 +132,10 @@ fun Intervalometer2Screen(
         IvTab.DELAY -> true
         IvTab.SHOTS -> true
     }
-    val subSecondCanon = onCanon && exposureMs in 1L..999L
+    // Sub-second host-timed bulb is unreliable on ANY camera transport (the
+    // press/release round-trip — WiFi RTT, BLE toggle, or USB — can't bracket
+    // a <1s exposure). The ESP32/wired path can (firmware GPIO timing).
+    val subSecondCanon = canControlAf && exposureMs in 1L..999L
     val bottomHint = when {
         tab == IvTab.EXPOSURE && exposureMs == 0L -> stringResource(R.string.iv2_set_exposure)
         tab == IvTab.EXPOSURE && subSecondCanon -> stringResource(R.string.canon_sub_second_warning)
