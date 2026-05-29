@@ -163,6 +163,10 @@
     <string name="mode_intervalometer">间隔计时器</string>
     <string name="mode_astro">天文</string>
     <string name="mode_manual">手动</string>
+    <string name="mode_cable_release">快门线</string>
+    <string name="mode_manual_dial_hint">将相机模式拨盘设为 Bulb</string>
+    <string name="mode_cable_release_dial_hint">将相机模式拨盘设为 M</string>
+    <string name="mode_cable_release_help">通过智能手机 BLE 快门触发一张照片。曝光由相机控制（自己的快门速度设置）——Pulsar 仅发送按下与释放事件。\n\n长曝光（Bulb）请使用手动模式。</string>
     <string name="mode_custom_flow">流程和预设</string>
     <string name="menu_settings">设置</string>
     <string name="disconnect">断开连接</string>

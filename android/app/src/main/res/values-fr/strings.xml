@@ -161,6 +161,10 @@
     <string name="mode_intervalometer">Intervallomètre</string>
     <string name="mode_astro">Astro</string>
     <string name="mode_manual">Manuel</string>
+    <string name="mode_cable_release">Déclencheur</string>
+    <string name="mode_manual_dial_hint">Réglez la molette de l\'appareil sur Bulb</string>
+    <string name="mode_cable_release_dial_hint">Réglez la molette de l\'appareil sur M</string>
+    <string name="mode_cable_release_help">Déclenche une photo via l\'obturateur BLE smartphone. L\'appareil contrôle l\'exposition (sa propre vitesse d\'obturation) — Pulsar envoie juste un événement appui-relâche.\n\nPour les poses longues (Bulb), utilisez Manuel.</string>
     <string name="mode_custom_flow">Flux &amp; Préréglages</string>
     <string name="menu_settings">Paramètres</string>
     <string name="disconnect">Déconnecter</string>

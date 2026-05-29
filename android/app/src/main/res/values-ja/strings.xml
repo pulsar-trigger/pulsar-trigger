@@ -161,6 +161,10 @@
     <string name="mode_intervalometer">インターバロメーター</string>
     <string name="mode_astro">天体撮影</string>
     <string name="mode_manual">マニュアル</string>
+    <string name="mode_cable_release">レリーズ</string>
+    <string name="mode_manual_dial_hint">カメラのダイヤルを Bulb に設定</string>
+    <string name="mode_cable_release_dial_hint">カメラのダイヤルを M に設定</string>
+    <string name="mode_cable_release_help">スマートフォン BLE シャッターで 1 枚撮影します。露出はカメラ側（シャッタースピード設定）が制御し、Pulsar は押す/離すイベントのみ送信します。\n\n長時間露光（バルブ）にはマニュアルを使用してください。</string>
     <string name="mode_custom_flow">フロー＆プリセット</string>
     <string name="menu_settings">設定</string>
     <string name="disconnect">切断</string>

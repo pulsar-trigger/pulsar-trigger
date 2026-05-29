@@ -129,7 +129,6 @@ internal fun ManualActions(vm: PulsarViewModel, mode: TriggerMode) {
         onModeSelected = { vm.selectMode(it) },
         onShutterDown = { vm.shutterDown() },
         onShutterUp = { vm.shutterUp() },
-        onSingleShot = { vm.fireSingle() },
     )
 }
 
@@ -140,7 +139,6 @@ internal fun ManualActionsContent(
     onModeSelected: (TriggerMode) -> Unit,
     onShutterDown: () -> Unit,
     onShutterUp: () -> Unit,
-    onSingleShot: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val isHold = mode == TriggerMode.PRESS_HOLD
@@ -232,32 +230,6 @@ internal fun ManualActionsContent(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-
-        // Single shot — full-width button matching the hold/lock control's
-        // shape/height so the panel reads as one consistent set of controls
-        // (one press+release tap, independent of the hold/lock mode).
-        Surface(
-            shape = RoundedCornerShape(32.dp),
-            color = MaterialTheme.colorScheme.secondaryContainer,
-            tonalElevation = 2.dp,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(64.dp)
-                .pointerInput(connected) {
-                    if (!connected) return@pointerInput
-                    detectTapGestures(onTap = { onSingleShot() })
-                },
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    stringResource(R.string.btn_single_shot),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    textAlign = TextAlign.Center,
-                )
-            }
-        }
     }
 }
 
@@ -459,6 +431,12 @@ internal fun ManualPanelContent(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    stringResource(R.string.mode_manual_dial_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
                 Text(
                     stringResource(R.string.panel_manual_tip),
                     style = MaterialTheme.typography.bodySmall,

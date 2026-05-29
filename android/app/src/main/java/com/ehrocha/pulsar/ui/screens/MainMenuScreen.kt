@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.Usb
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Wifi
@@ -59,6 +60,7 @@ fun MainMenuScreen(
     onTabChanged: (Int) -> Unit = {},
     onQuickFlow: (FlowStepType) -> Unit,
     onManualSelected: () -> Unit,
+    onCableReleaseSelected: () -> Unit = {},
     onCustomFlowSelected: () -> Unit = {},
     onPlannerSelected: () -> Unit = {},
     onAlignmentSelected: () -> Unit = {},
@@ -222,6 +224,9 @@ fun MainMenuScreen(
                             enabled = !bulbBlocked) { onQuickFlow(FlowStepType.RAMP) },
                         launcherItem(R.string.mode_manual, Icons.Default.TouchApp) {
                             onManualSelected()
+                        },
+                        launcherItem(R.string.mode_cable_release, Icons.Default.PhotoCamera) {
+                            onCableReleaseSelected()
                         },
                         launcherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList,
                             enabled = !bulbBlocked) { onCustomFlowSelected() },

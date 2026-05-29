@@ -229,6 +229,10 @@
     <string name="iv2_summary_ends">Ends %1$s</string>
     <string name="mode_astro">Astro</string>
     <string name="mode_manual">Manual</string>
+    <string name="mode_cable_release">Cable release</string>
+    <string name="mode_manual_dial_hint">Set camera dial to Bulb</string>
+    <string name="mode_cable_release_dial_hint">Set camera dial to M</string>
+    <string name="mode_cable_release_help">Fires a single shot via the camera\'s smartphone shutter. The camera owns the exposure (its own shutter-speed setting) — Pulsar just sends a press-and-release event.\n\nFor long exposures (Bulb), use Manual instead.</string>
     <string name="mode_dark_frame">Dark Frames</string>
     <string name="mode_ramp">Exposure Ramp</string>
     <string name="mode_custom_flow">Flows &amp; Presets</string>

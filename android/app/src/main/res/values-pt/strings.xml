@@ -161,6 +161,10 @@
     <string name="mode_intervalometer">Intervalômetro</string>
     <string name="mode_astro">Astro</string>
     <string name="mode_manual">Manual</string>
+    <string name="mode_cable_release">Disparador</string>
+    <string name="mode_manual_dial_hint">Coloque o seletor da câmera em Bulb</string>
+    <string name="mode_cable_release_dial_hint">Coloque o seletor da câmera em M</string>
+    <string name="mode_cable_release_help">Dispara uma única foto pelo disparador BLE smartphone. A câmera controla a exposição (sua própria velocidade do obturador) — o Pulsar apenas envia um evento de pressionar e soltar.\n\nPara exposições longas (Bulb), use o modo Manual.</string>
     <string name="mode_custom_flow">Fluxos &amp; Predefinições</string>
     <string name="menu_settings">Configurações</string>
     <string name="disconnect">Desconectar</string>
