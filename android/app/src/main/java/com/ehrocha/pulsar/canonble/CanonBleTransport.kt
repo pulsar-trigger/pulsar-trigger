@@ -210,19 +210,27 @@ class CanonBleTransport private constructor(
 
     private val isSmart get() = client.protocol == CanonProtocol.SMART
 
-    /** Press the shutter using whichever protocol is active. */
+    /** Press the shutter using whichever protocol is active. Bulb path: the
+     *  smartphone toggle `[00,01]`; BR-E1 path: `0x8C` full press. */
     private suspend fun pressShutter() {
         if (isSmart) client.smartShutter(press = true) else client.writeControl(SHUTTER_PRESS)
     }
 
-    /** Release the shutter using whichever protocol is active. */
+    /** Release the shutter for a bulb exposure. Smartphone: `[00,01]` toggle
+     *  back to "up" (Bulb tracks shutter state on this byte). BR-E1: `0x0C`. */
     private suspend fun releaseShutter() {
         if (isSmart) client.smartShutter(press = false) else client.writeControl(SHUTTER_RELEASE)
     }
 
     /** Single shot. BR-E1 with AF: half-press → wait → full-press → release.
      *  Smartphone mode folds AF into the release, so there's no separate AF
-     *  step — just press → brief tap → release. */
+     *  step — just press → brief tap → release.
+     *
+     *  Smartphone-mode release uses `[00,02]` (distinct release event), NOT
+     *  the bulb-path `[00,01]` toggle. In M (non-bulb) mode the camera reads
+     *  two `[00,01]`s as "press, press" and leaves the button DOWN
+     *  (confirmed on EOS RP via diagnostics log 2026-05-29). Bulb is unaffected
+     *  — `startBulb` / `stopBulb` still use the `[00,01]` toggle path. */
     override suspend fun fireShutter(af: Boolean) {
         if (!_connected.value) return
         if (af && !isSmart) {
@@ -231,9 +239,15 @@ class CanonBleTransport private constructor(
             delay(AF_HOLD_MS)
             client.writeControl(SHUTTER_RELEASE)
         }
-        pressShutter()
-        delay(SHUTTER_TAP_MS)
-        releaseShutter()
+        if (isSmart) {
+            client.smartShutterTap(press = true)
+            delay(SHUTTER_TAP_MS)
+            client.smartShutterTap(press = false)
+        } else {
+            pressShutter()
+            delay(SHUTTER_TAP_MS)
+            releaseShutter()
+        }
     }
 
     /** BR-E1 has no body-settings access. The user has to set Bulb on the

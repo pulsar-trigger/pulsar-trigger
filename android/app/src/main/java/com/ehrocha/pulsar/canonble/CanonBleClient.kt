@@ -413,7 +413,17 @@ class CanonBleClient(
 
     /** Write a payload to an arbitrary characteristic (WRITE_NO_RESPONSE),
      *  serialized through [opMutex]. Used by the smartphone-mode handshake +
-     *  shutter. Returns true once `onCharacteristicWrite` confirms. */
+     *  shutter. Returns true once `onCharacteristicWrite` confirms.
+     *
+     *  Retries on `writeCharacteristic() == false`: the first write right
+     *  after a fresh connect routinely fails to even queue because the
+     *  encrypted-link upgrade is still mid-flight ("busy"), even though
+     *  `bondState == BONDED`. Each retry waits a short backoff so the L2CAP
+     *  setup can complete. Without this, the smartphone handshake's first
+     *  `[01,name]` write would fail, the whole connect would abort, and the
+     *  viewmodel's `onCanonBleLinkDropped` reconnect would have to cycle the
+     *  GATT 3–4 times before one happened to land in a writable window
+     *  (RP diagnostics log 2026-05-29). */
     @SuppressLint("MissingPermission")
     private suspend fun writeNoResponse(
         ch: BluetoothGattCharacteristic?,
@@ -427,19 +437,28 @@ class CanonBleClient(
             c.value = payload
             c.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
         }
-        val deferred = CompletableDeferred<Boolean>()
-        writeSignal.set(deferred)
-        @Suppress("DEPRECATION")
-        if (g.writeCharacteristic(c) != true) {
-            CanonBleLog.w(TAG, "$label: writeCharacteristic() returned false (couldn't queue)")
+        var queued = false
+        val backoffs = longArrayOf(150, 300, 500, 800)
+        for ((attempt, wait) in backoffs.withIndex()) {
+            val deferred = CompletableDeferred<Boolean>()
+            writeSignal.set(deferred)
+            @Suppress("DEPRECATION")
+            if (g.writeCharacteristic(c) == true) {
+                // First write may trigger Android bonding (encrypted-link setup);
+                // 30 s covers the OS / on-camera confirmation.
+                val ok = withTimeoutOrNull(30_000) { deferred.await() } ?: false
+                CanonBleLog.d(TAG, "$label: ${payload.joinToString("") { "%02x".format(it) }} confirmed=$ok" +
+                    if (attempt > 0) " (after $attempt retries)" else "")
+                queued = true
+                return@withLock ok
+            }
             writeSignal.set(null)
-            return@withLock false
+            CanonBleLog.w(TAG, "$label: writeCharacteristic() returned false " +
+                "(couldn't queue, attempt ${attempt + 1}/${backoffs.size}) — backing off ${wait}ms")
+            delay(wait)
         }
-        // First write may trigger Android bonding (encrypted-link setup);
-        // 30 s covers the OS / on-camera confirmation.
-        val ok = withTimeoutOrNull(30_000) { deferred.await() } ?: false
-        CanonBleLog.d(TAG, "$label: ${payload.joinToString("") { "%02x".format(it) }} confirmed=$ok")
-        ok
+        if (!queued) CanonBleLog.w(TAG, "$label: gave up after ${backoffs.size} queue attempts")
+        false
     }
 
     /** Ensure the link is OS-bonded before the smartphone handshake. On the
@@ -519,16 +538,35 @@ class CanonBleClient(
             writeNoResponse(smartModeChar, byteArrayOf(SMART_MODE_SHOOT), "smart MODE_SHOOT")
     }
 
-    /** Smartphone-mode shutter — a **toggle** on `[0x00,0x01]` (button
-     *  down ↔ up), verified on the EOS RP. furble's `[0x00,0x02]` "release"
-     *  is inert on the RP, so BOTH press and release send `[0x00,0x01]`:
-     *  press = button-down (opens / fires), release = button-up (closes).
-     *  A complete shot or bulb is two toggles, returning the button to "up".
-     *  See docs/canon-ble-research.md §7. */
+    /** Smartphone-mode shutter — **bulb path**: positional toggle on
+     *  `[0x00,0x01]` (button down ↔ up). Verified on the EOS RP: each
+     *  `[0x00,0x01]` flips the bulb state, and `[0x00,0x02]` is inert in
+     *  Bulb (the camera tracks shutter open/closed only on `[00,01]`
+     *  events). A complete bulb op is two toggles, returning to "up".
+     *  Used by `startBulb` / `stopBulb`. See docs/canon-ble-research.md §7. */
     suspend fun smartShutter(press: Boolean): Boolean = writeNoResponse(
         smartShutterChar,
         byteArrayOf(0x00, 0x01),
         if (press) "smart shutter DOWN [00,01]" else "smart shutter UP [00,01]",
+    )
+
+    /** Smartphone-mode shutter — **single-shot path**: distinct press / release
+     *  events. Press = `[0x00,0x01]`, release = `[0x00,0x02]`.
+     *
+     *  Hypothesis (v0.288): in M (non-bulb) mode the camera treats the two
+     *  bytes as distinct shutter events, not a positional toggle. With the
+     *  bulb-style `[00,01]/[00,01]` pair the release re-presses, leaving the
+     *  button DOWN and the body shooting continuously (RP log 2026-05-29).
+     *  `[00,02]` was previously read as "inert" but that test was run in Bulb,
+     *  where the camera doesn't process release events.
+     *
+     *  Used by `fireShutter` only. If this turns out to be wrong on a body, the
+     *  bulb path is unaffected because `startBulb` / `stopBulb` still use
+     *  `smartShutter` above. */
+    suspend fun smartShutterTap(press: Boolean): Boolean = writeNoResponse(
+        smartShutterChar,
+        if (press) byteArrayOf(0x00, 0x01) else byteArrayOf(0x00, 0x02),
+        if (press) "smart shutter TAP press [00,01]" else "smart shutter TAP release [00,02]",
     )
 
     val address: String get() = device.address
