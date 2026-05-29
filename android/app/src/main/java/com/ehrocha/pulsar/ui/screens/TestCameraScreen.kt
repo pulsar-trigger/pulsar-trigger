@@ -5,19 +5,24 @@
 
 package com.ehrocha.pulsar.ui.screens
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -27,13 +32,20 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
@@ -66,6 +78,7 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     val stepCount by vm.cameraTestStepCount.collectAsState()
     val fullSequence = stepCount >= 5
     val ctx = LocalContext.current
+    var showLogs by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -149,6 +162,12 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                     Text(stringResource(R.string.test_camera_start))
                 }
                 OutlinedButton(
+                    onClick = { showLogs = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.tools_view_logs))
+                }
+                OutlinedButton(
                     onClick = { shareDiagnostics(ctx, vm.canonDiagnosticsText()) },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
@@ -161,6 +180,44 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                 )
             }
         }
+    }
+
+    if (showLogs) {
+        val logText = remember { vm.canonDiagnosticsText() }
+        val clipboard = LocalClipboardManager.current
+        AlertDialog(
+            onDismissRequest = { showLogs = false },
+            title = { Text(stringResource(R.string.tools_logs_title)) },
+            text = {
+                SelectionContainer {
+                    Text(
+                        logText,
+                        style = MaterialTheme.typography.bodySmall
+                            .copy(fontFamily = FontFamily.Monospace),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 420.dp)
+                            .verticalScroll(rememberScrollState())
+                            .horizontalScroll(rememberScrollState()),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { shareDiagnostics(ctx, logText) }) {
+                    Text(stringResource(R.string.event_share))
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = { clipboard.setText(AnnotatedString(logText)) }) {
+                        Text(stringResource(R.string.tools_logs_copy))
+                    }
+                    TextButton(onClick = { showLogs = false }) {
+                        Text(stringResource(R.string.tools_logs_close))
+                    }
+                }
+            },
+        )
     }
 }
 

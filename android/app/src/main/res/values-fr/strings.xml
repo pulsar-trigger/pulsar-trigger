@@ -138,6 +138,10 @@
     <string name="test_camera_start">Lancer le test</string>
     <string name="tools_collect_diagnostics">Collecter les diagnostics</string>
     <string name="tools_collect_diagnostics_hint">Exporte le journal récent de connexion Canon BLE dans un fichier partageable — à utiliser après un échec d\'appairage.</string>
+    <string name="tools_view_logs">Voir les journaux</string>
+    <string name="tools_logs_title">Journal de diagnostic</string>
+    <string name="tools_logs_copy">Copier</string>
+    <string name="tools_logs_close">Fermer</string>
     <string name="test_camera_stop">Arrêter le test</string>
     <string name="run_step_timelapse_summary">Timelapse · %1$d prises · écart %2$s</string>
     <string name="run_step_interval_summary">Intervallomètre · %1$d × %2$s · écart %3$s</string>

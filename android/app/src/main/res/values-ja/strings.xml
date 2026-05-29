@@ -138,6 +138,10 @@
     <string name="test_camera_start">テスト実行</string>
     <string name="tools_collect_diagnostics">診断を収集</string>
     <string name="tools_collect_diagnostics_hint">最近の Canon BLE 接続ログを共有できるファイルに書き出します — ペアリング失敗後に使用してください。</string>
+    <string name="tools_view_logs">ログを表示</string>
+    <string name="tools_logs_title">診断ログ</string>
+    <string name="tools_logs_copy">コピー</string>
+    <string name="tools_logs_close">閉じる</string>
     <string name="test_camera_stop">テスト停止</string>
     <string name="run_step_timelapse_summary">タイムラプス · %1$d ショット · 間隔 %2$s</string>
     <string name="run_step_interval_summary">インターバロメーター · %1$d × %2$s · 間隔 %3$s</string>
