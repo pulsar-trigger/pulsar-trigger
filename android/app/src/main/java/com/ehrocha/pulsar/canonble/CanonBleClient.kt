@@ -467,7 +467,12 @@ class CanonBleClient(
         name: String,
         deviceUuid: ByteArray,
         onAwaitConfirm: () -> Unit,
-        confirmTimeoutMs: Long = 70_000,
+        /** First-time pairing: wait the full window for the user to confirm
+         *  on the camera, and FAIL if rejected/timed-out. On a reconnect of an
+         *  already-registered body the camera won't re-prompt (and may not
+         *  re-send 0x02), so we wait only briefly and proceed regardless —
+         *  otherwise reconnect stalls for the full timeout. */
+        freshPair: Boolean = true,
     ): Boolean {
         val nameBytes = name.toByteArray(Charsets.US_ASCII)
         val pr = CompletableDeferred<Byte>()
@@ -483,13 +488,19 @@ class CanonBleClient(
             writeNoResponse(smartIdenChar, byteArrayOf(0x05, 0x02), "smart ID4 [05,02]")
         if (!wrote) { pairResultSignal.set(null); return false }
 
-        onAwaitConfirm()
-        val result = withTimeoutOrNull(confirmTimeoutMs) { pr.await() }
+        if (freshPair) onAwaitConfirm()
+        val waitMs = if (freshPair) 70_000L else 6_000L
+        val result = withTimeoutOrNull(waitMs) { pr.await() }
         pairResultSignal.set(null)
         when (result) {
             SMART_PAIR_ACCEPT -> CanonBleLog.i(TAG, "smart pairing ACCEPTED (0x02)")
             SMART_PAIR_REJECT -> { CanonBleLog.w(TAG, "smart pairing REJECTED (0x03)"); return false }
-            null -> { CanonBleLog.w(TAG, "smart pairing: no accept within ${confirmTimeoutMs}ms"); return false }
+            null -> if (freshPair) {
+                CanonBleLog.w(TAG, "smart pairing: no accept within ${waitMs}ms — aborting first pair")
+                return false
+            } else {
+                CanonBleLog.i(TAG, "reconnect: no re-accept (already registered) — proceeding")
+            }
             else -> CanonBleLog.w(TAG, "smart pairing: unexpected 0x%02X — proceeding".format(result.toInt() and 0xFF))
         }
 

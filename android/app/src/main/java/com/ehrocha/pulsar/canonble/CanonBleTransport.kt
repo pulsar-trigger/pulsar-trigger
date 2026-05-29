@@ -118,6 +118,11 @@ class CanonBleTransport private constructor(
                     }
                 }
                 CanonProtocol.SMART -> {
+                    // Already bonded == a reconnect (or a re-pair of a known
+                    // body): the camera won't re-prompt, so armSmart skips the
+                    // long accept-wait. A fresh (unbonded) connect is a first
+                    // pairing → full confirm-on-camera flow.
+                    val freshPair = device.bondState != BluetoothDevice.BOND_BONDED
                     // The RP ignores the registration writes on an unbonded
                     // link — bond first (this is what makes the camera show its
                     // pairing-confirm prompt), then run the handshake.
@@ -129,7 +134,7 @@ class CanonBleTransport private constructor(
                     // Smartphone-mode registration handshake (fires the RP /
                     // R5 / R6 / newer). Needs a persisted identity UUID so
                     // re-connects reuse the same registration.
-                    if (!client.armSmart(PAIR_NAME, deviceUuid(ctx), onAwaitConfirm)) {
+                    if (!client.armSmart(PAIR_NAME, deviceUuid(ctx), onAwaitConfirm, freshPair = freshPair)) {
                         CanonBleLog.w(TAG, "smartphone-mode registration failed for ${device.address}")
                         client.close()
                         return CanonBleConnectResult.Failed
