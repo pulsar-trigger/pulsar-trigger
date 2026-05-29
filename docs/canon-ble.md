@@ -133,15 +133,28 @@ shutter pattern differs:
 
 | Mode | BR-E1 (older bodies) | Smartphone-mode (R-series) |
 |---|---|---|
-| Timelapse | Per shot: `0x8C` (press) → 200 ms → `0x0C` (release) on `00050003`. AF: `0x4C` → 200 ms → `0x0C` first. | Per shot: `[00,01]` (press / toggle DOWN) → 200 ms → `[00,01]` (release / toggle UP) on `00030030`. AF is folded into the release — no separate half-press. |
-| Intervalometer (bulb) / Astro / DarkFrame | Optional AF half-press, `startBulb` writes `0x8C` → `delay(exposureMs)` → `stopBulb` writes `0x0C`. | `startBulb` writes `[00,01]` (toggle DOWN) → `delay(exposureMs)` → `stopBulb` writes `[00,01]` (toggle UP). |
+| Timelapse / single-shot (`fireShutter`) | Per shot: `0x8C` (press) → 200 ms → `0x0C` (release) on `00050003`. AF: `0x4C` → 200 ms → `0x0C` first. | Per shot: `[00,01]` (M-mode **press** event) → 200 ms → `[00,02]` (M-mode **release** event) on `00030030`. AF is folded into the release — no separate half-press. (`smartShutterTap` in `CanonBleClient`.) |
+| Intervalometer (bulb) / Astro / DarkFrame | Optional AF half-press, `startBulb` writes `0x8C` → `delay(exposureMs)` → `stopBulb` writes `0x0C`. | `startBulb` writes `[00,01]` → `delay(exposureMs)` → `stopBulb` writes `[00,01]`. Bulb tracks the shutter-open state on `[00,01]` toggles only. (`smartShutter` in `CanonBleClient`.) |
 | Ramp | Same as bulb; `exposureMs` interpolates linearly. | Same as bulb; `exposureMs` interpolates linearly. |
 
-The smartphone shutter is a true positional toggle (down ↔ up): one `[00,01]`
-write flips the button state. A complete op is therefore *two* toggles back to
-"up". furble's `[00,02]` "release" is inert on the EOS RP — confirmed empirically
-— so both press and release send the same `[00,01]` bytes; see
-[canon-ble-research.md §7](canon-ble-research.md) for the verification log.
+The smartphone shutter behaves differently by **camera dial setting**, not
+just by bytes:
+
+- **Bulb dial:** the camera tracks an open/closed shutter state and flips it
+  on each `[00,01]`. `[00,02]` is inert here. A complete bulb op is two
+  `[00,01]` toggles back to closed.
+- **M (non-bulb) dial:** the camera treats the bytes as **two distinct
+  shutter events** — `[00,01]` = press, `[00,02]` = release. Sending two
+  `[00,01]`s in M mode re-presses on the second byte and leaves the body
+  shooting continuously (verified on EOS RP, v0.288 diagnostics).
+
+Because the app can't read the dial position over BLE, Pulsar gates the
+choice at the UI level: the **Manual** tile drives bulb (camera dial → Bulb),
+the **Cable release** tile drives single-shot (camera dial → M). The two
+tiles wire to different transport methods (`smartShutter` vs
+`smartShutterTap`), so the right byte sequence is sent for the right dial
+setting. See [canon-ble-research.md §7](canon-ble-research.md) for the
+verification log.
 
 ## Wire format primer
 
@@ -185,7 +198,7 @@ on `00010000`, shooting on `00030000`. All writes are `WRITE_NO_RESPONSE`.
 | `SMART_NAME` | `00010006-…` | write + indicate | Phone-side: `[01, ...ASCII name]`. Camera-side indicate: `0x02` accept / `0x03` reject (fires once the user confirms the pairing on the body). |
 | `SMART_IDEN` | `0001000a-…` | write | The registration handshake: `[03, <16-byte UUID>]`, `[04, ...name]`, `[05, 02]`, then `[01]` to finalize after the camera accepts. |
 | `SMART_MODE` | `00030010-…` | write | `[0x02]` = `MODE_SHOOT` — switches the body into shooting mode after handshake. |
-| `SMART_SHUTTER` | `00030030-…` | write | `[00, 01]` toggles the shutter button (down ↔ up). One toggle = press; two toggles = press + release (back to "up"). Bulb is `[00,01]` → wait → `[00,01]`. |
+| `SMART_SHUTTER` | `00030030-…` | write | Two distinct events. **Bulb path:** `[00, 01]` toggles the shutter-open state (open ↔ closed). `[00, 02]` is inert in Bulb. So bulb is `[00,01]` → wait → `[00,01]`. **M (non-bulb) path:** `[00, 01]` = press event, `[00, 02]` = release event. A single shot is `[00,01]` → wait → `[00,02]`; sending the bulb pattern (`[00,01]`/`[00,01]`) in M re-presses on the second toggle and leaves the body shooting continuously. |
 
 Auto-focus is folded into the toggle on the camera side — there's no separate
 half-press write. The body uses the focus mode set on the lens / camera at
@@ -309,24 +322,16 @@ If instead you see `pair/arm write failed … aborting`, the `[0x03, name]` writ
 
 ## Future work
 
-1. **M-mode single-shot toggle parity (open bug).** In smartphone mode the
-   shutter is a positional toggle. A single shot is press + release (two
-   toggles) — correct in Bulb. In **M** (non-bulb) the same pair causes
-   continuous shooting on at least the RP: the dial mode determines whether
-   one or two toggles is the right single-shot recipe, and BLE can't read the
-   dial. Tracking via the [in-app diagnostics](#1-capture-the-connect--shutter-trace)
-   to decide between a single-toggle M-mode path and a release-reliability fix.
-2. **Per-family BLE mechanism map.** Today `CanonProtocol` is auto-detected at
+1. **Per-family BLE mechanism map.** Today `CanonProtocol` is auto-detected at
    connect time. A small per-family map (`EOS R-series → SMART`, `older →
-   BR-E1`, `2018 EOS R → NO_BLE_SHUTTER`) would let the scan card pre-label the
-   capability before the user even taps connect, and lets us add per-family
-   shutter quirks (e.g. furble's `[00,02]` release variant, untested but
-   documented for the M6, could be opted in for families that need it).
-3. **Manual pair-name field** — let the user override `"Pulsar"` so multiple
+   BR-E1`, `2018 EOS R → NO_BLE_SHUTTER`) would let the scan card pre-label
+   the capability before the user even taps connect, and lets us add
+   per-family shutter quirks.
+2. **Manual pair-name field** — let the user override `"Pulsar"` so multiple
    phones paired to the same camera are distinguishable in the camera's list.
-4. **Multi-camera bonds.** Today `lastCanonBleAddress` is single-valued. Could
+3. **Multi-camera bonds.** Today `lastCanonBleAddress` is single-valued. Could
    become a list with a "preferred" entry, like CCAPI's per-UDN nickname map.
-5. **2-second self-timer mode.** `MODE_DELAY (0x04)` is exposed by the BR-E1
+4. **2-second self-timer mode.** `MODE_DELAY (0x04)` is exposed by the BR-E1
    wire but not surfaced in Pulsar. Useful for tripod-shake suppression on
    single shots; doesn't apply to the smartphone-mode protocol.
 

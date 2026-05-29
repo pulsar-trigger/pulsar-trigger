@@ -34,7 +34,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.R
-import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
 import com.ehrocha.pulsar.ui.theme.LocalDeviceLatency
@@ -48,32 +47,6 @@ import com.ehrocha.pulsar.ui.theme.StatusOff
 import com.ehrocha.pulsar.ui.theme.StatusRed
 import com.ehrocha.pulsar.ui.theme.ThemeMode
 
-private val LedIdle = StatusGreen
-private val LedRunning = StatusRed
-private val LedWaiting = StatusOrange
-private val LedError = StatusRed
-private val LedOff = StatusOff
-
-@Composable
-private fun StateLed(label: String, color: Color, active: Boolean) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Canvas(modifier = Modifier.size(width = 14.dp, height = 6.dp)) {
-            drawRoundRect(
-                color = if (active) color else LedOff,
-                cornerRadius = CornerRadius(3.dp.toPx()),
-                size = Size(size.width, size.height),
-            )
-        }
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            fontSize = 7.sp,
-            color = if (active) color else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
-            lineHeight = 8.sp,
-        )
-    }
-}
-
 @Composable
 fun BatteryIndicator() {
     val status = LocalDeviceStatus.current
@@ -86,11 +59,6 @@ fun BatteryIndicator() {
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            StateLed("IDL", LedIdle, status?.state == DeviceState.IDLE)
-            StateLed("RUN", LedRunning, status?.state == DeviceState.RUNNING)
-            StateLed("WAI", LedWaiting, status?.state == DeviceState.WAITING)
-            StateLed("ERR", LedError, status?.state == DeviceState.ERROR)
-            Spacer(Modifier.width(4.dp))
             val battText = if (status != null) "${status.batteryPct}%" else "—"
             Text(
                 text = battText,

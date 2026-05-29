@@ -414,17 +414,29 @@ toggle  → write [0x00, 0x01] → 00030030     (button DOWN ↔ UP)
 focus   → no-op (smartphone mode does not split AF; the camera AFs on release)
 ```
 
-**The RP shutter is a TOGGLE on `[00 01]`** (verified 2026-05-29). Each
-`[00 01]` flips the shutter button down↔up: first opens/fires, second
-closes/releases. furble's `[00 02]` "release" (and `[00 00]`) are **inert on
-the RP** — furble's momentary-button usage never noticed because it only taps.
-So a single shot = `[00 01]` (down) → `[00 01]` (up); a bulb = `[00 01]` (down)
-→ hold → `[00 01]` (up). Sending `[00 02]` for release leaves the shutter open
-until the next `[00 01]`, which is the "skip every other shot / release on next
-press" bug an automated intervalometer exposes. Empirical proof: a probe firing
-5 `[00 01]`s (odd) interleaved with inert `[00 02]`/`[00 00]` left the camera
-**still exposed** at the end. Pulsar `smartShutter` therefore sends `[00 01]`
-for both press and release; a complete op is two toggles (back to "up").
+**The RP shutter has two distinct events whose meaning is gated by the camera
+dial setting** (verified 2026-05-29, refined v0.290):
+
+- **Bulb dial** — `[00 01]` toggles the shutter-open state (open ↔ closed);
+  `[00 02]` is inert. Empirical proof: a probe firing 5 `[00 01]`s (odd
+  parity) interleaved with `[00 02]`/`[00 00]` left the camera **still
+  exposed** at the end. A bulb op is two `[00 01]` toggles → back to closed.
+- **M (non-bulb) dial** — `[00 01]` = shutter **press** event, `[00 02]` =
+  shutter **release** event. Sending two `[00 01]`s in M leaves the body
+  shooting non-stop (each `[00 01]` is interpreted as another press; verified
+  on RP via diagnostics log 2026-05-29 18:11 — every write GATT_SUCCESS, body
+  still pressed). A single shot in M is `[00 01]` → wait → `[00 02]` (verified
+  firing one frame on RP, v0.290).
+
+The earlier-read "[00 02] is inert" was a Bulb-only artifact — Bulb tracks
+state on `[00 01]` only and ignores release events.
+
+Pulsar therefore splits the smartphone shutter into two methods:
+`CanonBleClient.smartShutter` (bulb-state toggle on `[00 01]` for both press
+and release, used by `startBulb` / `stopBulb`), and
+`CanonBleClient.smartShutterTap` (M-mode press/release on `[00 01]` / `[00 02]`,
+used by `fireShutter`). The UI gates the choice at the tile level (Manual ↔
+Bulb, Cable release ↔ M) since BLE can't read the dial.
 
 ### Geo / time-sync packet (optional, → 00040002, with response)
 
@@ -528,13 +540,15 @@ to a known family for free). Two-level selection:
    from the GATT** (toggle and press/release both expose `00030000`/`00030030`).
    If it ever diverges, key the override on the **model family / generation**
    (Device Information `0x2a24` model, `0x2a26` firmware), in one spot:
-   `CanonBleClient.smartShutter`. Pulsar defaults to the `[00 01]` toggle today.
+   `CanonBleClient.smartShutter` / `smartShutterTap`. Pulsar's `[00 01]`
+   toggle (bulb) and `[00 01]` press / `[00 02]` release (M) are both
+   confirmed on the RP — no per-family override needed today.
 
-| Mechanism (family) | Detection | Shutter encoding | Bodies |
+| Path | Detection | Shutter encoding | Bodies |
 |---|---|---|---|
 | **BR-E1 remote** | adv/GATT `00050000` | `mode\|button` byte → `00050003` | M50, 200D, 77D, 800D, older DSLRs (NOT R-series) |
-| **Smartphone — toggle** | `00010000` + `00030000` | `[00 01]` toggle (down↔up) → `00030030` | EOS RP ✅ confirmed; R5/R6/R6 II expected (untested) |
-| **Smartphone — press/release** | `00010000` + `00030000` (same GATT — distinguished by family only) | press `[00 01]` / release `[00 02]` → `00030030` | EOS M6 per gkoh/furble (toggle-vs-press unverified) |
+| **Smartphone — bulb-state toggle** | `00010000` + `00030000`; sent by `smartShutter` (used by `startBulb` / `stopBulb`) | `[00 01]` toggles open ↔ closed → `00030030` | EOS RP ✅ confirmed (v0.272); R5/R6/R6 II expected (untested) |
+| **Smartphone — press / release events** | `00010000` + `00030000`; sent by `smartShutterTap` (used by `fireShutter`) | press `[00 01]` / release `[00 02]` → `00030030` | EOS RP ✅ confirmed in M (v0.290); M6 documented in gkoh/furble (untested) |
 | **Smartphone — no shutter** | `00010000`, **no `00030000`** | none (Camera Connect uses Wi-Fi) | EOS R (2018) — use USB/Wi-Fi |
 
 How to add to the map: connect the body, run Tools → Collect diagnostics (or

@@ -553,16 +553,17 @@ class CanonBleClient(
     /** Smartphone-mode shutter — **single-shot path**: distinct press / release
      *  events. Press = `[0x00,0x01]`, release = `[0x00,0x02]`.
      *
-     *  Hypothesis (v0.288): in M (non-bulb) mode the camera treats the two
-     *  bytes as distinct shutter events, not a positional toggle. With the
-     *  bulb-style `[00,01]/[00,01]` pair the release re-presses, leaving the
-     *  button DOWN and the body shooting continuously (RP log 2026-05-29).
-     *  `[00,02]` was previously read as "inert" but that test was run in Bulb,
-     *  where the camera doesn't process release events.
+     *  In M (non-bulb) mode the camera treats the two bytes as distinct shutter
+     *  events, NOT as a positional toggle. With the bulb-style
+     *  `[00,01]/[00,01]` pair the "release" re-presses, leaving the button
+     *  DOWN and the body shooting continuously (verified on EOS RP). `[00,02]`
+     *  was previously read as "inert" but that test was run in Bulb, where the
+     *  camera tracks shutter-open state on `[00,01]` only and doesn't process
+     *  release events — the byte does fire in M.
      *
-     *  Used by `fireShutter` only. If this turns out to be wrong on a body, the
-     *  bulb path is unaffected because `startBulb` / `stopBulb` still use
-     *  `smartShutter` above. */
+     *  Used by `fireShutter` only. `startBulb` / `stopBulb` keep the
+     *  `[00,01]` toggle path above (verified to work for the bulb state
+     *  machine). Confirmed firing one frame in M on the RP, v0.290. */
     suspend fun smartShutterTap(press: Boolean): Boolean = writeNoResponse(
         smartShutterChar,
         if (press) byteArrayOf(0x00, 0x01) else byteArrayOf(0x00, 0x02),
