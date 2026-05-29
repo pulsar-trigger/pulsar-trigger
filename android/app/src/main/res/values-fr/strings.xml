@@ -165,6 +165,7 @@
     <string name="done">Terminé</string>
     <string name="dismiss">Fermer</string>
     <string name="ok">OK</string>
+    <string name="interval_short_warning">Les intervalles de moins de 2 s ne sont pas recommandés — l\'appareil a besoin de temps pour écrire chaque photo sur la carte.</string>
     <string name="session_interrupted_title">Session interrompue</string>
     <string name="session_interrupted_body">La connexion à l\'appareil a été perdue pendant la session et la prise de vue s\'est arrêtée. Vérifiez l\'appareil — s\'il était en pose (Bulb), il peut encore exposer ; appuyez sur le déclencheur ou redémarrez-le par sécurité. Reconnectez-vous puis relancez la séquence.</string>
     <string name="retry">Réessayer</string>

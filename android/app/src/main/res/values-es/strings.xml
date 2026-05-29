@@ -165,6 +165,7 @@
     <string name="done">Listo</string>
     <string name="dismiss">Descartar</string>
     <string name="ok">OK</string>
+    <string name="interval_short_warning">No se recomiendan intervalos de menos de 2 s — la cámara necesita tiempo para guardar cada foto en la tarjeta.</string>
     <string name="session_interrupted_title">Sesión interrumpida</string>
     <string name="session_interrupted_body">Se perdió la conexión con la cámara durante la sesión y se detuvo el disparo. Revisa la cámara — si estaba en exposición (Bulb), puede seguir exponiendo; pulsa el obturador o reiníciala por seguridad. Luego reconecta y reinicia la secuencia.</string>
     <string name="retry">Reintentar</string>

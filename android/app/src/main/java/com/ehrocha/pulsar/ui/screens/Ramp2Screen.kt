@@ -95,6 +95,7 @@ fun Ramp2Screen(
         tab == RampTab.END && endExposureMs == 0L -> stringResource(R.string.ramp2_set_end)
         tab == RampTab.END && subSecondEnd -> stringResource(R.string.canon_sub_second_warning)
         tab == RampTab.INTERVAL && intervalMs == 0L -> stringResource(R.string.iv2_set_interval)
+        tab == RampTab.INTERVAL && intervalMs in 1L..1999L -> stringResource(R.string.interval_short_warning)
         tab == RampTab.STEPS && steps < 2 -> stringResource(R.string.ramp2_set_steps)
         else -> null
     }

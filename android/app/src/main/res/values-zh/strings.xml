@@ -167,6 +167,7 @@
     <string name="done">完成</string>
     <string name="dismiss">关闭</string>
     <string name="ok">确定</string>
+    <string name="interval_short_warning">不建议使用小于 2 秒的间隔——相机需要时间将每张照片写入存储卡。</string>
     <string name="session_interrupted_title">会话已中断</string>
     <string name="session_interrupted_body">会话期间与相机的连接已断开，拍摄已停止。请检查相机——如果当时正在曝光（B 门），可能仍在曝光；为安全起见请按下快门或重启相机。然后重新连接并重新开始拍摄。</string>
     <string name="retry">重试</string>

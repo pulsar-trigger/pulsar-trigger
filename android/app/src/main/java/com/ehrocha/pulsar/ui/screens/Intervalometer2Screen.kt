@@ -137,6 +137,7 @@ fun Intervalometer2Screen(
         tab == IvTab.EXPOSURE && exposureMs == 0L -> stringResource(R.string.iv2_set_exposure)
         tab == IvTab.EXPOSURE && subSecondCanon -> stringResource(R.string.canon_sub_second_warning)
         tab == IvTab.INTERVAL && intervalMs == 0L -> stringResource(R.string.iv2_set_interval)
+        tab == IvTab.INTERVAL && intervalMs in 1L..1999L -> stringResource(R.string.interval_short_warning)
         isContinuous && tab == IvTab.SHOTS -> stringResource(R.string.iv2_continuous_warning)
         !configComplete && tab == IvTab.SHOTS -> stringResource(R.string.iv2_set_exposure_and_interval)
         else -> null

@@ -165,6 +165,7 @@
     <string name="done">Pronto</string>
     <string name="dismiss">Dispensar</string>
     <string name="ok">OK</string>
+    <string name="interval_short_warning">Intervalos abaixo de 2 s não são recomendados — a câmera precisa de tempo para gravar cada foto no cartão.</string>
     <string name="session_interrupted_title">Sessão interrompida</string>
     <string name="session_interrupted_body">A conexão com a câmera caiu durante a sessão e a captura parou. Verifique a câmera — se estava em exposição (Bulb), ela pode ainda estar expondo; pressione o obturador ou reinicie a câmera por segurança. Depois reconecte e reinicie a sequência.</string>
     <string name="retry">Tentar novamente</string>
