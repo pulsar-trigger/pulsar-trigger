@@ -22,6 +22,8 @@
     <string name="canon_ble_camera_subtitle">Canon BR-E1 protocol over BLE</string>
     <string name="canon_ble_camera_fallback_name">Canon BLE camera</string>
     <string name="canon_ble_err_connect_failed">Could not connect to Canon BLE camera. Check pair mode on the body, then try again.</string>
+    <string name="canon_ble_err_no_ble_shutter">This Canon body has no Bluetooth shutter (e.g. EOS R). Use USB-C or Wi-Fi to shoot it.</string>
+    <string name="canon_ble_awaiting_confirm">Confirm the pairing on your camera to finish connecting…</string>
     <string name="canon_ble_connected_hint">Connected over Canon BLE — set Bulb on the body\'s mode dial for bulb-style flows. Live view, lens info, and battery readout aren\'t available on this transport.</string>
     <string name="canon_ble_reconnecting_hint">Canon BLE link dropped — waiting for the camera to advertise again. Power it on / wake it up to auto-reconnect.</string>
     <string name="mode_test_camera">Test Camera</string>

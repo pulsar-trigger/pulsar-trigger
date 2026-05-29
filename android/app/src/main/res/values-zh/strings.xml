@@ -119,6 +119,8 @@
     <string name="canon_ble_camera_subtitle">基于 BLE 的佳能 BR-E1 协议</string>
     <string name="canon_ble_camera_fallback_name">佳能 BLE 相机</string>
     <string name="canon_ble_err_connect_failed">无法连接到佳能 BLE 相机。请检查机身上的配对模式后重试。</string>
+    <string name="canon_ble_err_no_ble_shutter">此佳能机身不支持蓝牙快门（例如 EOS R）。请使用 USB-C 或 Wi-Fi 拍摄。</string>
+    <string name="canon_ble_awaiting_confirm">请在相机上确认配对以完成连接…</string>
     <string name="canon_ble_connected_hint">已通过佳能 BLE 连接 — 请将机身模式拨盘设为 Bulb 以进行 B 门流程。此传输方式不支持实时取景、镜头信息和电池读取。</string>
     <string name="canon_ble_reconnecting_hint">佳能 BLE 连接已断开 — 等待相机重新广播。开启相机或将其唤醒可自动重新连接。</string>
     <string name="ptp_connected_hint">已通过 USB 连接 — Pulsar 持有 PTP 会话时相机设置被锁定。需要在机身上切换 Bulb/手动模式时请先断开连接。</string>

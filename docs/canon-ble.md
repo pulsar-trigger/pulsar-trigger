@@ -4,6 +4,30 @@ Pulsar's fourth transport: drive a Canon body directly over Bluetooth Low Energy
 
 Its reason to exist: a fully wireless, hardware-free path on Canon bodies that takes the same `CameraTransport` abstraction as CCAPI and PTP. CCAPI shipped first and remains the most featureful (live view + Star Focus + lens info + battery), PTP-over-USB shipped second to cover the EOS R where CCAPI cannot be activated, and Canon BLE direct now covers the "I just want to wirelessly trigger my Canon from my phone, no cables, no extra gear" case.
 
+## Two protocols (auto-detected)
+
+Canon bodies expose **two different BLE control protocols** depending on the
+camera's Bluetooth menu setting. Pulsar auto-detects which one a body speaks
+*after connecting* (the advertisement isn't reliable — an RP in smartphone mode
+still advertises the BR-E1 UUID), then arms it accordingly:
+
+- **BR-E1 remote** (service `00050000`) — the classic remote protocol; a
+  `[0x03, name]` arm-write then single-byte control writes. Fires older DSLR /
+  M-series bodies. **Does not fire the EOS R-series** (they pair but ignore the
+  shutter).
+- **Smartphone mode** (service `00010000` + control service `00030000`) —
+  Canon's richer "Connect to smartphone" protocol with a registration
+  handshake (4 identify writes → you confirm the pairing on the camera body →
+  mode-switch → `[00 01]`/`[00 02]` shutter). **This is the path that fires the
+  EOS RP / R5 / R6 / newer.** A generated 128-bit identity is persisted so
+  re-connects reuse the registration.
+- **EOS R (2018) exception** — registers in smartphone mode but exposes no
+  `00030000`: it has *no BLE shutter at all* (even Canon's Camera Connect needs
+  Wi-Fi to fire it). Pulsar detects this and steers the user to USB/Wi-Fi.
+
+The full protocol bytes + reverse-engineering record (incl. a confirmed EOS RP
+fire) are in **[canon-ble-research.md](canon-ble-research.md)**.
+
 ## What works
 
 | Feature | Status | Notes |
@@ -21,7 +45,7 @@ Its reason to exist: a fully wireless, hardware-free path on Canon bodies that t
 
 ## Compatible bodies
 
-Verified across five open-source references (see `External references` below). Any body Canon lists in the BR-E1 compatibility matrix should work:
+Verified across six open-source references (see `External references` below). Any body Canon lists in the BR-E1 compatibility matrix should work:
 
 EOS R, RP, R5, R6, Ra, 6D Mark II, 77D, 800D / Rebel T7i, 200D / SL2, 850D, M50, M200, plus the PowerShots G7 X Mark III and G5 X Mark II.
 
@@ -216,17 +240,24 @@ If instead you see `pair/arm write failed … aborting`, the `[0x03, name]` writ
 
 ## External references
 
-Verified against five independent open-source implementations — every byte and UUID below was cross-checked:
+> **Full reverse-engineering log & reference catalog: [canon-ble-research.md](canon-ble-research.md).**
+> Every UUID, constant, write semantic, per-project quirk, and the empirical EOS
+> R GATT dump + the open "pairs-but-won't-shoot" investigation are captured
+> there in detail — so the external projects never need to be re-cloned. The
+> live diagnostic driver is in-repo at [`tools/canon_ble_test.py`](../tools/canon_ble_test.py).
+
+Verified against six independent open-source implementations — every byte and UUID below was cross-checked:
 
 - **`maxmacstn/ESP32-Canon-BLE-Remote`** — Arduino / ESP32. Source of the constants in `CanonBleClient`. Tested on EOS M50.
-- **`pklaus/canoremote`** — Python `bleak`. README lists the broadest compatibility matrix (EOS R/RP/R5/R6/Ra and many others).
+- **`pklaus/canoremote`** — Python `bleak`. README lists the broadest compatibility matrix (EOS R/RP/R5/R6/Ra and many others) — but it's the same simple subset (see research doc §2.4).
 - **`iebyt/cbremote`** — Android app (Apache 2.0). Source of the `SIGNAL_*` byte combos used in our bulb implementation. Tested on EOS 200D.
 - **`ArthurFDLR/BR-M5`** — M5Stick C+ / PlatformIO. Tested on EOS M50 Mark I.
 - **`ids1024/cannon-bluetooth-remote`** — Python via `btgatt-client`. Confirmed handle numbers 0xf504 / 0xf506.
+- **`RReverser/eos-remote-web`** — Web Bluetooth (JS). Same simple `0002`+`0003` protocol; touches no extra characteristic.
 
 Protocol write-ups:
 
 - **Ian Douglas Scott, "Reverse-engineering the Canon T7i's Bluetooth (work-in-progress)"** — `iandouglasscott.com/2017/09/04/…`. First public dump of the service / characteristic UUIDs.
 - **Ian Douglas Scott, "Canon DSLR Bluetooth remote protocol"** — `iandouglasscott.com/2018/07/04/…`. The bit-layout of the control byte.
 
-The clean-room reimplementation in this transport derives the protocol facts from all five and re-expresses them in idiomatic Kotlin. None of those references are GPL-3 — the Apache 2.0 (`cbremote`), MIT (`BR-M5`, `cannon-bluetooth-remote`), and the unlicensed-but-pedagogical posts are all compatible with Pulsar's GPL-3-or-later relicensing.
+The clean-room reimplementation in this transport derives the protocol facts from all six and re-expresses them in idiomatic Kotlin. None of those references are GPL-3 — the Apache 2.0 (`cbremote`), MIT (`BR-M5`, `cannon-bluetooth-remote`, `eos-remote-web`), and the unlicensed-but-pedagogical posts are all compatible with Pulsar's GPL-3-or-later relicensing.

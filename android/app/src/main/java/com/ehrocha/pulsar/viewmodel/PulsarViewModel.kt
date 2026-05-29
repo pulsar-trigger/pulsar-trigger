@@ -324,6 +324,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val _canonBleConnecting = MutableStateFlow(false)
     val canonBleConnecting: StateFlow<Boolean> = _canonBleConnecting
 
+    /** True while the smartphone-mode handshake is waiting for the user to
+     *  confirm the pairing on the camera body. The setup screen surfaces a
+     *  "Confirm the pairing on your camera" prompt off this. */
+    private val _canonBleAwaitingConfirm = MutableStateFlow(false)
+    val canonBleAwaitingConfirm: StateFlow<Boolean> = _canonBleAwaitingConfirm
+
     private val _canonBleError = MutableStateFlow<String?>(null)
     val canonBleError: StateFlow<String?> = _canonBleError
 
@@ -1306,13 +1312,24 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 stopCanonBleScan()
 
                 val appCtx = getApplication<Application>()
-                val transport = com.ehrocha.pulsar.canonble.CanonBleTransport.connect(
+                val result = com.ehrocha.pulsar.canonble.CanonBleTransport.connect(
                     appCtx, device,
                     onSpontaneousDisconnect = { onCanonBleLinkDropped() },
+                    onAwaitConfirm = { _canonBleAwaitingConfirm.value = true },
                 )
-                if (transport == null) {
-                    _canonBleError.value = "connect_failed"
-                    return@launch
+                _canonBleAwaitingConfirm.value = false
+                val transport = when (result) {
+                    is com.ehrocha.pulsar.canonble.CanonBleConnectResult.Ok -> result.transport
+                    com.ehrocha.pulsar.canonble.CanonBleConnectResult.NoBleShutter -> {
+                        // Smartphone-mode body with no BLE shutter (2018 EOS R):
+                        // steer the user to USB / Wi-Fi instead of "failed".
+                        _canonBleError.value = "no_ble_shutter"
+                        return@launch
+                    }
+                    com.ehrocha.pulsar.canonble.CanonBleConnectResult.Failed -> {
+                        _canonBleError.value = "connect_failed"
+                        return@launch
+                    }
                 }
                 _canonBleTransport.value = transport
                 lastCanonBleAddress = device.address
@@ -1335,6 +1352,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 )
             } finally {
                 _canonBleConnecting.value = false
+                _canonBleAwaitingConfirm.value = false
             }
         }
     }

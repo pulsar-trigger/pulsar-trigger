@@ -119,6 +119,8 @@
     <string name="canon_ble_camera_subtitle">BLE 経由の Canon BR-E1 プロトコル</string>
     <string name="canon_ble_camera_fallback_name">Canon BLE カメラ</string>
     <string name="canon_ble_err_connect_failed">Canon BLE カメラに接続できませんでした。ボディのペアリングモードを確認してもう一度お試しください。</string>
+    <string name="canon_ble_err_no_ble_shutter">この Canon ボディは Bluetooth シャッターに対応していません（例: EOS R）。撮影には USB-C または Wi-Fi を使用してください。</string>
+    <string name="canon_ble_awaiting_confirm">接続を完了するには、カメラ側でペアリングを承認してください…</string>
     <string name="canon_ble_connected_hint">Canon BLE 経由で接続中 — バルブ撮影にはボディのモードダイヤルを Bulb に合わせてください。ライブビュー、レンズ情報、バッテリー読み取りはこのトランスポートでは利用できません。</string>
     <string name="canon_ble_reconnecting_hint">Canon BLE のリンクが切れました — カメラの再アドバタイズを待っています。電源を入れる/スリープを解除すると自動的に再接続します。</string>
     <string name="ptp_connected_hint">USB 接続中 — Pulsar が PTP セッションを保持している間、カメラの設定は固定されます。本体のバルブ／マニュアル切替には一旦切断してください。</string>

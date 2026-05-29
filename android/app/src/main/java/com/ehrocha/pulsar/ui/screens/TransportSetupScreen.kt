@@ -664,16 +664,19 @@ private fun PtpSetup(vm: PulsarViewModel) {
 private fun CanonBleSetup(vm: PulsarViewModel) {
     val cameras by vm.canonBleCameras.collectAsState()
     val connecting by vm.canonBleConnecting.collectAsState()
+    val awaitingConfirm by vm.canonBleAwaitingConfirm.collectAsState()
     val canonBleError by vm.canonBleError.collectAsState()
     val canonBleErrGeneric = stringResource(R.string.canon_ble_err_connect_failed)
+    val canonBleErrNoShutter = stringResource(R.string.canon_ble_err_no_ble_shutter)
     val toastCtx = androidx.compose.ui.platform.LocalContext.current
     val scrollState = rememberScrollState()
 
-    // Surface connect failures (mostly the OS pair dialog being denied
-    // or timing out) the same way the legacy ScanScreen did.
+    // Surface connect failures. "no_ble_shutter" = a smartphone-mode body with
+    // no BLE shutter (2018 EOS R) — steer to USB/Wi-Fi rather than "failed".
     LaunchedEffect(canonBleError) {
-        if (canonBleError == null) return@LaunchedEffect
-        android.widget.Toast.makeText(toastCtx, canonBleErrGeneric, android.widget.Toast.LENGTH_LONG).show()
+        val err = canonBleError ?: return@LaunchedEffect
+        val msg = if (err == "no_ble_shutter") canonBleErrNoShutter else canonBleErrGeneric
+        android.widget.Toast.makeText(toastCtx, msg, android.widget.Toast.LENGTH_LONG).show()
         vm.clearCanonBleError()
     }
 
@@ -703,6 +706,32 @@ private fun CanonBleSetup(vm: PulsarViewModel) {
                 stringResource(R.string.canon_ble_setup_step4),
             ),
         )
+
+        // Smartphone-mode pairing: the camera shows its own confirm prompt and
+        // we wait for the user to accept it on the body.
+        if (awaitingConfirm) {
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer,
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        stringResource(R.string.canon_ble_awaiting_confirm),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
+            }
+        }
 
         Row(
             modifier = Modifier.fillMaxWidth(),

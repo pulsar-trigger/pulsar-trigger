@@ -18,6 +18,17 @@ import com.ehrocha.pulsar.transport.TransportKind
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import java.security.SecureRandom
+
+/** Outcome of [CanonBleTransport.connect]. Distinguishes a plain failure from
+ *  the EOS-R case (registers in smartphone mode but has no BLE shutter) so the
+ *  UI can steer the user to USB/Wi-Fi instead of just "connect failed". */
+sealed interface CanonBleConnectResult {
+    data class Ok(val transport: CanonBleTransport) : CanonBleConnectResult
+    object Failed : CanonBleConnectResult
+    /** Smartphone-mode body with no 00030000 control service (2018 EOS R). */
+    object NoBleShutter : CanonBleConnectResult
+}
 
 /**
  * `CameraTransport` over Canon's BR-E1 BLE service. The protocol is
@@ -62,21 +73,27 @@ class CanonBleTransport private constructor(
          *  display width without ellipsis. */
         const val PAIR_NAME = "Pulsar"
 
-        /** Open a GATT session, optionally pair-write on first connect.
-         *  Returns null on any failure (camera off, out of range, user
-         *  denied the OS pair dialog, missing characteristics, etc.).
-         *  Caller has nothing to clean up on null — we close internally.
+        private const val SMART_UUID_PREF = "pulsar_canon_ble"
+        private const val SMART_UUID_KEY = "smart_device_uuid"
+
+        /** Open a GATT session and arm the camera with whichever protocol it
+         *  exposes (auto-detected after service discovery):
+         *   - **BR-E1** (00050000): `[0x03, name]` arm-write, as before.
+         *   - **Smartphone** (00010000 + 00030000): the furble identify
+         *     handshake, then [onAwaitConfirm] fires while we wait for the
+         *     user to confirm the pairing on the camera body.
+         *   - **Smartphone but no 00030000** (2018 EOS R): no BLE shutter →
+         *     [CanonBleConnectResult.NoBleShutter].
          *
          *  [onSpontaneousDisconnect] fires when the link drops *after* a
-         *  successful connect (camera powered off, out of range, etc.).
-         *  Not invoked for an explicit [release]. The viewmodel uses this
-         *  to drive the auto-reconnect banner + re-scan. */
+         *  successful connect; not invoked for an explicit [release]. */
         @SuppressLint("MissingPermission")
         suspend fun connect(
             ctx: Context,
             device: BluetoothDevice,
             onSpontaneousDisconnect: () -> Unit = {},
-        ): CanonBleTransport? {
+            onAwaitConfirm: () -> Unit = {},
+        ): CanonBleConnectResult {
             var transportRef: CanonBleTransport? = null
             val client = CanonBleClient(ctx, device, onSpontaneousDisconnect = {
                 transportRef?.markDisconnected()
@@ -85,31 +102,64 @@ class CanonBleTransport private constructor(
             if (!client.connect()) {
                 Log.w(TAG, "GATT connect failed for ${device.address}")
                 client.close()
-                return null
+                return CanonBleConnectResult.Failed
             }
-            // Write the BR-E1 pair name on EVERY connection, right after
-            // service discovery, before any control write. This is the
-            // "arm this device as the active remote" step — Canon bodies
-            // expect it each session, not just on first bond. The working
-            // Android reference (iebyt/cbremote) calls its equivalent
-            // `pairAndConnect()` in onServicesDiscovered on every connect;
-            // skipping it (as we did when already-bonded) leaves the camera
-            // OS-bonded but un-armed, so it silently drops shutter writes.
-            // First time this also triggers Android's OS pair dialog;
-            // later connects reuse the bond and the write is silent.
-            // See docs/canon-ble.md → Connect flow.
-            if (!client.writePairName(PAIR_NAME)) {
-                Log.w(TAG, "pair/arm write failed for ${device.address}; aborting")
-                client.close()
-                return null
+            // Arm the camera per detected protocol, before any shutter write.
+            when (client.protocol) {
+                CanonProtocol.BRE1 -> {
+                    // BR-E1: `[0x03, name]` on every connect — the "arm as the
+                    // active remote" step the body expects each session (matches
+                    // iebyt/cbremote's onServicesDiscovered). First time this
+                    // also pops the OS pair dialog. See docs/canon-ble.md.
+                    if (!client.writePairName(PAIR_NAME)) {
+                        Log.w(TAG, "BR-E1 pair/arm write failed for ${device.address}; aborting")
+                        client.close()
+                        return CanonBleConnectResult.Failed
+                    }
+                }
+                CanonProtocol.SMART -> {
+                    // Smartphone-mode registration handshake (fires the RP /
+                    // R5 / R6 / newer). Needs a persisted identity UUID so
+                    // re-connects reuse the same registration.
+                    if (!client.armSmart(PAIR_NAME, deviceUuid(ctx), onAwaitConfirm)) {
+                        Log.w(TAG, "smartphone-mode registration failed for ${device.address}")
+                        client.close()
+                        return CanonBleConnectResult.Failed
+                    }
+                }
+                CanonProtocol.SMART_NO_SHUTTER -> {
+                    Log.w(TAG, "${device.address} registered in smartphone mode but exposes " +
+                        "no 00030000 control service (e.g. 2018 EOS R) — no BLE shutter")
+                    client.close()
+                    return CanonBleConnectResult.NoBleShutter
+                }
+                CanonProtocol.NONE -> {
+                    client.close()
+                    return CanonBleConnectResult.Failed
+                }
             }
             val label = client.name?.takeIf { it.isNotBlank() } ?: "Canon BLE camera"
-            Log.i(TAG, "connected + armed $label (${device.address})")
-            return CanonBleTransport(device, client).also {
+            Log.i(TAG, "connected + armed $label (${device.address}) via ${client.protocol}")
+            val transport = CanonBleTransport(device, client).also {
                 it._label.value = label
                 it._connected.value = true
                 transportRef = it
             }
+            return CanonBleConnectResult.Ok(transport)
+        }
+
+        /** Generate-once / persist a 16-byte smartphone-mode identity UUID, so
+         *  re-connects reuse the same registration instead of re-prompting. */
+        private fun deviceUuid(ctx: Context): ByteArray {
+            val prefs = ctx.getSharedPreferences(SMART_UUID_PREF, Context.MODE_PRIVATE)
+            prefs.getString(SMART_UUID_KEY, null)?.let { hex ->
+                runCatching {
+                    ByteArray(hex.length / 2) { hex.substring(it * 2, it * 2 + 2).toInt(16).toByte() }
+                }.getOrNull()?.takeIf { it.size == 16 }?.let { return it }
+            }
+            val u = ByteArray(16).also { SecureRandom().nextBytes(it) }
+            prefs.edit().putString(SMART_UUID_KEY, u.joinToString("") { "%02x".format(it) }).apply()
+            return u
         }
     }
 
@@ -142,19 +192,32 @@ class CanonBleTransport private constructor(
      *  if false — guards against double-release after a cable-pull mid-run. */
     @Volatile private var bulbOpen = false
 
-    /** Single shot. With AF: half-press → wait → full-press → release.
-     *  Without AF: full-press → release. Matches the cbremote pattern. */
+    private val isSmart get() = client.protocol == CanonProtocol.SMART
+
+    /** Press the shutter using whichever protocol is active. */
+    private suspend fun pressShutter() {
+        if (isSmart) client.smartShutter(press = true) else client.writeControl(SHUTTER_PRESS)
+    }
+
+    /** Release the shutter using whichever protocol is active. */
+    private suspend fun releaseShutter() {
+        if (isSmart) client.smartShutter(press = false) else client.writeControl(SHUTTER_RELEASE)
+    }
+
+    /** Single shot. BR-E1 with AF: half-press → wait → full-press → release.
+     *  Smartphone mode folds AF into the release, so there's no separate AF
+     *  step — just press → brief tap → release. */
     override suspend fun fireShutter(af: Boolean) {
         if (!_connected.value) return
-        if (af) {
-            // Half-press → camera does AF → release the half-press
+        if (af && !isSmart) {
+            // BR-E1 only: half-press → camera does AF → release the half-press
             client.writeControl((MODE_IMMEDIATE.toInt() or BUTTON_FOCUS.toInt()).toByte())
             delay(AF_HOLD_MS)
             client.writeControl(SHUTTER_RELEASE)
         }
-        client.writeControl(SHUTTER_PRESS)
+        pressShutter()
         delay(SHUTTER_TAP_MS)
-        client.writeControl(SHUTTER_RELEASE)
+        releaseShutter()
     }
 
     /** BR-E1 has no body-settings access. The user has to set Bulb on the
@@ -169,26 +232,26 @@ class CanonBleTransport private constructor(
      *  release. Caller must pair with [stopBulb] before the next op. */
     override suspend fun startBulb(af: Boolean) {
         if (!_connected.value) return
-        if (af) {
+        if (af && !isSmart) {
             client.writeControl((MODE_IMMEDIATE.toInt() or BUTTON_FOCUS.toInt()).toByte())
             delay(AF_HOLD_MS)
             client.writeControl(SHUTTER_RELEASE)
         }
-        client.writeControl(SHUTTER_PRESS)
+        pressShutter()
         bulbOpen = true
     }
 
     /** Close the shutter — idempotent. */
     override suspend fun stopBulb() {
         if (!bulbOpen) return
-        client.writeControl(SHUTTER_RELEASE)
+        releaseShutter()
         bulbOpen = false
     }
 
     /** Abort whatever's in flight. Used by viewmodel.stopFlow(). */
     override suspend fun stop() {
         if (bulbOpen) {
-            runCatching { client.writeControl(SHUTTER_RELEASE) }
+            runCatching { releaseShutter() }
             bulbOpen = false
         }
     }
@@ -209,7 +272,7 @@ class CanonBleTransport private constructor(
             // mid-run disconnect doesn't leave the body holding the
             // exposure indefinitely. Suppress errors — the cable / link
             // may already be gone.
-            runCatching { client.writeControl(SHUTTER_RELEASE) }
+            runCatching { releaseShutter() }
             bulbOpen = false
         }
         client.close()

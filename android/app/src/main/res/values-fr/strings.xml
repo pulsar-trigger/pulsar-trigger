@@ -119,6 +119,8 @@
     <string name="canon_ble_camera_subtitle">Protocole Canon BR-E1 sur BLE</string>
     <string name="canon_ble_camera_fallback_name">Appareil Canon BLE</string>
     <string name="canon_ble_err_connect_failed">Connexion à l\'appareil Canon BLE impossible. Vérifiez le mode appairage sur le boîtier puis réessayez.</string>
+    <string name="canon_ble_err_no_ble_shutter">Ce boîtier Canon n\'a pas de déclenchement Bluetooth (ex. EOS R). Utilisez l\'USB-C ou le Wi-Fi pour déclencher.</string>
+    <string name="canon_ble_awaiting_confirm">Confirmez l\'appairage sur l\'appareil pour terminer la connexion…</string>
     <string name="canon_ble_connected_hint">Connecté en Canon BLE — placez la molette du boîtier sur Bulb pour les flux bulb. Live view, info objectif et lecture de batterie ne sont pas disponibles sur ce transport.</string>
     <string name="canon_ble_reconnecting_hint">Lien Canon BLE perdu — en attente d\'une nouvelle annonce de l\'appareil. Allumez-le ou réveillez-le pour reconnecter automatiquement.</string>
     <string name="ptp_connected_hint">Connecté via USB — les réglages de l\'appareil sont verrouillés tant que Pulsar maintient la session PTP. Déconnectez pour changer Bulb/Manuel sur le boîtier.</string>

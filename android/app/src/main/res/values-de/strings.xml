@@ -119,6 +119,8 @@
     <string name="canon_ble_camera_subtitle">Canon-BR-E1-Protokoll über BLE</string>
     <string name="canon_ble_camera_fallback_name">Canon-BLE-Kamera</string>
     <string name="canon_ble_err_connect_failed">Verbindung zur Canon-BLE-Kamera fehlgeschlagen. Prüfen Sie den Pairing-Modus am Gehäuse und versuchen Sie es erneut.</string>
+    <string name="canon_ble_err_no_ble_shutter">Dieses Canon-Gehäuse hat keinen Bluetooth-Auslöser (z. B. EOS R). Nutzen Sie USB-C oder WLAN zum Auslösen.</string>
+    <string name="canon_ble_awaiting_confirm">Bestätigen Sie das Pairing an der Kamera, um die Verbindung abzuschließen…</string>
     <string name="canon_ble_connected_hint">Verbunden via Canon BLE — stellen Sie das Modusrad am Gehäuse auf Bulb für Bulb-Abläufe. Live-View, Objektivinfo und Akkustand sind über diesen Transport nicht verfügbar.</string>
     <string name="canon_ble_reconnecting_hint">Canon-BLE-Verbindung verloren — warte auf erneutes Advertisement der Kamera. Schalten Sie sie ein bzw. wecken Sie sie auf, um automatisch erneut zu verbinden.</string>
     <string name="ptp_connected_hint">Per USB verbunden — Kameraeinstellungen sind gesperrt, solange Pulsar die PTP-Sitzung hält. Trenne die Verbindung, um Bulb/Manual am Body umzustellen.</string>

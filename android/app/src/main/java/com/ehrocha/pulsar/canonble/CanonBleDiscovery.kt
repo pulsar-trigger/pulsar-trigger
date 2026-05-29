@@ -39,6 +39,15 @@ class CanonBleDiscovery(private val ctx: Context) {
          *  in the BR-E1 compatibility list (EOS R/RP/R5/R6, M50, 200D,
          *  77D, 800D, Ra, 850D, M200, 6D II, G7X III, G5X II). */
         val SERVICE_UUID: UUID = UUID.fromString("00050000-0000-1000-0000-d8492fffa821")
+
+        /** Canon smartphone-mode service (advertised when the body's BT is
+         *  set to "Connect to smartphone" / register-a-device). A different,
+         *  richer protocol than BR-E1 — and the only BLE path that fires the
+         *  EOS R-series. See docs/canon-ble.md. We scan for BOTH because a
+         *  body in smartphone mode may still advertise only [SERVICE_UUID]
+         *  in its (tiny) adv packet — the actual protocol is detected after
+         *  connect, not from the advertisement. */
+        val SMART_SERVICE_UUID: UUID = UUID.fromString("00010000-0000-1000-0000-d8492fffa821")
     }
 
     private val btManager = ctx.getSystemService(BluetoothManager::class.java)

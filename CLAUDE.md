@@ -120,6 +120,7 @@ cd firmware
 - [docs/ccapi.md](docs/ccapi.md) — Canon CCAPI integration design
 - [docs/ptp.md](docs/ptp.md) — USB PTP transport design (Canon EOS R + RP)
 - [docs/canon-ble.md](docs/canon-ble.md) — Canon BLE direct transport (BR-E1 protocol, all BR-E1-compatible bodies)
+- [docs/canon-ble-research.md](docs/canon-ble-research.md) — BR-E1 reverse-engineering log: all 6 refs decoded, EOS R GATT dump, the open "pairs-but-won't-shoot" bug. Diagnostic driver: `tools/canon_ble_test.py`
 - [docs/mode-schema.md](docs/mode-schema.md) — user-mode preset JSON schema
 - [docs/wiring.md](docs/wiring.md) — hardware schematics
 - [.github/copilot-instructions.md](.github/copilot-instructions.md) — AI assistant conventions
