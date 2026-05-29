@@ -166,7 +166,7 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
 
 /** Write the diagnostics text to a cache file and open the share sheet. Reuses
  *  the app's existing FileProvider (`shared/` cache path is whitelisted). */
-private fun shareDiagnostics(ctx: android.content.Context, text: String) {
+internal fun shareDiagnostics(ctx: android.content.Context, text: String) {
     val dir = File(ctx.cacheDir, "shared").apply { mkdirs() }
     val ts = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
     val file = File(dir, "pulsar-diagnostics-$ts.txt")

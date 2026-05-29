@@ -205,6 +205,17 @@ fun ScanLandingScreen(
             Spacer(Modifier.width(8.dp))
             Text(stringResource(R.string.scan_landing_use_simulator))
         }
+
+        // ── Collect diagnostics — reachable while disconnected, so connection
+        //    issues (e.g. a failed reconnect) can be captured without adb.
+        val diagCtx = androidx.compose.ui.platform.LocalContext.current
+        TextButton(onClick = { shareDiagnostics(diagCtx, vm.canonDiagnosticsText()) }) {
+            Text(
+                stringResource(R.string.tools_collect_diagnostics),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

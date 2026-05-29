@@ -287,7 +287,7 @@ class CanonBleClient(
      *  Android first encrypts the link); the caller's coroutine suspends
      *  until the bond completes or times out. */
     @SuppressLint("MissingPermission")
-    suspend fun connect(timeoutMs: Long = 30_000): Boolean {
+    suspend fun connect(timeoutMs: Long = 30_000, autoConnect: Boolean = false): Boolean {
         val deferred = CompletableDeferred<Boolean>()
         connectSignal.set(deferred)
         servicesSignal.set(CompletableDeferred())
@@ -297,12 +297,24 @@ class CanonBleClient(
         releasedByUser = false
         fullyConnected = false
         protocol = CanonProtocol.NONE
-        gatt = device.connectGatt(ctx, false, callback, BluetoothDevice.TRANSPORT_LE)
+        // autoConnect=true is the OS-managed reconnect: the stack completes the
+        // connection whenever the (bonded) body becomes available — even via a
+        // directed advertisement a service-UUID scan never sees. Used for
+        // reconnect; first connect uses autoConnect=false (immediate attempt).
+        CanonBleLog.i(TAG, "connectGatt(autoConnect=$autoConnect) to ${device.address}")
+        gatt = device.connectGatt(ctx, autoConnect, callback, BluetoothDevice.TRANSPORT_LE)
         if (gatt == null) {
             connectSignal.set(null)
             return false
         }
-        val result = withTimeoutOrNull(timeoutMs) { deferred.await() } ?: false
+        val result = try {
+            withTimeoutOrNull(timeoutMs) { deferred.await() } ?: false
+        } catch (t: Throwable) {
+            // Cancellation (e.g. user navigated away / started another connect)
+            // must close the pending autoConnect GATT so it doesn't leak.
+            close()
+            throw t
+        }
         if (!result) close()
         return result
     }

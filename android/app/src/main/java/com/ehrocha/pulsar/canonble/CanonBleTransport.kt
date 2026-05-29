@@ -93,13 +93,17 @@ class CanonBleTransport private constructor(
             device: BluetoothDevice,
             onSpontaneousDisconnect: () -> Unit = {},
             onAwaitConfirm: () -> Unit = {},
+            /** Reconnect to a bonded body: OS-managed [autoConnect] + a longer
+             *  window, since the camera may take a while to become available. */
+            autoConnect: Boolean = false,
+            connectTimeoutMs: Long = 30_000,
         ): CanonBleConnectResult {
             var transportRef: CanonBleTransport? = null
             val client = CanonBleClient(ctx, device, onSpontaneousDisconnect = {
                 transportRef?.markDisconnected()
                 onSpontaneousDisconnect()
             })
-            if (!client.connect()) {
+            if (!client.connect(timeoutMs = connectTimeoutMs, autoConnect = autoConnect)) {
                 CanonBleLog.w(TAG, "GATT connect failed for ${device.address}")
                 client.close()
                 return CanonBleConnectResult.Failed

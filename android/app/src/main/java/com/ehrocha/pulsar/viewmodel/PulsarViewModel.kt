@@ -202,7 +202,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     ?.adapter ?: return
                 val device = runCatching { adapter.getRemoteDevice(last.identifier) }.getOrNull()
                     ?: return
-                connectCanonBle(device)
+                // The body may not be advertising the service UUID right now
+                // (registered cameras often re-advertise directed at the bonded
+                // phone) — use OS-managed autoConnect so the reconnect lands
+                // when the camera becomes available, rather than failing fast.
+                connectCanonBle(device, autoReconnect = true)
             }
         }
     }
@@ -373,6 +377,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  reconnect banner — same pattern as PTP cable replug. */
     private val _canonBleReconnecting = MutableStateFlow(false)
     val canonBleReconnecting: StateFlow<Boolean> = _canonBleReconnecting
+
+    /** Last Canon BLE [android.bluetooth.BluetoothDevice] we connected to, kept
+     *  so a drop can fire an OS-managed autoConnect reconnect without waiting
+     *  for the body to reappear in a service-UUID scan. */
+    @Volatile private var lastCanonBleDevice: android.bluetooth.BluetoothDevice? = null
 
     /** MAC address of the last Canon BLE camera we successfully connected
      *  to. Persisted in plain SharedPrefs (the BLE bond itself is in the
@@ -1321,8 +1330,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     fun connectCanonBle(
         device: android.bluetooth.BluetoothDevice,
         auto: Boolean = false,
+        /** Reconnect to a previously-bonded body: use OS-managed autoConnect
+         *  (waits for the camera to become available — a directed-advertising
+         *  body never shows in the service-UUID scan) + a longer window. */
+        autoReconnect: Boolean = false,
     ) {
         canonBleConnectJob?.cancel()
+        lastCanonBleDevice = device
         canonBleConnectJob = viewModelScope.launch {
             if (auto && _simulatorActive.value) {
                 Log.i(TAG, "connectCanonBle(auto): simulator active, skipping")
@@ -1330,6 +1344,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             }
             _canonBleError.value = null
             _canonBleConnecting.value = true
+            if (autoReconnect) _canonBleReconnecting.value = true
             try {
                 if (bleController.connected.value) bleController.disconnect()
                 if (_canonCcapiTransport.value != null) disconnectCanonCcapi()
@@ -1348,6 +1363,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     appCtx, device,
                     onSpontaneousDisconnect = { onCanonBleLinkDropped() },
                     onAwaitConfirm = { _canonBleAwaitingConfirm.value = true },
+                    autoConnect = autoReconnect,
+                    connectTimeoutMs = if (autoReconnect) 120_000L else 30_000L,
                 )
                 _canonBleAwaitingConfirm.value = false
                 val transport = when (result) {
@@ -1403,13 +1420,20 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private fun onCanonBleLinkDropped() {
         Log.i(TAG, "Canon BLE link dropped — arming auto-reconnect")
         _canonBleReconnecting.value = true
-        // Make sure the discovery scanner is running so the collector
-        // in init{} can pick up the body's next advertisement. start()
-        // is a no-op if already scanning.
-        canonBleDiscovery.start()
+        val device = lastCanonBleDevice
         // Tear down the dropped transport's GATT resources, but preserve
-        // lastCanonBleAddress so the collector knows what to reconnect.
+        // lastCanonBleAddress / lastCanonBleDevice for the reconnect.
         disconnectCanonBle(clearAutoReconnect = false)
+        if (device != null) {
+            // OS-managed autoConnect: the stack re-establishes when the body
+            // is next available (including directed advertisements a scan can't
+            // see). More reliable than waiting for the service-UUID scan.
+            connectCanonBle(device, auto = true, autoReconnect = true)
+        } else {
+            // No cached device (e.g. reconnect target only known by MAC) —
+            // fall back to the scan + collector path.
+            canonBleDiscovery.start()
+        }
     }
 
     private fun disconnectCanonBle(clearAutoReconnect: Boolean = true) {
