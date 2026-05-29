@@ -84,16 +84,22 @@ class CanonBleDiscovery(private val ctx: Context) {
             Log.w(TAG, "no BluetoothLeScanner — adapter off or permission missing")
             return
         }
-        val filter = ScanFilter.Builder()
-            .setServiceUuid(ParcelUuid(SERVICE_UUID))
-            .build()
+        // Scan for BOTH Canon services (OR semantics): BR-E1 remote (00050000)
+        // AND smartphone-mode (00010000). A body advertises one or the other
+        // depending on its Bluetooth menu state — the RP in "add a device"
+        // smartphone pairing advertises 00010000, which the single BR-E1 filter
+        // missed. The protocol is still auto-detected after connect.
+        val filters = listOf(
+            ScanFilter.Builder().setServiceUuid(ParcelUuid(SERVICE_UUID)).build(),
+            ScanFilter.Builder().setServiceUuid(ParcelUuid(SMART_SERVICE_UUID)).build(),
+        )
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
             .build()
         try {
-            s.startScan(listOf(filter), settings, scanCallback)
+            s.startScan(filters, settings, scanCallback)
             _scanning.value = true
-            Log.d(TAG, "scan started")
+            Log.d(TAG, "scan started (BR-E1 + smartphone service filters)")
         } catch (e: SecurityException) {
             Log.w(TAG, "scan blocked by permission: ${e.message}")
         }
