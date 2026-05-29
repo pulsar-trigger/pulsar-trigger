@@ -165,7 +165,7 @@
     <string name="done">完了</string>
     <string name="dismiss">閉じる</string>
     <string name="ok">OK</string>
-    <string name="interval_short_warning">2 秒未満の間隔は推奨されません。カメラが各写真をカードに書き込む時間が必要です。</string>
+    <string name="interval_short_warning">4 秒未満の間隔は推奨されません。カメラが復帰して各写真をカードに書き込む時間が必要です。</string>
     <string name="session_interrupted_title">セッションが中断されました</string>
     <string name="session_interrupted_body">セッション中にカメラとの接続が切れ、撮影が停止しました。カメラを確認してください。露光中（バルブ）だった場合、まだ露光している可能性があります。念のためシャッターを押すか電源を入れ直してください。その後、再接続して撮影をやり直してください。</string>
     <string name="retry">再試行</string>

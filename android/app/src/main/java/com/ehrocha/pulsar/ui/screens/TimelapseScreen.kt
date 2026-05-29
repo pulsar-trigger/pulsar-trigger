@@ -98,7 +98,7 @@ fun TimelapseScreen(
     }
     val bottomHint = when {
         tab == TlTab.INTERVAL && intervalMs == 0L -> stringResource(R.string.iv2_set_interval)
-        tab == TlTab.INTERVAL && intervalMs in 1L..1999L -> stringResource(R.string.interval_short_warning)
+        tab == TlTab.INTERVAL && intervalMs in 1L..3999L -> stringResource(R.string.interval_short_warning)
         tab == TlTab.SHOTS && continuous && configComplete ->
             stringResource(R.string.iv2_continuous_warning)
         tab == TlTab.SHOTS && !configComplete -> stringResource(R.string.iv2_set_interval)

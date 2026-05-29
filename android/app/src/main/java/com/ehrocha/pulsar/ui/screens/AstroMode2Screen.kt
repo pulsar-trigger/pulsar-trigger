@@ -203,7 +203,7 @@ fun AstroMode2Screen(
     val bottomHint = when {
         tab == AstroTab.LENS && focalLength == 0 -> stringResource(R.string.astro2_set_lens)
         tab == AstroTab.INTERVAL && intervalMs == 0L -> stringResource(R.string.iv2_set_interval)
-        tab == AstroTab.INTERVAL && intervalMs in 1L..1999L -> stringResource(R.string.interval_short_warning)
+        tab == AstroTab.INTERVAL && intervalMs in 1L..3999L -> stringResource(R.string.interval_short_warning)
         tab == AstroTab.SHOTS && continuous && configComplete ->
             stringResource(R.string.iv2_continuous_warning)
         tab == AstroTab.SHOTS && !configComplete ->
