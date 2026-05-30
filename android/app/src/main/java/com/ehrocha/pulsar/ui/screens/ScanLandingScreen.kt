@@ -9,7 +9,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -25,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Science
@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Usb
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -334,6 +335,11 @@ private fun SimulatorTile(onClick: () -> Unit) {
     }
 }
 
+/** Slim one-line row for a known device. Tap = reconnect, trailing X =
+ *  forget. Spinner replaces the leading icon while reconnect is in flight,
+ *  and taps are swallowed so the user can't stack attempts. Sized and
+ *  styled to match the transport tile family so it reads as a continuation
+ *  of the surface set above. */
 @Composable
 private fun ReconnectCard(
     last: LastConnection,
@@ -350,57 +356,58 @@ private fun ReconnectCard(
         }
     )
     Surface(
-        // Swallow taps while a reconnect is already in flight so the user
-        // can't stack attempts; the spinner shows it's working.
         onClick = { if (!reconnecting) onReconnect() },
         shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier.padding(20.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (reconnecting) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(28.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-            } else {
-                Icon(
-                    Icons.Default.History,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(28.dp),
-                )
-            }
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.fillMaxWidth()) {
-                Text(
-                    if (reconnecting)
-                        stringResource(R.string.scan_landing_reconnecting, last.label)
-                    else
-                        stringResource(R.string.scan_landing_reconnect_to, last.label),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-                Text(
-                    stringResource(R.string.scan_landing_reconnect_via, transportLabel),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
-                )
-                Spacer(Modifier.height(4.dp))
-                TextButton(
-                    onClick = onForget,
-                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp),
-                ) {
-                    Text(
-                        stringResource(R.string.scan_landing_forget),
-                        style = MaterialTheme.typography.labelSmall,
+            Box(modifier = Modifier.size(28.dp), contentAlignment = Alignment.Center) {
+                if (reconnecting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                } else {
+                    Icon(
+                        Icons.Default.History,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp),
                     )
                 }
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    last.label,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                )
+                Text(
+                    if (reconnecting) stringResource(R.string.scan_landing_reconnecting, "").trim()
+                    else transportLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
+            IconButton(
+                onClick = onForget,
+                modifier = Modifier.size(36.dp),
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = stringResource(R.string.scan_landing_forget),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp),
+                )
             }
         }
     }
