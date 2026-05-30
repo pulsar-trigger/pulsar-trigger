@@ -23,13 +23,20 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.ui.theme.OnWarningContainer
 import com.ehrocha.pulsar.ui.theme.WarningContainer
 
 /** Fixed slot height for the caution strip. Reserved whether or not a
- *  warning is showing, so the editor below doesn't jump when state flips. */
-private val WarningSlotHeight = 56.dp
+ *  warning is showing, so the editor below doesn't jump when state flips.
+ *
+ *  Sized for **3 lines of body-small text + 10 dp top/bottom padding**.
+ *  Empirically covers the English warning copy (~117 chars ≈ 3 lines on a
+ *  360 dp phone) and the longer German/French translations (~140 chars).
+ *  The Text inside is capped at maxLines = 3 with ellipsis so an even
+ *  longer future translation can't push past the slot. */
+private val WarningSlotHeight = 88.dp
 
 /**
  * In-content caution strip shown above the wizard's value editor.
@@ -74,6 +81,8 @@ fun WizardWarning(text: String?, modifier: Modifier = Modifier) {
                         text = text,
                         style = MaterialTheme.typography.bodySmall,
                         color = OnWarningContainer,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
