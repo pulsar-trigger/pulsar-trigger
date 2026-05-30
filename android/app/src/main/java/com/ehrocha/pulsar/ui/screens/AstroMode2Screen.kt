@@ -5,11 +5,8 @@
 
 package com.ehrocha.pulsar.ui.screens
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
@@ -22,11 +19,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -42,11 +35,7 @@ import com.ehrocha.pulsar.ui.components.PulsarTopBar
 import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
 import com.ehrocha.pulsar.ui.theme.LocalRunState
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
-import kotlin.math.PI
-import kotlin.math.atan2
-import kotlin.math.cos
 import kotlin.math.roundToInt
-import kotlin.math.sin
 
 private enum class AstroTab(val labelRes: Int) {
     LENS(R.string.astro2_tab_lens),
@@ -66,44 +55,9 @@ private val SENSOR_OPTS = listOf(
 
 private val FOCAL_DIAL_PRESETS = listOf(8, 14, 24, 35, 50, 85, 105, 135, 200)
 
-/** Map a continuous angle (degrees from 12 o'clock clockwise) into the focal
- *  range. Presets sit at evenly spaced positions; angles between presets
- *  produce interpolated values (so the user can land on 16, 70, etc.). The
- *  last arc — wrapping from the highest preset back to the lowest — is
- *  treated as a dead zone: pin to whichever endpoint the finger is nearer.
- *  Returns null if the angle is out of range (shouldn't happen with 0–360). */
-private fun focalFromAngle(angleDeg: Double, presets: List<Int>): Int? {
-    val n = presets.size
-    if (n < 2) return null
-    val stepDeg = 360.0 / n
-    val segmentIdx = (angleDeg / stepDeg).toInt().coerceIn(0, n - 1)
-    val frac = (angleDeg - segmentIdx * stepDeg) / stepDeg
-    if (segmentIdx == n - 1) {
-        // Dead arc between the last preset and the wrap-back to the first —
-        // skip interpolation, snap to the nearer endpoint.
-        return if (frac < 0.5) presets[n - 1] else presets[0]
-    }
-    val a = presets[segmentIdx]
-    val b = presets[segmentIdx + 1]
-    return (a + (b - a) * frac).roundToInt()
-}
-
-/** Inverse of [focalFromAngle] — where does this focal value sit on the dial? */
-private fun angleFromFocal(valueMm: Int, presets: List<Int>): Double {
-    val n = presets.size
-    val stepDeg = 360.0 / n
-    if (valueMm <= presets.first()) return 0.0
-    if (valueMm >= presets.last()) return (n - 1) * stepDeg
-    for (i in 0 until n - 1) {
-        if (valueMm in presets[i]..presets[i + 1]) {
-            val frac = (valueMm - presets[i]).toDouble() / (presets[i + 1] - presets[i])
-            return i * stepDeg + frac * stepDeg
-        }
-    }
-    return 0.0
-}
-
-/** Which preset is the current value closest to (for highlighting the rim tick)? */
+/** Which preset is the current value closest to — used by [FocalLengthSlider]
+ *  to place the thumb when the user's actual value isn't an exact preset
+ *  (e.g. 28 lands between 24 and 35). */
 private fun nearestPresetIndex(valueMm: Int, presets: List<Int>): Int {
     if (valueMm <= 0) return -1
     var bestIdx = 0
@@ -441,7 +395,7 @@ private fun LensTab(
 
         Spacer(Modifier.height(16.dp))
 
-        FocalLengthDial(
+        FocalLengthSlider(
             valueMm = focalLength,
             onChange = onFocalChange,
             enabled = enabled,
@@ -585,22 +539,26 @@ private fun DetectedLensChip(
     }
 }
 
+/** Compact focal-length picker. Replaces the 220 dp round dial with a
+ *  ~120 dp Slider that snaps to [FOCAL_DIAL_PRESETS], a big tap-to-edit
+ *  current-value readout above it, and tick labels under it.
+ *
+ *  Snap behaviour: the slider's discrete steps map 1:1 to the presets, so
+ *  dragging hops 8 → 14 → 24 → 35 → 50 → 85 → 105 → 135 → 200 with haptic
+ *  feedback at each landing. For arbitrary values (e.g. 28 or 70 mm) the
+ *  user taps the big readout to open the numeric keypad — the slider then
+ *  sits at the *nearest* preset position so the visual neighbourhood
+ *  stays meaningful. */
 @Composable
-private fun FocalLengthDial(
+private fun FocalLengthSlider(
     valueMm: Int,
     onChange: (Int) -> Unit,
     enabled: Boolean,
 ) {
     val haptic = LocalHapticFeedback.current
-    val density = LocalDensity.current
-    val sizeDp = 220.dp
-    val sizePx = with(density) { sizeDp.toPx() }
-    val centerPx = sizePx / 2f
     val primary = MaterialTheme.colorScheme.primary
-    val outline = MaterialTheme.colorScheme.outlineVariant
     val onSurface = MaterialTheme.colorScheme.onSurface
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
-    val container = MaterialTheme.colorScheme.surfaceContainerHigh
 
     var showNumPad by remember { mutableStateOf(false) }
     if (showNumPad) {
@@ -617,129 +575,79 @@ private fun FocalLengthDial(
         )
     }
 
-    var lastEmitted by remember(valueMm) { mutableIntStateOf(valueMm) }
     val n = FOCAL_DIAL_PRESETS.size
-    val stepDeg = 360.0 / n
+    // Slider position = index of the preset the slider thumb sits on. When
+    // the current value is non-preset, snap visually to the nearest one so
+    // the slider still reads as "you're around this focal length."
+    val sliderIdx = remember(valueMm) {
+        if (valueMm <= 0) 0
+        else nearestPresetIndex(valueMm, FOCAL_DIAL_PRESETS)
+    }
+    var lastEmittedIdx by remember(valueMm) { mutableIntStateOf(sliderIdx) }
 
-    Box(
-        modifier = Modifier
-            .size(sizeDp)
-            .pointerInput(enabled) {
-                if (!enabled) return@pointerInput
-                detectDragGestures(
-                    onDragStart = { /* no-op */ },
-                    onDrag = { change, _ ->
-                        val dx = change.position.x - centerPx
-                        val dy = change.position.y - centerPx
-                        var angleDeg = Math.toDegrees(
-                            atan2(dy.toDouble(), dx.toDouble()) + PI / 2
-                        )
-                        if (angleDeg < 0) angleDeg += 360.0
-                        val newVal = focalFromAngle(angleDeg, FOCAL_DIAL_PRESETS)
-                            ?: return@detectDragGestures
-                        if (newVal != lastEmitted) {
-                            lastEmitted = newVal
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onChange(newVal)
-                        }
-                    },
-                )
-            },
-        contentAlignment = Alignment.Center,
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val r = size.minDimension / 2f
-            val ringR = r - with(density) { 18.dp.toPx() }
-
-            // Background ring
-            drawCircle(
-                color = container,
-                radius = ringR,
-                style = Stroke(width = with(density) { 28.dp.toPx() }),
-            )
-
-            val tickInset = with(density) { 12.dp.toPx() }
-            val tickOutset = with(density) { 14.dp.toPx() }
-            // Highlight the preset that's the user's current "neighborhood"
-            // (the one they're closest to numerically). Lets users see the
-            // anchor even when between presets.
-            val nearestPresetIdx = nearestPresetIndex(valueMm, FOCAL_DIAL_PRESETS)
-
-            for (i in 0 until n) {
-                val rad = -PI / 2 + i * (2 * PI / n)
-                val isNearest = i == nearestPresetIdx && valueMm > 0
-                drawLine(
-                    color = if (isNearest) primary else outline,
-                    start = Offset(
-                        center.x + (ringR - tickInset) * cos(rad).toFloat(),
-                        center.y + (ringR - tickInset) * sin(rad).toFloat(),
-                    ),
-                    end = Offset(
-                        center.x + (ringR + tickOutset) * cos(rad).toFloat(),
-                        center.y + (ringR + tickOutset) * sin(rad).toFloat(),
-                    ),
-                    strokeWidth = if (isNearest)
-                        with(density) { 5.dp.toPx() } else with(density) { 2.dp.toPx() },
-                )
-            }
-
-            // Indicator dot — at the user's actual angle (not snapped),
-            // so the dial reads true even between presets like 16 or 70.
-            if (valueMm > 0) {
-                val angleDeg = angleFromFocal(valueMm, FOCAL_DIAL_PRESETS)
-                val rad = -PI / 2 + Math.toRadians(angleDeg)
-                drawCircle(
-                    color = primary,
-                    radius = with(density) { 8.dp.toPx() },
-                    center = Offset(
-                        center.x + ringR * cos(rad).toFloat(),
-                        center.y + ringR * sin(rad).toFloat(),
-                    ),
-                )
-            }
-        }
-
-        // Preset labels around the rim
-        val density2 = LocalDensity.current
-        FOCAL_DIAL_PRESETS.forEachIndexed { i, focal ->
-            val rad = -PI / 2 + i * (2 * PI / n)
-            // Place label OUTSIDE the ring
-            val labelRadiusPx = with(density2) { (sizeDp.toPx() / 2f) + 4.dp.toPx() }
-            val xPx = labelRadiusPx * cos(rad).toFloat()
-            val yPx = labelRadiusPx * sin(rad).toFloat()
-            Text(
-                text = "${focal}",
-                fontSize = 12.sp,
-                color = if (focal == valueMm) primary else onSurfaceVariant,
-                fontWeight = if (focal == valueMm) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(
-                        x = with(density2) { xPx.toDp() },
-                        y = with(density2) { yPx.toDp() },
-                    ),
-            )
-        }
-
-        // Centre: current value, tap to enter arbitrary
+        // Big tap-to-edit current value
         Box(
             modifier = Modifier
-                .size(120.dp)
-                .clip(CircleShape)
-                .clickable(enabled = enabled) { showNumPad = true },
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(enabled = enabled) { showNumPad = true }
+                .padding(horizontal = 16.dp, vertical = 4.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(verticalAlignment = Alignment.Bottom) {
                 Text(
-                    if (valueMm == 0) "—" else "$valueMm",
+                    if (valueMm <= 0) "—" else "$valueMm",
                     fontSize = 44.sp,
                     fontWeight = FontWeight.Light,
-                    color = if (valueMm == 0) onSurfaceVariant else onSurface,
+                    color = if (valueMm <= 0) onSurfaceVariant else onSurface,
                 )
+                Spacer(Modifier.width(4.dp))
                 Text(
                     "mm",
                     style = MaterialTheme.typography.labelMedium,
                     color = onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 10.dp),
+                )
+            }
+        }
+
+        // Snap-to-preset slider
+        Slider(
+            value = sliderIdx.toFloat(),
+            onValueChange = { f ->
+                val idx = f.roundToInt().coerceIn(0, n - 1)
+                if (idx != lastEmittedIdx) {
+                    lastEmittedIdx = idx
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onChange(FOCAL_DIAL_PRESETS[idx])
+                }
+            },
+            valueRange = 0f..(n - 1).toFloat(),
+            // steps = (n - 2) means the slider has (n - 1) discrete stops
+            // counting the endpoints — i.e. one stop per preset.
+            steps = (n - 2).coerceAtLeast(0),
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+        )
+
+        // Tick labels under the slider, evenly spaced at the same positions
+        // as the slider stops. The Row uses SpaceBetween so labels align with
+        // the slider's first / last / interior stops on a constant-width track.
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            FOCAL_DIAL_PRESETS.forEach { focal ->
+                val isCurrent = focal == valueMm
+                Text(
+                    text = "$focal",
+                    fontSize = 11.sp,
+                    color = if (isCurrent) primary else onSurfaceVariant,
+                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
                 )
             }
         }
