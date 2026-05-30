@@ -101,13 +101,16 @@ fun ScanLandingScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp)
     ) {
-        Spacer(Modifier.height(64.dp))
+        Spacer(Modifier.height(32.dp))
 
-        // Brand header — same look as the old ScanScreen for continuity.
+        // Brand header — slim form: gradient mark + wordmark, no tagline.
+        // The detailed tagline was double duty with the "Pick a transport"
+        // subtitle below; dropping it (and halving the spacers around it)
+        // wins ~70 dp of vertical real estate on the landing.
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
                     .background(
                         Brush.linearGradient(
@@ -125,25 +128,17 @@ fun ScanLandingScreen(
                     tint = Color.White,
                 )
             }
-            Spacer(Modifier.width(16.dp))
-            Column(Modifier.fillMaxWidth()) {
-                Text(
-                    stringResource(R.string.app_name),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 2.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Text(
-                    stringResource(R.string.app_tagline),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 1.sp,
-                )
-            }
+            Spacer(Modifier.width(14.dp))
+            Text(
+                stringResource(R.string.app_name),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 2.sp,
+                color = MaterialTheme.colorScheme.primary,
+            )
         }
 
-        Spacer(Modifier.height(40.dp))
+        Spacer(Modifier.height(20.dp))
 
         Text(
             stringResource(R.string.scan_landing_pick_transport),
@@ -202,15 +197,12 @@ fun ScanLandingScreen(
         // option but visually distinct from the four real transports.
         SimulatorTile(onClick = onSimulatorSelected)
 
-        // ── Known devices ─────────────────────────────────────────────────
+        // ── Known device (last connection) ────────────────────────────────
+        // No section heading — the primaryContainer-tinted row is its own
+        // visual anchor and labels itself ("MonsteRP / Canon BLE"). When
+        // multi-device history lands, restore the heading + scrollable list.
         lastConnection?.let { last ->
-            Spacer(Modifier.height(28.dp))
-            Text(
-                stringResource(R.string.scan_landing_known_devices),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(20.dp))
             ReconnectCard(
                 last = last,
                 reconnecting = reconnecting,
@@ -219,7 +211,7 @@ fun ScanLandingScreen(
             )
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(16.dp))
 
         // ── Collect diagnostics — reachable while disconnected, so connection
         //    issues (e.g. a failed reconnect) can be captured without adb.
@@ -357,28 +349,27 @@ private fun ReconnectCard(
     )
     Surface(
         onClick = { if (!reconnecting) onReconnect() },
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            modifier = Modifier.padding(start = 14.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(modifier = Modifier.size(28.dp), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) {
                 if (reconnecting) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(18.dp),
                         strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                 } else {
                     Icon(
                         Icons.Default.History,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(22.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(20.dp),
                     )
                 }
             }
@@ -388,25 +379,25 @@ private fun ReconnectCard(
                     last.label,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                     maxLines = 1,
                 )
                 Text(
-                    if (reconnecting) stringResource(R.string.scan_landing_reconnecting, "").trim()
-                    else transportLabel,
+                    transportLabel,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f),
                     maxLines = 1,
                 )
             }
             IconButton(
                 onClick = onForget,
-                modifier = Modifier.size(36.dp),
+                modifier = Modifier.size(32.dp),
             ) {
                 Icon(
                     Icons.Default.Close,
                     contentDescription = stringResource(R.string.scan_landing_forget),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                    modifier = Modifier.size(16.dp),
                 )
             }
         }
