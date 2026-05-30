@@ -405,23 +405,7 @@ private fun LensTab(
         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Computed-exposure readout
-        Spacer(Modifier.height(12.dp))
-        Text(
-            stringResource(R.string.astro2_max_exposure_label),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            if (focalLength == 0) "—"
-            else iv2FormatHmsPretty(maxExpMs).replace(":", "·"),
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Light,
-            color = if (focalLength == 0) MaterialTheme.colorScheme.onSurfaceVariant
-                    else MaterialTheme.colorScheme.primary,
-        )
-
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(8.dp))
 
         FocalLengthSlider(
             valueMm = focalLength,
@@ -497,63 +481,96 @@ private fun LensTab(
             }
         }
 
-        if (focalLength > 0) {
-            Spacer(Modifier.height(12.dp))
-            TrailPredictor(focalLength = focalLength, cropFactor = cropFactor)
-        }
+        Spacer(Modifier.height(12.dp))
+        ExposureSection(
+            focalLength = focalLength,
+            cropFactor = cropFactor,
+            maxExpMs = maxExpMs,
+        )
 
         Spacer(Modifier.height(8.dp))
     }
 }
 
-/** Compact 4-column readout that shows max exposure (host-timed seconds)
- *  before stars trail by 1, 3, 5, or 10 pixels. Pure geometry via
- *  [AppConfig.astroTrailExposureS] — works for any rule selection (it
- *  complements them rather than replacing). Hidden when focal length is
- *  unset; only renders when there's a valid focal value. */
+/** Combined "Exposure" card — pairs the rule's max-exposure pick with the
+ *  star-trail predictor cells. They're the same concept (longest exposure
+ *  before stars trail) so they read better as one group than as two
+ *  separate elements at opposite ends of the Lens tab.
+ *
+ *  Layout: a tonal card containing
+ *   - Headline row: 'Max exposure' label + big value (the rule's pick).
+ *   - 4 trail cells: '1 / 3 / 5 / 10 px' max-exposure each, rule-independent
+ *     geometry from [AppConfig.astroTrailExposureS].
+ *
+ *  Hidden trail block when focal length isn't set yet (value would be
+ *  meaningless without a focal length to divide by). The headline row stays
+ *  to show the placeholder '—'. */
 @Composable
-private fun TrailPredictor(focalLength: Int, cropFactor: Float) {
+private fun ExposureSection(focalLength: Int, cropFactor: Float, maxExpMs: Long) {
     val trailLengths = listOf(1, 3, 5, 10)
-    Column(
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(
-            stringResource(R.string.astro2_trail_predictor),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            stringResource(R.string.astro2_trail_predictor_caption),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(2.dp))
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.fillMaxWidth(),
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            // Headline: rule's pick. Big value right-aligned.
             Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Bottom,
             ) {
-                trailLengths.forEach { trailPx ->
-                    val t = AppConfig.astroTrailExposureS(focalLength, cropFactor, trailPx)
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            stringResource(R.string.astro2_trail_px, trailPx),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Text(
+                    stringResource(R.string.astro2_max_exposure_label),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    if (focalLength <= 0) "—"
+                    else iv2FormatHmsPretty(maxExpMs).replace(":", "·"),
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Light,
+                    color = if (focalLength <= 0)
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    else MaterialTheme.colorScheme.primary,
+                )
+            }
+
+            if (focalLength > 0) {
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                )
+                Text(
+                    stringResource(R.string.astro2_trail_predictor_caption),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                ) {
+                    trailLengths.forEach { trailPx ->
+                        val t = AppConfig.astroTrailExposureS(
+                            focalLength, cropFactor, trailPx,
                         )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            formatTrailExposure(t),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                stringResource(R.string.astro2_trail_px, trailPx),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                formatTrailExposure(t),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                     }
                 }
             }
