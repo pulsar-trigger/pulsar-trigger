@@ -683,6 +683,9 @@
     <string name="assessment_unavailable">Bewertung nicht verfügbar</string>
     <string name="astro2_max_exposure_label">MAX. BELICHTUNG</string>
     <string name="astro2_rule">Regel</string>
+    <string name="astro2_trail_predictor">Sternspur-Vorschau</string>
+    <string name="astro2_trail_predictor_caption">Max. Belichtung für Spur von:</string>
+    <string name="astro2_trail_px">%d px</string>
     <string name="astro2_sensor_format">Sensorformat</string>
     <string name="astro2_set_lens">Brennweite festlegen, um zu starten</string>
     <string name="astro2_set_lens_and_interval">Brennweite und Intervall festlegen, um zu starten</string>

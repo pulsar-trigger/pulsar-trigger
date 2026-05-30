@@ -180,6 +180,9 @@
     <string name="astro2_max_exposure_label">MAX EXPOSURE</string>
     <string name="astro2_sensor_format">Sensor format</string>
     <string name="astro2_rule">Rule</string>
+    <string name="astro2_trail_predictor">Star trail predictor</string>
+    <string name="astro2_trail_predictor_caption">Max exposure for trail of:</string>
+    <string name="astro2_trail_px">%d px</string>
     <string name="astro2_set_lens">Set focal length to start</string>
     <string name="astro2_set_lens_and_interval">Set focal length and interval to start</string>
     <string name="astro2_lens_detected_prime">Prime · %1$d mm</string>

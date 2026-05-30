@@ -55,9 +55,37 @@ private val SENSOR_OPTS = listOf(
 
 private val FOCAL_DIAL_PRESETS = listOf(8, 14, 24, 35, 50, 85, 105, 135, 200)
 
+/** Map a continuous slider position (in segments — 0 = first preset, n-1 =
+ *  last) to an interpolated focal length in mm. Mirrors the old dial's
+ *  segment-interpolation behaviour so users can land on in-between values
+ *  like 11 / 16 / 28 / 70 / 145 mm without opening the numeric keypad. */
+private fun sliderValueToFocal(sliderValue: Float, presets: List<Int>): Int {
+    val n = presets.size
+    if (n < 2) return presets.firstOrNull() ?: 0
+    val clamped = sliderValue.coerceIn(0f, (n - 1).toFloat())
+    val segIdx = clamped.toInt().coerceAtMost(n - 2)
+    val frac = clamped - segIdx
+    val a = presets[segIdx]
+    val b = presets[segIdx + 1]
+    return (a + (b - a) * frac).roundToInt()
+}
+
+/** Inverse — where does [valueMm] sit on the slider in segment coordinates? */
+private fun focalToSliderValue(valueMm: Int, presets: List<Int>): Float {
+    val n = presets.size
+    if (valueMm <= presets.first()) return 0f
+    if (valueMm >= presets.last()) return (n - 1).toFloat()
+    for (i in 0 until n - 1) {
+        if (valueMm in presets[i]..presets[i + 1]) {
+            val frac = (valueMm - presets[i]).toFloat() / (presets[i + 1] - presets[i])
+            return i + frac
+        }
+    }
+    return 0f
+}
+
 /** Which preset is the current value closest to — used by [FocalLengthSlider]
- *  to place the thumb when the user's actual value isn't an exact preset
- *  (e.g. 28 lands between 24 and 35). */
+ *  for haptic feedback as the user drags across preset boundaries. */
 private fun nearestPresetIndex(valueMm: Int, presets: List<Int>): Int {
     if (valueMm <= 0) return -1
     var bestIdx = 0
@@ -469,8 +497,77 @@ private fun LensTab(
             }
         }
 
+        if (focalLength > 0) {
+            Spacer(Modifier.height(12.dp))
+            TrailPredictor(focalLength = focalLength, cropFactor = cropFactor)
+        }
+
         Spacer(Modifier.height(8.dp))
     }
+}
+
+/** Compact 4-column readout that shows max exposure (host-timed seconds)
+ *  before stars trail by 1, 3, 5, or 10 pixels. Pure geometry via
+ *  [AppConfig.astroTrailExposureS] — works for any rule selection (it
+ *  complements them rather than replacing). Hidden when focal length is
+ *  unset; only renders when there's a valid focal value. */
+@Composable
+private fun TrailPredictor(focalLength: Int, cropFactor: Float) {
+    val trailLengths = listOf(1, 3, 5, 10)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            stringResource(R.string.astro2_trail_predictor),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            stringResource(R.string.astro2_trail_predictor_caption),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(2.dp))
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                trailLengths.forEach { trailPx ->
+                    val t = AppConfig.astroTrailExposureS(focalLength, cropFactor, trailPx)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            stringResource(R.string.astro2_trail_px, trailPx),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            formatTrailExposure(t),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Format an exposure in seconds for the trail-predictor cells. Sub-second
+ *  values get one decimal; whole-second values from 10 s up are integer-only
+ *  to stay narrow inside the 4-column row. */
+private fun formatTrailExposure(seconds: Double): String = when {
+    seconds <= 0.0 -> "—"
+    seconds < 10.0 -> "%.1fs".format(seconds)
+    else -> "${seconds.roundToInt()}s"
 }
 
 // ── Rotary focal-length dial ─────────────────────────────────────────────
@@ -540,15 +637,16 @@ private fun DetectedLensChip(
 }
 
 /** Compact focal-length picker. Replaces the 220 dp round dial with a
- *  ~120 dp Slider that snaps to [FOCAL_DIAL_PRESETS], a big tap-to-edit
- *  current-value readout above it, and tick labels under it.
+ *  ~120 dp Slider that interpolates between [FOCAL_DIAL_PRESETS], a big
+ *  tap-to-edit current-value readout above it, and tick labels under it.
  *
- *  Snap behaviour: the slider's discrete steps map 1:1 to the presets, so
- *  dragging hops 8 → 14 → 24 → 35 → 50 → 85 → 105 → 135 → 200 with haptic
- *  feedback at each landing. For arbitrary values (e.g. 28 or 70 mm) the
- *  user taps the big readout to open the numeric keypad — the slider then
- *  sits at the *nearest* preset position so the visual neighbourhood
- *  stays meaningful. */
+ *  Slider is **continuous, segment-mapped** — each pair of adjacent presets
+ *  occupies an equal slice of the track and the slider interpolates linearly
+ *  between them. So users can land on intermediate values like 11 / 16 / 28
+ *  / 70 / 145 mm just by dragging between the marked positions; the numeric
+ *  keypad (tap the big readout) is only needed for values outside the preset
+ *  range. Haptic fires each time the thumb crosses into a different preset
+ *  neighbourhood, so the preset rhythm of the old dial is preserved. */
 @Composable
 private fun FocalLengthSlider(
     valueMm: Int,
@@ -576,14 +674,17 @@ private fun FocalLengthSlider(
     }
 
     val n = FOCAL_DIAL_PRESETS.size
-    // Slider position = index of the preset the slider thumb sits on. When
-    // the current value is non-preset, snap visually to the nearest one so
-    // the slider still reads as "you're around this focal length."
-    val sliderIdx = remember(valueMm) {
-        if (valueMm <= 0) 0
-        else nearestPresetIndex(valueMm, FOCAL_DIAL_PRESETS)
+    val sliderValue = remember(valueMm) {
+        focalToSliderValue(valueMm.coerceAtLeast(0), FOCAL_DIAL_PRESETS)
     }
-    var lastEmittedIdx by remember(valueMm) { mutableIntStateOf(sliderIdx) }
+    // Last preset neighbourhood the user was in — fires haptic when crossing
+    // into a different one (preserves the dial's preset-snap feel without
+    // forcing snap-to-preset values).
+    var lastPresetIdx by remember {
+        mutableIntStateOf(
+            if (valueMm > 0) nearestPresetIndex(valueMm, FOCAL_DIAL_PRESETS) else 0
+        )
+    }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -615,28 +716,29 @@ private fun FocalLengthSlider(
             }
         }
 
-        // Snap-to-preset slider
+        // Continuous slider — segment-mapped to presets so each preset
+        // occupies equal track width while in-between values are reachable.
         Slider(
-            value = sliderIdx.toFloat(),
+            value = sliderValue,
             onValueChange = { f ->
-                val idx = f.roundToInt().coerceIn(0, n - 1)
-                if (idx != lastEmittedIdx) {
-                    lastEmittedIdx = idx
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    onChange(FOCAL_DIAL_PRESETS[idx])
+                val newFocal = sliderValueToFocal(f, FOCAL_DIAL_PRESETS)
+                if (newFocal != valueMm) {
+                    val newPresetIdx = nearestPresetIndex(newFocal, FOCAL_DIAL_PRESETS)
+                    if (newPresetIdx != lastPresetIdx) {
+                        lastPresetIdx = newPresetIdx
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    }
+                    onChange(newFocal)
                 }
             },
             valueRange = 0f..(n - 1).toFloat(),
-            // steps = (n - 2) means the slider has (n - 1) discrete stops
-            // counting the endpoints — i.e. one stop per preset.
-            steps = (n - 2).coerceAtLeast(0),
             enabled = enabled,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
         )
 
         // Tick labels under the slider, evenly spaced at the same positions
-        // as the slider stops. The Row uses SpaceBetween so labels align with
-        // the slider's first / last / interior stops on a constant-width track.
+        // the slider's segment-mapping uses. SpaceBetween + matching outer
+        // padding aligns each label with its slider-track position.
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,

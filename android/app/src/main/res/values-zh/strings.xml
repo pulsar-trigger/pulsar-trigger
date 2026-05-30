@@ -679,6 +679,9 @@
     <string name="assessment_unavailable">评估不可用</string>
     <string name="astro2_max_exposure_label">最大曝光</string>
     <string name="astro2_rule">法则</string>
+    <string name="astro2_trail_predictor">星轨预测</string>
+    <string name="astro2_trail_predictor_caption">星轨长度对应最长曝光:</string>
+    <string name="astro2_trail_px">%d px</string>
     <string name="astro2_sensor_format">传感器规格</string>
     <string name="astro2_set_lens">设置焦距以开始</string>
     <string name="astro2_set_lens_and_interval">设置焦距和间隔以开始</string>

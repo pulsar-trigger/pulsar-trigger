@@ -681,6 +681,9 @@
     <string name="assessment_unavailable">Evaluación no disponible</string>
     <string name="astro2_max_exposure_label">EXPOSICIÓN MÁX</string>
     <string name="astro2_rule">Regla</string>
+    <string name="astro2_trail_predictor">Predicción de trazas</string>
+    <string name="astro2_trail_predictor_caption">Exposición máx. para traza de:</string>
+    <string name="astro2_trail_px">%d px</string>
     <string name="astro2_sensor_format">Formato de sensor</string>
     <string name="astro2_set_lens">Define la focal para empezar</string>
     <string name="astro2_set_lens_and_interval">Define focal e intervalo para empezar</string>

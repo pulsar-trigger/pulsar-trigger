@@ -381,4 +381,25 @@ object AppConfig {
         val aperture = 2.8
         return (35.0 * aperture + 30.0 * pixelPitchUm) / (focalLength * cropFactor)
     }
+
+    /** Max exposure (seconds) before stars trail by [trailPixels] pixels on a
+     *  sensor with [cropFactor]-derived pixel pitch. Pure geometry — independent
+     *  of which "rule" (500 / 400 / NPF) the user has selected for the primary
+     *  no-trail readout. Worst-case (celestial equator) sidereal rate of 15"/s.
+     *
+     *  Derivation:
+     *   - angular size per pixel = 206 265 · p_µm / (1000 · f_mm) arcsec
+     *   - star moves at 15"/s at the equator (cos δ = 1 worst case)
+     *   - time for N px of motion = N · pixel_arcsec / 15
+     *                            = N · 206 265 · p / (1000 · 15 · f)
+     *                            = N · 13.75 · p / f seconds
+     *
+     *  Same shape as the no-trail rules — divides by focal length, scales with
+     *  pixel pitch. Used by the Lens-tab "star trail predictor" readout to show
+     *  the max exposure at common acceptable trail lengths (1 / 3 / 5 / 10 px). */
+    fun astroTrailExposureS(focalLength: Int, cropFactor: Float, trailPixels: Int): Double {
+        if (focalLength <= 0 || trailPixels <= 0) return 0.0
+        val pixelPitchUm = estimatedPixelPitchUm(cropFactor)
+        return trailPixels * 13.75 * pixelPitchUm / focalLength
+    }
 }

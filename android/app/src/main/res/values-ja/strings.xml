@@ -683,6 +683,9 @@
     <string name="assessment_unavailable">評価を取得できません</string>
     <string name="astro2_max_exposure_label">最大露光</string>
     <string name="astro2_rule">ルール</string>
+    <string name="astro2_trail_predictor">星の流れ予測</string>
+    <string name="astro2_trail_predictor_caption">流れる量に対する最大露光:</string>
+    <string name="astro2_trail_px">%d px</string>
     <string name="astro2_sensor_format">センサーサイズ</string>
     <string name="astro2_set_lens">焦点距離を設定してください</string>
     <string name="astro2_set_lens_and_interval">焦点距離と間隔を設定してください</string>
