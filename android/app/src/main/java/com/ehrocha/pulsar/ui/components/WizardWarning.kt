@@ -5,6 +5,8 @@
 
 package com.ehrocha.pulsar.ui.components
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -21,6 +23,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -28,15 +32,21 @@ import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.ui.theme.OnWarningContainer
 import com.ehrocha.pulsar.ui.theme.WarningContainer
 
-/** Fixed slot height for the caution strip. Reserved whether or not a
- *  warning is showing, so the editor below doesn't jump when state flips.
- *
- *  Sized for **3 lines of body-small text + 10 dp top/bottom padding**.
- *  Empirically covers the English warning copy (~117 chars ≈ 3 lines on a
- *  360 dp phone) and the longer German/French translations (~140 chars).
- *  The Text inside is capped at maxLines = 3 with ellipsis so an even
- *  longer future translation can't push past the slot. */
+/** Full slot height when a warning is showing. Sized for **3 lines of
+ *  body-small text + 10 dp top/bottom padding** — covers the English copy
+ *  (~117 chars ≈ 3 lines on a 360 dp phone) and the longer German / French
+ *  translations (~140 chars). Text is capped at maxLines = 3 with ellipsis
+ *  so a future translation that runs even longer can't push past. */
 private val WarningSlotHeight = 88.dp
+
+/** Vertical breathing room above / below the slot when a warning is showing.
+ *  Animates with the slot itself so the gap also collapses to zero when no
+ *  warning is present — caller passes horizontal padding only. */
+private val WarningSlotMargin = 8.dp
+
+/** How long to animate the slot's height when a warning toggles. Short
+ *  enough that the editor below settles before the user reaches for it. */
+private val SlotAnimationMs = 220
 
 /**
  * In-content caution strip shown above the wizard's value editor.
@@ -47,24 +57,40 @@ private val WarningSlotHeight = 88.dp
  * the bottom bar's hint slot), and not for hard blockers (which would be
  * error red, but we don't currently have one).
  *
- * **Always renders a slot of the same height**, even when [text] is null.
- * That way the editor below sits at the same y-coordinate regardless of
- * whether a warning is showing — toggling the warning doesn't shift the
- * other UI elements.
+ * **Slot height animates** between 0 (no warning) and [WarningSlotHeight]
+ * (warning showing). When a warning toggles, the editor below slides
+ * smoothly into / out of the reclaimed space — the user perceives it as a
+ * UI state change, not an abrupt jump. When no warning is showing the slot
+ * is genuinely 0 dp tall, so the editor sits flush at the top of its
+ * panel — no wasted-space-above-the-input problem.
  */
 @Composable
 fun WizardWarning(text: String?, modifier: Modifier = Modifier) {
+    val targetHeight =
+        if (text != null) WarningSlotHeight + WarningSlotMargin * 2 else 0.dp
+    val animatedHeight by animateDpAsState(
+        targetValue = targetHeight,
+        animationSpec = tween(durationMillis = SlotAnimationMs),
+        label = "WizardWarningSlotHeight",
+    )
+    // Latch the text so the strip can still render its content during the
+    // collapse animation (otherwise text would null out the moment a warning
+    // clears and the strip would empty mid-collapse, looking abrupt). The
+    // latched value updates whenever a non-null text comes in.
+    val latchedText = remember(text) { text }
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(WarningSlotHeight),
+            .height(animatedHeight),
         contentAlignment = Alignment.Center,
     ) {
-        if (text != null) {
+        if (animatedHeight > 0.dp && latchedText != null) {
             Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = WarningContainer,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(WarningSlotHeight),
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -78,7 +104,7 @@ fun WizardWarning(text: String?, modifier: Modifier = Modifier) {
                         modifier = Modifier.size(20.dp),
                     )
                     Text(
-                        text = text,
+                        text = latchedText,
                         style = MaterialTheme.typography.bodySmall,
                         color = OnWarningContainer,
                         maxLines = 3,

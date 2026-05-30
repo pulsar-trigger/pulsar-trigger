@@ -302,7 +302,7 @@ fun AstroMode2Screen(
                 Column(modifier = Modifier.fillMaxSize()) {
                     com.ehrocha.pulsar.ui.components.WizardWarning(
                         wizardWarning,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp),
                     )
                     when (tab) {
                     AstroTab.LENS -> LensTab(
