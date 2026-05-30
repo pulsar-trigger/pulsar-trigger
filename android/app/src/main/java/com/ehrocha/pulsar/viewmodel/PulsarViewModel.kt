@@ -813,8 +813,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun connectTo(device: BluetoothDevice) {
         // Hang up any active session so transports stay single-valued.
+        // disconnectCanonBle runs unconditionally — see its KDoc; a Canon
+        // BLE link can be torn down with the transport already null but
+        // a reconnect job still in flight (post-drop state).
         if (_canonCcapiTransport.value != null) disconnectCanonCcapi()
-        if (_canonBleTransport.value != null) disconnectCanonBle()
+        disconnectCanonBle()
         if (_ptpTransport.value != null) disconnectPtp()
         if (_simulatorActive.value) disconnectSimulator()
         _deviceName.value = device.name ?: "Pulsar"
@@ -845,7 +848,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             // connected" stays single-valued.
             if (bleController.connected.value) bleController.disconnect()
             if (_ptpTransport.value != null) disconnectPtp()
-            if (_canonBleTransport.value != null) disconnectCanonBle()
+            disconnectCanonBle()
             if (_simulatorActive.value) disconnectSimulator()
             stopScan()
 
@@ -1245,7 +1248,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 // "what's connected" stays single-valued.
                 if (bleController.connected.value) bleController.disconnect()
                 if (_canonCcapiTransport.value != null) disconnectCanonCcapi()
-                if (_canonBleTransport.value != null) disconnectCanonBle()
+                disconnectCanonBle()
                 if (_simulatorActive.value) disconnectSimulator()
                 stopScan()
 
@@ -1470,19 +1473,24 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun disconnectCanonBle(clearAutoReconnect: Boolean = true) {
-        val transport = _canonBleTransport.value ?: run {
-            if (clearAutoReconnect) {
-                lastCanonBleAddress = null
-                _canonBleReconnecting.value = false
-            }
-            return
-        }
+        // Cancel any in-flight connect / reconnect FIRST — must run even
+        // when `_canonBleTransport.value` is already null. After a
+        // spontaneous link drop the transport is cleared but the
+        // OS-managed autoConnect job started by `onCanonBleLinkDropped`
+        // is still in flight; without this cancel, switching to a
+        // sibling transport (simulator, Pulsar BLE, CCAPI, PTP) leaves
+        // the camera trying to reconnect in the background and racing
+        // to overwrite the chosen transport when the camera comes back.
         canonBleConnectJob?.cancel()
         canonBleConnectJob = null
-        viewModelScope.launch { transport.release() }
-        _canonBleTransport.value = null
+        val transport = _canonBleTransport.value
+        if (transport != null) {
+            viewModelScope.launch { transport.release() }
+            _canonBleTransport.value = null
+        }
         if (clearAutoReconnect) {
             lastCanonBleAddress = null
+            lastCanonBleDevice = null
             _canonBleReconnecting.value = false
         }
         if (!bleController.connected.value && !_simulatorActive.value &&
@@ -2270,7 +2278,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         // overridden by an in-flight or auto-rearming hardware connect.
         if (bleController.connected.value) bleController.disconnect()
         if (_canonCcapiTransport.value != null) disconnectCanonCcapi()
-        if (_canonBleTransport.value != null) disconnectCanonBle()
+        disconnectCanonBle()
         if (_ptpTransport.value != null) disconnectPtp()
         lastPtpAutoReconnect = null
         _ptpReconnecting.value = false
