@@ -407,6 +407,16 @@ private fun LensTab(
     ) {
         Spacer(Modifier.height(8.dp))
 
+        // Exposure card up top so the readout reacts visibly as the user
+        // touches the focal slider / sensor / rule controls below it.
+        ExposureSection(
+            focalLength = focalLength,
+            cropFactor = cropFactor,
+            maxExpMs = maxExpMs,
+        )
+
+        Spacer(Modifier.height(12.dp))
+
         FocalLengthSlider(
             valueMm = focalLength,
             onChange = onFocalChange,
@@ -480,13 +490,6 @@ private fun LensTab(
                 }
             }
         }
-
-        Spacer(Modifier.height(12.dp))
-        ExposureSection(
-            focalLength = focalLength,
-            cropFactor = cropFactor,
-            maxExpMs = maxExpMs,
-        )
 
         Spacer(Modifier.height(8.dp))
     }
