@@ -989,9 +989,22 @@ enum class SettingsSection(val icon: ImageVector, @StringRes val titleRes: Int) 
 }
 
 @Composable
-internal fun SettingsMenu(onSectionSelected: (SettingsSection) -> Unit) {
+internal fun SettingsMenu(
+    onSectionSelected: (SettingsSection) -> Unit,
+    showEspSections: Boolean = true,
+) {
+    val sections = SettingsSection.entries.filter { section ->
+        when (section) {
+            // Device section is entirely firmware-specific (rename, auto-off,
+            // GPIO pins). Hide it when the active transport isn't the Pulsar
+            // ESP32 path — Canon CCAPI / PTP / direct BLE don't have anything
+            // to configure here.
+            SettingsSection.DEVICE -> showEspSections
+            else -> true
+        }
+    }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        SettingsSection.entries.forEach { section ->
+        sections.forEach { section ->
             Surface(
                 onClick = { onSectionSelected(section) },
                 shape = RoundedCornerShape(12.dp),
@@ -1375,8 +1388,8 @@ internal fun BackupRestoreSectionContent(vm: PulsarViewModel) {
 }
 
 @Composable
-internal fun UpdatesSectionContent(vm: PulsarViewModel) {
-    UpdatesSection(vm = vm)
+internal fun UpdatesSectionContent(vm: PulsarViewModel, showFirmware: Boolean = true) {
+    UpdatesSection(vm = vm, showFirmware = showFirmware)
 }
 
 @Composable
@@ -1703,9 +1716,11 @@ private fun RenameDeviceDialog(
 }
 
 @Composable
-private fun UpdatesSection(vm: PulsarViewModel) {
+private fun UpdatesSection(vm: PulsarViewModel, showFirmware: Boolean = true) {
     val connected = LocalDeviceConnected.current
-    // Firmware state
+    // Firmware state (only relevant when showFirmware == true; collected
+    // unconditionally because StateFlow.collectAsState() can't be moved
+    // into a conditional branch without breaking Compose state-key rules)
     val fwManager = vm.firmwareManager
     val otaState by fwManager.state.collectAsState()
     val fwProgress by fwManager.progress.collectAsState()
@@ -1722,6 +1737,7 @@ private fun UpdatesSection(vm: PulsarViewModel) {
     val appVersion = BuildConfig.VERSION_NAME
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (showFirmware) {
         // ── Firmware ─────────────────────────────────────────────────
         Text(stringResource(R.string.label_firmware), style = MaterialTheme.typography.titleSmall)
 
@@ -1871,6 +1887,7 @@ private fun UpdatesSection(vm: PulsarViewModel) {
         }
 
         HorizontalDivider()
+        } // end if (showFirmware)
 
         // ── App ──────────────────────────────────────────────────────
         Text(stringResource(R.string.label_app), style = MaterialTheme.typography.titleSmall)

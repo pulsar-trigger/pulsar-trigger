@@ -221,6 +221,16 @@ fun SettingsScreen(
     val otaProgress by vm.firmwareManager.progress.collectAsState()
     val otaError by vm.firmwareManager.errorMessage.collectAsState()
 
+    // Are we on the Pulsar ESP32 firmware path? Real ESP32 BLE OR the
+    // simulator (which mimics the firmware contract). Used to gate
+    // settings sub-screens that only make sense for the firmware path —
+    // device rename, GPIO pins, auto-shutdown, firmware-OTA, on-board
+    // hardware info. Hidden when on a Canon transport (CCAPI / PTP /
+    // direct BLE) since those have no equivalent settings.
+    val pulsarBleConnected by vm.bleController.connected.collectAsState()
+    val simulatorActive by vm.simulatorActive.collectAsState()
+    val onEsp = pulsarBleConnected || simulatorActive
+
     var currentSection by remember { mutableStateOf(initialSection) }
 
     val otaActive = otaState in listOf(
@@ -314,10 +324,13 @@ fun SettingsScreen(
                     .padding(16.dp),
             ) {
                 when (currentSection) {
-                    null -> SettingsMenu(onSectionSelected = { currentSection = it })
+                    null -> SettingsMenu(
+                        onSectionSelected = { currentSection = it },
+                        showEspSections = onEsp,
+                    )
                     SettingsSection.USER_GUIDE -> UserGuideSectionContent()
                     SettingsSection.LANGUAGE -> LanguageSectionContent()
-                    SettingsSection.DEVICE -> {
+                    SettingsSection.DEVICE -> if (onEsp) {
                         DeviceSectionContent(vm, deviceName)
                         Spacer(Modifier.height(16.dp))
                         HorizontalDivider()
@@ -327,13 +340,15 @@ fun SettingsScreen(
                     SettingsSection.PLANNER -> PlannerSettingsSectionContent(vm)
                     SettingsSection.BACKGROUND -> BackgroundSectionContent(vm)
                     SettingsSection.BACKUP_RESTORE -> BackupRestoreSectionContent(vm)
-                    SettingsSection.UPDATES -> UpdatesSectionContent(vm)
+                    SettingsSection.UPDATES -> UpdatesSectionContent(vm, showFirmware = onEsp)
                     SettingsSection.ABOUT -> {
                         AboutSectionContent()
-                        Spacer(Modifier.height(16.dp))
-                        HorizontalDivider()
-                        Spacer(Modifier.height(16.dp))
-                        DeviceInfoSectionContent(vm)
+                        if (onEsp) {
+                            Spacer(Modifier.height(16.dp))
+                            HorizontalDivider()
+                            Spacer(Modifier.height(16.dp))
+                            DeviceInfoSectionContent(vm)
+                        }
                     }
                 }
             }
