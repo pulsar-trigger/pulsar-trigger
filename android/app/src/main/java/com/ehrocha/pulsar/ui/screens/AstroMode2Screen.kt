@@ -64,7 +64,7 @@ private val SENSOR_OPTS = listOf(
     SensorOpt("M4/3", 2.0f),
 )
 
-private val FOCAL_DIAL_PRESETS = listOf(14, 24, 35, 50, 85, 105, 135, 200)
+private val FOCAL_DIAL_PRESETS = listOf(8, 14, 24, 35, 50, 85, 105, 135, 200)
 
 /** Map a continuous angle (degrees from 12 o'clock clockwise) into the focal
  *  range. Presets sit at evenly spaced positions; angles between presets
