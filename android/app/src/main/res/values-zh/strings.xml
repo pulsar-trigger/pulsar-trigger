@@ -598,6 +598,13 @@
     <string name="scan_landing_forget">忘记此设备</string>
     <string name="scan_landing_use_simulator">使用模拟器</string>
     <string name="scan_landing_known_devices">已知设备</string>
+    <string name="scan_section_transports">连接方式</string>
+    <string name="scan_section_recent">最近</string>
+    <string name="scan_section_tools">工具</string>
+    <string name="trigger_section_bulb">B 门模式</string>
+    <string name="trigger_section_standard">标准模式</string>
+    <string name="trigger_section_favorites">收藏</string>
+    <string name="trigger_section_custom">自定义</string>
     <string name="transport_tile_simulator_title">模拟器</string>
     <string name="transport_tile_simulator_subtitle">无硬件试用</string>
     <string name="transport_tile_pulsar_ble_title">Pulsar BLE</string>

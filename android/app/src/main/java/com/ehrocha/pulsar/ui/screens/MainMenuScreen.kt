@@ -15,7 +15,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Bookmark
@@ -50,6 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.model.FlowStepType
+import com.ehrocha.pulsar.ui.components.SectionContainer
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import kotlinx.coroutines.launch
 
@@ -210,12 +213,11 @@ fun MainMenuScreen(
                     // so the user doesn't start a flow that'd fail at the
                     // first bulb call. Canon BLE is hard-true on this flag.
                     val bulbBlocked = (onCanon || onPtp || onCanonBle) && !supportsBulb
-                    val builtIns = listOf(
+                    // Bulb wizards — camera dial → Bulb. The app drives
+                    // exposure timing on these.
+                    val bulbTiles = listOf(
                         launcherItem(R.string.mode_intervalometer, Icons.Default.Timer,
                             enabled = !bulbBlocked) { onIntervalometer2Selected() },
-                        launcherItem(R.string.mode_timelapse, Icons.Default.PhotoLibrary) {
-                            onTimelapseSelected()
-                        },
                         launcherItem(R.string.mode_astro, Icons.Default.Stars,
                             enabled = !bulbBlocked) { onAstroMode2Selected() },
                         launcherItem(R.string.mode_dark_frame, Icons.Default.LensBlur,
@@ -225,15 +227,20 @@ fun MainMenuScreen(
                         launcherItem(R.string.mode_manual, Icons.Default.TouchApp) {
                             onManualSelected()
                         },
+                    )
+                    // Standard modes — camera dial → M. Camera owns the
+                    // exposure; Pulsar just fires shutter events.
+                    val standardTiles = listOf(
+                        launcherItem(R.string.mode_timelapse, Icons.Default.PhotoLibrary) {
+                            onTimelapseSelected()
+                        },
                         launcherItem(R.string.mode_cable_release, Icons.Default.PhotoCamera) {
                             onCableReleaseSelected()
                         },
-                        launcherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList,
-                            enabled = !bulbBlocked) { onCustomFlowSelected() },
                     )
-                    // Only bookmarked user modes get quick-launch tiles here.
-                    // Other saved presets live in the preset picker for each mode.
-                    val userTiles = userModes.filter { it.bookmarked }.map { mode ->
+                    // Favorites — bookmarked user presets only. Other saved
+                    // presets live in the per-mode preset picker.
+                    val favoriteTiles = userModes.filter { it.bookmarked }.map { mode ->
                         LauncherItem(
                             key = "user:${mode.id}",
                             label = mode.name,
@@ -241,23 +248,44 @@ fun MainMenuScreen(
                             onClick = { onUserModeRun(mode) },
                         )
                     }
-                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    // Custom — multi-step flows authored by the user.
+                    val customTiles = listOf(
+                        launcherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList,
+                            enabled = !bulbBlocked) { onCustomFlowSelected() },
+                    )
+                    Column(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
                         if (onCanon) {
                             CanonBulbBanner(
                                 reconnecting = canonCcapiReconnecting,
                                 bulbUnsupported = bulbBlocked,
                             )
-                            Spacer(Modifier.height(8.dp))
                         }
                         if (onPtp || ptpReconnecting) {
                             PtpBanner(reconnecting = ptpReconnecting)
-                            Spacer(Modifier.height(8.dp))
                         }
                         if (onCanonBle || canonBleReconnecting) {
                             CanonBleBanner(reconnecting = canonBleReconnecting)
-                            Spacer(Modifier.height(8.dp))
                         }
-                        LauncherGrid(builtIns + userTiles)
+                        SectionContainer(title = stringResource(R.string.trigger_section_bulb)) {
+                            SectionGrid(bulbTiles)
+                        }
+                        SectionContainer(title = stringResource(R.string.trigger_section_standard)) {
+                            SectionGrid(standardTiles)
+                        }
+                        if (favoriteTiles.isNotEmpty()) {
+                            SectionContainer(title = stringResource(R.string.trigger_section_favorites)) {
+                                SectionGrid(favoriteTiles)
+                            }
+                        }
+                        SectionContainer(title = stringResource(R.string.trigger_section_custom)) {
+                            SectionGrid(customTiles)
+                        }
+                        Spacer(Modifier.height(8.dp))
                     }
                 }
                 TAB_TOOLS -> {
@@ -334,6 +362,33 @@ private fun launcherItem(
     enabled = enabled,
     onClick = onClick,
 )
+
+/** Non-lazy 3-column tile grid for placement inside a [SectionContainer],
+ *  where a LazyVerticalGrid would fail to size (infinite height) and
+ *  inflate the layout pass. Empty trailing cells are spacered so the
+ *  partial last row stays left-aligned with the rows above it. */
+@Composable
+private fun SectionGrid(items: List<LauncherItem>) {
+    if (items.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        items.chunked(3).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                row.forEach { item ->
+                    LauncherTile(
+                        label = item.label,
+                        icon = item.icon,
+                        enabled = item.enabled,
+                        onClick = item.onClick,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                repeat(3 - row.size) {
+                    Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
 
 @Composable
 private fun LauncherGrid(items: List<LauncherItem>) {
@@ -495,6 +550,7 @@ private fun LauncherTile(
     icon: ImageVector,
     onClick: () -> Unit,
     enabled: Boolean = true,
+    modifier: Modifier = Modifier,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -511,7 +567,7 @@ private fun LauncherTile(
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .aspectRatio(0.9f)
             .scale(scale),

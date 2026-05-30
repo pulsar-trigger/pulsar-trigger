@@ -106,6 +106,12 @@ val StatusGreen = Color(0xFF4CAF50)
 val StatusOrange = Color(0xFFFFA726)
 val StatusRed = Color(0xFFFF1744)
 val StatusOff = Color(0xFF3A3A3A)
+
+// Caution palette — used by WizardWarning. Yellow signals "you can still
+// proceed, but heads-up" (e.g. interval-too-short, sub-second bulb),
+// distinct from error red which would imply a hard blocker.
+val WarningContainer = Color(0xFFFFF1C2)   // light cream-yellow surface
+val OnWarningContainer = Color(0xFF6E4F00) // dark amber for icon + text
 val ExposureGreen = Color(0xFF00E676)
 val WaitingYellow = Color(0xFFFFD600)
 

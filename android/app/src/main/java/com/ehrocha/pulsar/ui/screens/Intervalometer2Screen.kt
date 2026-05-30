@@ -255,12 +255,10 @@ fun Intervalometer2Screen(
                     return@Box
                 }
                 Column(modifier = Modifier.fillMaxSize()) {
-                    wizardWarning?.let {
-                        com.ehrocha.pulsar.ui.components.WizardWarning(
-                            it,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        )
-                    }
+                    com.ehrocha.pulsar.ui.components.WizardWarning(
+                        wizardWarning,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
                     when (tab) {
                         IvTab.EXPOSURE -> SegmentedTimeEditor(
                             ms = exposureMs,

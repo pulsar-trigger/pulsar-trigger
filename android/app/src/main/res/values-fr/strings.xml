@@ -598,6 +598,13 @@
     <string name="scan_landing_forget">Oublier cet appareil</string>
     <string name="scan_landing_use_simulator">Utiliser le simulateur</string>
     <string name="scan_landing_known_devices">Appareils connus</string>
+    <string name="scan_section_transports">Transports</string>
+    <string name="scan_section_recent">Récents</string>
+    <string name="scan_section_tools">Outils</string>
+    <string name="trigger_section_bulb">Modes Bulb</string>
+    <string name="trigger_section_standard">Modes standard</string>
+    <string name="trigger_section_favorites">Favoris</string>
+    <string name="trigger_section_custom">Personnalisé</string>
     <string name="transport_tile_simulator_title">Simulateur</string>
     <string name="transport_tile_simulator_subtitle">Essayer sans matériel</string>
     <string name="transport_tile_pulsar_ble_title">Pulsar BLE</string>

@@ -598,6 +598,13 @@
     <string name="scan_landing_forget">Esquecer este dispositivo</string>
     <string name="scan_landing_use_simulator">Usar simulador</string>
     <string name="scan_landing_known_devices">Dispositivos conhecidos</string>
+    <string name="scan_section_transports">Transportes</string>
+    <string name="scan_section_recent">Recentes</string>
+    <string name="scan_section_tools">Ferramentas</string>
+    <string name="trigger_section_bulb">Modos Bulb</string>
+    <string name="trigger_section_standard">Modos padrão</string>
+    <string name="trigger_section_favorites">Favoritos</string>
+    <string name="trigger_section_custom">Personalizado</string>
     <string name="transport_tile_simulator_title">Simulador</string>
     <string name="transport_tile_simulator_subtitle">Teste sem hardware</string>
     <string name="transport_tile_pulsar_ble_title">Pulsar BLE</string>

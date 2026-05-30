@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,8 +24,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Usb
 import androidx.compose.material.icons.filled.Wifi
@@ -36,7 +35,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -54,21 +52,17 @@ import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.model.LastConnection
 import com.ehrocha.pulsar.transport.TransportKind
+import com.ehrocha.pulsar.ui.components.SectionContainer
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 
 /**
- * Initial post-permission screen. Replaces the old all-in-one ScanScreen as
- * the user's entry point. The user picks a transport from a 2×2 tile grid
- * (Pulsar BLE, Canon Wi-Fi, USB PTP, Canon BLE) plus a "Use simulator"
- * link below; tapping a tile navigates to that transport's setup screen.
- *
- * If [PulsarViewModel.lastConnection] is non-null, a reconnect CTA appears
- * above the grid for one-tap return to the most-recent device.
- *
- * Phase 2 of the scan-screen overhaul: tiles route to the legacy
- * [ScanScreen] for now (filtered visually by the user's choice — they'll
- * only look at the section they care about). Phase 3 replaces those
- * routes with per-transport setup screens.
+ * Initial post-permission screen. Three grouped sections share the same
+ * `SectionContainer` shape so they read as a coherent set: **Transports**
+ * (the 2×2 protocol tile grid), **Recent** (the last-connection reconnect
+ * row, shown only if any), **Tools** (Simulator + Diagnostics as compact
+ * rows). The Simulator and Diagnostics rows match the Recent row's
+ * structure on purpose — within a section the items look alike; the
+ * containers themselves carry the visual hierarchy.
  */
 @Composable
 fun ScanLandingScreen(
@@ -82,8 +76,6 @@ fun ScanLandingScreen(
     val canonBleConnecting by vm.canonBleConnecting.collectAsState()
     val ptpConnecting by vm.ptpConnecting.collectAsState()
     val ccapiConnecting by vm.canonCcapiConnecting.collectAsState()
-    // Reconnect is in flight for the last-used transport — drive the card's
-    // spinner so a tap isn't ambiguous (Canon BLE autoConnect can wait a while).
     val reconnecting = when (lastConnection?.kind) {
         TransportKind.CANON_BLE -> canonBleConnecting
         TransportKind.PTP_USB -> ptpConnecting
@@ -93,20 +85,19 @@ fun ScanLandingScreen(
     if (connected) {
         LaunchedEffect(Unit) { onConnected() }
     }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(20.dp))
 
-        // Brand header — slim form: gradient mark + wordmark, no tagline.
-        // The detailed tagline was double duty with the "Pick a transport"
-        // subtitle below; dropping it (and halving the spacers around it)
-        // wins ~70 dp of vertical real estate on the landing.
+        // ── Brand mark ────────────────────────────────────────────────────
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
@@ -122,11 +113,7 @@ fun ScanLandingScreen(
                     ),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    Icons.Default.Bluetooth,
-                    contentDescription = null,
-                    tint = Color.White,
-                )
+                Icon(Icons.Default.Bluetooth, contentDescription = null, tint = Color.White)
             }
             Spacer(Modifier.width(14.dp))
             Text(
@@ -138,92 +125,67 @@ fun ScanLandingScreen(
             )
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(4.dp))
 
-        Text(
-            stringResource(R.string.scan_landing_pick_transport),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-        )
-        Text(
-            stringResource(R.string.scan_landing_subtitle),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(16.dp))
-
-        // ── Transport tiles: 2×2 grid + wide simulator tile below ─────────
-        val transportTiles = listOf(
-            TileSpec(
-                kind = TransportKind.BLE_ESP,
-                icon = Icons.Default.Bluetooth,
-                titleRes = R.string.transport_tile_pulsar_ble_title,
-                subtitleRes = R.string.transport_tile_pulsar_ble_subtitle,
-            ),
-            TileSpec(
-                kind = TransportKind.CCAPI,
-                icon = Icons.Default.Wifi,
-                titleRes = R.string.transport_tile_ccapi_title,
-                subtitleRes = R.string.transport_tile_ccapi_subtitle,
-            ),
-            TileSpec(
-                kind = TransportKind.PTP_USB,
-                icon = Icons.Default.Usb,
-                titleRes = R.string.transport_tile_ptp_title,
-                subtitleRes = R.string.transport_tile_ptp_subtitle,
-            ),
-            TileSpec(
-                kind = TransportKind.CANON_BLE,
-                icon = Icons.Default.Bluetooth,
-                titleRes = R.string.transport_tile_canon_ble_title,
-                subtitleRes = R.string.transport_tile_canon_ble_subtitle,
-            ),
-        )
-        transportTiles.chunked(2).forEach { row ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                row.forEach { spec ->
-                    TransportTile(spec, modifier = Modifier.weight(1f)) {
-                        onTransportSelected(spec.kind)
+        // ── Transports ────────────────────────────────────────────────────
+        SectionContainer(title = stringResource(R.string.scan_section_transports)) {
+            val transportTiles = listOf(
+                TileSpec(TransportKind.BLE_ESP, Icons.Default.Bluetooth,
+                    R.string.transport_tile_pulsar_ble_title,
+                    R.string.transport_tile_pulsar_ble_subtitle),
+                TileSpec(TransportKind.CCAPI, Icons.Default.Wifi,
+                    R.string.transport_tile_ccapi_title,
+                    R.string.transport_tile_ccapi_subtitle),
+                TileSpec(TransportKind.PTP_USB, Icons.Default.Usb,
+                    R.string.transport_tile_ptp_title,
+                    R.string.transport_tile_ptp_subtitle),
+                TileSpec(TransportKind.CANON_BLE, Icons.Default.Bluetooth,
+                    R.string.transport_tile_canon_ble_title,
+                    R.string.transport_tile_canon_ble_subtitle),
+            )
+            transportTiles.chunked(2).forEach { row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    row.forEach { spec ->
+                        TransportTile(spec, modifier = Modifier.weight(1f)) {
+                            onTransportSelected(spec.kind)
+                        }
                     }
                 }
             }
-            Spacer(Modifier.height(12.dp))
         }
 
-        // Simulator: same tile family, wider/shorter so it reads as a peer
-        // option but visually distinct from the four real transports.
-        SimulatorTile(onClick = onSimulatorSelected)
-
-        // ── Known device (last connection) ────────────────────────────────
-        // No section heading — the primaryContainer-tinted row is its own
-        // visual anchor and labels itself ("MonsteRP / Canon BLE"). When
-        // multi-device history lands, restore the heading + scrollable list.
+        // ── Recent ────────────────────────────────────────────────────────
         lastConnection?.let { last ->
-            Spacer(Modifier.height(20.dp))
-            ReconnectCard(
-                last = last,
-                reconnecting = reconnecting,
-                onReconnect = { vm.reconnectLast() },
-                onForget = { vm.forgetLastConnection() },
+            SectionContainer(title = stringResource(R.string.scan_section_recent)) {
+                ReconnectRow(
+                    last = last,
+                    reconnecting = reconnecting,
+                    onReconnect = { vm.reconnectLast() },
+                    onForget = { vm.forgetLastConnection() },
+                )
+            }
+        }
+
+        // ── Tools ─────────────────────────────────────────────────────────
+        SectionContainer(title = stringResource(R.string.scan_section_tools)) {
+            ActionRow(
+                icon = Icons.Default.Science,
+                title = stringResource(R.string.transport_tile_simulator_title),
+                subtitle = stringResource(R.string.transport_tile_simulator_subtitle),
+                onClick = onSimulatorSelected,
+            )
+            ActionRow(
+                icon = Icons.Default.Description,
+                title = stringResource(R.string.tools_collect_diagnostics),
+                subtitle = stringResource(R.string.tools_collect_diagnostics_hint),
+                onClick = { shareDiagnostics(ctx, vm.canonDiagnosticsText()) },
             )
         }
 
         Spacer(Modifier.height(16.dp))
-
-        // ── Collect diagnostics — reachable while disconnected, so connection
-        //    issues (e.g. a failed reconnect) can be captured without adb.
-        val diagCtx = androidx.compose.ui.platform.LocalContext.current
-        TextButton(onClick = { shareDiagnostics(diagCtx, vm.canonDiagnosticsText()) }) {
-            Text(
-                stringResource(R.string.tools_collect_diagnostics),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Spacer(Modifier.height(24.dp))
     }
 }
 
@@ -234,106 +196,99 @@ private data class TileSpec(
     val subtitleRes: Int,
 )
 
+/** Compact tile used by the Transports section. Fixed-height to keep the
+ *  section short; icon-top / text-bottom layout. */
 @Composable
 private fun TransportTile(spec: TileSpec, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(14.dp),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
-        modifier = modifier.aspectRatio(1f),
+        modifier = modifier.height(108.dp),
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                modifier = Modifier.size(44.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        spec.icon,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(26.dp),
-                    )
-                }
-            }
+            Icon(
+                spec.icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(26.dp),
+            )
             Column {
                 Text(
                     stringResource(spec.titleRes),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
+                    maxLines = 1,
                 )
-                Spacer(Modifier.height(2.dp))
                 Text(
                     stringResource(spec.subtitleRes),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
                 )
             }
         }
     }
 }
 
-/** Wide horizontal tile for the simulator option. Same surface family as the
- *  transport tiles but laid out icon-left / text-right at half the height —
- *  signals "peer option" without competing for visual weight with the four
- *  real transports above it. */
+/** Shared row used inside Tools (Simulator, Diagnostics) and structurally
+ *  matched by [ReconnectRow] (which adds a trailing forget X + spinner +
+ *  primary tint). Keeping the inner anatomy identical is the consistency
+ *  the user asked for — same icon size, same padding, same text styles. */
 @Composable
-private fun SimulatorTile(onClick: () -> Unit) {
+private fun ActionRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String?,
+    onClick: () -> Unit,
+) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                modifier = Modifier.size(44.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Default.Science,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(26.dp),
-                    )
-                }
-            }
-            Spacer(Modifier.width(14.dp))
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp),
+            )
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    stringResource(R.string.transport_tile_simulator_title),
+                    title,
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
                 )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    stringResource(R.string.transport_tile_simulator_subtitle),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                if (subtitle != null) {
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                    )
+                }
             }
         }
     }
 }
 
-/** Slim one-line row for a known device. Tap = reconnect, trailing X =
- *  forget. Spinner replaces the leading icon while reconnect is in flight,
- *  and taps are swallowed so the user can't stack attempts. Sized and
- *  styled to match the transport tile family so it reads as a continuation
- *  of the surface set above. */
+/** Reconnect to the last connection. Same row anatomy as [ActionRow] but
+ *  with a primary tint (this is the CTA), a leading spinner while
+ *  reconnecting, and a trailing X to forget the bond. */
 @Composable
-private fun ReconnectCard(
+private fun ReconnectRow(
     last: LastConnection,
     reconnecting: Boolean,
     onReconnect: () -> Unit,
@@ -349,15 +304,15 @@ private fun ReconnectCard(
     )
     Surface(
         onClick = { if (!reconnecting) onReconnect() },
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.primaryContainer,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier.padding(start = 14.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
+            modifier = Modifier.padding(start = 14.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.size(22.dp), contentAlignment = Alignment.Center) {
                 if (reconnecting) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(18.dp),
@@ -389,10 +344,7 @@ private fun ReconnectCard(
                     maxLines = 1,
                 )
             }
-            IconButton(
-                onClick = onForget,
-                modifier = Modifier.size(32.dp),
-            ) {
+            IconButton(onClick = onForget, modifier = Modifier.size(32.dp)) {
                 Icon(
                     Icons.Default.Close,
                     contentDescription = stringResource(R.string.scan_landing_forget),
