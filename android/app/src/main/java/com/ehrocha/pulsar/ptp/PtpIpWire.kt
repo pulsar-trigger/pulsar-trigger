@@ -6,6 +6,7 @@
 package com.ehrocha.pulsar.ptp
 
 import android.util.Log
+import com.ehrocha.pulsar.canonble.CanonBleLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.DataInputStream
@@ -129,6 +130,9 @@ class PtpIpWire private constructor(
                     }
                     val paramCount = ((payload.size - 6) / 4).coerceIn(0, 5)
                     val rparams = IntArray(paramCount) { rcBuf.int }
+                    CanonBleLog.d(TAG, "op 0x${"%04X".format(opCode)} " +
+                        "rc=0x${"%04X".format(rc)} params=${rparams.toList()} " +
+                        "data=${data?.size ?: 0}B")
                     return@withContext PtpClient.Response(rc, rparams, data)
                 }
                 PKT_EVENT -> Unit // tolerate strays on the cmd channel
@@ -213,7 +217,7 @@ class PtpIpWire private constructor(
             try {
                 cmd.connect(InetSocketAddress(host, port), connectTimeoutMs)
                 cmd.soTimeout = confirmTimeoutMs   // user confirmation can take a while
-                Log.i(TAG, "command channel up to $host:$port")
+                CanonBleLog.i(TAG, "command channel up to $host:$port")
 
                 // Init Command Request: guid(16) + utf16(name) + version(4)
                 val nameBytes = utf16(clientName)
@@ -250,7 +254,7 @@ class PtpIpWire private constructor(
                 val connNo = ByteBuffer.wrap(ackBody).order(ByteOrder.LITTLE_ENDIAN).int
                 val respGuid = ackBody.copyOfRange(4, 20).joinToString("") { "%02x".format(it) }
                 val respName = readUtf16Z(ackBody, 20).first
-                Log.i(TAG, "Init Cmd Ack: conn=$connNo guid=$respGuid name='$respName'")
+                CanonBleLog.i(TAG, "Init Cmd Ack: conn=$connNo guid=$respGuid name='$respName'")
 
                 // Event channel — same host:port, second socket.
                 evt.connect(InetSocketAddress(host, port), connectTimeoutMs)
@@ -264,7 +268,7 @@ class PtpIpWire private constructor(
                         "event-channel init: type $evtAck (expected INIT_EVENT_ACK)",
                     )
                 }
-                Log.i(TAG, "Init Event Ack — PTP/IP link up")
+                CanonBleLog.i(TAG, "Init Event Ack — PTP/IP link up")
 
                 // Drop the camera-confirmation timeout to a working session timeout.
                 cmd.soTimeout = SESSION_READ_TIMEOUT_MS

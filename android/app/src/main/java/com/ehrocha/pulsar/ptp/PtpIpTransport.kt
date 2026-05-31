@@ -6,6 +6,7 @@
 package com.ehrocha.pulsar.ptp
 
 import android.util.Log
+import com.ehrocha.pulsar.canonble.CanonBleLog
 import com.ehrocha.pulsar.transport.CameraTransport
 import com.ehrocha.pulsar.transport.TransportKind
 import kotlinx.coroutines.Dispatchers
@@ -87,7 +88,7 @@ class PtpIpTransport private constructor(
                 wire.close()
                 return@withContext PtpIpOpenResult.Failed("GetDeviceInfo returned null")
             }
-            Log.i(TAG, "openOn: ${info.manufacturer} ${info.model} " +
+            CanonBleLog.i(TAG, "openOn: ${info.manufacturer} ${info.model} " +
                 "(vendorExt=${info.vendorExtensionId}, ops=${info.supportedOperations.size})")
             PtpIpOpenResult.Ok(PtpIpTransport(camera, wire, client, info))
         }
@@ -111,13 +112,17 @@ class PtpIpTransport private constructor(
     // ── Capability detection mirrors PtpTransport (USB) — same DeviceInfo
     //    fields, same vendor op codes.
 
-    val advertisesCanonBulb: Boolean = run {
-        val ops = deviceInfo.supportedOperations
-        PtpClient.OP_CANON_REMOTE_RELEASE_ON in ops ||
-            0x9125 in ops || 0x9128 in ops
-    }
-
-    override val supportsBulb: Boolean = advertisesCanonBulb
+    /** **Hardcoded true** on PTP/IP because Canon doesn't advertise vendor
+     *  ops (`0x9128` `RemoteReleaseOn` / `0x9129` `RemoteReleaseOff`) in the
+     *  initial `GetDeviceInfo` over Wi-Fi — they only appear after PC-remote
+     *  mode is enabled, and re-fetching DeviceInfo at that point would be a
+     *  bigger refactor (cached `val`). All R-series bodies that speak
+     *  PTP/IP support bulb. If a non-Canon PTP/IP body ever appears the wire
+     *  call simply returns OperationNotSupported and the runner reports a
+     *  failed shot. */
+    private val canonExtension: Boolean =
+        deviceInfo.vendorExtensionId == PtpClient.VENDOR_EXT_CANON_EOS
+    override val supportsBulb: Boolean = canonExtension
     override val supportsSettings: Boolean = deviceInfo.supportedDeviceProperties.isNotEmpty()
     override val supportsLiveView: Boolean =
         PtpClient.OP_CANON_GET_VIEWFINDER_DATA in deviceInfo.supportedOperations
@@ -140,12 +145,12 @@ class PtpIpTransport private constructor(
                     return@withContext false
                 }
                 _connected.value = true
-                Log.i(TAG, "Session opened")
+                CanonBleLog.i(TAG, "Session opened")
                 if (deviceInfo.vendorExtensionId == PtpClient.VENDOR_EXT_CANON_EOS) {
                     val rm = runCatching { client.canonSetRemoteMode(1) }.getOrNull()
                     val em = runCatching { client.canonSetEventMode(1) }.getOrNull()
                     pcRemoteActive = rm?.ok == true && em?.ok == true
-                    Log.i(TAG, "Canon PC-remote setup: " +
+                    CanonBleLog.i(TAG, "Canon PC-remote setup: " +
                         "SetRemoteMode=${rm?.code?.let { "0x%04X".format(it) }} " +
                         "EventMode=${em?.code?.let { "0x%04X".format(it) }} " +
                         "active=$pcRemoteActive")
@@ -182,10 +187,28 @@ class PtpIpTransport private constructor(
                 return@withContext
             }
             try {
-                val r = client.initiateCapture()
-                if (!r.ok) Log.w(TAG, "InitiateCapture rc=0x${"%04X".format(r.code)}")
+                // In PC-remote mode (which we always enable at connect on
+                // Canon bodies) the body rejects InitiateCapture in favour
+                // of RemoteRelease. A "single shot" is therefore a short
+                // press/release pair, with the same mode parameter on both
+                // sides so the body accepts the release.
+                val mode = if (af) MODE_FULL_PRESS_AF else MODE_FULL_PRESS_NO_AF
+                val on = client.canonRemoteReleaseOn(mode = mode)
+                if (!on.ok) {
+                    Log.w(TAG, "fireShutter RemoteReleaseOn(mode=$mode) " +
+                        "rc=0x${"%04X".format(on.code)}")
+                    return@withContext
+                }
+                // 50 ms is enough for the body to register the press —
+                // shorter than the BR-E1 tap (200 ms) because the wire
+                // already costs the round trip. Adjust if specific bodies
+                // misfire.
+                kotlinx.coroutines.delay(50)
+                val off = client.canonRemoteReleaseOff(mode = mode)
+                if (!off.ok) Log.w(TAG, "fireShutter RemoteReleaseOff(mode=$mode) " +
+                    "rc=0x${"%04X".format(off.code)}")
             } catch (e: PtpProtocolException) {
-                Log.w(TAG, "InitiateCapture threw: ${e.message}")
+                Log.w(TAG, "fireShutter threw: ${e.message}")
             }
         }
     }
