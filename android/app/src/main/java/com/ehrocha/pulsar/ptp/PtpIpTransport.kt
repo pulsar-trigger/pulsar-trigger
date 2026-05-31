@@ -183,32 +183,37 @@ class PtpIpTransport private constructor(
     override suspend fun fireShutter(af: Boolean) = wireMutex.withLock {
         withContext(Dispatchers.IO) {
             if (!_connected.value) {
-                Log.w(TAG, "fireShutter: not connected — ignored")
+                CanonBleLog.w(TAG, "fireShutter: not connected — ignored")
                 return@withContext
             }
+            val mode = if (af) MODE_FULL_PRESS_AF else MODE_FULL_PRESS_NO_AF
+            CanonBleLog.i(TAG, "fireShutter af=$af mode=$mode → RemoteRelease pair")
             try {
                 // In PC-remote mode (which we always enable at connect on
                 // Canon bodies) the body rejects InitiateCapture in favour
                 // of RemoteRelease. A "single shot" is therefore a short
                 // press/release pair, with the same mode parameter on both
                 // sides so the body accepts the release.
-                val mode = if (af) MODE_FULL_PRESS_AF else MODE_FULL_PRESS_NO_AF
                 val on = client.canonRemoteReleaseOn(mode = mode)
                 if (!on.ok) {
-                    Log.w(TAG, "fireShutter RemoteReleaseOn(mode=$mode) " +
+                    CanonBleLog.w(TAG, "fireShutter RemoteReleaseOn(mode=$mode) " +
                         "rc=0x${"%04X".format(on.code)}")
                     return@withContext
                 }
-                // 50 ms is enough for the body to register the press —
-                // shorter than the BR-E1 tap (200 ms) because the wire
-                // already costs the round trip. Adjust if specific bodies
+                // 20 ms is enough for the body to register the press but
+                // short enough that continuous-drive bodies don't sneak a
+                // second frame into the window. Adjust if specific bodies
                 // misfire.
-                kotlinx.coroutines.delay(50)
+                kotlinx.coroutines.delay(20)
                 val off = client.canonRemoteReleaseOff(mode = mode)
-                if (!off.ok) Log.w(TAG, "fireShutter RemoteReleaseOff(mode=$mode) " +
+                if (!off.ok) CanonBleLog.w(TAG, "fireShutter RemoteReleaseOff(mode=$mode) " +
                     "rc=0x${"%04X".format(off.code)}")
+                else CanonBleLog.d(TAG, "fireShutter done")
             } catch (e: PtpProtocolException) {
-                Log.w(TAG, "fireShutter threw: ${e.message}")
+                CanonBleLog.w(TAG, "fireShutter PtpProtocolException: ${e.message}")
+            } catch (e: java.io.IOException) {
+                CanonBleLog.w(TAG, "fireShutter IOException — link likely lost: ${e.message}")
+                _connected.value = false
             }
         }
     }
@@ -216,14 +221,18 @@ class PtpIpTransport private constructor(
     override suspend fun setShutterMode(bulb: Boolean) = wireMutex.withLock<Unit> {
         if (!_connected.value || !bulb) return@withLock
         withContext(Dispatchers.IO) {
+            CanonBleLog.i(TAG, "setShutterMode(bulb=true) → set Canon shutter speed property")
             try {
                 val v = PtpClient.CANON_SHUTTER_SPEED_BULB
                 val data = byteArrayOf((v and 0xFF).toByte(), ((v ushr 8) and 0xFF).toByte())
                 val r = client.setDevicePropValue(PtpClient.PROP_CANON_SHUTTER_SPEED, data)
-                if (!r.ok) Log.w(TAG, "SetShutterSpeed→Bulb rc=0x${"%04X".format(r.code)} — " +
+                if (!r.ok) CanonBleLog.w(TAG, "SetShutterSpeed→Bulb rc=0x${"%04X".format(r.code)} — " +
                     "user may need to set Bulb on body dial")
             } catch (e: PtpProtocolException) {
-                Log.w(TAG, "setShutterMode threw (non-fatal): ${e.message}")
+                CanonBleLog.w(TAG, "setShutterMode PtpProtocolException (non-fatal): ${e.message}")
+            } catch (e: java.io.IOException) {
+                CanonBleLog.w(TAG, "setShutterMode IOException — link likely lost: ${e.message}")
+                _connected.value = false
             }
         }
     }
@@ -231,15 +240,20 @@ class PtpIpTransport private constructor(
     override suspend fun startBulb(af: Boolean) = wireMutex.withLock {
         withContext(Dispatchers.IO) {
             if (!_connected.value) {
-                Log.w(TAG, "startBulb: not connected — ignored")
+                CanonBleLog.w(TAG, "startBulb: not connected — ignored")
                 return@withContext
             }
+            lastBulbMode = if (af) MODE_FULL_PRESS_AF else MODE_FULL_PRESS_NO_AF
+            CanonBleLog.i(TAG, "startBulb af=$af → RemoteReleaseOn(mode=$lastBulbMode)")
             try {
-                lastBulbMode = if (af) MODE_FULL_PRESS_AF else MODE_FULL_PRESS_NO_AF
                 val r = client.canonRemoteReleaseOn(mode = lastBulbMode)
-                if (!r.ok) Log.w(TAG, "RemoteReleaseOn(mode=$lastBulbMode) rc=0x${"%04X".format(r.code)}")
+                if (!r.ok) CanonBleLog.w(TAG, "RemoteReleaseOn(mode=$lastBulbMode) " +
+                    "rc=0x${"%04X".format(r.code)}")
             } catch (e: PtpProtocolException) {
-                Log.w(TAG, "startBulb threw: ${e.message}")
+                CanonBleLog.w(TAG, "startBulb PtpProtocolException: ${e.message}")
+            } catch (e: java.io.IOException) {
+                CanonBleLog.w(TAG, "startBulb IOException — link likely lost: ${e.message}")
+                _connected.value = false
             }
         }
     }
@@ -247,11 +261,16 @@ class PtpIpTransport private constructor(
     override suspend fun stopBulb() = wireMutex.withLock<Unit> {
         withContext(Dispatchers.IO) {
             if (!_connected.value) return@withContext
+            CanonBleLog.i(TAG, "stopBulb → RemoteReleaseOff(mode=$lastBulbMode)")
             try {
                 val r = client.canonRemoteReleaseOff(mode = lastBulbMode)
-                if (!r.ok) Log.w(TAG, "RemoteReleaseOff(mode=$lastBulbMode) rc=0x${"%04X".format(r.code)}")
+                if (!r.ok) CanonBleLog.w(TAG, "RemoteReleaseOff(mode=$lastBulbMode) " +
+                    "rc=0x${"%04X".format(r.code)}")
             } catch (e: PtpProtocolException) {
-                Log.w(TAG, "stopBulb threw: ${e.message}")
+                CanonBleLog.w(TAG, "stopBulb PtpProtocolException: ${e.message}")
+            } catch (e: java.io.IOException) {
+                CanonBleLog.w(TAG, "stopBulb IOException — link likely lost: ${e.message}")
+                _connected.value = false
             }
         }
     }

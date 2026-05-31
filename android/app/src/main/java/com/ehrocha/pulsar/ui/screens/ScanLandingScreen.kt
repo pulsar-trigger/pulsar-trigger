@@ -130,32 +130,53 @@ fun ScanLandingScreen(
         Spacer(Modifier.height(4.dp))
 
         // ── Transports ────────────────────────────────────────────────────
+        // 2×3 grid grouped by family: BLE row, Wi-Fi row, USB + Simulator
+        // row. Simulator joins the transport tiles (instead of living in the
+        // Tools section) so all the "ways to connect" sit together. Each
+        // row has two tiles of similar shape so the grid reads as a single
+        // matrix.
         SectionContainer(title = stringResource(R.string.scan_section_transports)) {
-            val transportTiles = listOf(
-                TileSpec(TransportKind.BLE_ESP, Icons.Default.Bluetooth,
-                    R.string.transport_tile_pulsar_ble_title,
-                    R.string.transport_tile_pulsar_ble_subtitle),
-                TileSpec(TransportKind.CCAPI, Icons.Default.Wifi,
-                    R.string.transport_tile_ccapi_title,
-                    R.string.transport_tile_ccapi_subtitle),
-                TileSpec(TransportKind.PTP_USB, Icons.Default.Usb,
-                    R.string.transport_tile_ptp_title,
-                    R.string.transport_tile_ptp_subtitle),
-                TileSpec(TransportKind.CANON_BLE, Icons.Default.Bluetooth,
-                    R.string.transport_tile_canon_ble_title,
-                    R.string.transport_tile_canon_ble_subtitle),
-                TileSpec(TransportKind.PTP_IP, Icons.Default.Wifi,
-                    R.string.transport_tile_ptp_ip_title,
-                    R.string.transport_tile_ptp_ip_subtitle),
+            val rows = listOf(
+                // BLE row
+                listOf(
+                    TileSpec(TransportKind.BLE_ESP, Icons.Default.Bluetooth,
+                        R.string.transport_tile_pulsar_ble_title,
+                        R.string.transport_tile_pulsar_ble_subtitle),
+                    TileSpec(TransportKind.CANON_BLE, Icons.Default.Bluetooth,
+                        R.string.transport_tile_canon_ble_title,
+                        R.string.transport_tile_canon_ble_subtitle),
+                ),
+                // Wi-Fi row
+                listOf(
+                    TileSpec(TransportKind.CCAPI, Icons.Default.Wifi,
+                        R.string.transport_tile_ccapi_title,
+                        R.string.transport_tile_ccapi_subtitle),
+                    TileSpec(TransportKind.PTP_IP, Icons.Default.Wifi,
+                        R.string.transport_tile_ptp_ip_title,
+                        R.string.transport_tile_ptp_ip_subtitle),
+                ),
+                // USB + Simulator row
+                listOf(
+                    TileSpec(TransportKind.PTP_USB, Icons.Default.Usb,
+                        R.string.transport_tile_ptp_title,
+                        R.string.transport_tile_ptp_subtitle),
+                    // Sentinel: a null kind means "simulator" (no
+                    // TransportKind for it). Handled below.
+                    null,
+                ),
             )
-            transportTiles.chunked(2).forEach { row ->
+            rows.forEach { row ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     row.forEach { spec ->
-                        TransportTile(spec, modifier = Modifier.weight(1f)) {
-                            onTransportSelected(spec.kind)
+                        if (spec != null) {
+                            TransportTile(spec, modifier = Modifier.weight(1f)) {
+                                onTransportSelected(spec.kind)
+                            }
+                        } else {
+                            SimulatorTile(modifier = Modifier.weight(1f), onClick = onSimulatorSelected)
                         }
                     }
                 }
@@ -175,13 +196,9 @@ fun ScanLandingScreen(
         }
 
         // ── Tools ─────────────────────────────────────────────────────────
+        // Simulator moved to the Transports grid above (it's a peer way
+        // to drive the app). Tools is just diagnostics now.
         SectionContainer(title = stringResource(R.string.scan_section_tools)) {
-            ActionRow(
-                icon = Icons.Default.Science,
-                title = stringResource(R.string.transport_tile_simulator_title),
-                subtitle = stringResource(R.string.transport_tile_simulator_subtitle),
-                onClick = onSimulatorSelected,
-            )
             ActionRow(
                 icon = Icons.Default.Description,
                 title = stringResource(R.string.tools_collect_diagnostics),
@@ -240,7 +257,48 @@ private fun TransportTile(spec: TileSpec, modifier: Modifier = Modifier, onClick
     }
 }
 
-/** Shared row used inside Tools (Simulator, Diagnostics) and structurally
+/** Simulator tile — same square format as [TransportTile] so it sits as a
+ *  peer in the 2×3 transport grid (BLE row / Wi-Fi row / USB + Simulator
+ *  row). Same anatomy as TransportTile; separate composable only because
+ *  Simulator doesn't have a [TransportKind] entry. */
+@Composable
+private fun SimulatorTile(modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+        modifier = modifier.height(108.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Icon(
+                Icons.Default.Science,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(26.dp),
+            )
+            Column {
+                Text(
+                    stringResource(R.string.transport_tile_simulator_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                )
+                Text(
+                    stringResource(R.string.transport_tile_simulator_subtitle),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                )
+            }
+        }
+    }
+}
+
+/** Shared row used inside Tools (Diagnostics today) and structurally
  *  matched by [ReconnectRow] (which adds a trailing forget X + spinner +
  *  primary tint). Keeping the inner anatomy identical is the consistency
  *  the user asked for — same icon size, same padding, same text styles. */
