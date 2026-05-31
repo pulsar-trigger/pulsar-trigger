@@ -613,6 +613,17 @@
     <string name="transport_tile_ccapi_subtitle">CCAPI 対応の EOS R シリーズ</string>
     <string name="transport_tile_ptp_title">Canon USB-C</string>
     <string name="transport_tile_ptp_subtitle">USB-C ケーブル、PTP 対応ボディ</string>
+    <string name="transport_tile_ptp_ip_title">Canon Wi-Fi PTP</string>
+    <string name="transport_tile_ptp_ip_subtitle">EOS R/RP/R5/R6 を Wi-Fi 経由（EOS Utility モード）</string>
+    <string name="ptp_ip_setup_step1">カメラ: ワイヤレス通信 → Wi-Fi → 「リモート操作 (EOS Utility)」</string>
+    <string name="ptp_ip_setup_step2">スマートフォンと同じ Wi-Fi ネットワーク（またはカメラのホットスポット）に接続</string>
+    <string name="ptp_ip_setup_step3">下のカメラをタップし、カメラ側の確認画面で承認してください</string>
+    <string name="ptp_ip_setup_empty">カメラが見つかりません。両方の機器が同じ Wi-Fi にある必要があります。</string>
+    <string name="ptp_ip_cameras_header">このネットワーク上のカメラ</string>
+    <string name="ptp_ip_confirm_on_camera">カメラ側で接続を承認してください</string>
+    <string name="ptp_ip_err_rejected">カメラが接続を拒否しました。</string>
+    <string name="ptp_ip_err_connect_failed">カメラに接続できませんでした。</string>
+    <string name="ptp_ip_err_session_failed">カメラとのセッションを開始できませんでした。</string>
     <string name="transport_tile_canon_ble_title">Canon BLE</string>
     <string name="transport_tile_canon_ble_subtitle">BR-E1 プロトコル、ワイヤレス</string>
 

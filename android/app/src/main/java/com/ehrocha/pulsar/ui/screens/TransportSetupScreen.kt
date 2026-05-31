@@ -109,6 +109,7 @@ private fun TopBar(kind: TransportKind, onBack: () -> Unit) {
         TransportKind.CCAPI -> R.string.transport_tile_ccapi_title
         TransportKind.PTP_USB -> R.string.transport_tile_ptp_title
         TransportKind.CANON_BLE -> R.string.transport_tile_canon_ble_title
+        TransportKind.PTP_IP -> R.string.transport_tile_ptp_ip_title
     }
     Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
         Row(
@@ -140,6 +141,7 @@ private fun SetupContent(vm: PulsarViewModel, kind: TransportKind) {
         TransportKind.CCAPI -> CcapiSetup(vm)
         TransportKind.PTP_USB -> PtpSetup(vm)
         TransportKind.CANON_BLE -> CanonBleSetup(vm)
+        TransportKind.PTP_IP -> PtpIpSetup(vm)
     }
 }
 
@@ -835,6 +837,154 @@ private fun PulsarBleDeviceCard(scanned: ScannedDevice, onClick: () -> Unit) {
                     @Suppress("MissingPermission") scanned.device.address,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+// ── PTP/IP (Canon EOS Wi-Fi) ──────────────────────────────────────────────
+
+@Composable
+private fun PtpIpSetup(vm: PulsarViewModel) {
+    val cameras by vm.ptpIpCameras.collectAsState()
+    val connecting by vm.ptpIpConnecting.collectAsState()
+    val awaitingConfirm by vm.ptpIpAwaitingConfirm.collectAsState()
+    val ptpIpError by vm.ptpIpError.collectAsState()
+    val toastCtx = androidx.compose.ui.platform.LocalContext.current
+    val rejectedStr = stringResource(R.string.ptp_ip_err_rejected)
+    val connectFailedStr = stringResource(R.string.ptp_ip_err_connect_failed)
+    val sessionFailedStr = stringResource(R.string.ptp_ip_err_session_failed)
+    val genericStr = stringResource(R.string.ptp_err_generic)
+
+    LaunchedEffect(ptpIpError) {
+        val e = ptpIpError ?: return@LaunchedEffect
+        val msg = when (e) {
+            "rejected" -> rejectedStr
+            "connect_failed" -> connectFailedStr
+            "session_failed" -> sessionFailedStr
+            else -> genericStr.format(e)
+        }
+        android.widget.Toast.makeText(toastCtx, msg, android.widget.Toast.LENGTH_LONG).show()
+        vm.clearPtpIpError()
+    }
+
+    // Start mDNS discovery on screen-visible; stop on dispose.
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        vm.startPtpIpScan()
+        onDispose { vm.stopPtpIpScan() }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Spacer(Modifier.height(8.dp))
+
+        InstructionCard(
+            iconRes = Icons.Default.Wifi,
+            lines = listOf(
+                stringResource(R.string.ptp_ip_setup_step1),
+                stringResource(R.string.ptp_ip_setup_step2),
+                stringResource(R.string.ptp_ip_setup_step3),
+            ),
+        )
+
+        if (awaitingConfirm) {
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer,
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        stringResource(R.string.ptp_ip_confirm_on_camera),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
+            }
+        }
+
+        Text(
+            stringResource(R.string.ptp_ip_cameras_header),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+
+        if (cameras.isEmpty()) {
+            EmptyState(stringResource(R.string.ptp_ip_setup_empty))
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                cameras.forEach { cam ->
+                    PtpIpCameraCard(
+                        camera = cam,
+                        connecting = connecting,
+                        onClick = { vm.connectPtpIp(cam) },
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun PtpIpCameraCard(
+    camera: com.ehrocha.pulsar.ptp.PtpIpCamera,
+    connecting: Boolean,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = { if (!connecting) onClick() },
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Default.Wifi,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp),
+            )
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    camera.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                )
+                Text(
+                    "${camera.host}:${camera.port}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
+            if (connecting) {
+                androidx.compose.material3.CircularProgressIndicator(
+                    strokeWidth = 2.dp,
+                    modifier = Modifier.size(18.dp),
                 )
             }
         }

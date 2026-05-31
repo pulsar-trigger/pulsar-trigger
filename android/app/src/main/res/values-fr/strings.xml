@@ -613,6 +613,17 @@
     <string name="transport_tile_ccapi_subtitle">EOS série R avec CCAPI</string>
     <string name="transport_tile_ptp_title">Canon USB-C</string>
     <string name="transport_tile_ptp_subtitle">Câble USB-C, tout boîtier PTP</string>
+    <string name="transport_tile_ptp_ip_title">Canon Wi-Fi PTP</string>
+    <string name="transport_tile_ptp_ip_subtitle">EOS R/RP/R5/R6 en Wi-Fi (mode EOS Utility)</string>
+    <string name="ptp_ip_setup_step1">Sur l\'appareil : Wireless → Wi-Fi → \"Télécommande (EOS Utility)\"</string>
+    <string name="ptp_ip_setup_step2">Rejoignez le même réseau Wi-Fi que votre téléphone (ou le hotspot de l\'appareil)</string>
+    <string name="ptp_ip_setup_step3">Touchez l\'appareil ci-dessous ; confirmez la connexion sur l\'écran de l\'appareil</string>
+    <string name="ptp_ip_setup_empty">Aucun appareil trouvé. Les deux appareils doivent être sur le même Wi-Fi.</string>
+    <string name="ptp_ip_cameras_header">Appareils sur ce réseau</string>
+    <string name="ptp_ip_confirm_on_camera">Confirmez la connexion sur l\'appareil</string>
+    <string name="ptp_ip_err_rejected">L\'appareil a refusé la connexion.</string>
+    <string name="ptp_ip_err_connect_failed">Impossible de joindre l\'appareil.</string>
+    <string name="ptp_ip_err_session_failed">Impossible d\'ouvrir une session avec l\'appareil.</string>
     <string name="transport_tile_canon_ble_title">Canon BLE</string>
     <string name="transport_tile_canon_ble_subtitle">Protocole BR-E1, sans fil</string>
 

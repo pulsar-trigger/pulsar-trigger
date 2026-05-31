@@ -209,7 +209,7 @@ class PtpTransport private constructor(
                         "active=$pcRemoteActive")
                 }
                 true
-            } catch (e: PtpClient.ProtocolException) {
+            } catch (e: PtpProtocolException) {
                 Log.w(TAG, "Connect threw: ${e.message}")
                 false
             }
@@ -250,7 +250,7 @@ class PtpTransport private constructor(
                 if (!r.ok) {
                     Log.w(TAG, "InitiateCapture rc=0x${"%04X".format(r.code)}")
                 }
-            } catch (e: PtpClient.ProtocolException) {
+            } catch (e: PtpProtocolException) {
                 Log.w(TAG, "InitiateCapture threw: ${e.message}")
             }
         }
@@ -275,7 +275,7 @@ class PtpTransport private constructor(
                     Log.w(TAG, "SetShutterSpeed→Bulb rc=0x${"%04X".format(r.code)} — " +
                               "user may need to set Bulb on body dial")
                 }
-            } catch (e: PtpClient.ProtocolException) {
+            } catch (e: PtpProtocolException) {
                 Log.w(TAG, "setShutterMode threw (non-fatal): ${e.message}")
             }
         }
@@ -305,7 +305,7 @@ class PtpTransport private constructor(
                 val r = client.canonRemoteReleaseOn(mode = lastBulbMode)
                 if (!r.ok) Log.w(TAG, "RemoteReleaseOn(mode=$lastBulbMode) " +
                                        "rc=0x${"%04X".format(r.code)}")
-            } catch (e: PtpClient.ProtocolException) {
+            } catch (e: PtpProtocolException) {
                 Log.w(TAG, "startBulb threw: ${e.message}")
             }
         }
@@ -320,7 +320,7 @@ class PtpTransport private constructor(
                 val r = client.canonRemoteReleaseOff(mode = lastBulbMode)
                 if (!r.ok) Log.w(TAG, "RemoteReleaseOff(mode=$lastBulbMode) " +
                                        "rc=0x${"%04X".format(r.code)}")
-            } catch (e: PtpClient.ProtocolException) {
+            } catch (e: PtpProtocolException) {
                 Log.w(TAG, "stopBulb threw: ${e.message}")
             }
         }
@@ -350,7 +350,7 @@ class PtpTransport private constructor(
                     focalMm = focal,
                     zoomRangeMm = range,
                 )
-            } catch (e: PtpClient.ProtocolException) {
+            } catch (e: PtpProtocolException) {
                 Log.w(TAG, "getLensInfo threw: ${e.message}")
                 null
             }
@@ -406,7 +406,7 @@ class PtpTransport private constructor(
                     Log.w(TAG, "startLiveView: $lastLiveViewError")
                     false
                 }
-            } catch (e: PtpClient.ProtocolException) {
+            } catch (e: PtpProtocolException) {
                 lastLiveViewError = e.message ?: "protocol error"
                 Log.w(TAG, "startLiveView threw: ${e.message}")
                 false
@@ -427,7 +427,7 @@ class PtpTransport private constructor(
                     ((v ushr 24) and 0xFF).toByte(),
                 )
                 client.setDevicePropValue(PtpClient.PROP_CANON_EVF_OUTPUT, data)
-            } catch (e: PtpClient.ProtocolException) {
+            } catch (e: PtpProtocolException) {
                 Log.w(TAG, "stopLiveView threw: ${e.message}")
             }
         }
@@ -448,7 +448,7 @@ class PtpTransport private constructor(
                     return@withContext null
                 }
                 extractJpeg(r.data)
-            } catch (e: PtpClient.ProtocolException) {
+            } catch (e: PtpProtocolException) {
                 Log.w(TAG, "getLiveViewFrame threw: ${e.message}")
                 null
             }
@@ -481,7 +481,7 @@ class PtpTransport private constructor(
             try {
                 val r = client.canonDriveLens(value)
                 if (!r.ok) Log.w(TAG, "DriveLens($action=$value) rc=0x${"%04X".format(r.code)}")
-            } catch (e: PtpClient.ProtocolException) {
+            } catch (e: PtpProtocolException) {
                 Log.w(TAG, "driveFocus threw: ${e.message}")
             }
         }
@@ -535,7 +535,7 @@ class PtpTransport private constructor(
                 }
                 val pct = (r.data[0].toInt() and 0xFF).coerceIn(0, 100)
                 pct
-            } catch (e: PtpClient.ProtocolException) {
+            } catch (e: PtpProtocolException) {
                 Log.w(TAG, "readBatteryPercent threw: ${e.message}")
                 null
             }

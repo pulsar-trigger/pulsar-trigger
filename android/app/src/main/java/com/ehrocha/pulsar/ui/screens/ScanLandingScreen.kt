@@ -76,10 +76,12 @@ fun ScanLandingScreen(
     val canonBleConnecting by vm.canonBleConnecting.collectAsState()
     val ptpConnecting by vm.ptpConnecting.collectAsState()
     val ccapiConnecting by vm.canonCcapiConnecting.collectAsState()
+    val ptpIpConnecting by vm.ptpIpConnecting.collectAsState()
     val reconnecting = when (lastConnection?.kind) {
         TransportKind.CANON_BLE -> canonBleConnecting
         TransportKind.PTP_USB -> ptpConnecting
         TransportKind.CCAPI -> ccapiConnecting
+        TransportKind.PTP_IP -> ptpIpConnecting
         else -> false
     }
     if (connected) {
@@ -142,6 +144,9 @@ fun ScanLandingScreen(
                 TileSpec(TransportKind.CANON_BLE, Icons.Default.Bluetooth,
                     R.string.transport_tile_canon_ble_title,
                     R.string.transport_tile_canon_ble_subtitle),
+                TileSpec(TransportKind.PTP_IP, Icons.Default.Wifi,
+                    R.string.transport_tile_ptp_ip_title,
+                    R.string.transport_tile_ptp_ip_subtitle),
             )
             transportTiles.chunked(2).forEach { row ->
                 Row(
@@ -300,6 +305,7 @@ private fun ReconnectRow(
             TransportKind.CCAPI -> R.string.transport_tile_ccapi_title
             TransportKind.PTP_USB -> R.string.transport_tile_ptp_title
             TransportKind.CANON_BLE -> R.string.transport_tile_canon_ble_title
+            TransportKind.PTP_IP -> R.string.transport_tile_ptp_ip_title
         }
     )
     Surface(

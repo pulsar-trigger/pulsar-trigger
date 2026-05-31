@@ -12,28 +12,21 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 /**
- * Thin Kotlin client for the PTP-over-USB wire protocol (PIMA 15740 +
- * USB Still Image Capture Device Class Spec 1.0). Built directly on
- * Android's [UsbDeviceConnection] — no native deps, no JNI.
+ * Canon / PTP high-level operations layer, transport-agnostic. The actual
+ * bytes-on-the-wire framing lives in [PtpWire] implementations:
+ *  - [BulkPtpWire] — PTP-over-USB (PIMA 15740 + USB Still Image class).
+ *  - [PtpIpWire]  — PTP-over-TCP-IP (ISO 15740 / Wi-Fi).
  *
- * Construction expects the caller to have already opened the USB device,
- * claimed the PTP interface, and located the bulk-in / bulk-out endpoints.
- * See [PtpClient.openOn] for a helper that does all of that.
+ * Canon EOS bodies speak the same vendor op set over USB cable and Wi-Fi,
+ * which is why this client doesn't care which wire it's sitting on.
  *
- * The client is *not* thread-safe — guard transactions externally if you
- * call from multiple coroutines. In practice Pulsar serialises every
- * transport call through the run loop, so this isn't an issue today.
+ * Not thread-safe — guard transactions externally. Pulsar serialises every
+ * transport call through the camera run loop, so this isn't an issue today.
  */
 class PtpClient(
-    private val connection: UsbDeviceConnection,
-    private val bulkIn: UsbEndpoint,
-    private val bulkOut: UsbEndpoint,
-    /** Tag used in [Log] for tracing the wire. */
+    private val wire: PtpWire,
     private val tag: String = "PtpClient",
 ) {
-
-    /** Monotonically increasing transaction ID — every command gets a new one. */
-    private var transactionId: Int = 0
 
     /** Set after [openSession]; cleared by [closeSession]. */
     var sessionId: Int = 0
@@ -41,11 +34,21 @@ class PtpClient(
 
     val sessionOpen: Boolean get() = sessionId != 0
 
+    /** PtpClient with a USB-bulk wire — convenience for the existing
+     *  USB transport. New TCP/IP-backed callers construct [PtpIpWire]
+     *  themselves and use the primary constructor. */
+    constructor(
+        connection: UsbDeviceConnection,
+        bulkIn: UsbEndpoint,
+        bulkOut: UsbEndpoint,
+        tag: String = "PtpClient",
+    ) : this(BulkPtpWire(connection, bulkIn, bulkOut), tag)
+
     // ── Public high-level operations ────────────────────────────────────
 
     /** PTP `OpenSession` — required before any non-discovery operation. */
     suspend fun openSession(id: Int = 1): Response {
-        val r = transact(OP_OPEN_SESSION, intArrayOf(id), expectDataIn = false)
+        val r = wire.transact(OP_OPEN_SESSION, intArrayOf(id), expectDataIn = false)
         if (r.code == RC_OK) sessionId = id
         return r
     }
@@ -53,7 +56,7 @@ class PtpClient(
     /** PTP `CloseSession`. Idempotent — quietly returns if no session is open. */
     suspend fun closeSession(): Response {
         if (sessionId == 0) return Response(RC_OK)
-        val r = transact(OP_CLOSE_SESSION, intArrayOf(), expectDataIn = false)
+        val r = wire.transact(OP_CLOSE_SESSION, intArrayOf(), expectDataIn = false)
         sessionId = 0
         return r
     }
@@ -61,7 +64,7 @@ class PtpClient(
     /** PTP `GetDeviceInfo` — can be called without an open session. Returns
      *  the parsed DeviceInfo dataset, or null on protocol failure. */
     suspend fun getDeviceInfo(): DeviceInfo? {
-        val r = transact(OP_GET_DEVICE_INFO, intArrayOf(), expectDataIn = true)
+        val r = wire.transact(OP_GET_DEVICE_INFO, intArrayOf(), expectDataIn = true)
         if (r.code != RC_OK || r.data == null) {
             Log.w(tag, "GetDeviceInfo failed: rc=0x${"%04X".format(r.code)}")
             return null
@@ -75,7 +78,7 @@ class PtpClient(
      *  settings. Storage and format both default to 0 (use camera defaults). */
     suspend fun initiateCapture(storageId: Int = 0, formatCode: Int = 0): Response {
         require(sessionOpen) { "InitiateCapture requires an open session" }
-        return transact(OP_INITIATE_CAPTURE, intArrayOf(storageId, formatCode), expectDataIn = false)
+        return wire.transact(OP_INITIATE_CAPTURE, intArrayOf(storageId, formatCode), expectDataIn = false)
     }
 
     /** Generic transaction — exposed for callers that need to send a vendor
@@ -85,7 +88,7 @@ class PtpClient(
         params: IntArray = IntArray(0),
         dataOut: ByteArray? = null,
         expectDataIn: Boolean = false,
-    ): Response = transact(opCode, params, dataOut, expectDataIn)
+    ): Response = wire.transact(opCode, params, dataOut, expectDataIn)
 
     // ── Canon EOS vendor operations ─────────────────────────────────────
     // Canon EOS bodies require the camera to be put into "PC remote
@@ -99,47 +102,47 @@ class PtpClient(
     /** Canon: enable (mode=1) or disable (mode=0) PC remote-control mode.
      *  Required before any RemoteRelease op. */
     suspend fun canonSetRemoteMode(mode: Int = 1): Response =
-        transact(OP_CANON_SET_REMOTE_MODE, intArrayOf(mode), expectDataIn = false)
+        wire.transact(OP_CANON_SET_REMOTE_MODE, intArrayOf(mode), expectDataIn = false)
 
     /** Canon: enable the event channel so the body accepts subsequent
      *  remote operations. Pulsar doesn't currently consume the events. */
     suspend fun canonSetEventMode(mode: Int = 1): Response =
-        transact(OP_CANON_EVENT_MODE, intArrayOf(mode), expectDataIn = false)
+        wire.transact(OP_CANON_EVENT_MODE, intArrayOf(mode), expectDataIn = false)
 
     /** Canon: start a remote shutter press. The camera holds the shutter
      *  open until [canonRemoteReleaseOff] for bulb-mode exposures (body
      *  must be set to Bulb on its dial). `mode=3` is "full press + AF"
      *  in Canon's lexicon — the value gphoto2 uses for bulb. */
     suspend fun canonRemoteReleaseOn(mode: Int = 3): Response =
-        transact(OP_CANON_REMOTE_RELEASE_ON, intArrayOf(mode), expectDataIn = false)
+        wire.transact(OP_CANON_REMOTE_RELEASE_ON, intArrayOf(mode), expectDataIn = false)
 
     /** Canon: release the remote shutter press. Pair with [canonRemoteReleaseOn]. */
     suspend fun canonRemoteReleaseOff(mode: Int = 3): Response =
-        transact(OP_CANON_REMOTE_RELEASE_OFF, intArrayOf(mode), expectDataIn = false)
+        wire.transact(OP_CANON_REMOTE_RELEASE_OFF, intArrayOf(mode), expectDataIn = false)
 
     /** Canon: read one live-view frame. Returns the raw response payload —
      *  the caller is responsible for finding the JPEG SOI / EOI markers in
      *  the body-specific wrapper Canon embeds the frame inside. */
     suspend fun canonGetViewFinderData(): Response =
-        transact(OP_CANON_GET_VIEWFINDER_DATA, intArrayOf(0x00100000), expectDataIn = true)
+        wire.transact(OP_CANON_GET_VIEWFINDER_DATA, intArrayOf(0x00100000), expectDataIn = true)
 
     /** Canon: step the focus motor. `value` encodes direction and magnitude:
      *  `0x0001..0x0003` = far (small / medium / large step),
      *  `0x8001..0x8003` = near. Source: libgphoto2's canon driver. */
     suspend fun canonDriveLens(value: Int): Response =
-        transact(OP_CANON_DRIVE_LENS, intArrayOf(value), expectDataIn = false)
+        wire.transact(OP_CANON_DRIVE_LENS, intArrayOf(value), expectDataIn = false)
 
     /** PTP `GetDevicePropValue` — read the current value of a device
      *  property (battery level, focal length, etc.). Caller decodes the
      *  data payload based on the property's known type. */
     suspend fun getDevicePropValue(propCode: Int): Response =
-        transact(OP_GET_DEVICE_PROP_VALUE, intArrayOf(propCode), expectDataIn = true)
+        wire.transact(OP_GET_DEVICE_PROP_VALUE, intArrayOf(propCode), expectDataIn = true)
 
     /** PTP `SetDevicePropValue` — write a new value to a device property.
      *  Caller pre-encodes the value bytes for the property's known type
      *  (UINT8, UINT16, STR, etc.). Returns the response code. */
     suspend fun setDevicePropValue(propCode: Int, valueBytes: ByteArray): Response =
-        transact(OP_SET_DEVICE_PROP_VALUE, intArrayOf(propCode),
+        wire.transact(OP_SET_DEVICE_PROP_VALUE, intArrayOf(propCode),
                  dataOut = valueBytes, expectDataIn = false)
 
     // ── Result types ────────────────────────────────────────────────────
@@ -170,105 +173,6 @@ class PtpClient(
         val deviceVersion: String,
         val serialNumber: String,
     )
-
-    // ── Wire-protocol guts ──────────────────────────────────────────────
-
-    /** Run one PTP transaction: command -> [optional data] -> response. */
-    private fun transact(
-        opCode: Int,
-        params: IntArray,
-        dataOut: ByteArray? = null,
-        expectDataIn: Boolean = false,
-    ): Response {
-        val txId = ++transactionId
-        sendCommand(opCode, params, txId)
-        if (dataOut != null) sendData(opCode, dataOut, txId)
-        val data = if (expectDataIn) readData(txId) else null
-        return readResponse(txId).copy(data = data)
-    }
-
-    private fun sendCommand(opCode: Int, params: IntArray, txId: Int) {
-        require(params.size <= 5) { "PTP commands take at most 5 parameters" }
-        val len = 12 + params.size * 4
-        val buf = ByteBuffer.allocate(len).order(ByteOrder.LITTLE_ENDIAN)
-            .putInt(len)
-            .putShort(CONTAINER_COMMAND.toShort())
-            .putShort(opCode.toShort())
-            .putInt(txId)
-        for (p in params) buf.putInt(p)
-        val sent = connection.bulkTransfer(bulkOut, buf.array(), len, TIMEOUT_DEFAULT)
-        if (sent != len) {
-            throw ProtocolException("send-command",
-                "bulkTransfer sent $sent / $len for op 0x${"%04X".format(opCode)}")
-        }
-    }
-
-    private fun sendData(opCode: Int, payload: ByteArray, txId: Int) {
-        val len = 12 + payload.size
-        val buf = ByteBuffer.allocate(len).order(ByteOrder.LITTLE_ENDIAN)
-            .putInt(len)
-            .putShort(CONTAINER_DATA.toShort())
-            .putShort(opCode.toShort())
-            .putInt(txId)
-            .put(payload)
-        val sent = connection.bulkTransfer(bulkOut, buf.array(), len, TIMEOUT_DEFAULT)
-        if (sent != len) {
-            throw ProtocolException("send-data",
-                "bulkTransfer sent $sent / $len for op 0x${"%04X".format(opCode)}")
-        }
-    }
-
-    /** Read a DATA container. Loops until [declared length] bytes received. */
-    private fun readData(expectedTxId: Int): ByteArray {
-        val first = ByteArray(BULK_READ_CHUNK)
-        val firstLen = connection.bulkTransfer(bulkIn, first, first.size, TIMEOUT_LONG)
-        if (firstLen < 12) throw ProtocolException("recv-data", "short read: $firstLen")
-        val header = ByteBuffer.wrap(first, 0, 12).order(ByteOrder.LITTLE_ENDIAN)
-        val declared = header.int
-        val type = header.short.toInt() and 0xFFFF
-        header.short // opCode echo
-        val txId = header.int
-        if (type != CONTAINER_DATA) {
-            throw ProtocolException("recv-data", "expected DATA container, got $type")
-        }
-        if (txId != expectedTxId) {
-            throw ProtocolException("recv-data",
-                "transaction id mismatch: expected $expectedTxId, got $txId")
-        }
-        val out = ByteArray(declared - 12)
-        val available = (firstLen - 12).coerceAtMost(out.size)
-        System.arraycopy(first, 12, out, 0, available)
-        var copied = available
-        while (copied < out.size) {
-            val n = connection.bulkTransfer(bulkIn, first, first.size, TIMEOUT_DEFAULT)
-            if (n <= 0) break
-            val take = n.coerceAtMost(out.size - copied)
-            System.arraycopy(first, 0, out, copied, take)
-            copied += take
-        }
-        return out
-    }
-
-    private fun readResponse(expectedTxId: Int): Response {
-        val buf = ByteArray(64)
-        val n = connection.bulkTransfer(bulkIn, buf, buf.size, TIMEOUT_DEFAULT)
-        if (n < 12) throw ProtocolException("recv-response", "short read: $n")
-        val header = ByteBuffer.wrap(buf, 0, n).order(ByteOrder.LITTLE_ENDIAN)
-        val declared = header.int
-        val type = header.short.toInt() and 0xFFFF
-        val code = header.short.toInt() and 0xFFFF
-        val txId = header.int
-        if (type != CONTAINER_RESPONSE) {
-            throw ProtocolException("recv-response", "expected RESPONSE container, got $type")
-        }
-        if (txId != expectedTxId) {
-            throw ProtocolException("recv-response",
-                "transaction id mismatch: expected $expectedTxId, got $txId")
-        }
-        val paramCount = ((declared - 12).coerceAtLeast(0) / 4).coerceAtMost(5)
-        val params = IntArray(paramCount) { header.int }
-        return Response(code, params)
-    }
 
     // ── DeviceInfo parser (PIMA 15740 §5.5.1) ───────────────────────────
 
@@ -319,8 +223,6 @@ class PtpClient(
         for (i in 0 until n) out.add(buf.short.toInt() and 0xFFFF)
         return out
     }
-
-    class ProtocolException(val stage: String, msg: String) : Exception("[$stage] $msg")
 
     companion object {
         // ── PTP container types (PIMA 15740 §13.2.1) ─────────────────────
@@ -378,13 +280,5 @@ class PtpClient(
         // ── Vendor extension IDs ─────────────────────────────────────────
         const val VENDOR_EXT_CANON_EOS = 11L
         const val VENDOR_EXT_MTP = 0xFFFFL
-
-        // ── Timeouts (ms) ────────────────────────────────────────────────
-        private const val TIMEOUT_DEFAULT = 3_000
-        private const val TIMEOUT_LONG = 10_000
-        /** Default buffer size for the first chunk of a data-in read. 4 KB
-         *  is enough to swallow most DeviceInfo + standard property reads
-         *  in one bulk transfer. */
-        private const val BULK_READ_CHUNK = 4096
     }
 }

@@ -208,6 +208,20 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 // when the camera becomes available, rather than failing fast.
                 connectCanonBle(device, autoReconnect = true)
             }
+            com.ehrocha.pulsar.transport.TransportKind.PTP_IP -> {
+                // identifier = "name|host|port"; try to reconnect to the
+                // recorded host directly (we can't browse mDNS instantly).
+                val parts = last.identifier.split('|')
+                if (parts.size < 3) {
+                    forgetLastConnection()
+                    return
+                }
+                val port = parts[2].toIntOrNull() ?: return
+                val cam = com.ehrocha.pulsar.ptp.PtpIpCamera(
+                    name = parts[0], host = parts[1], port = port,
+                )
+                connectPtpIp(cam)
+            }
         }
     }
 
@@ -308,6 +322,134 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  the same camera reappears on the bus. */
     private var lastPtpAutoReconnect: Pair<Int, Int>? = null
 
+    // ── PTP/IP (Canon Wi-Fi PTP-over-TCP) — Pulsar's 5th transport ─────
+    // Discovers and drives Canon EOS bodies in "Remote Control (EOS
+    // Utility)" Wi-Fi mode. Same op layer as USB PTP (shared PtpClient);
+    // only the wire (PtpIpWire over TCP) differs. The EOS R lead since
+    // CCAPI doesn't activate there and the body has no BLE shutter.
+    // Phase 1 scope: discovery + handshake + connect. Shutter / live view
+    // / reconnect hardening land in later phases.
+    private val ptpIpDiscovery = com.ehrocha.pulsar.ptp.PtpIpDiscovery(app)
+    val ptpIpCameras: StateFlow<List<com.ehrocha.pulsar.ptp.PtpIpCamera>> =
+        ptpIpDiscovery.cameras
+
+    private val _ptpIpTransport =
+        MutableStateFlow<com.ehrocha.pulsar.ptp.PtpIpTransport?>(null)
+    val ptpIpTransport: StateFlow<com.ehrocha.pulsar.ptp.PtpIpTransport?> =
+        _ptpIpTransport
+
+    private val _ptpIpConnecting = MutableStateFlow(false)
+    val ptpIpConnecting: StateFlow<Boolean> = _ptpIpConnecting
+
+    /** True between starting the PTP/IP handshake and the camera's user
+     *  confirmation. UI surfaces a "Confirm on camera" prompt. */
+    private val _ptpIpAwaitingConfirm = MutableStateFlow(false)
+    val ptpIpAwaitingConfirm: StateFlow<Boolean> = _ptpIpAwaitingConfirm
+
+    private val _ptpIpError = MutableStateFlow<String?>(null)
+    val ptpIpError: StateFlow<String?> = _ptpIpError
+    fun clearPtpIpError() { _ptpIpError.value = null }
+
+    fun startPtpIpScan() = ptpIpDiscovery.start()
+    fun stopPtpIpScan() = ptpIpDiscovery.stop()
+
+    private var ptpIpConnectJob: Job? = null
+
+    /** Connect to a PTP/IP camera. Mutually exclusive with the other four
+     *  transports — they're torn down first. The camera shows a "Connect
+     *  this device?" prompt the first time it sees our client GUID. */
+    fun connectPtpIp(camera: com.ehrocha.pulsar.ptp.PtpIpCamera) {
+        ptpIpConnectJob?.cancel()
+        ptpIpConnectJob = viewModelScope.launch {
+            _ptpIpError.value = null
+            _ptpIpConnecting.value = true
+            try {
+                // Mutual exclusion: any other transport is torn down first.
+                if (bleController.connected.value) bleController.disconnect()
+                if (_canonCcapiTransport.value != null) disconnectCanonCcapi()
+                disconnectCanonBle()
+                if (_ptpTransport.value != null) disconnectPtp()
+                if (_simulatorActive.value) disconnectSimulator()
+                stopPtpIpScan()
+
+                val result = com.ehrocha.pulsar.ptp.PtpIpTransport.openOn(
+                    camera = camera,
+                    clientName = "Pulsar",
+                    clientGuid = ptpIpClientGuid(),
+                    onAwaitConfirm = { _ptpIpAwaitingConfirm.value = true },
+                )
+                _ptpIpAwaitingConfirm.value = false
+                val transport = when (result) {
+                    is com.ehrocha.pulsar.ptp.PtpIpOpenResult.Ok -> result.transport
+                    is com.ehrocha.pulsar.ptp.PtpIpOpenResult.Rejected -> {
+                        _ptpIpError.value = "rejected"
+                        return@launch
+                    }
+                    is com.ehrocha.pulsar.ptp.PtpIpOpenResult.Failed -> {
+                        _ptpIpError.value = "connect_failed"
+                        return@launch
+                    }
+                }
+                if (!transport.connect()) {
+                    _ptpIpError.value = "session_failed"
+                    transport.release()
+                    return@launch
+                }
+                _ptpIpTransport.value = transport
+                _deviceName.value = transport.label.value
+                _connected.value = true
+                recordLastConnection(com.ehrocha.pulsar.model.LastConnection(
+                    kind = com.ehrocha.pulsar.transport.TransportKind.PTP_IP,
+                    label = transport.label.value,
+                    identifier = "${camera.name}|${camera.host}|${camera.port}",
+                ))
+                _status.value = StatusFrame(
+                    state = DeviceState.IDLE,
+                    mode = TriggerMode.TIMELAPSE.id,
+                    shotsTaken = 0,
+                    timeRemainingMs = 0L,
+                    batteryPct = 0,
+                    errorCode = 0,
+                    fwVersion = "",
+                )
+            } finally {
+                _ptpIpConnecting.value = false
+                _ptpIpAwaitingConfirm.value = false
+            }
+        }
+    }
+
+    private fun disconnectPtpIp() {
+        ptpIpConnectJob?.cancel()
+        ptpIpConnectJob = null
+        val transport = _ptpIpTransport.value
+        if (transport != null) {
+            viewModelScope.launch { transport.release() }
+            _ptpIpTransport.value = null
+        }
+        if (!bleController.connected.value && !_simulatorActive.value &&
+            _canonCcapiTransport.value == null && _ptpTransport.value == null &&
+            _canonBleTransport.value == null) {
+            _connected.value = false
+            _status.value = null
+        }
+    }
+
+    /** Persistent client GUID for PTP/IP — the camera remembers it across
+     *  reconnects so it only prompts once per device. Stored in plain
+     *  SharedPrefs (not a secret, just an identifier). */
+    private fun ptpIpClientGuid(): java.util.UUID {
+        val prefs = getApplication<Application>().getSharedPreferences(
+            "pulsar_ptpip", android.content.Context.MODE_PRIVATE,
+        )
+        prefs.getString("client_guid", null)?.let {
+            runCatching { return java.util.UUID.fromString(it) }
+        }
+        val fresh = java.util.UUID.randomUUID()
+        prefs.edit().putString("client_guid", fresh.toString()).apply()
+        return fresh
+    }
+
     // ── Canon BLE direct transport (Phase 1: connect + pair + single-shot
     //    + bulb via press/hold). The phone speaks Canon's BR-E1 BLE
     //    protocol directly to the camera — no Pulsar ESP32 hardware, no
@@ -347,6 +489,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             _canonBleTransport.value != null -> "Canon BLE"
             _canonCcapiTransport.value != null -> "Canon CCAPI"
             _ptpTransport.value != null -> "USB PTP"
+            _ptpIpTransport.value != null -> "Wi-Fi PTP/IP"
             bleController.connected.value -> "Pulsar BLE"
             _simulatorActive.value -> "Simulator"
             else -> "none"
@@ -819,6 +962,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         if (_canonCcapiTransport.value != null) disconnectCanonCcapi()
         disconnectCanonBle()
         if (_ptpTransport.value != null) disconnectPtp()
+        if (_ptpIpTransport.value != null) disconnectPtpIp()
         if (_simulatorActive.value) disconnectSimulator()
         _deviceName.value = device.name ?: "Pulsar"
         pendingBleConnectMac = device.address
@@ -848,6 +992,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             // connected" stays single-valued.
             if (bleController.connected.value) bleController.disconnect()
             if (_ptpTransport.value != null) disconnectPtp()
+            if (_ptpIpTransport.value != null) disconnectPtpIp()
             disconnectCanonBle()
             if (_simulatorActive.value) disconnectSimulator()
             stopScan()
@@ -1248,6 +1393,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 // "what's connected" stays single-valued.
                 if (bleController.connected.value) bleController.disconnect()
                 if (_canonCcapiTransport.value != null) disconnectCanonCcapi()
+                if (_ptpIpTransport.value != null) disconnectPtpIp()
                 disconnectCanonBle()
                 if (_simulatorActive.value) disconnectSimulator()
                 stopScan()
@@ -1384,6 +1530,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 if (bleController.connected.value) bleController.disconnect()
                 if (_canonCcapiTransport.value != null) disconnectCanonCcapi()
                 if (_ptpTransport.value != null) disconnectPtp()
+                if (_ptpIpTransport.value != null) disconnectPtpIp()
                 if (_simulatorActive.value) disconnectSimulator()
                 stopScan()
                 // Stop the BLE scan once connected — Android shouldn't be
@@ -1554,6 +1701,17 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             disconnectCanonBle()
             return
         }
+        if (_ptpIpTransport.value != null) {
+            if (_flowRunning.value) {
+                flowJob?.cancel()
+                flowJob = null
+                _flowRunning.value = false
+                _flowPaused.value = false
+                _flowCurrentStep.value = -1
+            }
+            disconnectPtpIp()
+            return
+        }
         if (_simulatorActive.value) {
             disconnectSimulator()
             return
@@ -1711,8 +1869,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  [runCameraTest] fires Timelapse only. Drives the Tools-tab tile
      *  copy too. */
     val activeTransportSupportsBulb: StateFlow<Boolean> = combine(
-        _canonCcapiTransport, _ptpTransport, _canonBleTransport,
-    ) { ccapi, ptp, ble ->
+        _canonCcapiTransport, _ptpTransport, _canonBleTransport, _ptpIpTransport,
+    ) { ccapi, ptp, ble, ptpIp ->
         // First non-null transport wins. ESP32 BLE + simulator paths don't
         // appear here — neither implements CameraTransport, and both own
         // their own bulb timing, so the "no phone-side transport" fallback
@@ -1721,6 +1879,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             ccapi != null -> ccapi.supportsBulb
             ptp != null -> ptp.supportsBulb
             ble != null -> ble.supportsBulb
+            ptpIp != null -> ptpIp.supportsBulb
             else -> true
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, true)
@@ -1865,6 +2024,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  of [executeFlowStep]. */
     private fun activeCameraTransport(): com.ehrocha.pulsar.transport.CameraTransport? =
         _canonCcapiTransport.value ?: _ptpTransport.value ?: _canonBleTransport.value
+            ?: _ptpIpTransport.value
 
     fun stopFlow() {
         // Hand the BLE stop off immediately (don't wait on cancellation) so
@@ -2280,6 +2440,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         if (_canonCcapiTransport.value != null) disconnectCanonCcapi()
         disconnectCanonBle()
         if (_ptpTransport.value != null) disconnectPtp()
+        if (_ptpIpTransport.value != null) disconnectPtpIp()
         lastPtpAutoReconnect = null
         _ptpReconnecting.value = false
         _simulatorActive.value = true
