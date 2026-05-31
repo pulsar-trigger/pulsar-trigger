@@ -162,7 +162,7 @@ Package: `com.ehrocha.pulsar`, `minSdk 26`, `compileSdk 35`. Navigation is a man
 
 ## Transports
 
-Pulsar talks to cameras through four mutually-exclusive transports, all routed through the same viewmodel: `bleController` (Pulsar ESP32 over BLE), `_canonCcapiTransport` (Canon CCAPI over Wi-Fi), `_ptpTransport` (USB PTP), and `_canonBleTransport` (Canon's own BR-E1 BLE protocol). Tapping a device of one kind disconnects the others; the simulator is treated as a fifth transport for mutual-exclusion purposes.
+Pulsar talks to cameras through five mutually-exclusive transports, all routed through the same viewmodel: `bleController` (Pulsar ESP32 over BLE), `_canonCcapiTransport` (Canon CCAPI over Wi-Fi), `_ptpTransport` (USB PTP), `_canonBleTransport` (Canon's own BR-E1 / smartphone-mode BLE protocol), and `_ptpIpTransport` (Canon PTP-over-Wi-Fi). Tapping a device of one kind disconnects the others; the simulator is treated as an additional transport for mutual-exclusion purposes.
 
 ### BLE / ESP32
 
@@ -223,6 +223,23 @@ Compatibility: every body on Canon's BR-E1 compatibility list — RP, R5, R6, R6
 
 Full design: [docs/canon-ble.md](docs/canon-ble.md).
 
+### Canon Wi-Fi PTP (PTP/IP)
+
+The reason this transport exists: the **EOS R** has no BLE shutter and no CCAPI, so the only wireless control path Canon ever shipped for that body is PTP-over-Wi-Fi via "Remote Control (EOS Utility)" mode. Same op set as USB PTP (shared `PtpClient`); only the wire differs — TCP sockets on port 15740 instead of USB bulk endpoints. Works on every EOS body with "Remote Control (EOS Utility)" Wi-Fi mode (R / RP / R5 / R6 / R6 II / R7 / R8 / R10 / R50, plus pre-R bodies from the EOS Utility era).
+
+- **Discovery** — mDNS browse on `_ptp._tcp.local` via Android's `NsdManager`. Cameras in EOS Utility mode announce themselves on the local network; resolved entries surface as `PtpIpCamera(name, host, port)` in the scan list. Multicast must work on the LAN — some enterprise APs block it; use the camera's own Wi-Fi AP mode as a workaround.
+- **Pair** — body's Wireless menu → Wi-Fi → **"Remote Control (EOS Utility)"** (not "Connect to smartphone"). Both devices on the same network (or phone joins the camera's AP). Tap the camera card; Pulsar runs the four-message PTP/IP init handshake (two TCP sockets — command + event — with a persisted 16-byte client GUID); the camera shows "Connect this device?" — confirm on the body. Subsequent reconnects skip the prompt because the camera remembers our GUID.
+- **Capture** — `PtpIpTransport.fireShutter` / `startBulb` / `stopBulb` go through the same Canon op set as USB PTP (`InitiateCapture`, `RemoteRelease{On,Off}`). Adding a new Canon op needs zero PTP/IP-specific code — the wire abstraction (`PtpWire` / `PtpIpWire` / `BulkPtpWire`) keeps the client agnostic.
+- **Phases** — Phase 1 (v0.305, shipped): discovery + handshake + connect + capability detection. Phase 2: shutter (code in place, hardware-verify pending). Phase 3-5: settings/lens/battery, live view + Star Focus, auto-reconnect.
+
+Honest caveats:
+
+- **Wi-Fi doubles camera battery drain** vs USB PTP — plan for a dummy-battery passthrough on long sessions.
+- **PC-remote mode locks the camera dial** — same caveat as USB PTP.
+- **mDNS requires multicast on the network** — workaround: camera's own AP.
+
+Full design: [docs/ptp-ip.md](docs/ptp-ip.md). USB sibling: [docs/ptp.md](docs/ptp.md).
+
 ---
 
 ## Repository Structure
@@ -263,6 +280,7 @@ pulsar-trigger/
     ├── ble-protocol.md             ← Pulsar BLE wire format spec (TLV)
     ├── ccapi.md                    ← Canon CCAPI integration design
     ├── ptp.md                      ← USB PTP transport design (Canon EOS R / RP)
+    ├── ptp-ip.md                   ← Canon Wi-Fi PTP transport (PTP-over-TCP, EOS R wireless)
     ├── canon-ble.md                ← Canon BLE direct transport (BR-E1 + smartphone-mode)
     ├── canon-ble-research.md       ← Reverse-engineering log (all refs + GATT dumps + the open M-mode toggle bug)
     ├── mode-schema.md              ← User-mode preset JSON schema

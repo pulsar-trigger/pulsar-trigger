@@ -2,7 +2,15 @@
 
 Pulsar's third transport: drive a Canon body (or any PTP-capable camera) directly over USB-C from the phone. No ESP32 in between, no Wi-Fi handshake, no CCAPI activation — just a USB-C cable from the phone's host port to the camera. Built on Android's `UsbManager` host API + a hand-rolled PTP-over-USB client.
 
-The PTP transport's reason to exist: Canon's EOS R doesn't support CCAPI even on the latest firmware, and there is no PC activation path that fixes it. PTP is the only phone-side automation Pulsar can offer on that body. As a bonus it's also the lowest-latency transport overall — bulk USB writes are ~10-30 ms vs CCAPI's ~100-200 ms HTTP RTT — and the camera draws ~5 %/h instead of ~30 %/h, because the body's Wi-Fi radio stays off.
+The PTP transport's reason to exist: Canon's EOS R doesn't support CCAPI even on the latest firmware, and there is no PC activation path that fixes it. PTP is the only phone-side automation Pulsar can offer on that body when a cable is in play. As a bonus it's also the lowest-latency transport overall — bulk USB writes are ~10-30 ms vs CCAPI's ~100-200 ms HTTP RTT — and the camera draws ~5 %/h instead of ~30 %/h, because the body's Wi-Fi radio stays off.
+
+> **Sister doc — wireless equivalent**: [docs/ptp-ip.md](ptp-ip.md) covers
+> Pulsar's 5th transport, **Canon Wi-Fi PTP**. Same `PtpClient` op layer
+> (extracted into a `PtpWire` interface in `ptp/PtpWire.kt`), different wire:
+> two TCP sockets on port 15740 instead of USB bulk endpoints. Same Canon
+> ops (`InitiateCapture`, `RemoteRelease{On,Off}`, `GetDevicePropValue`, …)
+> reach the body unchanged. Use that when you want the EOS R wirelessly and
+> don't have a cable.
 
 ## What works (Phase 1–6 shipped)
 

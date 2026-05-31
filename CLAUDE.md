@@ -4,11 +4,12 @@ Quick reference for AI assistants working on this project. See README.md for ful
 
 ## Project
 
-Open-source camera intervalometer + trigger. Four transports:
+Open-source camera intervalometer + trigger. Five transports:
 - **Pulsar ESP32 firmware** ↔ BLE (`bleController` in the app — universal, any camera with a wired remote port)
 - **Canon CCAPI** ↔ Wi-Fi (`_canonCcapiTransport`, for EOS R-series with CCAPI activated — adds live view + Star Focus + lens info + battery)
 - **USB PTP** ↔ USB-C (`_ptpTransport`, for Canon EOS R/RP and any PTP-capable body — the only phone-side path for the EOS R since CCAPI doesn't activate there)
-- **Canon BLE direct** ↔ BLE (`_canonBleTransport`, speaks Canon's own BR-E1 protocol — wireless, no hardware, every BR-E1-compatible body. Capability is bulb-class; no live view / lens / battery)
+- **Canon BLE direct** ↔ BLE (`_canonBleTransport`, speaks Canon's BR-E1 + smartphone-mode protocols — wireless, no hardware, every BR-E1-compatible body. Capability is bulb-class; no live view / lens / battery)
+- **Canon Wi-Fi PTP (PTP/IP)** ↔ Wi-Fi (`_ptpIpTransport`, EOS bodies in "Remote Control (EOS Utility)" mode. Shares `PtpClient` with USB PTP via the `PtpWire` interface — only the wire differs. Wireless control path for the EOS R)
 
 License: GPL-3.0-or-later. Repo branch: `master`. Canon SDK PDFs live outside the repo at `../Canon-API/` (NDA — do not commit, do not copy verbatim).
 
@@ -30,7 +31,7 @@ License: GPL-3.0-or-later. Repo branch: `master`. Canon SDK PDFs live outside th
 
 ## Key Gotchas
 
-- **Four transports, one viewmodel.** Almost every viewmodel method that touches the wire has a Pulsar-BLE branch + CCAPI branch + PTP branch + Canon-BLE branch + simulator branch in `executeFlowStep`. When adding a new wire call think through all five paths. The three transports that implement `CameraTransport` (CCAPI, PTP, Canon BLE) share `CanonRunner.kt`'s `runCanonBulb` / `runCanonTimelapse` / `runCanonRamp`; ESP32 firmware owns its own run loop.
+- **Five transports, one viewmodel.** Almost every viewmodel method that touches the wire has a Pulsar-BLE branch + CCAPI branch + PTP branch + Canon-BLE branch + PtpIp branch + simulator branch in `executeFlowStep`. When adding a new wire call think through all six paths. The four transports that implement `CameraTransport` (CCAPI, USB PTP, Canon BLE, PTP/IP) share `CanonRunner.kt`'s `runCanonBulb` / `runCanonTimelapse` / `runCanonRamp`; ESP32 firmware owns its own run loop. USB PTP and PTP/IP additionally share `PtpClient` and split only at the `PtpWire` (USB-bulk vs TCP-packet) layer.
 - **Run loops are transport-agnostic.** `transport/CanonRunner.kt` (`runCanonTimelapse` / `runCanonBulb` / `runCanonRamp`) takes a `CameraTransport`. Both `CcapiTransport` and `PtpTransport` implement it; ESP32 has its own firmware-side run loop and doesn't go through this. Despite the name, the runners are not Canon-specific — they're the phone-driven-shot-timing pattern.
 - **CCAPI / PTP bulb capability is body-dependent.** `_canonCcapiTransport.value?.supportsBulb` (CCAPI: `/shutterbutton/manual` in endpoint matrix) and `_ptpTransport.value?.supportsBulb` (PTP: Canon `RemoteRelease` ops `0x9128` / `0x9125` advertised in `GetDeviceInfo`). UI dims bulb-based tiles when false. Canon BLE always reports `supportsBulb = true` — the press-and-hold pattern works on every BR-E1-compatible body.
 - **Intervalometer gap semantics** — `intervalMs` is the GAP between exposures (expose → wait gap → repeat), NOT the total cycle time. Cycle = `exposureMs + intervalMs`.
@@ -119,6 +120,7 @@ cd firmware
 - [docs/ble-protocol.md](docs/ble-protocol.md) — BLE TLV wire format
 - [docs/ccapi.md](docs/ccapi.md) — Canon CCAPI integration design
 - [docs/ptp.md](docs/ptp.md) — USB PTP transport design (Canon EOS R + RP)
+- [docs/ptp-ip.md](docs/ptp-ip.md) — Canon Wi-Fi PTP (PTP/IP) transport — same `PtpClient` over TCP
 - [docs/canon-ble.md](docs/canon-ble.md) — Canon BLE direct transport (BR-E1 protocol, all BR-E1-compatible bodies)
 - [docs/canon-ble-research.md](docs/canon-ble-research.md) — BR-E1 reverse-engineering log: all 6 refs decoded, EOS R GATT dump, the open "pairs-but-won't-shoot" bug. Diagnostic driver: `tools/canon_ble_test.py`
 - [docs/mode-schema.md](docs/mode-schema.md) — user-mode preset JSON schema
