@@ -21,7 +21,12 @@ import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.model.FlowPresets
 import com.ehrocha.pulsar.model.RunState
 import com.ehrocha.pulsar.model.SavedFlow
+import com.ehrocha.pulsar.ptp.awaitPtpIpReady
+import com.ehrocha.pulsar.ptp.awaitPtpUsbReady
+import com.ehrocha.pulsar.ptp.startPtpBatteryPolling
+import com.ehrocha.pulsar.ptp.startPtpIpBatteryPolling
 import com.ehrocha.pulsar.service.PulsarNotificationService
+import com.ehrocha.pulsar.transport.ccapi.awaitCcapiReady
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -264,7 +269,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     // When non-null, the app talks to a Canon camera over HTTP instead of BLE.
     // Mutually exclusive with BLE & simulator — picking one disconnects the
     // others. Only Timelapse runs are supported in Phase 2.
-    private val _canonCcapiTransport =
+    internal val _canonCcapiTransport =
         MutableStateFlow<com.ehrocha.pulsar.transport.ccapi.CcapiTransport?>(null)
     val canonCcapiTransport: StateFlow<com.ehrocha.pulsar.transport.ccapi.CcapiTransport?> =
         _canonCcapiTransport
@@ -284,7 +289,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     /** True while the polling loop has lost contact with the camera and is
      *  trying to reach it again — the UI keeps the session alive (no return
      *  to the scan screen) and shows a reconnecting banner. */
-    private val _canonCcapiReconnecting = MutableStateFlow(false)
+    internal val _canonCcapiReconnecting = MutableStateFlow(false)
     val canonCcapiReconnecting: StateFlow<Boolean> = _canonCcapiReconnecting
 
     // ── USB PTP transport (Phase 1: Timelapse only) ──────────────────────
@@ -296,7 +301,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val ptpDiscovery = com.ehrocha.pulsar.ptp.PtpDiscovery(app).also { it.start() }
     val ptpCameras: StateFlow<List<android.hardware.usb.UsbDevice>> = ptpDiscovery.cameras
 
-    private val _ptpTransport =
+    internal val _ptpTransport =
         MutableStateFlow<com.ehrocha.pulsar.ptp.PtpTransport?>(null)
     val ptpTransport: StateFlow<com.ehrocha.pulsar.ptp.PtpTransport?> = _ptpTransport
 
@@ -309,7 +314,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  the auto-reconnect logic is waiting for it to reappear. The UI
      *  shows a banner like the CCAPI Wi-Fi reconnect indicator. Cleared
      *  by either a successful reconnect or an explicit user disconnect. */
-    private val _ptpReconnecting = MutableStateFlow(false)
+    internal val _ptpReconnecting = MutableStateFlow(false)
     val ptpReconnecting: StateFlow<Boolean> = _ptpReconnecting
 
     /** Called by the scan-screen Snackbar after surfacing the error. */
@@ -333,7 +338,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val ptpIpCameras: StateFlow<List<com.ehrocha.pulsar.ptp.PtpIpCamera>> =
         ptpIpDiscovery.cameras
 
-    private val _ptpIpTransport =
+    internal val _ptpIpTransport =
         MutableStateFlow<com.ehrocha.pulsar.ptp.PtpIpTransport?>(null)
     val ptpIpTransport: StateFlow<com.ehrocha.pulsar.ptp.PtpIpTransport?> =
         _ptpIpTransport
@@ -353,7 +358,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     /** True while we're trying to recover a dropped PTP/IP wire. The UI
      *  surfaces a "Reconnecting…" state instead of bouncing the user back
      *  to scan. */
-    private val _ptpIpReconnecting = MutableStateFlow(false)
+    internal val _ptpIpReconnecting = MutableStateFlow(false)
     val ptpIpReconnecting: StateFlow<Boolean> = _ptpIpReconnecting
 
     /** Last camera we connected to over PTP/IP. Cleared on a user-initiated
@@ -501,23 +506,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Periodic PTP/IP battery poll — same 30 s cadence as USB PTP since
      *  neither path pushes battery events. Cancelled in [disconnectPtpIp]. */
-    private var ptpIpPollJob: Job? = null
-    private fun startPtpIpBatteryPolling(transport: com.ehrocha.pulsar.ptp.PtpIpTransport) {
-        ptpIpPollJob?.cancel()
-        ptpIpPollJob = viewModelScope.launch {
-            transport.readBatteryPercent()?.let { pct ->
-                _status.value = _status.value?.copy(batteryPct = pct)
-            }
-            while (isActive) {
-                delay(30_000)
-                // Body downgraded its own capability — stop polling to
-                // avoid wire spam (EOS R case: prop advertised, read rejected).
-                if (!transport.supportsBatteryReadout) break
-                val pct = transport.readBatteryPercent() ?: continue
-                _status.value = _status.value?.copy(batteryPct = pct)
-            }
-        }
-    }
+    internal var ptpIpPollJob: Job? = null
+    // startPtpIpBatteryPolling lives in ptp/PtpIpPulsarViewModelExt.kt — a
+    // PulsarViewModel extension that reads internal poll-job state on this
+    // class. Keeps the per-transport leaf concerns out of the main file.
 
     private fun disconnectPtpIp() {
         ptpIpConnectJob?.cancel()
@@ -824,7 +816,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val _connected = MutableStateFlow(false)
     val connected: StateFlow<Boolean> = _connected
 
-    private val _status = MutableStateFlow<StatusFrame?>(null)
+    internal val _status = MutableStateFlow<StatusFrame?>(null)
     val status: StateFlow<StatusFrame?> = _status
 
     val deviceInfo: StateFlow<DeviceInfo?> = bleController.deviceInfo
@@ -1372,7 +1364,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         canonCcapiCredsPrefs.edit().remove("u:$udn").remove("p:$udn").apply()
     }
 
-    private var canonCcapiPollJob: Job? = null
+    internal var canonCcapiPollJob: Job? = null
 
     /** Long-poll `/event/polling` for live battery + shot count. On a streak of
      *  failures the loop enters reconnect mode and re-probes `/ccapi` for up
@@ -1595,27 +1587,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Periodic PTP battery poll. PTP doesn't push battery events, so we
-     *  ask the body for `BatteryLevel` (0x5001) every 30 s and update the
-     *  run-screen chip. Cancelled in [disconnectPtp]. */
-    private var ptpPollJob: Job? = null
-    private fun startPtpBatteryPolling(transport: com.ehrocha.pulsar.ptp.PtpTransport) {
-        ptpPollJob?.cancel()
-        ptpPollJob = viewModelScope.launch {
-            // Seed immediately so the user doesn't see 0% for 30 s.
-            transport.readBatteryPercent()?.let { pct ->
-                _status.value = _status.value?.copy(batteryPct = pct)
-            }
-            while (isActive) {
-                delay(30_000)
-                // Stop polling if the transport runtime-downgraded the cap
-                // (e.g. EOS R advertises BatteryLevel but rejects the read).
-                if (!transport.supportsBatteryReadout) break
-                val pct = transport.readBatteryPercent() ?: continue
-                _status.value = _status.value?.copy(batteryPct = pct)
-            }
-        }
-    }
+    /** Job handle for the USB PTP battery poll loop — implementation lives
+     *  in [com.ehrocha.pulsar.ptp.startPtpBatteryPolling]. Cancelled in
+     *  [disconnectPtp]. */
+    internal var ptpPollJob: Job? = null
 
     // ── Canon BLE direct: connect / disconnect / auto-reconnect ────────
 
@@ -2378,6 +2353,18 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  so the caller bails instead of firing shots into the void. The flow's
      *  [DeviceState] is flipped to WAITING while paused so the RunningView
      *  shows the paused affordance rather than RUNNING. */
+    /** Dispatches the runner-pause to the right per-transport extension —
+     *  see [com.ehrocha.pulsar.transport.ccapi.awaitCcapiReady],
+     *  [com.ehrocha.pulsar.ptp.awaitPtpUsbReady], and
+     *  [com.ehrocha.pulsar.ptp.awaitPtpIpReady] for the actual hold logic.
+     *  ESP-BLE + Canon BLE direct don't have a pause-on-reconnect concept,
+     *  so they return immediately. */
+    /** Dispatches the runner-pause to the right per-transport extension —
+     *  see [com.ehrocha.pulsar.transport.ccapi.awaitCcapiReady],
+     *  [com.ehrocha.pulsar.ptp.awaitPtpUsbReady], and
+     *  [com.ehrocha.pulsar.ptp.awaitPtpIpReady] for the actual hold logic.
+     *  ESP-BLE + Canon BLE direct don't have a pause-on-reconnect concept,
+     *  so they return immediately. */
     private suspend fun awaitCanonReady(
         transport: com.ehrocha.pulsar.transport.CameraTransport,
     ) {
@@ -2389,74 +2376,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             is com.ehrocha.pulsar.ptp.PtpTransport ->
                 awaitPtpUsbReady(transport)
             else -> return
-        }
-    }
-
-    private suspend fun awaitPtpUsbReady(
-        ptp: com.ehrocha.pulsar.ptp.PtpTransport,
-    ) {
-        if (!_ptpReconnecting.value && _ptpTransport.value === ptp) return
-        val priorState = _status.value?.state
-        try {
-            while (true) {
-                coroutineContext.ensureActive()
-                if (_ptpTransport.value !== ptp) {
-                    throw IllegalStateException("USB PTP transport dropped during pause")
-                }
-                if (!_ptpReconnecting.value) return
-                _status.value = _status.value?.copy(state = DeviceState.WAITING)
-                delay(500)
-            }
-        } finally {
-            if (priorState != null && _status.value?.state == DeviceState.WAITING) {
-                _status.value = _status.value?.copy(state = priorState)
-            }
-        }
-    }
-
-    private suspend fun awaitCcapiReady(
-        ccapi: com.ehrocha.pulsar.transport.ccapi.CcapiTransport,
-    ) {
-        if (!_canonCcapiReconnecting.value && _canonCcapiTransport.value === ccapi) return
-        val priorState = _status.value?.state
-        try {
-            while (true) {
-                coroutineContext.ensureActive()
-                if (_canonCcapiTransport.value !== ccapi) {
-                    throw IllegalStateException("Canon transport dropped during pause")
-                }
-                if (!_canonCcapiReconnecting.value) return
-                _status.value = _status.value?.copy(state = DeviceState.WAITING)
-                delay(500)
-            }
-        } finally {
-            if (priorState != null && _status.value?.state == DeviceState.WAITING) {
-                _status.value = _status.value?.copy(state = priorState)
-            }
-        }
-    }
-
-    private suspend fun awaitPtpIpReady(
-        ptpIp: com.ehrocha.pulsar.ptp.PtpIpTransport,
-    ) {
-        if (!_ptpIpReconnecting.value && _ptpIpTransport.value === ptpIp) return
-        val priorState = _status.value?.state
-        try {
-            while (true) {
-                coroutineContext.ensureActive()
-                // Bail if the transport was torn down (reconnect timed out
-                // and the viewmodel cleared the StateFlow).
-                if (_ptpIpTransport.value !== ptpIp) {
-                    throw IllegalStateException("PTP/IP transport dropped during pause")
-                }
-                if (!_ptpIpReconnecting.value) return
-                _status.value = _status.value?.copy(state = DeviceState.WAITING)
-                delay(500)
-            }
-        } finally {
-            if (priorState != null && _status.value?.state == DeviceState.WAITING) {
-                _status.value = _status.value?.copy(state = priorState)
-            }
         }
     }
 
