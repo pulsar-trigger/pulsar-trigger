@@ -8,22 +8,25 @@ package com.ehrocha.pulsar.widget
 import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
-import androidx.glance.LocalSize
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
+import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
-import androidx.glance.appwidget.updateAll
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
@@ -38,14 +41,27 @@ import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.glance.unit.ColorProvider
+import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.MainActivity
 import com.ehrocha.pulsar.astro.AstroDashboardManager
 import com.ehrocha.pulsar.astro.DashboardState
-import com.ehrocha.pulsar.astro.DewRisk
+import com.ehrocha.pulsar.astro.LocationInfo
+import com.ehrocha.pulsar.astro.MoonInfo
+import com.ehrocha.pulsar.astro.PhotoWindow
+import com.ehrocha.pulsar.astro.WeatherInfo
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.abs
+
+// Verdict palette — matches DashboardScreen.kt's VerdictRow exactly.
+private val VERDICT_GOOD = Color(0xFF2E7D32)
+private val VERDICT_BAD = Color(0xFFE65100)
+private val WINDOW_EXCELLENT = Color(0xFF2E7D32)
+private val WINDOW_GOOD = Color(0xFF558B2F)
+private val WINDOW_FAIR = Color(0xFFF9A825)
 
 class DashboardWidget : GlanceAppWidget() {
 
@@ -62,27 +78,12 @@ class DashboardWidget : GlanceAppWidget() {
                 if (state == null) {
                     EmptyState()
                 } else {
-                    // Pick layout density from the actual widget cell size.
-                    // Compact (≤200dp wide): the "is tonight shootable" glance.
-                    // Medium (≤320dp): + weather + dew/Bortle.
-                    // Full (>320dp): the existing rich LazyColumn.
-                    val size = LocalSize.current
-                    when {
-                        size.width < 220.dp -> CompactContent(state, snapshot.updatedAtMs)
-                        size.width < 320.dp -> MediumContent(state, snapshot.updatedAtMs)
-                        else -> DashboardContent(state, snapshot.updatedAtMs)
-                    }
+                    SummaryCard(state, snapshot.updatedAtMs)
                 }
             }
         }
     }
 }
-
-/** True when the cached snapshot is older than ~12h (battery saver killed
- *  the worker, or no network for a while). The widget tints the timestamp
- *  amber and prefixes it so users notice. */
-private fun isStale(updatedAtMs: Long): Boolean =
-    updatedAtMs > 0 && System.currentTimeMillis() - updatedAtMs > 12L * 3600_000L
 
 class DashboardWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = DashboardWidget()
@@ -94,14 +95,18 @@ private fun openAppIntent(context: Context): Intent =
         putExtra(MainActivity.EXTRA_OPEN_TAB, MainActivity.TAB_DASHBOARD)
     }
 
+private fun isStale(updatedAtMs: Long): Boolean =
+    updatedAtMs > 0 && System.currentTimeMillis() - updatedAtMs > 12L * 3600_000L
+
 @Composable
 private fun EmptyState() {
+    val ctx = androidx.glance.LocalContext.current
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(GlanceTheme.colors.widgetBackground)
-            .padding(12.dp)
-            .clickable(actionStartActivity(openAppIntent(LocalContextOrNull()))),
+            .padding(14.dp)
+            .clickable(actionStartActivity(openAppIntent(ctx))),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -110,7 +115,7 @@ private fun EmptyState() {
             style = TextStyle(
                 color = GlanceTheme.colors.onSurface,
                 fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
+                fontSize = 14.sp,
             ),
         )
         Spacer(GlanceModifier.height(4.dp))
@@ -118,57 +123,67 @@ private fun EmptyState() {
             "Open the app to populate the widget",
             style = TextStyle(
                 color = GlanceTheme.colors.onSurfaceVariant,
-                fontSize = 11.sp,
+                fontSize = 12.sp,
             ),
         )
     }
 }
 
+/**
+ * Mirrors the Summary card on the in-app Dashboard tab:
+ * city + lat/lon header, then verdict chips for Sun / Moon / Weather /
+ * Milky Way / Bortle (green for good, orange for bad), rise/set times,
+ * and the best photo windows of the night with rating chips.
+ *
+ * Lives in a [LazyColumn] so the widget content scrolls when the user
+ * resizes it small enough that everything doesn't fit.
+ */
 @Composable
-private fun DashboardContent(state: DashboardState, updatedAtMs: Long) {
-    val ctx = LocalContextOrNull()
+private fun SummaryCard(state: DashboardState, updatedAtMs: Long) {
+    val ctx = androidx.glance.LocalContext.current
     LazyColumn(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(GlanceTheme.colors.widgetBackground)
-            .padding(10.dp)
+            .padding(14.dp)
             .clickable(actionStartActivity(openAppIntent(ctx))),
     ) {
-        item { Header(state, updatedAtMs) }
-        item { SectionSpacer() }
-        state.moon?.let { item { MoonSection(it) } }
-        if (state.sun != null || state.twilight != null) {
-            item { SectionSpacer() }
-            item { SunTwilightSection(state) }
+        item { CardHeader(state, updatedAtMs) }
+        item { Spacer(GlanceModifier.height(10.dp)) }
+        state.sun?.let { item { VerdictRow("☀️", "Sun", true) } }
+        state.moon?.let { moon -> item { MoonVerdict(moon) } }
+        state.weather?.let { w -> item { WeatherVerdict(w) } }
+        state.milkyWay?.let { mw ->
+            item {
+                VerdictRow(
+                    "🌌",
+                    if (mw.visible) "MW Visible" else "MW Not Visible",
+                    mw.visible,
+                )
+            }
         }
-        state.weather?.let {
-            item { SectionSpacer() }
-            item { WeatherSection(it) }
+        state.bortle?.let { b ->
+            val bInt = b.bortleClass.toInt().coerceIn(1, 9)
+            item { VerdictRow("💡", "Bortle $bInt", bInt <= 4) }
         }
-        if (state.bortle != null || state.dewPoint != null) {
-            item { SectionSpacer() }
-            item { SkyAndDewSection(state) }
+
+        val riseSetRows = buildRiseSetRows(state)
+        if (riseSetRows.isNotEmpty()) {
+            item { Spacer(GlanceModifier.height(10.dp)) }
+            item { SectionLabel("Rise / Set") }
+            items(riseSetRows) { (emoji, times) -> RiseSetRow(emoji, times) }
         }
-        state.milkyWay?.takeIf { it.visible }?.let {
-            item { SectionSpacer() }
-            item { MilkyWaySection(it) }
-        }
+
         if (state.bestWindows.isNotEmpty()) {
-            item { SectionSpacer() }
-            item { WindowsHeader() }
-            items(state.bestWindows.take(3)) { w -> WindowRow(w) }
-        }
-        val visiblePlanets = state.planets.filter { it.visible }
-        if (visiblePlanets.isNotEmpty()) {
-            item { SectionSpacer() }
-            item { PlanetsHeader() }
-            items(visiblePlanets) { p -> PlanetRow(p) }
+            item { Spacer(GlanceModifier.height(10.dp)) }
+            item { SectionLabel("Best Photo Windows") }
+            items(state.bestWindows) { w -> WindowRow(w) }
         }
     }
 }
 
 @Composable
-private fun Header(state: DashboardState, updatedAtMs: Long, showWeatherChip: Boolean = true) {
+private fun CardHeader(state: DashboardState, updatedAtMs: Long) {
     val stale = isStale(updatedAtMs)
     Row(
         modifier = GlanceModifier.fillMaxWidth(),
@@ -180,275 +195,158 @@ private fun Header(state: DashboardState, updatedAtMs: Long, showWeatherChip: Bo
                 style = TextStyle(
                     color = GlanceTheme.colors.onSurface,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
+                    fontSize = 17.sp,
                 ),
                 maxLines = 1,
             )
+            state.location?.let { loc ->
+                Text(
+                    formatCoords(loc),
+                    style = TextStyle(
+                        color = GlanceTheme.colors.onSurfaceVariant,
+                        fontSize = 12.sp,
+                    ),
+                    maxLines = 1,
+                )
+            }
             Text(
                 (if (stale) "Stale · " else "Updated ") + formatTime(updatedAtMs),
                 style = TextStyle(
                     color = if (stale) GlanceTheme.colors.error
                     else GlanceTheme.colors.onSurfaceVariant,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     fontWeight = if (stale) FontWeight.Medium else FontWeight.Normal,
                 ),
             )
-        }
-        if (showWeatherChip && state.weather != null) {
-            Text(
-                "${state.weather.temperatureC.toInt()}°C  ${state.weather.cloudCoverPct}%☁",
-                style = TextStyle(
-                    color = GlanceTheme.colors.onSurface,
-                    fontSize = 12.sp,
-                ),
-            )
-            Spacer(GlanceModifier.width(8.dp))
         }
         RefreshButton()
     }
 }
 
-/** Circular-arrow icon that enqueues a one-shot [DashboardWidgetWorker].
- *  Uses Android's built-in `ic_menu_rotate` resource so we don't ship a
- *  custom drawable just for the widget. */
 @Composable
-private fun RefreshButton() {
-    androidx.glance.Image(
-        provider = androidx.glance.ImageProvider(android.R.drawable.ic_popup_sync),
-        contentDescription = "Refresh",
-        modifier = GlanceModifier
-            .size(20.dp)
-            .clickable(actionRunCallback<DashboardRefreshAction>()),
-        colorFilter = androidx.glance.ColorFilter.tint(GlanceTheme.colors.primary),
+private fun MoonVerdict(moon: MoonInfo) {
+    VerdictRow(
+        moon.emoji,
+        if (moon.goodForAstro) "Dark Moon" else "Bright Moon",
+        moon.goodForAstro,
     )
 }
 
 @Composable
-private fun CompactContent(state: DashboardState, updatedAtMs: Long) {
-    val ctx = LocalContextOrNull()
-    Column(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(GlanceTheme.colors.widgetBackground)
-            .padding(10.dp)
-            .clickable(actionStartActivity(openAppIntent(ctx))),
-    ) {
-        Header(state, updatedAtMs, showWeatherChip = false)
-        Spacer(GlanceModifier.height(6.dp))
-        state.moon?.let { MoonSection(it) }
-        state.twilight?.let { tw ->
-            Spacer(GlanceModifier.height(4.dp))
-            Text(
-                "🌌 ${tw.astroEnd ?: "—"} → ${tw.astroStart ?: "—"}",
-                style = TextStyle(
-                    color = GlanceTheme.colors.onSurface,
-                    fontSize = 11.sp,
-                ),
-            )
-        }
-        state.dewPoint?.let { d ->
-            Spacer(GlanceModifier.height(2.dp))
-            val tint = when (d.risk) {
-                DewRisk.CRITICAL -> GlanceTheme.colors.error
-                DewRisk.WARNING -> GlanceTheme.colors.tertiary
-                DewRisk.NONE -> GlanceTheme.colors.onSurfaceVariant
-            }
-            Text(
-                "Dew ${"%.0f".format(d.dewPointC)}°C · Δ ${"%.0f".format(d.spreadC)}°C",
-                style = TextStyle(color = tint, fontSize = 11.sp),
-            )
-        }
+private fun WeatherVerdict(weather: WeatherInfo) {
+    val hasRain = weather.precipitationMm > 0.1
+    val good = weather.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD && !hasRain
+    val label = when {
+        hasRain -> "Rain"
+        weather.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD -> "Clear Skies"
+        weather.cloudCoverPct <= AppConfig.CLOUD_COVER_PARTLY_THRESHOLD -> "Partly Cloudy"
+        else -> "Too Cloudy"
     }
+    VerdictRow(weatherEmoji(weather.weatherCode), label, good)
 }
 
+/** One verdict chip — emoji + label inside a soft-tinted rounded surface.
+ *  Green tint for "good" conditions, orange for "bad". Matches
+ *  [com.ehrocha.pulsar.ui.screens.DashboardScreen]'s `VerdictRow`. */
 @Composable
-private fun MediumContent(state: DashboardState, updatedAtMs: Long) {
-    val ctx = LocalContextOrNull()
-    Column(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(GlanceTheme.colors.widgetBackground)
-            .padding(10.dp)
-            .clickable(actionStartActivity(openAppIntent(ctx))),
-    ) {
-        Header(state, updatedAtMs)
-        Spacer(GlanceModifier.height(6.dp))
-        state.moon?.let { MoonSection(it) }
-        if (state.sun != null || state.twilight != null) {
-            Spacer(GlanceModifier.height(6.dp))
-            SunTwilightSection(state)
-        }
-        if (state.bortle != null || state.dewPoint != null) {
-            Spacer(GlanceModifier.height(6.dp))
-            SkyAndDewSection(state)
-        }
-    }
-}
-
-@Composable
-private fun MoonSection(moon: com.ehrocha.pulsar.astro.MoonInfo) {
+private fun VerdictRow(emoji: String, label: String, good: Boolean) {
+    val accent = if (good) VERDICT_GOOD else VERDICT_BAD
+    val bg = accent.copy(alpha = 0.14f)
     Row(
-        modifier = GlanceModifier.fillMaxWidth(),
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            moon.emoji,
-            style = TextStyle(fontSize = 22.sp),
-        )
-        Spacer(GlanceModifier.width(6.dp))
-        Column(modifier = GlanceModifier.defaultWeight()) {
+        Row(
+            modifier = GlanceModifier
+                .defaultWeight()
+                .background(bg)
+                .cornerRadius(10.dp)
+                .padding(horizontal = 10.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(emoji, style = TextStyle(fontSize = 15.sp))
+            Spacer(GlanceModifier.width(6.dp))
             Text(
-                "${moon.phaseName} · ${moon.illuminationPct.toInt()}%",
+                label,
                 style = TextStyle(
-                    color = GlanceTheme.colors.onSurface,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
-                ),
-            )
-            Text(
-                buildString {
-                    moon.rise?.let { append("↑ $it") }
-                    if (moon.rise != null && moon.set != null) append("   ")
-                    moon.set?.let { append("↓ $it") }
-                },
-                style = TextStyle(
-                    color = GlanceTheme.colors.onSurfaceVariant,
-                    fontSize = 11.sp,
+                    color = ColorProvider(accent),
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 13.sp,
                 ),
             )
         }
+    }
+}
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text,
+        style = TextStyle(
+            color = GlanceTheme.colors.primary,
+            fontWeight = FontWeight.Bold,
+            fontSize = 12.sp,
+        ),
+    )
+}
+
+@Composable
+private fun RiseSetRow(emoji: String, times: String) {
+    Row(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(emoji, style = TextStyle(fontSize = 15.sp), modifier = GlanceModifier.width(26.dp))
         Text(
-            if (moon.goodForAstro) "✓ astro" else "—",
+            times,
             style = TextStyle(
-                color = if (moon.goodForAstro)
-                    GlanceTheme.colors.primary
-                else GlanceTheme.colors.onSurfaceVariant,
-                fontSize = 10.sp,
+                color = GlanceTheme.colors.onSurfaceVariant,
+                fontSize = 13.sp,
             ),
         )
     }
 }
 
 @Composable
-private fun SunTwilightSection(state: DashboardState) {
-    Column(modifier = GlanceModifier.fillMaxWidth()) {
-        state.sun?.let { sun ->
-            Row(modifier = GlanceModifier.fillMaxWidth()) {
-                Text(
-                    "☀ ${sun.sunrise ?: "—"} / ${sun.sunset ?: "—"}",
-                    style = TextStyle(
-                        color = GlanceTheme.colors.onSurface,
-                        fontSize = 11.sp,
-                    ),
-                )
-            }
-        }
-        state.twilight?.let { tw ->
-            Spacer(GlanceModifier.height(2.dp))
-            Text(
-                "Astro twilight: ${tw.astroEnd ?: "—"} → ${tw.astroStart ?: "—"}",
-                style = TextStyle(
-                    color = GlanceTheme.colors.onSurfaceVariant,
-                    fontSize = 10.sp,
-                ),
-            )
-            tw.nauticalEnd?.let { ne ->
-                Text(
-                    "Nautical: $ne → ${tw.nauticalStart ?: "—"}    Civil: ${tw.civilEnd ?: "—"} → ${tw.civilStart ?: "—"}",
-                    style = TextStyle(
-                        color = GlanceTheme.colors.onSurfaceVariant,
-                        fontSize = 10.sp,
-                    ),
-                )
-            }
-        }
+private fun WindowRow(w: PhotoWindow) {
+    val (chipColor, chipLabel) = when (w.rating) {
+        3 -> WINDOW_EXCELLENT to "Excellent"
+        2 -> WINDOW_GOOD to "Good"
+        else -> WINDOW_FAIR to "Fair"
     }
-}
-
-@Composable
-private fun WeatherSection(w: com.ehrocha.pulsar.astro.WeatherInfo) {
-    Column(modifier = GlanceModifier.fillMaxWidth()) {
+    val chipMark = when (w.rating) { 3 -> "⭐"; 2 -> "👍"; else -> "👌" }
+    Row(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(chipMark, style = TextStyle(fontSize = 16.sp), modifier = GlanceModifier.width(28.dp))
         Text(
-            "Weather",
-            style = TextStyle(
-                color = GlanceTheme.colors.primary,
-                fontWeight = FontWeight.Bold,
-                fontSize = 11.sp,
-            ),
-        )
-        Spacer(GlanceModifier.height(2.dp))
-        Text(
-            "${w.temperatureC.toInt()}°C   ☁ ${w.cloudCoverPct}%   " +
-                "💧 ${w.humidity}%   🌧 ${"%.1f".format(w.precipitationMm)} mm   " +
-                "💨 ${w.windSpeedKmh.toInt()} km/h",
+            "${w.startTime} – ${w.endTime}",
             style = TextStyle(
                 color = GlanceTheme.colors.onSurface,
-                fontSize = 11.sp,
-            ),
-        )
-    }
-}
-
-@Composable
-private fun SkyAndDewSection(state: DashboardState) {
-    Column(modifier = GlanceModifier.fillMaxWidth()) {
-        state.bortle?.let { b ->
-            Text(
-                "Sky: Bortle ${"%.1f".format(b.bortleClass)} · ${b.category}",
-                style = TextStyle(
-                    color = GlanceTheme.colors.onSurface,
-                    fontSize = 11.sp,
-                ),
-            )
-            Text(
-                "Milky Way: ${b.milkyWayQuality}",
-                style = TextStyle(
-                    color = GlanceTheme.colors.onSurfaceVariant,
-                    fontSize = 10.sp,
-                ),
-            )
-        }
-        state.dewPoint?.let { d ->
-            Spacer(GlanceModifier.height(2.dp))
-            val tint = when (d.risk) {
-                DewRisk.CRITICAL -> GlanceTheme.colors.error
-                DewRisk.WARNING -> GlanceTheme.colors.tertiary
-                DewRisk.NONE -> GlanceTheme.colors.onSurface
-            }
-            Text(
-                "Dew: ${"%.1f".format(d.dewPointC)}°C  Δ ${"%.1f".format(d.spreadC)}°C · ${d.risk.name}",
-                style = TextStyle(color = tint, fontSize = 11.sp),
-            )
-        }
-    }
-}
-
-@Composable
-private fun MilkyWaySection(m: com.ehrocha.pulsar.astro.MilkyWayInfo) {
-    Column(modifier = GlanceModifier.fillMaxWidth()) {
-        Text(
-            if (m.seasonBest) "Milky Way · in season" else "Milky Way",
-            style = TextStyle(
-                color = GlanceTheme.colors.primary,
                 fontWeight = FontWeight.Bold,
-                fontSize = 11.sp,
+                fontSize = 13.sp,
             ),
+            modifier = GlanceModifier.defaultWeight(),
         )
-        if (m.coreRise != null || m.coreSet != null) {
+        Row(
+            modifier = GlanceModifier
+                .background(chipColor.copy(alpha = 0.17f))
+                .cornerRadius(10.dp)
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+        ) {
             Text(
-                "Core: ${m.coreRise ?: "—"} → ${m.coreSet ?: "—"}",
+                chipLabel,
                 style = TextStyle(
-                    color = GlanceTheme.colors.onSurface,
+                    color = ColorProvider(chipColor),
+                    fontWeight = FontWeight.Bold,
                     fontSize = 11.sp,
-                ),
-            )
-        }
-        m.darkWindow?.let {
-            Text(
-                "Dark window: $it",
-                style = TextStyle(
-                    color = GlanceTheme.colors.onSurfaceVariant,
-                    fontSize = 10.sp,
                 ),
             )
         }
@@ -456,66 +354,68 @@ private fun MilkyWaySection(m: com.ehrocha.pulsar.astro.MilkyWayInfo) {
 }
 
 @Composable
-private fun WindowsHeader() {
-    Text(
-        "Best photo windows",
-        style = TextStyle(
-            color = GlanceTheme.colors.primary,
-            fontWeight = FontWeight.Bold,
-            fontSize = 11.sp,
-        ),
+private fun RefreshButton() {
+    Image(
+        provider = ImageProvider(android.R.drawable.ic_popup_sync),
+        contentDescription = "Refresh",
+        modifier = GlanceModifier
+            .size(22.dp)
+            .clickable(actionRunCallback<DashboardRefreshAction>()),
+        colorFilter = ColorFilter.tint(GlanceTheme.colors.primary),
     )
 }
 
-@Composable
-private fun WindowRow(w: com.ehrocha.pulsar.astro.PhotoWindow) {
-    val ratingMark = when (w.rating) { 3 -> "★★★"; 2 -> "★★"; else -> "★" }
-    Text(
-        "$ratingMark  ${w.startTime}–${w.endTime} · ${w.hours}h · ☁ ${w.avgCloudPct}%",
-        style = TextStyle(
-            color = GlanceTheme.colors.onSurface,
-            fontSize = 11.sp,
-        ),
-    )
+// ── Helpers ────────────────────────────────────────────────────────────
+
+private fun buildRiseSetRows(state: DashboardState): List<Pair<String, String>> = buildList {
+    state.sun?.let { sun ->
+        val t = listOfNotNull(
+            sun.sunrise?.let { "↑${stripSeconds(it)}" },
+            sun.sunset?.let { "↓${stripSeconds(it)}" },
+        ).joinToString("  ")
+        if (t.isNotEmpty()) add("☀️" to t)
+    }
+    state.moon?.let { moon ->
+        val t = listOfNotNull(
+            moon.rise?.let { "↑${stripSeconds(it)}" },
+            moon.set?.let { "↓${stripSeconds(it)}" },
+        ).joinToString("  ")
+        if (t.isNotEmpty()) add(moon.emoji to t)
+    }
+    state.milkyWay?.let { mw ->
+        val t = listOfNotNull(
+            mw.coreRise?.let { "↑$it" },
+            mw.coreSet?.let { "↓$it" },
+        ).joinToString("  ")
+        if (t.isNotEmpty()) add("🌌" to t)
+    }
 }
 
-@Composable
-private fun PlanetsHeader() {
-    Text(
-        "Planets tonight",
-        style = TextStyle(
-            color = GlanceTheme.colors.primary,
-            fontWeight = FontWeight.Bold,
-            fontSize = 11.sp,
-        ),
-    )
-}
+/** Strip seconds off an "HH:mm:ss" timestamp so the row fits in tight widget cells. */
+private fun stripSeconds(s: String): String =
+    if (s.count { it == ':' } >= 2) s.substringBeforeLast(':') else s
 
-@Composable
-private fun PlanetRow(p: com.ehrocha.pulsar.astro.PlanetInfo) {
-    Text(
-        "${p.emoji} ${p.name}  · max alt ${p.altitude.toInt()}°" +
-            (p.rise?.let { "  ↑ $it" } ?: "") +
-            (p.set?.let { "  ↓ $it" } ?: ""),
-        style = TextStyle(
-            color = GlanceTheme.colors.onSurface,
-            fontSize = 11.sp,
-        ),
-    )
-}
-
-@Composable
-private fun SectionSpacer() {
-    Spacer(GlanceModifier.height(6.dp))
-}
-
-@Composable
-private fun LocalContextOrNull(): Context {
-    return androidx.glance.LocalContext.current
-}
+private fun formatCoords(loc: LocationInfo): String = String.format(
+    Locale.US, "%.4f° %s, %.4f° %s",
+    abs(loc.latitude), if (loc.latitude >= 0) "N" else "S",
+    abs(loc.longitude), if (loc.longitude >= 0) "E" else "W",
+)
 
 private fun formatTime(epochMs: Long): String {
     if (epochMs <= 0) return "—"
     val t = Instant.ofEpochMilli(epochMs).atZone(ZoneId.systemDefault())
     return DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()).format(t)
+}
+
+/** Map Open-Meteo weather codes to a small set of emoji. Subset of the
+ *  in-app mapping — covers the categories the verdict logic uses. */
+private fun weatherEmoji(code: Int): String = when (code) {
+    in 0..1 -> "☀️"
+    in 2..3 -> "⛅"
+    in 45..48 -> "🌫️"
+    in 51..67 -> "🌦️"
+    in 71..77 -> "❄️"
+    in 80..82 -> "🌧️"
+    in 95..99 -> "⛈️"
+    else -> "☁️"
 }
