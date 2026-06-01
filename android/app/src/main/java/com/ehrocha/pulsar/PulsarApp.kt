@@ -8,7 +8,9 @@ package com.ehrocha.pulsar
 import android.app.Application
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.ehrocha.pulsar.canonble.CrashPersister
@@ -43,13 +45,15 @@ class PulsarApp : Application() {
 
     /** Refresh the home-screen widget's cached dashboard snapshot every 3 h.
      *  The dashboard data (weather + astronomy) changes slowly, so 3 h is
-     *  plenty to keep the widget useful without burning battery. */
+     *  plenty to keep the widget useful without burning battery. Also kicks
+     *  off a one-shot run on first launch so a freshly-placed widget paints
+     *  real data without requiring the user to open the Dashboard tab. */
     private fun scheduleDashboardWidgetRefresh() {
         val constraints = Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
-        val request = PeriodicWorkRequestBuilder<DashboardWidgetWorker>(
+        val periodic = PeriodicWorkRequestBuilder<DashboardWidgetWorker>(
             3, TimeUnit.HOURS,
         ).setConstraints(constraints)
             .build()
@@ -57,7 +61,18 @@ class PulsarApp : Application() {
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             DashboardWidgetWorker.WORK_NAME,
             ExistingPeriodicWorkPolicy.KEEP,
-            request,
+            periodic,
+        )
+
+        // One-shot on first launch — the periodic schedule's initial delay
+        // could be hours, leaving a fresh widget stuck on the loading layout.
+        val oneShot = OneTimeWorkRequestBuilder<DashboardWidgetWorker>()
+            .setConstraints(constraints)
+            .build()
+        WorkManager.getInstance(this).enqueueUniqueWork(
+            "${DashboardWidgetWorker.WORK_NAME}_oneshot_bootstrap",
+            ExistingWorkPolicy.KEEP,
+            oneShot,
         )
     }
 }

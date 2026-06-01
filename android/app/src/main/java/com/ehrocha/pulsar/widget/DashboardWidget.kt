@@ -13,12 +13,13 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
+import androidx.glance.LocalSize
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.SizeMode
+import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
-import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
@@ -32,6 +33,7 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
@@ -60,12 +62,27 @@ class DashboardWidget : GlanceAppWidget() {
                 if (state == null) {
                     EmptyState()
                 } else {
-                    DashboardContent(state, snapshot.updatedAtMs)
+                    // Pick layout density from the actual widget cell size.
+                    // Compact (≤200dp wide): the "is tonight shootable" glance.
+                    // Medium (≤320dp): + weather + dew/Bortle.
+                    // Full (>320dp): the existing rich LazyColumn.
+                    val size = LocalSize.current
+                    when {
+                        size.width < 220.dp -> CompactContent(state, snapshot.updatedAtMs)
+                        size.width < 320.dp -> MediumContent(state, snapshot.updatedAtMs)
+                        else -> DashboardContent(state, snapshot.updatedAtMs)
+                    }
                 }
             }
         }
     }
 }
+
+/** True when the cached snapshot is older than ~12h (battery saver killed
+ *  the worker, or no network for a while). The widget tints the timestamp
+ *  amber and prefixes it so users notice. */
+private fun isStale(updatedAtMs: Long): Boolean =
+    updatedAtMs > 0 && System.currentTimeMillis() - updatedAtMs > 12L * 3600_000L
 
 class DashboardWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = DashboardWidget()
@@ -151,7 +168,8 @@ private fun DashboardContent(state: DashboardState, updatedAtMs: Long) {
 }
 
 @Composable
-private fun Header(state: DashboardState, updatedAtMs: Long) {
+private fun Header(state: DashboardState, updatedAtMs: Long, showWeatherChip: Boolean = true) {
+    val stale = isStale(updatedAtMs)
     Row(
         modifier = GlanceModifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -167,14 +185,16 @@ private fun Header(state: DashboardState, updatedAtMs: Long) {
                 maxLines = 1,
             )
             Text(
-                "Updated ${formatTime(updatedAtMs)}",
+                (if (stale) "Stale · " else "Updated ") + formatTime(updatedAtMs),
                 style = TextStyle(
-                    color = GlanceTheme.colors.onSurfaceVariant,
+                    color = if (stale) GlanceTheme.colors.error
+                    else GlanceTheme.colors.onSurfaceVariant,
                     fontSize = 10.sp,
+                    fontWeight = if (stale) FontWeight.Medium else FontWeight.Normal,
                 ),
             )
         }
-        if (state.weather != null) {
+        if (showWeatherChip && state.weather != null) {
             Text(
                 "${state.weather.temperatureC.toInt()}°C  ${state.weather.cloudCoverPct}%☁",
                 style = TextStyle(
@@ -182,6 +202,85 @@ private fun Header(state: DashboardState, updatedAtMs: Long) {
                     fontSize = 12.sp,
                 ),
             )
+            Spacer(GlanceModifier.width(8.dp))
+        }
+        RefreshButton()
+    }
+}
+
+/** Circular-arrow icon that enqueues a one-shot [DashboardWidgetWorker].
+ *  Uses Android's built-in `ic_menu_rotate` resource so we don't ship a
+ *  custom drawable just for the widget. */
+@Composable
+private fun RefreshButton() {
+    androidx.glance.Image(
+        provider = androidx.glance.ImageProvider(android.R.drawable.ic_popup_sync),
+        contentDescription = "Refresh",
+        modifier = GlanceModifier
+            .size(20.dp)
+            .clickable(actionRunCallback<DashboardRefreshAction>()),
+        colorFilter = androidx.glance.ColorFilter.tint(GlanceTheme.colors.primary),
+    )
+}
+
+@Composable
+private fun CompactContent(state: DashboardState, updatedAtMs: Long) {
+    val ctx = LocalContextOrNull()
+    Column(
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .background(GlanceTheme.colors.widgetBackground)
+            .padding(10.dp)
+            .clickable(actionStartActivity(openAppIntent(ctx))),
+    ) {
+        Header(state, updatedAtMs, showWeatherChip = false)
+        Spacer(GlanceModifier.height(6.dp))
+        state.moon?.let { MoonSection(it) }
+        state.twilight?.let { tw ->
+            Spacer(GlanceModifier.height(4.dp))
+            Text(
+                "🌌 ${tw.astroEnd ?: "—"} → ${tw.astroStart ?: "—"}",
+                style = TextStyle(
+                    color = GlanceTheme.colors.onSurface,
+                    fontSize = 11.sp,
+                ),
+            )
+        }
+        state.dewPoint?.let { d ->
+            Spacer(GlanceModifier.height(2.dp))
+            val tint = when (d.risk) {
+                DewRisk.CRITICAL -> GlanceTheme.colors.error
+                DewRisk.WARNING -> GlanceTheme.colors.tertiary
+                DewRisk.NONE -> GlanceTheme.colors.onSurfaceVariant
+            }
+            Text(
+                "Dew ${"%.0f".format(d.dewPointC)}°C · Δ ${"%.0f".format(d.spreadC)}°C",
+                style = TextStyle(color = tint, fontSize = 11.sp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun MediumContent(state: DashboardState, updatedAtMs: Long) {
+    val ctx = LocalContextOrNull()
+    Column(
+        modifier = GlanceModifier
+            .fillMaxSize()
+            .background(GlanceTheme.colors.widgetBackground)
+            .padding(10.dp)
+            .clickable(actionStartActivity(openAppIntent(ctx))),
+    ) {
+        Header(state, updatedAtMs)
+        Spacer(GlanceModifier.height(6.dp))
+        state.moon?.let { MoonSection(it) }
+        if (state.sun != null || state.twilight != null) {
+            Spacer(GlanceModifier.height(6.dp))
+            SunTwilightSection(state)
+        }
+        if (state.bortle != null || state.dewPoint != null) {
+            Spacer(GlanceModifier.height(6.dp))
+            SkyAndDewSection(state)
         }
     }
 }
