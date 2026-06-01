@@ -1952,6 +1952,17 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     }
                 } catch (t: Throwable) {
                     threw = true
+                    // Log the exception class + message + first ~6 stack
+                    // frames into the in-app diag ring so a wizard-start
+                    // crash captured via Tools→Diagnostics shows the root
+                    // cause (CancellationException still rethrows cleanly).
+                    if (t !is kotlinx.coroutines.CancellationException) {
+                        com.ehrocha.pulsar.canonble.CanonBleLog.e(
+                            "FlowJob",
+                            "${t.javaClass.simpleName}: ${t.message}\n" +
+                                t.stackTrace.take(6).joinToString("\n  ") { "at $it" },
+                        )
+                    }
                     throw t
                 } finally {
                     val endedAt = System.currentTimeMillis()

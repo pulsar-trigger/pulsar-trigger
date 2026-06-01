@@ -186,25 +186,27 @@ class PtpIpTransport private constructor(
                 CanonBleLog.w(TAG, "fireShutter: not connected — ignored")
                 return@withContext
             }
-            val mode = if (af) MODE_FULL_PRESS_AF else MODE_FULL_PRESS_NO_AF
+            // R-series rejects mode=2 (no-AF) with DEVICE_BUSY (0x2019)
+            // (verified on EOS R v0.308 diag log) — only mode=3 (full press
+            // with AF) is accepted. The `af` param is honoured at the camera
+            // setting level; if the user has the lens in MF the AF step is
+            // a no-op anyway. So we always send mode=3 on PTP/IP and let the
+            // camera decide what to do with AF based on its own settings.
+            val mode = MODE_FULL_PRESS_AF
             CanonBleLog.i(TAG, "fireShutter af=$af mode=$mode → RemoteRelease pair")
             try {
-                // In PC-remote mode (which we always enable at connect on
-                // Canon bodies) the body rejects InitiateCapture in favour
-                // of RemoteRelease. A "single shot" is therefore a short
-                // press/release pair, with the same mode parameter on both
-                // sides so the body accepts the release.
                 val on = client.canonRemoteReleaseOn(mode = mode)
                 if (!on.ok) {
                     CanonBleLog.w(TAG, "fireShutter RemoteReleaseOn(mode=$mode) " +
                         "rc=0x${"%04X".format(on.code)}")
                     return@withContext
                 }
-                // 20 ms is enough for the body to register the press but
-                // short enough that continuous-drive bodies don't sneak a
-                // second frame into the window. Adjust if specific bodies
-                // misfire.
-                kotlinx.coroutines.delay(20)
+                // 80 ms gives the body enough time to register the press
+                // on PTP/IP (the wire-round-trip + camera processing eats
+                // more time than USB), while keeping the window short
+                // enough that continuous-drive bodies catch at most one
+                // extra frame. v0.308's 20 ms was too short for some bodies.
+                kotlinx.coroutines.delay(80)
                 val off = client.canonRemoteReleaseOff(mode = mode)
                 if (!off.ok) CanonBleLog.w(TAG, "fireShutter RemoteReleaseOff(mode=$mode) " +
                     "rc=0x${"%04X".format(off.code)}")

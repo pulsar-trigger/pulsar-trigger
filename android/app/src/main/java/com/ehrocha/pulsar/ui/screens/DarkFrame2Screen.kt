@@ -65,7 +65,8 @@ fun DarkFrame2Screen(
     val onCanon = vm.canonCcapiTransport.collectAsState().value != null
     val onPtp = vm.ptpTransport.collectAsState().value != null
     val onCanonBle = vm.canonBleTransport.collectAsState().value != null
-    val canControlAf = onCanon || onPtp || onCanonBle
+    val onPtpIp = vm.ptpIpTransport.collectAsState().value != null
+    val canControlAf = onCanon || onPtp || onCanonBle || onPtpIp
 
     var tabIdx by rememberSaveable {
         mutableIntStateOf(if (loadedPreset != null) DfTab.entries.size - 1 else 0)
