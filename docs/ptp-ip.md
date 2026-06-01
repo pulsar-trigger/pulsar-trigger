@@ -116,13 +116,16 @@ Packet types Pulsar uses (ISO 15740):
 The `PtpClient.Response` returned by `PtpWire.transact()` has the exact same
 shape (rc + params + data) regardless of which wire produced it.
 
-## Auto-reconnect (Phase 5 — not yet implemented)
+## Auto-reconnect (shipped v0.315 / v0.316)
 
-If the Wi-Fi link drops mid-session today, the transport's connected flow
-flips false, the run-loop aborts via `abortFlowOnTransportDrop`, and the user
-returns to the scan landing. Phase 5 will mirror what Canon BLE does:
-preserve `lastPtpIpTarget`, watch for the camera to re-advertise on mDNS, and
-auto-reconnect.
+If the Wi-Fi link drops, the run-loop **pauses** via `awaitCanonReady`
+(parity with CCAPI) and the viewmodel re-runs the handshake against the same
+`PtpIpTransport` instance using `PtpIpTransport.reopen()` — a 3 / 5 / 10 / 30 s
+backoff. The outer transport reference stays valid, so the captured `transport`
+in `runCanonBulb` etc. keeps working after the swap (`wire` / `client` /
+`deviceInfo` are mutated in-place). On reconnect success the runner resumes
+mid-flow; after 4 failed attempts the run ends with `STOPPED` and the
+`reconnect_failed` error surfaces in the UI.
 
 ## Compatible bodies
 
@@ -152,19 +155,26 @@ control path on that body (BLE has no shutter; CCAPI doesn't activate).
 Phase 1 (v0.305 — shipped): discovery + handshake + connect, with `GetDeviceInfo`
 populating capability flags + label.
 
-Phase 2 (code in place, awaiting hardware verification): shutter
-(`fireShutter` → `InitiateCapture`, `startBulb` / `stopBulb` →
-`canonRemoteRelease{On,Off}`). Same `PtpClient` ops as USB PTP — works over the
-new wire with zero PTP/IP-specific code.
+Phase 2 (v0.307–v0.313 — shipped): shutter (`fireShutter` → `InitiateCapture`
+or `canonRemoteRelease{On,Off}`, `startBulb` / `stopBulb`). EOS R quirks
+discovered + worked around: `vendorExtensionId = 6` over Wi-Fi (vs. 11 over USB
+— gated on manufacturer string), and `mode = 2` rejected with `DEVICE_BUSY`
+forcing `mode = 3` on the wire. AF toggle is therefore cosmetic on this
+transport and hidden via `supportsAfToggle = false`.
 
-Phase 3: settings / battery / lens-info readouts on the trigger / planner /
-astro screens — same PTP `GetDevicePropValue` paths the USB transport uses.
+Phase 3 (v0.314 — shipped): lens info (`getLensInfo` → `PROP_CANON_LENS_NAME`),
+battery (`readBatteryPercent` → `PROP_BATTERY_LEVEL`, 30s poll), live view
+(`startLiveView` / `stopLiveView` / `getLiveViewFrame` → `PROP_CANON_EVF_OUTPUT`
++ `canonGetViewFinderData`), and focus drive (`driveFocus` → `canonDriveLens`)
+for the Star Focus wizard. Shared `decodePtpString` + `extractJpeg` extracted
+to `PtpDataHelpers.kt`.
 
-Phase 4: live view + Star Focus over PTP/IP. Requires consuming the event
-channel (PTP/IP's stream is async, unlike USB's request-response).
-
-Phase 5: auto-reconnect on Wi-Fi drop, mid-session abort handling, diagnostics
-integration.
+Phase 5 (v0.315–v0.316 — shipped): idle auto-reconnect (3 / 5 / 10 / 30 s
+backoff) and mid-flow pause-and-resume via `PtpIpTransport.reopen()` which
+swaps wire/client under the same transport reference. `awaitCanonReady`
+extended for PTP/IP. Diagnostics integration via the shared `CanonBleLog`
+ring + `CrashPersister` that survives JVM-kill crashes by dumping the log to
+`filesDir` on `Thread.setDefaultUncaughtExceptionHandler`.
 
 ## References
 

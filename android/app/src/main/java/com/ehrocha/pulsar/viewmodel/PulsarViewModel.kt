@@ -617,8 +617,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 appendLine(crash.trim())
             }
             appendLine()
-            appendLine("── Canon BLE wire log ──")
-            append(if (log.isBlank()) "(empty — no Canon BLE activity captured yet)" else log)
+            appendLine("── Transport wire log ──")
+            append(if (log.isBlank()) "(empty — no transport activity captured yet)" else log)
         }
     }
 
@@ -668,19 +668,35 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 val active = _ptpTransport.value
                 if (active != null &&
                     attached.none { it.deviceName == active.device.deviceName }) {
-                    Log.i(TAG, "USB camera unplugged — disconnecting PTP (auto-reconnect armed)")
-                    // A cable pull mid-session can't continue the phone-driven
-                    // run loop — abort it and warn the user.
-                    abortFlowOnTransportDrop()
-                    // Flip the reconnect banner BEFORE tearing the transport
-                    // down — the UI gate on `ptpReconnecting OR onPtp` keeps
-                    // the banner visible even after _ptpTransport goes null.
-                    _ptpReconnecting.value = true
-                    disconnectPtp(clearAutoReconnect = false)
+                    if (_flowRunning.value) {
+                        // Mid-flow cable bump: don't tear down the transport.
+                        // Mark reconnecting so awaitCanonReady pauses the
+                        // runner, and wait for the OS to reattach the same
+                        // (vid, pid) → call existing.reopen() in place.
+                        Log.i(TAG, "USB camera unplugged mid-flow — soft-pausing PTP for reopen")
+                        _ptpReconnecting.value = true
+                        lastPtpAutoReconnect = active.device.vendorId to active.device.productId
+                    } else {
+                        Log.i(TAG, "USB camera unplugged — disconnecting PTP (auto-reconnect armed)")
+                        _ptpReconnecting.value = true
+                        disconnectPtp(clearAutoReconnect = false)
+                    }
                     return@collect
                 }
                 val want = lastPtpAutoReconnect
-                if (active == null && want != null && idleAcrossOtherTransports()) {
+                if (active != null && _ptpReconnecting.value &&
+                    !active.connected.value && want != null) {
+                    // Soft-pause path: a held-but-dead transport is waiting
+                    // for the wire to come back. Find the freshly-enumerated
+                    // device matching the original vid/pid and swap in place.
+                    val match = attached.firstOrNull {
+                        it.vendorId == want.first && it.productId == want.second
+                    }
+                    if (match != null) {
+                        Log.i(TAG, "USB camera reappeared mid-flow — reopen()-ing in place")
+                        viewModelScope.launch { attemptPtpReopen(active, match) }
+                    }
+                } else if (active == null && want != null && idleAcrossOtherTransports()) {
                     val match = attached.firstOrNull {
                         it.vendorId == want.first && it.productId == want.second
                     }
@@ -691,6 +707,28 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 }
             }
         }
+    }
+
+    /** In-place USB reopen — see [PtpTransport.reopen]. Mirrors the PTP/IP
+     *  [attemptPtpIpReconnect] structure (single attempt since USB
+     *  enumeration is fast; if the new device doesn't claim the interface
+     *  cleanly, fall back to a full disconnect so the next ATTACHED can
+     *  rebuild from scratch). */
+    private suspend fun attemptPtpReopen(
+        transport: com.ehrocha.pulsar.ptp.PtpTransport,
+        newDevice: android.hardware.usb.UsbDevice,
+    ) {
+        val ok = runCatching {
+            transport.reopen(getApplication<Application>(), newDevice)
+        }.getOrDefault(false)
+        if (ok) {
+            _ptpReconnecting.value = false
+            return
+        }
+        Log.w(TAG, "PTP reopen failed — falling back to full disconnect")
+        _ptpError.value = "reconnect_failed"
+        abortFlowOnTransportDrop()
+        disconnectPtp(clearAutoReconnect = false)
     }
 
     /** True iff no other transport is currently in use — gates auto-reconnect
@@ -2307,7 +2345,31 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 awaitCcapiReady(transport)
             is com.ehrocha.pulsar.ptp.PtpIpTransport ->
                 awaitPtpIpReady(transport)
+            is com.ehrocha.pulsar.ptp.PtpTransport ->
+                awaitPtpUsbReady(transport)
             else -> return
+        }
+    }
+
+    private suspend fun awaitPtpUsbReady(
+        ptp: com.ehrocha.pulsar.ptp.PtpTransport,
+    ) {
+        if (!_ptpReconnecting.value && _ptpTransport.value === ptp) return
+        val priorState = _status.value?.state
+        try {
+            while (true) {
+                coroutineContext.ensureActive()
+                if (_ptpTransport.value !== ptp) {
+                    throw IllegalStateException("USB PTP transport dropped during pause")
+                }
+                if (!_ptpReconnecting.value) return
+                _status.value = _status.value?.copy(state = DeviceState.WAITING)
+                delay(500)
+            }
+        } finally {
+            if (priorState != null && _status.value?.state == DeviceState.WAITING) {
+                _status.value = _status.value?.copy(state = priorState)
+            }
         }
     }
 

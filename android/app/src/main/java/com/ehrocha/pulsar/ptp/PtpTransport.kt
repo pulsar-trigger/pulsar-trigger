@@ -38,12 +38,23 @@ import kotlinx.coroutines.withContext
  * interface, and closes the USB connection.
  */
 class PtpTransport private constructor(
-    val device: UsbDevice,
-    private val connection: UsbDeviceConnection,
-    private val iface: UsbInterface,
-    private val client: PtpClient,
+    initialDevice: UsbDevice,
+    initialConnection: UsbDeviceConnection,
+    initialIface: UsbInterface,
+    initialClient: PtpClient,
     val deviceInfo: PtpClient.DeviceInfo,
 ) : CameraTransport {
+
+    // Mutable so [reopen] can swap the underlying USB handle after a
+    // cable-unplug → replug. The outer [PtpTransport] reference stays the
+    // same — runners that captured it keep working after the swap. The
+    // (vendorId, productId) pair is the match key the viewmodel uses to
+    // route the USB ATTACHED broadcast back to this transport.
+    var device: UsbDevice = initialDevice
+        private set
+    private var connection: UsbDeviceConnection = initialConnection
+    private var iface: UsbInterface = initialIface
+    private var client: PtpClient = initialClient
 
     companion object {
         private const val TAG = "PtpTransport"
@@ -100,7 +111,13 @@ class PtpTransport private constructor(
             Log.i(TAG, "openOn: ${info.manufacturer} ${info.model} " +
                        "(vendorExt=${info.vendorExtensionId}, " +
                        "ops=${info.supportedOperations.size})")
-            PtpTransport(device, connection, iface, client, info)
+            PtpTransport(
+                initialDevice = device,
+                initialConnection = connection,
+                initialIface = iface,
+                initialClient = client,
+                deviceInfo = info,
+            )
         }
 
         private fun findPtpInterface(device: UsbDevice): UsbInterface? =
@@ -233,6 +250,69 @@ class PtpTransport private constructor(
             runCatching { connection.close() }
                 .onFailure { Log.d(TAG, "release: connection.close failed: ${it.message}") }
             Log.i(TAG, "Released")
+        }
+    }
+
+    /** Re-open against a freshly-attached [newDevice] (same vid/pid as the
+     *  old one, but a new OS handle after a cable-unplug → replug). Closes
+     *  the dead connection, claims the new interface, builds a new [PtpClient],
+     *  re-runs `OpenSession` + Canon PC-remote setup, and swaps everything
+     *  in-place so any runner holding this transport reference keeps working.
+     *  Returns true on full recovery. */
+    internal suspend fun reopen(ctx: Context, newDevice: UsbDevice): Boolean = wireMutex.withLock {
+        withContext(Dispatchers.IO) {
+            // Tear down the dead handle (best-effort — the device is gone).
+            runCatching { connection.releaseInterface(iface) }
+            runCatching { connection.close() }
+            pcRemoteActive = false
+            _connected.value = false
+
+            val usb = ctx.getSystemService(Context.USB_SERVICE) as UsbManager
+            if (!usb.hasPermission(newDevice)) {
+                Log.w(TAG, "reopen: no permission for ${newDevice.deviceName}")
+                return@withContext false
+            }
+            val newIface = findPtpInterface(newDevice) ?: run {
+                Log.w(TAG, "reopen: no PTP interface on ${newDevice.deviceName}"); return@withContext false
+            }
+            val endpoints = findBulkEndpoints(newIface) ?: run {
+                Log.w(TAG, "reopen: no bulk endpoints"); return@withContext false
+            }
+            val newConn = usb.openDevice(newDevice) ?: run {
+                Log.w(TAG, "reopen: usb.openDevice returned null"); return@withContext false
+            }
+            if (!newConn.claimInterface(newIface, true)) {
+                Log.w(TAG, "reopen: claimInterface failed")
+                newConn.close(); return@withContext false
+            }
+            val (bulkIn, bulkOut) = endpoints
+            val newClient = PtpClient(newConn, bulkIn, bulkOut)
+            device = newDevice
+            connection = newConn
+            iface = newIface
+            client = newClient
+            try {
+                val r = client.openSession(1)
+                if (!r.ok) {
+                    Log.w(TAG, "reopen: OpenSession rc=0x${"%04X".format(r.code)}")
+                    runCatching { newConn.releaseInterface(newIface); newConn.close() }
+                    return@withContext false
+                }
+                _connected.value = true
+                if (deviceInfo.vendorExtensionId == PtpClient.VENDOR_EXT_CANON_EOS) {
+                    val rm = runCatching { client.canonSetRemoteMode(1) }.getOrNull()
+                    val em = runCatching { client.canonSetEventMode(1) }.getOrNull()
+                    pcRemoteActive = rm?.ok == true && em?.ok == true
+                }
+                Log.i(TAG, "reopen: USB wire restored (pcRemote=$pcRemoteActive)")
+                true
+            } catch (e: Throwable) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.w(TAG, "reopen: session open threw ${e.javaClass.simpleName}: ${e.message}")
+                runCatching { newConn.releaseInterface(newIface); newConn.close() }
+                _connected.value = false
+                false
+            }
         }
     }
 

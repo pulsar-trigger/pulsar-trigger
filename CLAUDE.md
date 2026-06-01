@@ -108,7 +108,7 @@ cd firmware
 2. `triggers.cpp` → parse in `set_mode()`, handle in `triggers_tick()` (non-blocking)
 3. `Protocol.kt` → add `TriggerMode.XXX` + opcode
 4. `CommandBuilder.kt` → add `setXxx()` builder
-5. `PulsarViewModel.executeFlowStep()` → add the new `FlowStep` dispatch covering all four paths (BLE-ESP, CCAPI, PTP, simulator)
+5. `PulsarViewModel.executeFlowStep()` → add the new `FlowStep` dispatch covering all five transports + simulator (BLE-ESP, CCAPI, USB PTP, Canon BLE direct, PTP/IP, simulator). The four `CameraTransport` impls share `CanonRunner.kt` so a single change there often suffices; ESP32 + simulator branches are explicit.
 6. New wizard screen in `ui/screens/` or extend an existing one. Gate the AF toggle on `canControlAf = onCanon || onPtp`. Add a stepSummary case in `Intervalometer2Screen.stepSummary()` if the new mode should surface in the CurrentStepChip during multi-step runs.
 7. Add menu tile in `MainMenuScreen.kt`
 8. `docs/ble-protocol.md` → document the new opcode + TLVs
