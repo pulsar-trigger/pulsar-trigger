@@ -73,7 +73,7 @@ private suspend fun reportPtpUsb(t: PtpTransport) {
     CanonBleLog.i(TAG, "device: '${info.manufacturer}' / '${info.model}' " +
         "fw='${info.deviceVersion}' sn='${info.serialNumber}'")
     CanonBleLog.i(TAG, "vendorExtensionId=${info.vendorExtensionId} " +
-        "(11=Canon EOS, 6=MTP; both treated as Canon)")
+        "(6=MTP, 11=Canon EOS — both seen on Canon bodies, treated identically)")
     CanonBleLog.i(TAG, "operations: ${info.supportedOperations.size}, " +
         "properties: ${info.supportedDeviceProperties.size}")
     reportCanonOpsAndProps(info.supportedOperations, info.supportedDeviceProperties)
@@ -89,7 +89,7 @@ private fun reportPtpIp(t: PtpIpTransport) {
     CanonBleLog.i(TAG, "device: '${info.manufacturer}' / '${info.model}' " +
         "fw='${info.deviceVersion}' sn='${info.serialNumber}'")
     CanonBleLog.i(TAG, "vendorExtensionId=${info.vendorExtensionId} " +
-        "(EOS R reports 6 over Wi-Fi vs 11 over USB; both ok)")
+        "(6=MTP, 11=Canon EOS — varies by body+firmware, both treated as Canon)")
     CanonBleLog.i(TAG, "operations: ${info.supportedOperations.size}, " +
         "properties: ${info.supportedDeviceProperties.size}")
     reportCanonOpsAndProps(info.supportedOperations, info.supportedDeviceProperties)

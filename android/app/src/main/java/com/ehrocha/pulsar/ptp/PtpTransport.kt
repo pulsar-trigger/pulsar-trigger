@@ -180,24 +180,29 @@ class PtpTransport private constructor(
      *  exposes a settings UI is a separate question (camera-params tab is
      *  parked) — the *transport* can support it. */
     override val supportsSettings: Boolean = deviceInfo.supportedDeviceProperties.isNotEmpty()
-    /** True iff the body advertises Canon's `GetViewFinderData` op — the
-     *  ability to stream live-view JPEG frames over USB. Star Focus Assist
-     *  gates on this; PTP-capable bodies without it (PowerShots, older
-     *  DSLRs) fall through to the existing CCAPI-only Star Focus path. */
-    override val supportsLiveView: Boolean =
+    /** Initial value comes from the advertised op set; **downgraded at
+     *  runtime** when [startLiveView] sees `rc=0x200A` (the EOS R lists
+     *  GetViewFinderData but rejects SetEvfOutput, for example). Star Focus
+     *  gates on this; PTP-capable bodies without it fall through to the
+     *  existing CCAPI-only Star Focus path. */
+    private var _supportsLiveView: Boolean =
         PtpClient.OP_CANON_GET_VIEWFINDER_DATA in deviceInfo.supportedOperations
+    override val supportsLiveView: Boolean get() = _supportsLiveView
+
     /** True iff the body advertises the Canon LensName device property
      *  (`0xD157`). Reading it gives us a string like "RF16mm F2.8 STM" that
      *  Pulsar parses for the Astro wizard's focal-length auto-fill. */
     override val supportsLensInfo: Boolean =
         PtpClient.PROP_CANON_LENS_NAME in deviceInfo.supportedDeviceProperties
-    /** True iff the body advertises the standard PTP BatteryLevel
-     *  property (`0x5001`). Some Canon bodies expose battery through a
-     *  vendor-specific property instead — those would report false here
-     *  even though battery info is technically available; covering them
-     *  is a future polish item. */
-    override val supportsBatteryReadout: Boolean =
+
+    /** Initial value comes from the advertised prop set; downgraded at
+     *  runtime when [readBatteryPercent] sees `rc=0x2005` (the EOS R
+     *  advertises BatteryLevel but rejects the read). Some Canon bodies
+     *  expose battery through a vendor-specific prop instead — those would
+     *  start false but never downgrade. */
+    private var _supportsBatteryReadout: Boolean =
         PtpClient.PROP_BATTERY_LEVEL in deviceInfo.supportedDeviceProperties
+    override val supportsBatteryReadout: Boolean get() = _supportsBatteryReadout
 
     /** Whether we successfully entered PC-remote mode at connect time.
      *  If false, only basic InitiateCapture works (no bulb / settings). */
@@ -471,6 +476,13 @@ class PtpTransport private constructor(
                 } else {
                     lastLiveViewError = "SetEvfOutput rc=0x${"%04X".format(r.code)}"
                     Log.w(TAG, "startLiveView: $lastLiveViewError")
+                    // Body advertised the op but rejects the underlying
+                    // prop write — downgrade so the Star Focus tile gate
+                    // and subsequent calls reflect reality.
+                    if (r.code == 0x200A || r.code == 0x2005) {
+                        _supportsLiveView = false
+                        Log.i(TAG, "supportsLiveView downgraded to false (advertised but rejects)")
+                    }
                     false
                 }
             } catch (e: PtpProtocolException) {
@@ -566,6 +578,10 @@ class PtpTransport private constructor(
                 val r = client.getDevicePropValue(PtpClient.PROP_BATTERY_LEVEL)
                 if (!r.ok || r.data == null || r.data.isEmpty()) {
                     Log.w(TAG, "GetDevicePropValue(0x5001) rc=0x${"%04X".format(r.code)}")
+                    if (r.code == 0x2005 || r.code == 0x200A) {
+                        _supportsBatteryReadout = false
+                        Log.i(TAG, "supportsBatteryReadout downgraded to false (advertised but rejects)")
+                    }
                     return@withContext null
                 }
                 val pct = (r.data[0].toInt() and 0xFF).coerceIn(0, 100)

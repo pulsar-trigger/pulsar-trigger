@@ -510,6 +510,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             }
             while (isActive) {
                 delay(30_000)
+                // Body downgraded its own capability — stop polling to
+                // avoid wire spam (EOS R case: prop advertised, read rejected).
+                if (!transport.supportsBatteryReadout) break
                 val pct = transport.readBatteryPercent() ?: continue
                 _status.value = _status.value?.copy(batteryPct = pct)
             }
@@ -1605,6 +1608,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             }
             while (isActive) {
                 delay(30_000)
+                // Stop polling if the transport runtime-downgraded the cap
+                // (e.g. EOS R advertises BatteryLevel but rejects the read).
+                if (!transport.supportsBatteryReadout) break
                 val pct = transport.readBatteryPercent() ?: continue
                 _status.value = _status.value?.copy(batteryPct = pct)
             }
