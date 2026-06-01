@@ -357,19 +357,6 @@ class PtpTransport private constructor(
         }
     }
 
-    /** Decode the data payload from a STR-typed device property:
-     *  1-byte length (UTF-16 code units incl trailing NUL), then UTF-16LE.
-     *  Returns null on a malformed/empty buffer. */
-    private fun decodePtpString(data: ByteArray): String? {
-        if (data.isEmpty()) return null
-        val units = data[0].toInt() and 0xFF
-        if (units == 0) return ""
-        val byteCount = units * 2
-        if (data.size < 1 + byteCount) return null
-        val s = String(data, 1, byteCount, Charsets.UTF_16LE)
-        return if (s.isNotEmpty() && s.last() == ' ') s.dropLast(1) else s
-    }
-
     // ── Live view + drive-focus (Star Focus wizard) ─────────────────────
 
     /** Last error from a [startLiveView] attempt. Mirrors [CcapiTransport]
@@ -485,38 +472,6 @@ class PtpTransport private constructor(
                 Log.w(TAG, "driveFocus threw: ${e.message}")
             }
         }
-    }
-
-    /** Find the JPEG payload inside Canon's GetViewFinderData wrapper.
-     *  The frame is preceded by body-specific TLV-ish headers; we don't
-     *  parse them — we just scan for the JPEG Start-Of-Image marker
-     *  (`0xFFD8`) and the matching End-Of-Image (`0xFFD9`). Robust enough
-     *  for the Star Focus wizard which only needs a decodable JPEG. */
-    private fun extractJpeg(buf: ByteArray): ByteArray? {
-        val start = indexOfJpegSoi(buf) ?: return null
-        val end = indexOfJpegEoi(buf, start) ?: return null
-        // Slice end+2 to include the EOI marker bytes (FF D9).
-        return buf.copyOfRange(start, end + 2)
-    }
-
-    private fun indexOfJpegSoi(buf: ByteArray): Int? {
-        var i = 0
-        val last = buf.size - 1
-        while (i < last) {
-            if (buf[i] == 0xFF.toByte() && buf[i + 1] == 0xD8.toByte()) return i
-            i++
-        }
-        return null
-    }
-
-    private fun indexOfJpegEoi(buf: ByteArray, from: Int): Int? {
-        var i = from + 2
-        val last = buf.size - 1
-        while (i < last) {
-            if (buf[i] == 0xFF.toByte() && buf[i + 1] == 0xD9.toByte()) return i
-            i++
-        }
-        return null
     }
 
     /** Read current battery percentage via PTP property `0x5001`. Returns

@@ -412,6 +412,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     errorCode = 0,
                     fwVersion = "",
                 )
+                if (transport.supportsBatteryReadout) startPtpIpBatteryPolling(transport)
             } finally {
                 _ptpIpConnecting.value = false
                 _ptpIpAwaitingConfirm.value = false
@@ -419,9 +420,28 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Periodic PTP/IP battery poll — same 30 s cadence as USB PTP since
+     *  neither path pushes battery events. Cancelled in [disconnectPtpIp]. */
+    private var ptpIpPollJob: Job? = null
+    private fun startPtpIpBatteryPolling(transport: com.ehrocha.pulsar.ptp.PtpIpTransport) {
+        ptpIpPollJob?.cancel()
+        ptpIpPollJob = viewModelScope.launch {
+            transport.readBatteryPercent()?.let { pct ->
+                _status.value = _status.value?.copy(batteryPct = pct)
+            }
+            while (isActive) {
+                delay(30_000)
+                val pct = transport.readBatteryPercent() ?: continue
+                _status.value = _status.value?.copy(batteryPct = pct)
+            }
+        }
+    }
+
     private fun disconnectPtpIp() {
         ptpIpConnectJob?.cancel()
         ptpIpConnectJob = null
+        ptpIpPollJob?.cancel()
+        ptpIpPollJob = null
         val transport = _ptpIpTransport.value
         if (transport != null) {
             viewModelScope.launch { transport.release() }

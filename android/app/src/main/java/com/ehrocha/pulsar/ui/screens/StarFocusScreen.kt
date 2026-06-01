@@ -81,12 +81,15 @@ fun StarFocusScreen(
     onBack: () -> Unit,
 ) {
     // Star Focus runs on whichever Canon transport is active: CCAPI over
-    // Wi-Fi or PTP over USB-C. The wire-level live view + drive-focus ops
-    // live behind the `CameraTransport` interface; this screen doesn't
+    // Wi-Fi, USB PTP, or PTP/IP. The wire-level live view + drive-focus
+    // ops live behind the `CameraTransport` interface; this screen doesn't
     // care which one is on the other side.
     val canon by vm.canonCcapiTransport.collectAsState()
     val ptp by vm.ptpTransport.collectAsState()
-    val t: CameraTransport? = canon ?: ptp.takeIf { it?.supportsLiveView == true }
+    val ptpIp by vm.ptpIpTransport.collectAsState()
+    val t: CameraTransport? = canon
+        ?: ptp.takeIf { it?.supportsLiveView == true }
+        ?: ptpIp.takeIf { it?.supportsLiveView == true }
     if (t == null) {
         // Defensive: the menu tile is gated, but if the user disconnects
         // mid-flow we bail.

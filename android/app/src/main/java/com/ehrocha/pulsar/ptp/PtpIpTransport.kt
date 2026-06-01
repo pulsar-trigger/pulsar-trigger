@@ -292,6 +292,161 @@ class PtpIpTransport private constructor(
     override suspend fun stop() {
         runCatching { stopBulb() }
     }
+
+    /** Read the mounted lens via Canon `LensName` prop. Mirrors the USB
+     *  [PtpTransport.getLensInfo] — shared parser, just a different wire. */
+    override suspend fun getLensInfo(): com.ehrocha.pulsar.transport.LensInfo? = wireMutex.withLock {
+        if (!supportsLensInfo) return@withLock null
+        withContext(Dispatchers.IO) {
+            if (!_connected.value) return@withContext null
+            try {
+                val r = client.getDevicePropValue(PtpClient.PROP_CANON_LENS_NAME)
+                if (!r.ok || r.data == null || r.data.isEmpty()) {
+                    CanonBleLog.w(TAG, "GetDevicePropValue(LensName) rc=0x${"%04X".format(r.code)}")
+                    return@withContext null
+                }
+                val name = decodePtpString(r.data) ?: return@withContext null
+                val (focal, range) = com.ehrocha.pulsar.transport.parseFocalFromName(name)
+                com.ehrocha.pulsar.transport.LensInfo(
+                    mounted = name.isNotBlank(),
+                    name = name,
+                    focalMm = focal,
+                    zoomRangeMm = range,
+                )
+            } catch (e: Throwable) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                CanonBleLog.w(TAG, "getLensInfo ${e.javaClass.simpleName}: ${e.message}")
+                if (e is java.io.IOException) _connected.value = false
+                null
+            }
+        }
+    }
+
+    // ── Live view + drive-focus (Star Focus wizard) ─────────────────────
+
+    @Volatile override var lastLiveViewError: String? = null
+        private set
+
+    override suspend fun startLiveView(): Boolean = wireMutex.withLock {
+        if (!_connected.value) {
+            lastLiveViewError = "not connected"
+            return@withLock false
+        }
+        withContext(Dispatchers.IO) {
+            try {
+                val v = PtpClient.CANON_EVF_OUTPUT_PC
+                val data = byteArrayOf(
+                    (v and 0xFF).toByte(),
+                    ((v ushr 8) and 0xFF).toByte(),
+                    ((v ushr 16) and 0xFF).toByte(),
+                    ((v ushr 24) and 0xFF).toByte(),
+                )
+                val r = client.setDevicePropValue(PtpClient.PROP_CANON_EVF_OUTPUT, data)
+                if (r.ok) {
+                    lastLiveViewError = null
+                    true
+                } else {
+                    lastLiveViewError = "SetEvfOutput rc=0x${"%04X".format(r.code)}"
+                    CanonBleLog.w(TAG, "startLiveView: $lastLiveViewError")
+                    false
+                }
+            } catch (e: Throwable) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                lastLiveViewError = e.message ?: e.javaClass.simpleName
+                CanonBleLog.w(TAG, "startLiveView ${e.javaClass.simpleName}: ${e.message}")
+                if (e is java.io.IOException) _connected.value = false
+                false
+            }
+        }
+    }
+
+    override suspend fun stopLiveView() = wireMutex.withLock<Unit> {
+        if (!_connected.value) return@withLock
+        withContext(Dispatchers.IO) {
+            try {
+                val v = PtpClient.CANON_EVF_OUTPUT_OFF
+                val data = byteArrayOf(
+                    (v and 0xFF).toByte(),
+                    ((v ushr 8) and 0xFF).toByte(),
+                    ((v ushr 16) and 0xFF).toByte(),
+                    ((v ushr 24) and 0xFF).toByte(),
+                )
+                client.setDevicePropValue(PtpClient.PROP_CANON_EVF_OUTPUT, data)
+            } catch (e: Throwable) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                CanonBleLog.w(TAG, "stopLiveView ${e.javaClass.simpleName}: ${e.message}")
+                if (e is java.io.IOException) _connected.value = false
+            }
+        }
+    }
+
+    override suspend fun getLiveViewFrame(): ByteArray? = wireMutex.withLock {
+        if (!_connected.value) return@withLock null
+        withContext(Dispatchers.IO) {
+            try {
+                val r = client.canonGetViewFinderData()
+                if (!r.ok || r.data == null) {
+                    CanonBleLog.w(TAG, "GetViewFinderData rc=0x${"%04X".format(r.code)}")
+                    return@withContext null
+                }
+                extractJpeg(r.data)
+            } catch (e: Throwable) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                CanonBleLog.w(TAG, "getLiveViewFrame ${e.javaClass.simpleName}: ${e.message}")
+                if (e is java.io.IOException) _connected.value = false
+                null
+            }
+        }
+    }
+
+    override suspend fun driveFocus(action: String) = wireMutex.withLock<Unit> {
+        if (!_connected.value) return@withLock
+        val value = when (action) {
+            "near1" -> 0x8001
+            "near2" -> 0x8002
+            "near3" -> 0x8003
+            "far1" -> 0x0001
+            "far2" -> 0x0002
+            "far3" -> 0x0003
+            else -> {
+                CanonBleLog.w(TAG, "driveFocus: unknown action '$action'")
+                return@withLock
+            }
+        }
+        withContext(Dispatchers.IO) {
+            try {
+                val r = client.canonDriveLens(value)
+                if (!r.ok) CanonBleLog.w(TAG, "DriveLens($action=$value) rc=0x${"%04X".format(r.code)}")
+            } catch (e: Throwable) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                CanonBleLog.w(TAG, "driveFocus ${e.javaClass.simpleName}: ${e.message}")
+                if (e is java.io.IOException) _connected.value = false
+            }
+        }
+    }
+
+    /** Read battery percentage via standard PTP `BatteryLevel` (0x5001).
+     *  Null when the prop isn't advertised or the read fails. */
+    suspend fun readBatteryPercent(): Int? = wireMutex.withLock {
+        if (!supportsBatteryReadout) return@withLock null
+        withContext(Dispatchers.IO) {
+            if (!_connected.value) return@withContext null
+            try {
+                val r = client.getDevicePropValue(PtpClient.PROP_BATTERY_LEVEL)
+                if (!r.ok || r.data == null || r.data.isEmpty()) {
+                    CanonBleLog.w(TAG, "GetDevicePropValue(0x5001) rc=0x${"%04X".format(r.code)}")
+                    return@withContext null
+                }
+                (r.data[0].toInt() and 0xFF).coerceIn(0, 100)
+            } catch (e: Throwable) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                CanonBleLog.w(TAG, "readBatteryPercent ${e.javaClass.simpleName}: ${e.message}")
+                if (e is java.io.IOException) _connected.value = false
+                null
+            }
+        }
+    }
+
 }
 
 /** Outcome of [PtpIpTransport.openOn] — distinguishes user-rejection on the

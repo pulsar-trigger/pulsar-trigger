@@ -154,9 +154,10 @@ fun AstroMode2Screen(
     var lensInfo by remember {
         mutableStateOf<com.ehrocha.pulsar.transport.LensInfo?>(null)
     }
-    LaunchedEffect(canonCcapiTransport, ptpTransport) {
+    val ptpIpTransport = vm.ptpIpTransport.collectAsState().value
+    LaunchedEffect(canonCcapiTransport, ptpTransport, ptpIpTransport) {
         val t: com.ehrocha.pulsar.transport.CameraTransport =
-            canonCcapiTransport ?: ptpTransport ?: return@LaunchedEffect
+            canonCcapiTransport ?: ptpTransport ?: ptpIpTransport ?: return@LaunchedEffect
         if (!t.supportsLensInfo) return@LaunchedEffect
         val info = t.getLensInfo() ?: return@LaunchedEffect
         lensInfo = info
