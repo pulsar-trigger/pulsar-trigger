@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -146,23 +147,32 @@ fun AstroMode2Screen(
     /** All three Canon transports give us a per-shot AF flag. */
     val canControlAf = vm.activeTransportSupportsAf.collectAsState().value
 
-    // Fetch what lens is on the camera from whichever transport is active —
-    // CCAPI (Wi-Fi) or USB PTP. For a *fresh* run (no preset loaded) and a
-    // prime lens, auto-fill the focal length. For a loaded preset we leave
-    // the saved value alone — the user explicitly picked it — but still
-    // surface the detection chip so they know what's mounted.
+    // Lens detection is opt-in via the "Detect lens" button on the LENS tab.
+    // A successful detect populates the focal slider (and surfaces what's
+    // mounted in a chip below); the user can re-tap to re-detect after
+    // swapping lenses without leaving the wizard.
+    val ptpIpTransport = vm.ptpIpTransport.collectAsState().value
+    val detectTransport: com.ehrocha.pulsar.transport.CameraTransport? =
+        canonCcapiTransport ?: ptpTransport ?: ptpIpTransport
+    val canDetectLens = detectTransport?.supportsLensInfo == true
     var lensInfo by remember {
         mutableStateOf<com.ehrocha.pulsar.transport.LensInfo?>(null)
     }
-    val ptpIpTransport = vm.ptpIpTransport.collectAsState().value
-    LaunchedEffect(canonCcapiTransport, ptpTransport, ptpIpTransport) {
-        val t: com.ehrocha.pulsar.transport.CameraTransport =
-            canonCcapiTransport ?: ptpTransport ?: ptpIpTransport ?: return@LaunchedEffect
-        if (!t.supportsLensInfo) return@LaunchedEffect
-        val info = t.getLensInfo() ?: return@LaunchedEffect
-        lensInfo = info
-        if (loadedPreset == null && focalLength == 0 && info.focalMm != null) {
-            focalLength = info.focalMm
+    var lensDetecting by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val onDetectLens: () -> Unit = onDetect@{
+        if (lensDetecting || detectTransport == null) return@onDetect
+        lensDetecting = true
+        scope.launch {
+            try {
+                val info = detectTransport.getLensInfo()
+                lensInfo = info
+                if (info != null && info.focalMm != null) {
+                    focalLength = info.focalMm
+                }
+            } finally {
+                lensDetecting = false
+            }
         }
     }
 
@@ -313,6 +323,9 @@ fun AstroMode2Screen(
                         lensInfo = lensInfo,
                         ruleDivisor = ruleDivisor,
                         maxExpMs = maxExpMs,
+                        canDetectLens = canDetectLens,
+                        lensDetecting = lensDetecting,
+                        onDetectLens = onDetectLens,
                         onFocalChange = { focalLength = it },
                         onCropChange = { cropFactor = it },
                         onRuleChange = { ruleDivisor = it },
@@ -398,6 +411,9 @@ private fun LensTab(
     ruleDivisor: Int,
     maxExpMs: Long,
     lensInfo: com.ehrocha.pulsar.transport.LensInfo?,
+    canDetectLens: Boolean,
+    lensDetecting: Boolean,
+    onDetectLens: () -> Unit,
     onFocalChange: (Int) -> Unit,
     onCropChange: (Float) -> Unit,
     onRuleChange: (Int) -> Unit,
@@ -425,20 +441,13 @@ private fun LensTab(
             enabled = enabled,
         )
 
-        if (lensInfo != null && lensInfo.mounted) {
+        if (canDetectLens) {
             Spacer(Modifier.height(8.dp))
-            DetectedLensChip(
-                lens = lensInfo,
-                currentFocalMm = focalLength,
-                enabled = enabled,
-                onUseFocal = { onFocalChange(it) },
-            )
-        } else if (lensInfo != null && !lensInfo.mounted) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                stringResource(R.string.astro2_lens_not_mounted),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.error,
+            DetectLensRow(
+                detecting = lensDetecting,
+                lensInfo = lensInfo,
+                enabled = enabled && !lensDetecting,
+                onDetect = onDetectLens,
             )
         }
 
@@ -599,59 +608,85 @@ private fun formatTrailExposure(seconds: Double): String = when {
  * spaced around the rim; drag anywhere on the dial to rotate the indicator
  * to the nearest preset. Tap the centre to enter an arbitrary value.
  */
-/** Chip below the focal-length dial that surfaces the lens reported by the
- *  connected camera. For primes (parsed focal length single value) we offer
- *  a one-tap "Use" button. For zooms we just inform — current zoom position
- *  isn't reported by CCAPI, so the user types the value manually. */
+/** Opt-in lens detection. Tap the button to query the active camera
+ *  transport; on success the focal slider is populated, and the lens name
+ *  + zoom range is surfaced below. Shows a "no lens mounted" message when
+ *  the camera reports an empty lens name. */
 @Composable
-private fun DetectedLensChip(
-    lens: com.ehrocha.pulsar.transport.LensInfo,
-    currentFocalMm: Int,
+private fun DetectLensRow(
+    detecting: Boolean,
+    lensInfo: com.ehrocha.pulsar.transport.LensInfo?,
     enabled: Boolean,
-    onUseFocal: (Int) -> Unit,
+    onDetect: () -> Unit,
 ) {
-    val matches = lens.focalMm != null && lens.focalMm == currentFocalMm
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = RoundedCornerShape(12.dp),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+    Column(modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(
+            onClick = onDetect,
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            Icon(
-                Icons.Default.CameraAlt,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(Modifier.width(8.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    lens.name,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
+            if (detecting) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp,
                 )
-                Text(
-                    when {
-                        lens.isPrime -> stringResource(
-                            R.string.astro2_lens_detected_prime, lens.focalMm!!)
-                        lens.isZoom -> stringResource(
-                            R.string.astro2_lens_detected_zoom,
-                            lens.zoomRangeMm!!.first, lens.zoomRangeMm.last)
-                        else -> stringResource(R.string.astro2_lens_detected_unknown)
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.astro2_lens_detecting))
+            } else {
+                Icon(
+                    Icons.Default.CameraAlt,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
                 )
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.astro2_lens_detect))
             }
-            if (lens.isPrime && lens.focalMm != null && !matches) {
-                TextButton(
-                    onClick = { onUseFocal(lens.focalMm) },
-                    enabled = enabled,
+        }
+        if (lensInfo != null) {
+            Spacer(Modifier.height(8.dp))
+            if (!lensInfo.mounted) {
+                Text(
+                    stringResource(R.string.astro2_lens_not_mounted),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            } else {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(stringResource(R.string.astro2_lens_use_focal, lens.focalMm))
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Default.CameraAlt,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                lensInfo.name,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(
+                                when {
+                                    lensInfo.isPrime -> stringResource(
+                                        R.string.astro2_lens_detected_prime, lensInfo.focalMm!!)
+                                    lensInfo.isZoom -> stringResource(
+                                        R.string.astro2_lens_detected_zoom,
+                                        lensInfo.zoomRangeMm!!.first, lensInfo.zoomRangeMm.last)
+                                    else -> stringResource(R.string.astro2_lens_detected_unknown)
+                                },
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
                 }
             }
         }

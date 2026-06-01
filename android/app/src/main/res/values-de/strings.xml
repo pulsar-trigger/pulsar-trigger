@@ -85,6 +85,8 @@
     <string name="astro2_lens_detected_unknown">Von der Kamera erkannt</string>
     <string name="astro2_lens_use_focal">%1$d mm verwenden</string>
     <string name="astro2_lens_not_mounted">Kein Objektiv an der Kamera erkannt.</string>
+    <string name="astro2_lens_detect">Objektiv erkennen</string>
+    <string name="astro2_lens_detecting">Erkennen…</string>
     <string name="section_background">Hintergrundaktivität</string>
     <string name="background_help">Lange Astro-Aufnahmen mit ausgeschaltetem Display können durch Androids Doze-Modus gedrosselt werden. Hintergrundaktivität zu erlauben hält Pulsar bis zum Ende der Aufnahme laufend.</string>
     <string name="background_status_allowed">Hintergrundaktivität erlaubt</string>

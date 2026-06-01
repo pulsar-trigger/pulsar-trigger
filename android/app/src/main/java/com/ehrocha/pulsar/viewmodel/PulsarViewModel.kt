@@ -455,47 +455,38 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Tear down the dead transport and re-run [connectPtpIp]'s open+session
-     *  on a backoff (3 / 5 / 10 / 30 s). Caps at 4 attempts before giving up
-     *  and clearing the camera so the user has to re-pick. */
+    /** Re-run the handshake against the same transport instance on a backoff
+     *  (3 / 5 / 10 / 30 s). Calls [PtpIpTransport.reopen] so the outer
+     *  reference stays valid — runners that captured it via
+     *  `runCanonBulb(transport=...)` keep working once `_connected` flips
+     *  back to true. Caps at 4 attempts before giving up and clearing
+     *  the camera so the user has to re-pick. */
     private suspend fun attemptPtpIpReconnect(
-        dead: com.ehrocha.pulsar.ptp.PtpIpTransport,
-        camera: com.ehrocha.pulsar.ptp.PtpIpCamera,
+        transport: com.ehrocha.pulsar.ptp.PtpIpTransport,
+        @Suppress("UNUSED_PARAMETER") camera: com.ehrocha.pulsar.ptp.PtpIpCamera,
     ) {
         try {
-            ptpIpPollJob?.cancel()
-            runCatching { dead.release() }
-            _ptpIpTransport.value = null
-
             val backoffs = longArrayOf(3_000, 5_000, 10_000, 30_000)
             for ((i, delayMs) in backoffs.withIndex()) {
                 delay(delayMs)
                 coroutineContext.ensureActive()
+                if (_ptpIpTransport.value !== transport) return  // user disconnected mid-retry
                 Log.i(TAG, "PTP/IP reconnect attempt ${i + 1}/${backoffs.size}")
-                val result = com.ehrocha.pulsar.ptp.PtpIpTransport.openOn(
-                    camera = camera,
-                    clientName = "Pulsar",
-                    clientGuid = ptpIpClientGuid(),
-                    onAwaitConfirm = { /* silent — same body */ },
-                )
-                val tx = (result as? com.ehrocha.pulsar.ptp.PtpIpOpenResult.Ok)?.transport
-                    ?: continue
-                if (!tx.connect()) {
-                    runCatching { tx.release() }
-                    continue
+                val ok = runCatching { transport.reopen() }.getOrDefault(false)
+                if (ok) {
+                    _ptpIpReconnecting.value = false
+                    // Battery poll keeps running across reconnect — it just
+                    // sees null reads while _connected is false, then resumes
+                    // reporting real percentages once the wire is back.
+                    return
                 }
-                _ptpIpTransport.value = tx
-                _deviceName.value = tx.label.value
-                _connected.value = true
-                _ptpIpReconnecting.value = false
-                if (tx.supportsBatteryReadout) startPtpIpBatteryPolling(tx)
-                watchPtpIpWire(tx)
-                return
             }
             // Gave up — fall through to full disconnect.
             _ptpIpError.value = "reconnect_failed"
             lastPtpIpCamera = null
             _ptpIpReconnecting.value = false
+            runCatching { transport.release() }
+            _ptpIpTransport.value = null
             if (!bleController.connected.value && !_simulatorActive.value &&
                 _canonCcapiTransport.value == null && _ptpTransport.value == null &&
                 _canonBleTransport.value == null) {
@@ -2302,34 +2293,64 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Holds the runner until the active transport is no longer paused, then
-     *  returns. For CCAPI this checks [_canonCcapiReconnecting]; any future
-     *  non-CCAPI transport would carry its own pause condition. Throws if a
-     *  CCAPI transport was dropped entirely (e.g. reconnect timed out) so the
-     *  caller can bail cleanly instead of firing shots into the void. The
-     *  flow's [DeviceState] is flipped to WAITING while paused so the
-     *  RunningView shows the paused affordance rather than RUNNING. */
+     *  returns. Currently covers CCAPI (re-probes `/ccapi` after a Wi-Fi blip)
+     *  and PTP/IP (re-runs the handshake against the same transport via
+     *  [PtpIpTransport.reopen]). Throws if the transport was dropped entirely
+     *  so the caller bails instead of firing shots into the void. The flow's
+     *  [DeviceState] is flipped to WAITING while paused so the RunningView
+     *  shows the paused affordance rather than RUNNING. */
     private suspend fun awaitCanonReady(
         transport: com.ehrocha.pulsar.transport.CameraTransport,
     ) {
-        // CCAPI is the only transport with a pause-on-reconnect concept today.
-        val ccapi = transport as? com.ehrocha.pulsar.transport.ccapi.CcapiTransport ?: return
+        when (transport) {
+            is com.ehrocha.pulsar.transport.ccapi.CcapiTransport ->
+                awaitCcapiReady(transport)
+            is com.ehrocha.pulsar.ptp.PtpIpTransport ->
+                awaitPtpIpReady(transport)
+            else -> return
+        }
+    }
+
+    private suspend fun awaitCcapiReady(
+        ccapi: com.ehrocha.pulsar.transport.ccapi.CcapiTransport,
+    ) {
         if (!_canonCcapiReconnecting.value && _canonCcapiTransport.value === ccapi) return
         val priorState = _status.value?.state
         try {
             while (true) {
                 coroutineContext.ensureActive()
-                // Bail if the transport was replaced or torn down while we waited.
                 if (_canonCcapiTransport.value !== ccapi) {
                     throw IllegalStateException("Canon transport dropped during pause")
                 }
                 if (!_canonCcapiReconnecting.value) return
-                // Reflect "paused, waiting on camera" in the dashboard.
                 _status.value = _status.value?.copy(state = DeviceState.WAITING)
                 delay(500)
             }
         } finally {
-            // Restore the pre-pause state when we exit (success or throw)
-            // so the next iteration writes the right RUNNING/WAITING values.
+            if (priorState != null && _status.value?.state == DeviceState.WAITING) {
+                _status.value = _status.value?.copy(state = priorState)
+            }
+        }
+    }
+
+    private suspend fun awaitPtpIpReady(
+        ptpIp: com.ehrocha.pulsar.ptp.PtpIpTransport,
+    ) {
+        if (!_ptpIpReconnecting.value && _ptpIpTransport.value === ptpIp) return
+        val priorState = _status.value?.state
+        try {
+            while (true) {
+                coroutineContext.ensureActive()
+                // Bail if the transport was torn down (reconnect timed out
+                // and the viewmodel cleared the StateFlow).
+                if (_ptpIpTransport.value !== ptpIp) {
+                    throw IllegalStateException("PTP/IP transport dropped during pause")
+                }
+                if (!_ptpIpReconnecting.value) return
+                _status.value = _status.value?.copy(state = DeviceState.WAITING)
+                delay(500)
+            }
+        } finally {
             if (priorState != null && _status.value?.state == DeviceState.WAITING) {
                 _status.value = _status.value?.copy(state = priorState)
             }

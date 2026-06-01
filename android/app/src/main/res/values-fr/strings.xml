@@ -85,6 +85,8 @@
     <string name="astro2_lens_detected_unknown">Détecté sur l\'appareil</string>
     <string name="astro2_lens_use_focal">Utiliser %1$d mm</string>
     <string name="astro2_lens_not_mounted">Aucun objectif détecté sur l\'appareil.</string>
+    <string name="astro2_lens_detect">Détecter l\'objectif</string>
+    <string name="astro2_lens_detecting">Détection…</string>
     <string name="section_background">Activité en arrière-plan</string>
     <string name="background_help">Les longues sessions astro avec l\'écran éteint peuvent être interrompues par le mode Doze d\'Android. Autoriser l\'activité en arrière-plan permet à Pulsar de continuer jusqu\'à la fin.</string>
     <string name="background_status_allowed">Activité en arrière-plan autorisée</string>

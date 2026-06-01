@@ -34,10 +34,19 @@ import kotlinx.coroutines.withContext
  */
 class PtpIpTransport private constructor(
     val camera: PtpIpCamera,
-    private val wire: PtpIpWire,
-    private val client: PtpClient,
-    val deviceInfo: PtpClient.DeviceInfo,
+    private val clientName: String,
+    private val clientGuid: java.util.UUID,
+    initialWire: PtpIpWire,
+    initialClient: PtpClient,
+    initialDeviceInfo: PtpClient.DeviceInfo,
 ) : CameraTransport {
+
+    // Mutable so [reopen] can swap them after a wire drop. The outer
+    // [PtpIpTransport] reference stays the same — runners that captured
+    // it keep working after reconnect.
+    private var wire: PtpIpWire = initialWire
+    private var client: PtpClient = initialClient
+    val deviceInfo: PtpClient.DeviceInfo = initialDeviceInfo
 
     companion object {
         private const val TAG = "PtpIpTransport"
@@ -59,6 +68,32 @@ class PtpIpTransport private constructor(
             clientGuid: java.util.UUID,
             onAwaitConfirm: () -> Unit = {},
         ): PtpIpOpenResult = withContext(Dispatchers.IO) {
+            val res = doHandshake(camera, clientName, clientGuid, onAwaitConfirm)
+            when (res) {
+                is HandshakeResult.Ok -> {
+                    CanonBleLog.i(TAG, "openOn: ${res.info.manufacturer} ${res.info.model} " +
+                        "(vendorExt=${res.info.vendorExtensionId}, " +
+                        "ops=${res.info.supportedOperations.size})")
+                    PtpIpOpenResult.Ok(PtpIpTransport(
+                        camera = camera,
+                        clientName = clientName,
+                        clientGuid = clientGuid,
+                        initialWire = res.wire,
+                        initialClient = res.client,
+                        initialDeviceInfo = res.info,
+                    ))
+                }
+                is HandshakeResult.Rejected -> PtpIpOpenResult.Rejected(res.reason)
+                is HandshakeResult.Failed -> PtpIpOpenResult.Failed(res.reason)
+            }
+        }
+
+        private suspend fun doHandshake(
+            camera: PtpIpCamera,
+            clientName: String,
+            clientGuid: java.util.UUID,
+            onAwaitConfirm: () -> Unit,
+        ): HandshakeResult {
             val handshake = PtpIpWire.connect(
                 host = camera.host,
                 port = camera.port,
@@ -69,28 +104,36 @@ class PtpIpTransport private constructor(
             val wire = when (handshake) {
                 is PtpIpConnectResult.Ok -> handshake.wire
                 is PtpIpConnectResult.Rejected -> {
-                    Log.w(TAG, "openOn: rejected — ${handshake.reason}")
-                    return@withContext PtpIpOpenResult.Rejected(handshake.reason)
+                    Log.w(TAG, "handshake rejected — ${handshake.reason}")
+                    return HandshakeResult.Rejected(handshake.reason)
                 }
                 is PtpIpConnectResult.Failed -> {
-                    Log.w(TAG, "openOn: failed — ${handshake.reason}")
-                    return@withContext PtpIpOpenResult.Failed(handshake.reason)
+                    Log.w(TAG, "handshake failed — ${handshake.reason}")
+                    return HandshakeResult.Failed(handshake.reason)
                 }
             }
             val client = PtpClient(wire)
             val info = try {
                 client.getDeviceInfo()
             } catch (e: Throwable) {
-                Log.w(TAG, "openOn: GetDeviceInfo threw", e)
+                Log.w(TAG, "handshake: GetDeviceInfo threw", e)
                 null
             }
             if (info == null) {
                 wire.close()
-                return@withContext PtpIpOpenResult.Failed("GetDeviceInfo returned null")
+                return HandshakeResult.Failed("GetDeviceInfo returned null")
             }
-            CanonBleLog.i(TAG, "openOn: ${info.manufacturer} ${info.model} " +
-                "(vendorExt=${info.vendorExtensionId}, ops=${info.supportedOperations.size})")
-            PtpIpOpenResult.Ok(PtpIpTransport(camera, wire, client, info))
+            return HandshakeResult.Ok(wire, client, info)
+        }
+
+        private sealed interface HandshakeResult {
+            data class Ok(
+                val wire: PtpIpWire,
+                val client: PtpClient,
+                val info: PtpClient.DeviceInfo,
+            ) : HandshakeResult
+            data class Rejected(val reason: String) : HandshakeResult
+            data class Failed(val reason: String) : HandshakeResult
         }
     }
 
@@ -185,6 +228,56 @@ class PtpIpTransport private constructor(
             }
             wire.close()
             Log.i(TAG, "Released")
+        }
+    }
+
+    /** Re-run the PTP/IP handshake against the same camera and swap the
+     *  underlying wire/client in place. The outer [PtpIpTransport] reference
+     *  stays valid — any runner that captured it keeps working after the
+     *  swap. Caller is the viewmodel's reconnect job; runners just await
+     *  [_connected] flipping back to true.
+     *
+     *  Returns true on full recovery (wire up + session open + PC-remote
+     *  re-armed). On failure the transport is left disconnected and the
+     *  caller decides whether to retry or give up. */
+    internal suspend fun reopen(): Boolean = wireMutex.withLock {
+        withContext(Dispatchers.IO) {
+            runCatching { wire.close() }
+            pcRemoteActive = false
+            _connected.value = false
+            val res = doHandshake(camera, clientName, clientGuid) { /* silent */ }
+            if (res !is Companion.HandshakeResult.Ok) {
+                CanonBleLog.w(TAG, "reopen: handshake failed (${(res as? Companion.HandshakeResult.Failed)?.reason})")
+                return@withContext false
+            }
+            wire = res.wire
+            client = res.client
+            // deviceInfo is val — same camera so the fields are unchanged in
+            // practice. If a body somehow returned different ops we'd miss
+            // it; treat that as out-of-scope for now.
+            try {
+                val r = client.openSession(1)
+                if (!r.ok) {
+                    CanonBleLog.w(TAG, "reopen: OpenSession rc=0x${"%04X".format(r.code)}")
+                    runCatching { wire.close() }
+                    return@withContext false
+                }
+                _connected.value = true
+                if (res.info.vendorExtensionId == PtpClient.VENDOR_EXT_CANON_EOS ||
+                    res.info.manufacturer.startsWith("Canon", ignoreCase = true)) {
+                    val rm = runCatching { client.canonSetRemoteMode(1) }.getOrNull()
+                    val em = runCatching { client.canonSetEventMode(1) }.getOrNull()
+                    pcRemoteActive = rm?.ok == true && em?.ok == true
+                }
+                CanonBleLog.i(TAG, "reopen: wire restored (pcRemote=$pcRemoteActive)")
+                true
+            } catch (e: Throwable) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                CanonBleLog.w(TAG, "reopen: session open threw ${e.javaClass.simpleName}: ${e.message}")
+                runCatching { wire.close() }
+                _connected.value = false
+                false
+            }
         }
     }
 

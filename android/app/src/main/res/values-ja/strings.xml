@@ -85,6 +85,8 @@
     <string name="astro2_lens_detected_unknown">カメラから検出</string>
     <string name="astro2_lens_use_focal">%1$d mm を使用</string>
     <string name="astro2_lens_not_mounted">カメラにレンズが装着されていません。</string>
+    <string name="astro2_lens_detect">レンズを検出</string>
+    <string name="astro2_lens_detecting">検出中…</string>
     <string name="section_background">バックグラウンド動作</string>
     <string name="background_help">画面オフでの長時間天体撮影では、Android の Doze モードに制限される場合があります。バックグラウンド動作を許可すると、撮影終了まで Pulsar が確実に動作します。</string>
     <string name="background_status_allowed">バックグラウンド動作: 許可済み</string>

@@ -190,6 +190,8 @@
     <string name="astro2_lens_detected_unknown">Detected from camera</string>
     <string name="astro2_lens_use_focal">Use %1$d mm</string>
     <string name="astro2_lens_not_mounted">No lens detected on the camera.</string>
+    <string name="astro2_lens_detect">Detect lens</string>
+    <string name="astro2_lens_detecting">Detecting…</string>
 
     <!-- Intervalometer 2 -->
     <string name="iv2_tab_interval">Interval</string>
