@@ -248,7 +248,11 @@ class PtpIpTransport private constructor(
                 CanonBleLog.w(TAG, "startBulb: not connected — ignored")
                 return@withContext
             }
-            lastBulbMode = if (af) MODE_FULL_PRESS_AF else MODE_FULL_PRESS_NO_AF
+            // EOS R over PTP/IP rejects mode=2 (full-press no-AF) with
+            // 0x2019 DEVICE_BUSY — same quirk as fireShutter. Only mode=3
+            // is accepted. The AF toggle then has no wire effect; users
+            // who don't want per-shot AF must switch the lens to MF.
+            lastBulbMode = MODE_FULL_PRESS_AF
             CanonBleLog.i(TAG, "startBulb af=$af → RemoteReleaseOn(mode=$lastBulbMode)")
             try {
                 val r = client.canonRemoteReleaseOn(mode = lastBulbMode)
