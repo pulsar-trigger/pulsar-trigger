@@ -134,6 +134,11 @@ class PtpIpTransport private constructor(
     override val supportsBatteryReadout: Boolean =
         PtpClient.PROP_BATTERY_LEVEL in deviceInfo.supportedDeviceProperties
 
+    // EOS R rejects RemoteRelease mode=2 (no-AF) over Wi-Fi with DEVICE_BUSY,
+    // so [fireShutter] / [startBulb] force mode=3 — the af flag has no wire
+    // effect on PTP/IP. Wizards hide the toggle.
+    override val supportsAfToggle: Boolean = false
+
     private var pcRemoteActive: Boolean = false
     private var lastBulbMode: Int = MODE_FULL_PRESS_NO_AF
 

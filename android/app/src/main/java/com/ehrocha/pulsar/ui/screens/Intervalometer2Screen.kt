@@ -107,7 +107,7 @@ fun Intervalometer2Screen(
     val onPtp = vm.ptpTransport.collectAsState().value != null
     val onCanonBle = vm.canonBleTransport.collectAsState().value != null
     val onPtpIp = vm.ptpIpTransport.collectAsState().value != null
-    val canControlAf = onCanon || onPtp || onCanonBle || onPtpIp
+    val canControlAf = vm.activeTransportSupportsAf.collectAsState().value
 
     // Jump to the final tab when a preset is loaded — its values are already
     // valid so the user is one tap away from Start.

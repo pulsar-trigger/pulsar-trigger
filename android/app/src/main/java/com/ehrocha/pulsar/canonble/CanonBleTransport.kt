@@ -204,6 +204,11 @@ class CanonBleTransport private constructor(
     override val supportsLensInfo: Boolean = false
     override val supportsBatteryReadout: Boolean = false
 
+    // BR-E1 mode does a half-press AF tap before the release when af=true.
+    // Smartphone mode has no AF wire action — the toggle would be cosmetic.
+    override val supportsAfToggle: Boolean
+        get() = !isSmart
+
     /** Tracks whether a bulb exposure is in flight. `stopBulb` is a no-op
      *  if false — guards against double-release after a cable-pull mid-run. */
     @Volatile private var bulbOpen = false

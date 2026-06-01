@@ -144,7 +144,7 @@ fun AstroMode2Screen(
     val onCanonBle = canonBleTransport != null
     val onPtpIp = vm.ptpIpTransport.collectAsState().value != null
     /** All three Canon transports give us a per-shot AF flag. */
-    val canControlAf = onCanon || onPtp || onCanonBle || onPtpIp
+    val canControlAf = vm.activeTransportSupportsAf.collectAsState().value
 
     // Fetch what lens is on the camera from whichever transport is active —
     // CCAPI (Wi-Fi) or USB PTP. For a *fresh* run (no preset loaded) and a

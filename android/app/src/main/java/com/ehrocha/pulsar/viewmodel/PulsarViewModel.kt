@@ -1896,6 +1896,21 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         .map { if (it) 5 else 1 }
         .stateIn(viewModelScope, SharingStarted.Eagerly, 5)
 
+    /** True when the active camera transport honors the per-shot AF flag on
+     *  the wire. Wizards gate the AutofocusToggle on this so it doesn't show
+     *  on transports where it would be cosmetic (PTP/IP, BR-E1 smart-mode). */
+    val activeTransportSupportsAf: StateFlow<Boolean> = combine(
+        _canonCcapiTransport, _ptpTransport, _canonBleTransport, _ptpIpTransport,
+    ) { ccapi, ptp, ble, ptpIp ->
+        when {
+            ccapi != null -> ccapi.supportsAfToggle
+            ptp != null -> ptp.supportsAfToggle
+            ble != null -> ble.supportsAfToggle
+            ptpIp != null -> ptpIp.supportsAfToggle
+            else -> false
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     fun runCameraTest() {
         val canBulb = activeTransportSupportsBulb.value
         val test = buildList<FlowStep> {

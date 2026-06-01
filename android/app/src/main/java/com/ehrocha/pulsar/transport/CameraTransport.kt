@@ -91,6 +91,14 @@ interface CameraTransport {
      *  CCAPI: true (event polling + `/devicestatus/battery`). */
     val supportsBatteryReadout: Boolean
 
+    /** Transport honors the [fireShutter]/[startBulb] `af` flag on the wire.
+     *  Wizards hide the per-shot AF toggle when false — the camera body's
+     *  own AF setting still governs whether focus runs, but Pulsar can't
+     *  override it shot-to-shot. PTP/IP: false (EOS R rejects no-AF mode
+     *  with DEVICE_BUSY, forcing the with-AF path on the wire). */
+    val supportsAfToggle: Boolean
+        get() = true
+
     /** Snapshot of what lens is mounted, used by the Astro wizard to
      *  auto-fill the focal length. Returns null when [supportsLensInfo] is
      *  false, the read fails, or no lens is mounted. */
