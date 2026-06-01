@@ -138,6 +138,11 @@ Every EOS body with **"Remote Control (EOS Utility)" Wi-Fi mode** works:
 The **EOS R** is the headline use case: this transport is the only wireless
 control path on that body (BLE has no shutter; CCAPI doesn't activate).
 
+See [canon-body-matrix.md](canon-body-matrix.md) for the per-body × per-transport
+capability table, including the **R-series PTP false-positive quirks** (live
+view + battery advertised in `GetDeviceInfo` but rejected at runtime; mode=3-only
+for `RemoteRelease`) verified on EOS R + EOS RP.
+
 ## Honest caveats
 
 - **Camera Wi-Fi is power-hungry.** Body battery drain doubles vs. USB PTP.

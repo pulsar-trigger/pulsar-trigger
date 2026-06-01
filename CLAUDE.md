@@ -123,6 +123,7 @@ cd firmware
 - [docs/ptp-ip.md](docs/ptp-ip.md) — Canon Wi-Fi PTP (PTP/IP) transport — same `PtpClient` over TCP
 - [docs/canon-ble.md](docs/canon-ble.md) — Canon BLE direct transport (BR-E1 protocol, all BR-E1-compatible bodies)
 - [docs/canon-ble-research.md](docs/canon-ble-research.md) — BR-E1 reverse-engineering log: all 6 refs decoded, EOS R GATT dump, the open "pairs-but-won't-shoot" bug. Diagnostic driver: `tools/canon_ble_test.py`
+- [docs/canon-body-matrix.md](docs/canon-body-matrix.md) — body × transport compatibility table seeded from Compatibility Report runs. R-series PTP false-positives (live view + battery advertised but rejected), mode=3-only constraint, BLE protocol per body
 - [docs/mode-schema.md](docs/mode-schema.md) — user-mode preset JSON schema
 - [docs/wiring.md](docs/wiring.md) — hardware schematics
 - [.github/copilot-instructions.md](.github/copilot-instructions.md) — AI assistant conventions

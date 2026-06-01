@@ -25,12 +25,14 @@ The PTP transport's reason to exist: Canon's EOS R doesn't support CCAPI even on
 | Lens info | ✅ | Canon `LensName` property `0xD157`; focal length parsed from name |
 | All wizard modes (Intervalometer, Astro, DarkFrame, Ramp, Timelapse) | ✅ | Routed through `runCanonBulb` / `runCanonTimelapse` / `runCanonRamp` |
 | Live view / Star Focus | ✅ | Canon `GetViewFinderData` (op `0x9153`) + `DriveLens` (op `0x9155`) + `SetDevicePropValue(EvfOutput 0xD1B0)`; `StarFocusScreen` reads from whichever Canon transport is active |
-| Mid-cable-pull recovery | ⚠️ | Banner shows, transport tears down cleanly. *Not* a true resume — user must restart the flow after replug. Future work. |
+| Mid-cable-pull recovery | ✓ | v0.320: `PtpTransport.reopen(ctx, newDevice)` swaps the dead USB handle under the same transport reference when the OS reports a matching `(vid, pid)` ATTACHED. `awaitCanonReady` pauses the runner; the run resumes mid-flow on reattach. |
 
 ## Tested bodies
 
-- **Canon EOS R** — primary motivation; CCAPI does not activate on this body. PTP works for all modes.
-- **Canon EOS RP** — also works on PTP. Eduardo's CCAPI body, validated both transports against the same hardware.
+- **Canon EOS R** — primary motivation; CCAPI does not activate on this body. PTP works for capture + bulb. Live view and battery advertise as supported but are rejected at runtime — see [canon-body-matrix.md](canon-body-matrix.md).
+- **Canon EOS RP** — also works on PTP. Same false-positive PTP advertisements as the R, so the matrix entry is the same.
+
+See [canon-body-matrix.md](canon-body-matrix.md) for the per-body × per-transport capability table seeded by the in-app Compatibility Report.
 
 Other Canon EOS bodies + non-Canon PTP cameras (Nikon, Sony, Fuji) *should* work for basic capture (`InitiateCapture` is PIMA-standard) but the bulb path uses Canon-vendor operations `0x9128` / `0x9129`, so a different vendor would need its own bulb plumbing.
 
