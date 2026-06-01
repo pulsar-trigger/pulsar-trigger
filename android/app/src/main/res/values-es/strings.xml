@@ -87,6 +87,8 @@
     <string name="astro2_lens_not_mounted">No se detecta objetivo en la cámara.</string>
     <string name="astro2_lens_detect">Detectar objetivo</string>
     <string name="astro2_lens_detecting">Detectando…</string>
+    <string name="widget_dashboard_label">Panel Astro Pulsar</string>
+    <string name="widget_dashboard_description">Luna, sol, crepúsculo, clima y ventanas fotográficas de esta noche de un vistazo.</string>
     <string name="section_background">Actividad en segundo plano</string>
     <string name="background_help">Las sesiones astro largas con la pantalla apagada pueden ser interrumpidas por el modo Doze de Android. Permitir la actividad en segundo plano mantiene Pulsar funcionando hasta el final.</string>
     <string name="background_status_allowed">Actividad en segundo plano permitida</string>

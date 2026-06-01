@@ -99,6 +99,19 @@ import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
 class MainActivity : AppCompatActivity() {
 
+    companion object {
+        /** Intent extra: integer tab index to select on launch. Used by the
+         *  home-screen [com.ehrocha.pulsar.widget.DashboardWidget]. */
+        const val EXTRA_OPEN_TAB = "com.ehrocha.pulsar.OPEN_TAB"
+
+        // Mirror the consts in MainMenuScreen.kt so callers outside that file
+        // (the widget receiver lives in a different package) don't have to
+        // import the screen module.
+        const val TAB_DASHBOARD = 0
+        const val TAB_TRIGGER = 1
+        const val TAB_TOOLS = 2
+    }
+
     /** Read event JSON from an incoming VIEW/SEND intent (.pulsar file). */
     private fun readImportIntent(): String? {
         val intent = intent ?: return null
@@ -174,7 +187,11 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     if (permissions.allPermissionsGranted) {
-                        PulsarNavHost(importJson = pendingImportJson)
+                        PulsarNavHost(
+                            importJson = pendingImportJson,
+                            initialMenuTab = intent?.getIntExtra(EXTRA_OPEN_TAB, -1)
+                                ?.takeIf { it >= 0 },
+                        )
                     } else {
                         PermissionsRequiredScreen(
                             onRequestAgain = { permissions.launchMultiplePermissionRequest() },
@@ -235,9 +252,20 @@ private fun PermissionsRequiredScreen(onRequestAgain: () -> Unit) {
 }
 
 @Composable
-fun PulsarNavHost(vm: PulsarViewModel = viewModel(), importJson: String? = null) {
-    var currentScreen by remember { mutableStateOf<AppScreen>(AppScreen.ScanLanding) }
-    var menuTab by remember { mutableIntStateOf(com.ehrocha.pulsar.ui.screens.TAB_TRIGGER) }
+fun PulsarNavHost(
+    vm: PulsarViewModel = viewModel(),
+    importJson: String? = null,
+    initialMenuTab: Int? = null,
+) {
+    // Widget tap → launch straight into the main menu on the requested tab.
+    var currentScreen by remember {
+        mutableStateOf<AppScreen>(
+            if (initialMenuTab != null) AppScreen.Menu else AppScreen.ScanLanding
+        )
+    }
+    var menuTab by remember {
+        mutableIntStateOf(initialMenuTab ?: com.ehrocha.pulsar.ui.screens.TAB_TRIGGER)
+    }
     val connected by vm.connected.collectAsState()
 
     // Camera-transport link dropped mid-session (phone-driven run loop can't

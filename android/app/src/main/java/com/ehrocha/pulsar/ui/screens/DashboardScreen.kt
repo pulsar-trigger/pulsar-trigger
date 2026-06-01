@@ -35,6 +35,7 @@ import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.R
 
 import com.ehrocha.pulsar.astro.*
+import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -50,9 +51,26 @@ fun DashboardScreen(
     val scope = rememberCoroutineScope()
     var showDatePicker by remember { mutableStateOf(false) }
     var isRefreshing by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     LaunchedEffect(Unit) {
         dashboardManager.refresh()
+    }
+
+    // Whenever the in-app dashboard has a non-empty state, mirror the
+    // snapshot to SharedPrefs + redraw any active home-screen widgets.
+    // Triggers on first paint + every refresh.
+    LaunchedEffect(state.lastUpdated) {
+        if (state.lastUpdated != null && state.location != null &&
+            (state.moon != null || state.sun != null)) {
+            com.ehrocha.pulsar.widget.DashboardSnapshotStore
+                .save(context, dashboardManager.serializeState())
+            try {
+                com.ehrocha.pulsar.widget.DashboardWidget().updateAll(context)
+            } catch (_: Throwable) {
+                // No widget on a home screen — no-op.
+            }
+        }
     }
 
     // ── Date picker dialog ───────────────────────────────────────

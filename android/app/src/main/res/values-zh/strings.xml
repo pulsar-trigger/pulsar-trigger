@@ -87,6 +87,8 @@
     <string name="astro2_lens_not_mounted">相机未检测到镜头。</string>
     <string name="astro2_lens_detect">检测镜头</string>
     <string name="astro2_lens_detecting">检测中…</string>
+    <string name="widget_dashboard_label">Pulsar 天文仪表盘</string>
+    <string name="widget_dashboard_description">一目了然地查看月、日、晨昏、天气和今晚的拍摄窗口。</string>
     <string name="section_background">后台运行</string>
     <string name="background_help">关闭屏幕进行长时间天体拍摄时，Android 的 Doze 模式可能限制后台运行。允许后台运行可让 Pulsar 稳定运行至拍摄结束。</string>
     <string name="background_status_allowed">已允许后台运行</string>

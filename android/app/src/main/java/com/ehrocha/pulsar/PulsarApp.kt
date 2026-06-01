@@ -13,6 +13,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.ehrocha.pulsar.canonble.CrashPersister
 import com.ehrocha.pulsar.update.UpdateCheckWorker
+import com.ehrocha.pulsar.widget.DashboardWidgetWorker
 import java.util.concurrent.TimeUnit
 
 class PulsarApp : Application() {
@@ -20,6 +21,7 @@ class PulsarApp : Application() {
         super.onCreate()
         CrashPersister.install(this)
         scheduleUpdateCheck()
+        scheduleDashboardWidgetRefresh()
     }
 
     private fun scheduleUpdateCheck() {
@@ -34,6 +36,26 @@ class PulsarApp : Application() {
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             UpdateCheckWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            request,
+        )
+    }
+
+    /** Refresh the home-screen widget's cached dashboard snapshot every 3 h.
+     *  The dashboard data (weather + astronomy) changes slowly, so 3 h is
+     *  plenty to keep the widget useful without burning battery. */
+    private fun scheduleDashboardWidgetRefresh() {
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val request = PeriodicWorkRequestBuilder<DashboardWidgetWorker>(
+            3, TimeUnit.HOURS,
+        ).setConstraints(constraints)
+            .build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            DashboardWidgetWorker.WORK_NAME,
             ExistingPeriodicWorkPolicy.KEEP,
             request,
         )

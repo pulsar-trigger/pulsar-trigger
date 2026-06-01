@@ -20,8 +20,8 @@ android {
         applicationId = "com.ehrocha.pulsar"
         minSdk = 26
         targetSdk = 35
-        versionCode = 327
-        versionName = "0.316.0"
+        versionCode = 328
+        versionName = "0.317.0"
     }
 
     signingConfigs {
@@ -88,8 +88,12 @@ dependencies {
     // Encrypted prefs for Canon CCAPI digest credentials (keyed via Keystore)
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
-    // WorkManager — periodic background update checks
+    // WorkManager — periodic background update checks + dashboard widget refresh
     implementation("androidx.work:work-runtime-ktx:2.9.1")
+
+    // Jetpack Glance — Compose-style home-screen widget API
+    implementation("androidx.glance:glance-appwidget:1.1.1")
+    implementation("androidx.glance:glance-material3:1.1.1")
 
     // MapLibre — map-based location picker
     implementation("org.maplibre.gl:android-sdk:11.8.0")

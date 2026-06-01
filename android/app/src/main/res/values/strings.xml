@@ -193,6 +193,10 @@
     <string name="astro2_lens_detect">Detect lens</string>
     <string name="astro2_lens_detecting">Detecting…</string>
 
+    <!-- Home-screen widget -->
+    <string name="widget_dashboard_label">Pulsar Astro Dashboard</string>
+    <string name="widget_dashboard_description">Moon, sun, twilight, weather, and tonight\'s photo windows at a glance.</string>
+
     <!-- Intervalometer 2 -->
     <string name="iv2_tab_interval">Interval</string>
     <string name="iv2_tab_exposure">Exposure</string>
