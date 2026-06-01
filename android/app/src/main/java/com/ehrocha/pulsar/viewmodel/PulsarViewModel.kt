@@ -1957,18 +1957,18 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     }
                 } catch (t: Throwable) {
                     threw = true
-                    // Log the exception class + message + first ~6 stack
-                    // frames into the in-app diag ring so a wizard-start
-                    // crash captured via Tools→Diagnostics shows the root
-                    // cause (CancellationException still rethrows cleanly).
-                    if (t !is kotlinx.coroutines.CancellationException) {
-                        com.ehrocha.pulsar.canonble.CanonBleLog.e(
-                            "FlowJob",
-                            "${t.javaClass.simpleName}: ${t.message}\n" +
-                                t.stackTrace.take(6).joinToString("\n  ") { "at $it" },
-                        )
-                    }
-                    throw t
+                    // CancellationException is the structured-cancel signal —
+                    // rethrow so the parent scope sees the cancel cleanly.
+                    // Anything else (IllegalState, IO, NPE…) is a run failure:
+                    // log it for diagnostics and stop the run, but don't let
+                    // it propagate to viewModelScope where it would crash the
+                    // app on Android's default coroutine exception handler.
+                    if (t is kotlinx.coroutines.CancellationException) throw t
+                    com.ehrocha.pulsar.canonble.CanonBleLog.e(
+                        "FlowJob",
+                        "${t.javaClass.simpleName}: ${t.message}\n" +
+                            t.stackTrace.take(6).joinToString("\n  ") { "at $it" },
+                    )
                 } finally {
                     val endedAt = System.currentTimeMillis()
                     val completed = _status.value?.shotsTaken ?: 0

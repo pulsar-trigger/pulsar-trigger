@@ -120,8 +120,11 @@ class PtpIpTransport private constructor(
      *  PTP/IP support bulb. If a non-Canon PTP/IP body ever appears the wire
      *  call simply returns OperationNotSupported and the runner reports a
      *  failed shot. */
+    // Canon reports vendorExtensionId = 11 ("Canon EOS") over USB but 6 ("MTP")
+    // over PTP/IP — same body, different transport. Gate on the manufacturer
+    // string so both paths recognize Canon and expose RemoteRelease / bulb.
     private val canonExtension: Boolean =
-        deviceInfo.vendorExtensionId == PtpClient.VENDOR_EXT_CANON_EOS
+        deviceInfo.manufacturer.startsWith("Canon", ignoreCase = true)
     override val supportsBulb: Boolean = canonExtension
     override val supportsSettings: Boolean = deviceInfo.supportedDeviceProperties.isNotEmpty()
     override val supportsLiveView: Boolean =
