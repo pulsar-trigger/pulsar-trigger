@@ -11,12 +11,14 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.ehrocha.pulsar.canonble.CrashPersister
 import com.ehrocha.pulsar.update.UpdateCheckWorker
 import java.util.concurrent.TimeUnit
 
 class PulsarApp : Application() {
     override fun onCreate() {
         super.onCreate()
+        CrashPersister.install(this)
         scheduleUpdateCheck()
     }
 

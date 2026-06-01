@@ -497,6 +497,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         val ts = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
             .format(java.util.Date())
         val log = com.ehrocha.pulsar.canonble.CanonBleLog.dump()
+        val crash = com.ehrocha.pulsar.canonble.CrashPersister.consume(getApplication())
         return buildString {
             appendLine("Pulsar diagnostics")
             appendLine("app: ${com.ehrocha.pulsar.BuildConfig.VERSION_NAME} " +
@@ -508,6 +509,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             appendLine("canonBle: connecting=${_canonBleConnecting.value} " +
                 "awaitingConfirm=${_canonBleAwaitingConfirm.value} " +
                 "reconnecting=${_canonBleReconnecting.value} lastError=${_canonBleError.value}")
+            if (crash != null) {
+                appendLine()
+                appendLine(crash.trim())
+            }
             appendLine()
             appendLine("── Canon BLE wire log ──")
             append(if (log.isBlank()) "(empty — no Canon BLE activity captured yet)" else log)

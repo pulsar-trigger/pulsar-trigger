@@ -230,11 +230,11 @@ class PtpIpTransport private constructor(
                 val r = client.setDevicePropValue(PtpClient.PROP_CANON_SHUTTER_SPEED, data)
                 if (!r.ok) CanonBleLog.w(TAG, "SetShutterSpeed→Bulb rc=0x${"%04X".format(r.code)} — " +
                     "user may need to set Bulb on body dial")
-            } catch (e: PtpProtocolException) {
-                CanonBleLog.w(TAG, "setShutterMode PtpProtocolException (non-fatal): ${e.message}")
-            } catch (e: java.io.IOException) {
-                CanonBleLog.w(TAG, "setShutterMode IOException — link likely lost: ${e.message}")
-                _connected.value = false
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                CanonBleLog.w(TAG, "setShutterMode ${e.javaClass.simpleName} (non-fatal): ${e.message}")
+                if (e is java.io.IOException) _connected.value = false
             }
         }
     }
@@ -251,11 +251,11 @@ class PtpIpTransport private constructor(
                 val r = client.canonRemoteReleaseOn(mode = lastBulbMode)
                 if (!r.ok) CanonBleLog.w(TAG, "RemoteReleaseOn(mode=$lastBulbMode) " +
                     "rc=0x${"%04X".format(r.code)}")
-            } catch (e: PtpProtocolException) {
-                CanonBleLog.w(TAG, "startBulb PtpProtocolException: ${e.message}")
-            } catch (e: java.io.IOException) {
-                CanonBleLog.w(TAG, "startBulb IOException — link likely lost: ${e.message}")
-                _connected.value = false
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                CanonBleLog.w(TAG, "startBulb ${e.javaClass.simpleName}: ${e.message}")
+                if (e is java.io.IOException) _connected.value = false
             }
         }
     }
@@ -268,11 +268,11 @@ class PtpIpTransport private constructor(
                 val r = client.canonRemoteReleaseOff(mode = lastBulbMode)
                 if (!r.ok) CanonBleLog.w(TAG, "RemoteReleaseOff(mode=$lastBulbMode) " +
                     "rc=0x${"%04X".format(r.code)}")
-            } catch (e: PtpProtocolException) {
-                CanonBleLog.w(TAG, "stopBulb PtpProtocolException: ${e.message}")
-            } catch (e: java.io.IOException) {
-                CanonBleLog.w(TAG, "stopBulb IOException — link likely lost: ${e.message}")
-                _connected.value = false
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                CanonBleLog.w(TAG, "stopBulb ${e.javaClass.simpleName}: ${e.message}")
+                if (e is java.io.IOException) _connected.value = false
             }
         }
     }
