@@ -2052,6 +2052,26 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    private val _compatReportRunning = MutableStateFlow(false)
+    val compatReportRunning: StateFlow<Boolean> = _compatReportRunning
+
+    /** Run the wire-level [com.ehrocha.pulsar.transport.runCompatibilityReport]
+     *  against the active Canon transport. Read-only — no shutter / property
+     *  writes. Output goes to [CanonBleLog] and ships out via Tools →
+     *  Collect Diagnostics. Use case: multi-body community testing. */
+    fun runCompatibilityReport() {
+        val transport = activeCameraTransport() ?: return
+        if (_compatReportRunning.value) return
+        viewModelScope.launch {
+            _compatReportRunning.value = true
+            try {
+                com.ehrocha.pulsar.transport.runCompatibilityReport(transport)
+            } finally {
+                _compatReportRunning.value = false
+            }
+        }
+    }
+
     fun runCameraTest() {
         val canBulb = activeTransportSupportsBulb.value
         val test = buildList<FlowStep> {

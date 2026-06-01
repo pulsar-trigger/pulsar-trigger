@@ -129,6 +129,7 @@
     <string name="canon_ble_reconnecting_hint">Canon BLE のリンクが切れました — カメラの再アドバタイズを待っています。電源を入れる/スリープを解除すると自動的に再接続します。</string>
     <string name="ptp_connected_hint">USB 接続中 — Pulsar が PTP セッションを保持している間、カメラの設定は固定されます。本体のバルブ／マニュアル切替には一旦切断してください。</string>
     <string name="mode_test_camera">カメラテスト</string>
+    <string name="mode_compat_report">互換性レポート</string>
     <string name="test_camera_title">カメラテスト</string>
     <string name="test_camera_blurb">5 つのモードすべてで合計 25 ショットを撮影し、アクティブなトランスポート (Pulsar BLE、CCAPI、USB PTP、または Canon BLE) を端から端まで検証します。</string>
     <string name="test_camera_blurb_timelapse_only">タイムラプスで 5 ショットを撮影します。接続中のカメラがこのトランスポートでバルブをサポートしないため、バルブベースのモード (インターバロメーター-バルブ、天体、ダークフレーム、ランプ) はスキップされます。</string>

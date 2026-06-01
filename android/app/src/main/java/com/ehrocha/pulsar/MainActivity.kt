@@ -493,6 +493,10 @@ fun PulsarNavHost(
                     onWhatsUpSelected = { currentScreen = AppScreen.WhatsUp },
                     onStarFocusSelected = { currentScreen = AppScreen.StarFocus },
                     onTestCameraSelected = { currentScreen = AppScreen.TestCamera },
+                    onCompatReportSelected = {
+                        vm.runCompatibilityReport()
+                        currentScreen = AppScreen.Diagnostics
+                    },
                     onDiagnosticsSelected = { currentScreen = AppScreen.Diagnostics },
                     onSettingsSelected = { currentScreen = AppScreen.Settings(SettingsSection.UPDATES) },
                 )

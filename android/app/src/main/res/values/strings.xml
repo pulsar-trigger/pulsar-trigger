@@ -27,6 +27,7 @@
     <string name="canon_ble_connected_hint">Connected over Canon BLE — set Bulb on the body\'s mode dial for bulb-style flows. Live view, lens info, and battery readout aren\'t available on this transport.</string>
     <string name="canon_ble_reconnecting_hint">Canon BLE link dropped — waiting for the camera to advertise again. Power it on / wake it up to auto-reconnect.</string>
     <string name="mode_test_camera">Test Camera</string>
+    <string name="mode_compat_report">Compatibility Report</string>
     <string name="test_camera_title">Camera Test</string>
     <string name="test_camera_blurb">Fires 25 shots across all 5 modes to verify the active transport (Pulsar BLE, CCAPI, USB PTP, or Canon BLE) end-to-end.</string>
     <string name="test_camera_blurb_timelapse_only">Fires 5 Timelapse shots. The connected camera doesn\'t advertise bulb on this transport, so the bulb-based modes (Intervalometer-bulb, Astro, Dark Frame, Ramp) are skipped.</string>

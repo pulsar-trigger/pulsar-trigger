@@ -129,6 +129,7 @@
     <string name="canon_ble_reconnecting_hint">Canon-BLE-Verbindung verloren — warte auf erneutes Advertisement der Kamera. Schalten Sie sie ein bzw. wecken Sie sie auf, um automatisch erneut zu verbinden.</string>
     <string name="ptp_connected_hint">Per USB verbunden — Kameraeinstellungen sind gesperrt, solange Pulsar die PTP-Sitzung hält. Trenne die Verbindung, um Bulb/Manual am Body umzustellen.</string>
     <string name="mode_test_camera">Kameratest</string>
+    <string name="mode_compat_report">Kompatibilitätsbericht</string>
     <string name="test_camera_title">Kameratest</string>
     <string name="test_camera_blurb">Löst 25 Aufnahmen über alle 5 Modi aus, um den aktiven Transport (Pulsar BLE, CCAPI, USB PTP oder Canon BLE) durchgängig zu prüfen.</string>
     <string name="test_camera_blurb_timelapse_only">Löst 5 Timelapse-Aufnahmen aus. Die verbundene Kamera kündigt Bulb auf diesem Transport nicht an, daher werden die Bulb-basierten Modi (Intervallometer-Bulb, Astro, Dark Frame, Rampe) übersprungen.</string>
