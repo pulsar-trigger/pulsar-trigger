@@ -350,10 +350,22 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val ptpIpError: StateFlow<String?> = _ptpIpError
     fun clearPtpIpError() { _ptpIpError.value = null }
 
+    /** True while we're trying to recover a dropped PTP/IP wire. The UI
+     *  surfaces a "Reconnecting…" state instead of bouncing the user back
+     *  to scan. */
+    private val _ptpIpReconnecting = MutableStateFlow(false)
+    val ptpIpReconnecting: StateFlow<Boolean> = _ptpIpReconnecting
+
+    /** Last camera we connected to over PTP/IP. Cleared on a user-initiated
+     *  disconnect; kept on a wire drop so the auto-reconnect job knows what
+     *  to re-dial. */
+    private var lastPtpIpCamera: com.ehrocha.pulsar.ptp.PtpIpCamera? = null
+
     fun startPtpIpScan() = ptpIpDiscovery.start()
     fun stopPtpIpScan() = ptpIpDiscovery.stop()
 
     private var ptpIpConnectJob: Job? = null
+    private var ptpIpReconnectJob: Job? = null
 
     /** Connect to a PTP/IP camera. Mutually exclusive with the other four
      *  transports — they're torn down first. The camera shows a "Connect
@@ -398,6 +410,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 _ptpIpTransport.value = transport
                 _deviceName.value = transport.label.value
                 _connected.value = true
+                lastPtpIpCamera = camera
+                _ptpIpReconnecting.value = false
                 recordLastConnection(com.ehrocha.pulsar.model.LastConnection(
                     kind = com.ehrocha.pulsar.transport.TransportKind.PTP_IP,
                     label = transport.label.value,
@@ -413,10 +427,84 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     fwVersion = "",
                 )
                 if (transport.supportsBatteryReadout) startPtpIpBatteryPolling(transport)
+                watchPtpIpWire(transport)
             } finally {
                 _ptpIpConnecting.value = false
                 _ptpIpAwaitingConfirm.value = false
             }
+        }
+    }
+
+    /** Watch the PTP/IP transport's `connected` flow. When the wire drops
+     *  while we still hold the transport (and we have a remembered camera),
+     *  arm [_ptpIpReconnecting] and attempt to re-dial the same body on a
+     *  backoff. Mid-flow runs that hit the dead wire will end with STOPPED;
+     *  resuming the run is a follow-up. */
+    private fun watchPtpIpWire(transport: com.ehrocha.pulsar.ptp.PtpIpTransport) {
+        viewModelScope.launch {
+            transport.connected.collect { isUp ->
+                if (isUp) return@collect
+                // Stale watch — transport already swapped out.
+                if (_ptpIpTransport.value !== transport) return@collect
+                val cam = lastPtpIpCamera ?: return@collect
+                if (_ptpIpReconnecting.value) return@collect
+                _ptpIpReconnecting.value = true
+                ptpIpReconnectJob?.cancel()
+                ptpIpReconnectJob = launch { attemptPtpIpReconnect(transport, cam) }
+            }
+        }
+    }
+
+    /** Tear down the dead transport and re-run [connectPtpIp]'s open+session
+     *  on a backoff (3 / 5 / 10 / 30 s). Caps at 4 attempts before giving up
+     *  and clearing the camera so the user has to re-pick. */
+    private suspend fun attemptPtpIpReconnect(
+        dead: com.ehrocha.pulsar.ptp.PtpIpTransport,
+        camera: com.ehrocha.pulsar.ptp.PtpIpCamera,
+    ) {
+        try {
+            ptpIpPollJob?.cancel()
+            runCatching { dead.release() }
+            _ptpIpTransport.value = null
+
+            val backoffs = longArrayOf(3_000, 5_000, 10_000, 30_000)
+            for ((i, delayMs) in backoffs.withIndex()) {
+                delay(delayMs)
+                coroutineContext.ensureActive()
+                Log.i(TAG, "PTP/IP reconnect attempt ${i + 1}/${backoffs.size}")
+                val result = com.ehrocha.pulsar.ptp.PtpIpTransport.openOn(
+                    camera = camera,
+                    clientName = "Pulsar",
+                    clientGuid = ptpIpClientGuid(),
+                    onAwaitConfirm = { /* silent — same body */ },
+                )
+                val tx = (result as? com.ehrocha.pulsar.ptp.PtpIpOpenResult.Ok)?.transport
+                    ?: continue
+                if (!tx.connect()) {
+                    runCatching { tx.release() }
+                    continue
+                }
+                _ptpIpTransport.value = tx
+                _deviceName.value = tx.label.value
+                _connected.value = true
+                _ptpIpReconnecting.value = false
+                if (tx.supportsBatteryReadout) startPtpIpBatteryPolling(tx)
+                watchPtpIpWire(tx)
+                return
+            }
+            // Gave up — fall through to full disconnect.
+            _ptpIpError.value = "reconnect_failed"
+            lastPtpIpCamera = null
+            _ptpIpReconnecting.value = false
+            if (!bleController.connected.value && !_simulatorActive.value &&
+                _canonCcapiTransport.value == null && _ptpTransport.value == null &&
+                _canonBleTransport.value == null) {
+                _connected.value = false
+                _status.value = null
+            }
+        } catch (_: kotlinx.coroutines.CancellationException) {
+            _ptpIpReconnecting.value = false
+            throw kotlinx.coroutines.CancellationException("reconnect cancelled")
         }
     }
 
@@ -440,8 +528,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private fun disconnectPtpIp() {
         ptpIpConnectJob?.cancel()
         ptpIpConnectJob = null
+        ptpIpReconnectJob?.cancel()
+        ptpIpReconnectJob = null
         ptpIpPollJob?.cancel()
         ptpIpPollJob = null
+        _ptpIpReconnecting.value = false
+        lastPtpIpCamera = null
         val transport = _ptpIpTransport.value
         if (transport != null) {
             viewModelScope.launch { transport.release() }
