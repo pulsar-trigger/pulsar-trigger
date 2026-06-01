@@ -157,24 +157,29 @@ class PtpTransport private constructor(
      *  concurrently (e.g. status polling racing with fireShutter). */
     private val wireMutex = Mutex()
 
+    /** True iff `GetDeviceInfo` reports a Canon body, regardless of the
+     *  reported `vendorExtensionId` (which is 6 on the EOS R/RP under
+     *  the firmware versions we've seen, despite Canon's spec listing 11).
+     *  Use this to gate Canon-vendor PC-remote setup and shutter ops. */
+    private val isCanon: Boolean =
+        deviceInfo.manufacturer.startsWith("Canon", ignoreCase = true)
+
     /** Whether the camera advertises Canon's bulb operations. Determines
-     *  the capability flag but the actual bulb wiring is Phase 2 — we
-     *  report `false` until that's implemented. */
+     *  the capability flag — actual bulb wiring lives in
+     *  [startBulb] / [stopBulb]. */
     val advertisesCanonBulb: Boolean = run {
         val ops = deviceInfo.supportedOperations
         PtpClient.OP_CANON_REMOTE_RELEASE_ON in ops ||
             0x9125 in ops || 0x9128 in ops
     }
 
-    val advertisesCanonShutter: Boolean = run {
-        val ops = deviceInfo.supportedOperations
-        PtpClient.OP_INITIATE_CAPTURE in ops ||
-            0x9008 in ops  // CanonRemoteReleaseOn
-    }
-
     /** True iff the body advertises the Canon RemoteRelease vendor ops we
      *  need for bulb. Phase 2 wires startBulb/stopBulb to those ops; the
      *  wizards gate bulb-based tiles on this flag. */
+    /** USB PTP honors the per-shot AF flag at the wire via Canon's
+     *  `RemoteReleaseOn` mode parameter (`2` = no AF, `3` = with AF). */
+    override val supportsAfToggle: Boolean = true
+
     override val supportsBulb: Boolean = advertisesCanonBulb
     /** PTP DeviceInfo lists settings as device-properties. Whether Pulsar
      *  exposes a settings UI is a separate question (camera-params tab is
@@ -185,9 +190,11 @@ class PtpTransport private constructor(
      *  GetViewFinderData but rejects SetEvfOutput, for example). Star Focus
      *  gates on this; PTP-capable bodies without it fall through to the
      *  existing CCAPI-only Star Focus path. */
-    private var _supportsLiveView: Boolean =
+    private val _liveViewSupported = MutableStateFlow(
         PtpClient.OP_CANON_GET_VIEWFINDER_DATA in deviceInfo.supportedOperations
-    override val supportsLiveView: Boolean get() = _supportsLiveView
+    )
+    override val supportsLiveView: Boolean get() = _liveViewSupported.value
+    override val liveViewSupportedFlow: StateFlow<Boolean> = _liveViewSupported
 
     /** True iff the body advertises the Canon LensName device property
      *  (`0xD157`). Reading it gives us a string like "RF16mm F2.8 STM" that
@@ -195,14 +202,11 @@ class PtpTransport private constructor(
     override val supportsLensInfo: Boolean =
         PtpClient.PROP_CANON_LENS_NAME in deviceInfo.supportedDeviceProperties
 
-    /** Initial value comes from the advertised prop set; downgraded at
-     *  runtime when [readBatteryPercent] sees `rc=0x2005` (the EOS R
-     *  advertises BatteryLevel but rejects the read). Some Canon bodies
-     *  expose battery through a vendor-specific prop instead — those would
-     *  start false but never downgrade. */
-    private var _supportsBatteryReadout: Boolean =
+    private val _batterySupported = MutableStateFlow(
         PtpClient.PROP_BATTERY_LEVEL in deviceInfo.supportedDeviceProperties
-    override val supportsBatteryReadout: Boolean get() = _supportsBatteryReadout
+    )
+    override val supportsBatteryReadout: Boolean get() = _batterySupported.value
+    override val batterySupportedFlow: StateFlow<Boolean> = _batterySupported
 
     /** Whether we successfully entered PC-remote mode at connect time.
      *  If false, only basic InitiateCapture works (no bulb / settings). */
@@ -221,7 +225,7 @@ class PtpTransport private constructor(
                 }
                 _connected.value = true
                 Log.i(TAG, "Session opened")
-                if (deviceInfo.vendorExtensionId == PtpClient.VENDOR_EXT_CANON_EOS) {
+                if (isCanon) {
                     val rm = runCatching { client.canonSetRemoteMode(1) }.getOrNull()
                     val em = runCatching { client.canonSetEventMode(1) }.getOrNull()
                     pcRemoteActive = rm?.ok == true && em?.ok == true
@@ -304,7 +308,7 @@ class PtpTransport private constructor(
                     return@withContext false
                 }
                 _connected.value = true
-                if (deviceInfo.vendorExtensionId == PtpClient.VENDOR_EXT_CANON_EOS) {
+                if (isCanon) {
                     val rm = runCatching { client.canonSetRemoteMode(1) }.getOrNull()
                     val em = runCatching { client.canonSetEventMode(1) }.getOrNull()
                     pcRemoteActive = rm?.ok == true && em?.ok == true
@@ -480,7 +484,7 @@ class PtpTransport private constructor(
                     // prop write — downgrade so the Star Focus tile gate
                     // and subsequent calls reflect reality.
                     if (r.code == 0x200A || r.code == 0x2005) {
-                        _supportsLiveView = false
+                        _liveViewSupported.value = false
                         Log.i(TAG, "supportsLiveView downgraded to false (advertised but rejects)")
                     }
                     false
@@ -579,7 +583,7 @@ class PtpTransport private constructor(
                 if (!r.ok || r.data == null || r.data.isEmpty()) {
                     Log.w(TAG, "GetDevicePropValue(0x5001) rc=0x${"%04X".format(r.code)}")
                     if (r.code == 0x2005 || r.code == 0x200A) {
-                        _supportsBatteryReadout = false
+                        _batterySupported.value = false
                         Log.i(TAG, "supportsBatteryReadout downgraded to false (advertised but rejects)")
                     }
                     return@withContext null

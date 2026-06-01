@@ -320,7 +320,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  cable-unplug, cleared only on explicit user disconnect or when the
      *  user switches to a different transport. Used to auto-reconnect when
      *  the same camera reappears on the bus. */
-    private var lastPtpAutoReconnect: Pair<Int, Int>? = null
+    @Volatile private var lastPtpAutoReconnect: Pair<Int, Int>? = null
 
     // ── PTP/IP (Canon Wi-Fi PTP-over-TCP) — Pulsar's 5th transport ─────
     // Discovers and drives Canon EOS bodies in "Remote Control (EOS
@@ -359,7 +359,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     /** Last camera we connected to over PTP/IP. Cleared on a user-initiated
      *  disconnect; kept on a wire drop so the auto-reconnect job knows what
      *  to re-dial. */
-    private var lastPtpIpCamera: com.ehrocha.pulsar.ptp.PtpIpCamera? = null
+    @Volatile private var lastPtpIpCamera: com.ehrocha.pulsar.ptp.PtpIpCamera? = null
 
     fun startPtpIpScan() = ptpIpDiscovery.start()
     fun stopPtpIpScan() = ptpIpDiscovery.stop()
@@ -2220,9 +2220,24 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  one is non-null at a time. ESP32 BLE and the simulator don't
      *  implement [CameraTransport] and are handled in their own branches
      *  of [executeFlowStep]. */
-    private fun activeCameraTransport(): com.ehrocha.pulsar.transport.CameraTransport? =
-        _canonCcapiTransport.value ?: _ptpTransport.value ?: _canonBleTransport.value
-            ?: _ptpIpTransport.value
+    private fun activeCameraTransport(): com.ehrocha.pulsar.transport.CameraTransport? {
+        val cc = _canonCcapiTransport.value
+        val pu = _ptpTransport.value
+        val cb = _canonBleTransport.value
+        val pi = _ptpIpTransport.value
+        if (com.ehrocha.pulsar.BuildConfig.DEBUG) {
+            // Mutual exclusion invariant — every connect* path is supposed to
+            // tear down the other four. A debug-only assertion catches any
+            // teardown that drops a step (e.g. a future new transport whose
+            // connect path forgets to disconnect one of the others).
+            val live = listOfNotNull(cc, pu, cb, pi)
+            check(live.size <= 1) {
+                "Mutual exclusion violated: ${live.size} transports live " +
+                    "(${live.joinToString { it.kind.name }})"
+            }
+        }
+        return cc ?: pu ?: cb ?: pi
+    }
 
     fun stopFlow() {
         // Hand the BLE stop off immediately (don't wait on cancellation) so

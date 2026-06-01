@@ -181,6 +181,11 @@ class CanonBleTransport private constructor(
 
     override val kind = TransportKind.CANON_BLE
 
+    // No wire-serialization mutex here — unlike the PTP transports, Canon
+    // BLE goes through Android's GATT stack which only allows one
+    // outstanding op per connection. The Nordic BLE library Pulsar uses
+    // queues operations internally, so concurrent callers from coroutines
+    // are serialised on the wire side without an explicit Mutex.
     private val _label = MutableStateFlow(device.address)
     override val label: StateFlow<String> = _label
 

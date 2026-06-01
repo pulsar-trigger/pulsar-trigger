@@ -855,6 +855,7 @@ private fun PtpIpSetup(vm: PulsarViewModel) {
     val rejectedStr = stringResource(R.string.ptp_ip_err_rejected)
     val connectFailedStr = stringResource(R.string.ptp_ip_err_connect_failed)
     val sessionFailedStr = stringResource(R.string.ptp_ip_err_session_failed)
+    val reconnectFailedStr = stringResource(R.string.ptp_ip_err_reconnect_failed)
     val genericStr = stringResource(R.string.ptp_err_generic)
 
     LaunchedEffect(ptpIpError) {
@@ -863,6 +864,7 @@ private fun PtpIpSetup(vm: PulsarViewModel) {
             "rejected" -> rejectedStr
             "connect_failed" -> connectFailedStr
             "session_failed" -> sessionFailedStr
+            "reconnect_failed" -> reconnectFailedStr
             else -> genericStr.format(e)
         }
         android.widget.Toast.makeText(toastCtx, msg, android.widget.Toast.LENGTH_LONG).show()

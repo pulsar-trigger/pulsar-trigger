@@ -89,6 +89,12 @@
     <string name="astro2_lens_detecting">Detectando…</string>
     <string name="widget_dashboard_label">Panel Astro Pulsar</string>
     <string name="widget_dashboard_description">Luna, sol, crepúsculo, clima y ventanas fotográficas de esta noche de un vistazo.</string>
+    <string name="widget_empty_state">Abre la app para llenar el widget</string>
+    <string name="widget_empty_state_title">Pulsar — Panel astro</string>
+    <string name="widget_updated_prefix">Actualizado</string>
+    <string name="widget_stale_prefix">Obsoleto ·</string>
+    <string name="widget_refresh_content_description">Actualizar</string>
+    <string name="widget_verdict_sun">Sol</string>
     <string name="section_background">Actividad en segundo plano</string>
     <string name="background_help">Las sesiones astro largas con la pantalla apagada pueden ser interrumpidas por el modo Doze de Android. Permitir la actividad en segundo plano mantiene Pulsar funcionando hasta el final.</string>
     <string name="background_status_allowed">Actividad en segundo plano permitida</string>
@@ -627,6 +633,7 @@
     <string name="ptp_ip_err_rejected">La cámara rechazó la conexión.</string>
     <string name="ptp_ip_err_connect_failed">No se pudo conectar con la cámara.</string>
     <string name="ptp_ip_err_session_failed">No se pudo abrir una sesión con la cámara.</string>
+    <string name="ptp_ip_err_reconnect_failed">Se perdió la conexión Wi-Fi con la cámara y no se pudo recuperar. Comprueba que ambos dispositivos estén en la misma red.</string>
     <string name="transport_tile_canon_ble_title">Canon BLE</string>
     <string name="transport_tile_canon_ble_subtitle">Protocolo BR-E1, inalámbrico</string>
 

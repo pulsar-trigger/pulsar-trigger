@@ -43,6 +43,10 @@ class CcapiTransport(
 
     private val client = CcapiClient(camera.accessUrl, credentials)
 
+    // No wire-serialization mutex here — unlike the PTP transports, CCAPI's
+    // wire is HTTP, and OkHttp queues concurrent calls per-host on its own
+    // dispatcher. Methods on this class can be invoked from any coroutine
+    // and OkHttp serialises the wire side appropriately.
     private val _label = MutableStateFlow(camera.nickname ?: camera.friendlyName)
     override val label: StateFlow<String> = _label
 
@@ -56,6 +60,10 @@ class CcapiTransport(
     /** True iff the body reports `/shooting/control/shutterbutton/manual` in
      *  its endpoint matrix. Set after [connect]; bulb-based modes refuse to
      *  start otherwise. */
+    /** CCAPI honors the per-shot AF flag via `"af": true/false` on the
+     *  `/shutterbutton[/manual]` POST body. */
+    override val supportsAfToggle: Boolean = true
+
     override val supportsBulb: Boolean
         get() = client.supports(PATH_SHUTTER_MANUAL, "post")
 

@@ -89,6 +89,12 @@
     <string name="astro2_lens_detecting">Détection…</string>
     <string name="widget_dashboard_label">Tableau Astro Pulsar</string>
     <string name="widget_dashboard_description">Lune, soleil, crépuscule, météo et fenêtres photo de la nuit en un coup d\'œil.</string>
+    <string name="widget_empty_state">Ouvrez l\'application pour remplir le widget</string>
+    <string name="widget_empty_state_title">Pulsar — Tableau astro</string>
+    <string name="widget_updated_prefix">Mis à jour</string>
+    <string name="widget_stale_prefix">Périmé ·</string>
+    <string name="widget_refresh_content_description">Actualiser</string>
+    <string name="widget_verdict_sun">Soleil</string>
     <string name="section_background">Activité en arrière-plan</string>
     <string name="background_help">Les longues sessions astro avec l\'écran éteint peuvent être interrompues par le mode Doze d\'Android. Autoriser l\'activité en arrière-plan permet à Pulsar de continuer jusqu\'à la fin.</string>
     <string name="background_status_allowed">Activité en arrière-plan autorisée</string>
@@ -629,6 +635,7 @@
     <string name="ptp_ip_err_rejected">L\'appareil a refusé la connexion.</string>
     <string name="ptp_ip_err_connect_failed">Impossible de joindre l\'appareil.</string>
     <string name="ptp_ip_err_session_failed">Impossible d\'ouvrir une session avec l\'appareil.</string>
+    <string name="ptp_ip_err_reconnect_failed">Liaison Wi-Fi avec l\'appareil perdue, récupération impossible. Vérifiez que les deux appareils sont sur le même réseau.</string>
     <string name="transport_tile_canon_ble_title">Canon BLE</string>
     <string name="transport_tile_canon_ble_subtitle">Protocole BR-E1, sans fil</string>
 

@@ -172,23 +172,27 @@ class PtpIpTransport private constructor(
     override val supportsBulb: Boolean = canonExtension
     override val supportsSettings: Boolean = deviceInfo.supportedDeviceProperties.isNotEmpty()
 
-    // [_supportsLiveView] / [_supportsBatteryReadout] start true if the body
+    // [_liveViewSupported] / [_batterySupported] start true if the body
     // advertises the relevant op / prop, but get **downgraded at runtime**
     // when the first call returns "not supported" (rc=0x200A / 0x2005).
-    // The EOS R is the discovered case: it lists GetViewFinderData in
-    // GetDeviceInfo but rejects the SetEvfOutput required to enable EVF,
-    // and lists BatteryLevel but rejects the read. Future testers on other
-    // bodies might find more of these.
-    private var _supportsLiveView: Boolean =
+    // The EOS R/RP are the discovered cases: they list GetViewFinderData
+    // in GetDeviceInfo but reject SetEvfOutput, and list BatteryLevel but
+    // reject the read. Backed by StateFlow so Compose tile gates update
+    // without a restart.
+    private val _liveViewSupported = MutableStateFlow(
         PtpClient.OP_CANON_GET_VIEWFINDER_DATA in deviceInfo.supportedOperations
-    override val supportsLiveView: Boolean get() = _supportsLiveView
+    )
+    override val supportsLiveView: Boolean get() = _liveViewSupported.value
+    override val liveViewSupportedFlow: StateFlow<Boolean> = _liveViewSupported
 
     override val supportsLensInfo: Boolean =
         PtpClient.PROP_CANON_LENS_NAME in deviceInfo.supportedDeviceProperties
 
-    private var _supportsBatteryReadout: Boolean =
+    private val _batterySupported = MutableStateFlow(
         PtpClient.PROP_BATTERY_LEVEL in deviceInfo.supportedDeviceProperties
-    override val supportsBatteryReadout: Boolean get() = _supportsBatteryReadout
+    )
+    override val supportsBatteryReadout: Boolean get() = _batterySupported.value
+    override val batterySupportedFlow: StateFlow<Boolean> = _batterySupported
 
     // EOS R rejects RemoteRelease mode=2 (no-AF) over Wi-Fi with DEVICE_BUSY,
     // so [fireShutter] / [startBulb] force mode=3 — the af flag has no wire
@@ -210,7 +214,10 @@ class PtpIpTransport private constructor(
                 }
                 _connected.value = true
                 CanonBleLog.i(TAG, "Session opened")
-                if (deviceInfo.vendorExtensionId == PtpClient.VENDOR_EXT_CANON_EOS) {
+                // canonExtension is gated on the manufacturer string — EOS R/RP
+                // report vendorExtensionId=6 despite being Canon, so the
+                // earlier vendorExt==11 gate skipped PC-remote setup on them.
+                if (canonExtension) {
                     val rm = runCatching { client.canonSetRemoteMode(1) }.getOrNull()
                     val em = runCatching { client.canonSetEventMode(1) }.getOrNull()
                     pcRemoteActive = rm?.ok == true && em?.ok == true
@@ -276,8 +283,7 @@ class PtpIpTransport private constructor(
                     return@withContext false
                 }
                 _connected.value = true
-                if (res.info.vendorExtensionId == PtpClient.VENDOR_EXT_CANON_EOS ||
-                    res.info.manufacturer.startsWith("Canon", ignoreCase = true)) {
+                if (canonExtension) {
                     val rm = runCatching { client.canonSetRemoteMode(1) }.getOrNull()
                     val em = runCatching { client.canonSetEventMode(1) }.getOrNull()
                     pcRemoteActive = rm?.ok == true && em?.ok == true
@@ -459,7 +465,7 @@ class PtpIpTransport private constructor(
                     // Downgrade so subsequent attempts short-circuit and the
                     // Star Focus tile reflects reality (EOS R does this).
                     if (r.code == 0x200A || r.code == 0x2005) {
-                        _supportsLiveView = false
+                        _liveViewSupported.value = false
                         CanonBleLog.i(TAG, "supportsLiveView downgraded to false " +
                             "(body advertised but rejects)")
                     }
@@ -551,7 +557,7 @@ class PtpIpTransport private constructor(
                 if (!r.ok || r.data == null || r.data.isEmpty()) {
                     CanonBleLog.w(TAG, "GetDevicePropValue(0x5001) rc=0x${"%04X".format(r.code)}")
                     if (r.code == 0x2005 || r.code == 0x200A) {
-                        _supportsBatteryReadout = false
+                        _batterySupported.value = false
                         CanonBleLog.i(TAG, "supportsBatteryReadout downgraded to false " +
                             "(body advertised but rejects)")
                     }

@@ -5,6 +5,7 @@
 
 package com.ehrocha.pulsar.transport
 
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -80,16 +81,33 @@ interface CameraTransport {
     val supportsSettings: Boolean
 
     /** Transport can serve a live-view JPEG stream. CCAPI: true (used by
-     *  Star Focus). */
+     *  Star Focus). For UI gating that needs to react to **runtime
+     *  downgrade** (PTP bodies that advertise the op but reject the wire
+     *  call — see EOS R / RP), observe [liveViewSupportedFlow] instead. */
     val supportsLiveView: Boolean
+
+    /** Reactive form of [supportsLiveView]. Most transports just emit the
+     *  initial value once; PTP transports flip this to false on the first
+     *  `rc=0x200A PARAMETER_NOT_SUPPORTED` from the body, so Compose
+     *  consumers (the Star Focus tile gate) update without a restart. */
+    val liveViewSupportedFlow: StateFlow<Boolean>
+        get() = MutableStateFlow(supportsLiveView)
 
     /** Transport can report what lens is mounted (name, focal length).
      *  Used by the Astro wizard's focal-length auto-fill. CCAPI: true. */
     val supportsLensInfo: Boolean
 
     /** Transport can report camera battery state for the run-screen chip.
-     *  CCAPI: true (event polling + `/devicestatus/battery`). */
+     *  CCAPI: true (event polling + `/devicestatus/battery`). See
+     *  [batterySupportedFlow] for the reactive form (PTP bodies can
+     *  runtime-downgrade if the body advertises 0x5001 but rejects the
+     *  read). */
     val supportsBatteryReadout: Boolean
+
+    /** Reactive form of [supportsBatteryReadout] — see
+     *  [liveViewSupportedFlow] for the rationale. */
+    val batterySupportedFlow: StateFlow<Boolean>
+        get() = MutableStateFlow(supportsBatteryReadout)
 
     /** Transport honors the [fireShutter]/[startBulb] `af` flag on the wire.
      *  Wizards hide the per-shot AF toggle when false — the camera body's

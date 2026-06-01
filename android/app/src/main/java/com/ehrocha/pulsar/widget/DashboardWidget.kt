@@ -44,6 +44,7 @@ import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.MainActivity
+import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.astro.AstroDashboardManager
 import com.ehrocha.pulsar.astro.DashboardState
 import com.ehrocha.pulsar.astro.LocationInfo
@@ -111,7 +112,7 @@ private fun EmptyState() {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            "Pulsar — Astro dashboard",
+            ctx.getString(R.string.widget_empty_state_title),
             style = TextStyle(
                 color = GlanceTheme.colors.onSurface,
                 fontWeight = FontWeight.Bold,
@@ -120,7 +121,7 @@ private fun EmptyState() {
         )
         Spacer(GlanceModifier.height(4.dp))
         Text(
-            "Open the app to populate the widget",
+            ctx.getString(R.string.widget_empty_state),
             style = TextStyle(
                 color = GlanceTheme.colors.onSurfaceVariant,
                 fontSize = 12.sp,
@@ -150,33 +151,36 @@ private fun SummaryCard(state: DashboardState, updatedAtMs: Long) {
     ) {
         item { CardHeader(state, updatedAtMs) }
         item { Spacer(GlanceModifier.height(10.dp)) }
-        state.sun?.let { item { VerdictRow("☀️", "Sun", true) } }
+        state.sun?.let {
+            item { VerdictRow("☀️", ctx.getString(R.string.widget_verdict_sun), true) }
+        }
         state.moon?.let { moon -> item { MoonVerdict(moon) } }
         state.weather?.let { w -> item { WeatherVerdict(w) } }
         state.milkyWay?.let { mw ->
             item {
                 VerdictRow(
                     "🌌",
-                    if (mw.visible) "MW Visible" else "MW Not Visible",
+                    ctx.getString(if (mw.visible) R.string.verdict_mw_visible
+                                  else R.string.verdict_mw_not_visible),
                     mw.visible,
                 )
             }
         }
         state.bortle?.let { b ->
             val bInt = b.bortleClass.toInt().coerceIn(1, 9)
-            item { VerdictRow("💡", "Bortle $bInt", bInt <= 4) }
+            item { VerdictRow("💡", ctx.getString(R.string.verdict_bortle, bInt), bInt <= 4) }
         }
 
         val riseSetRows = buildRiseSetRows(state)
         if (riseSetRows.isNotEmpty()) {
             item { Spacer(GlanceModifier.height(10.dp)) }
-            item { SectionLabel("Rise / Set") }
+            item { SectionLabel(ctx.getString(R.string.label_rise_set)) }
             items(riseSetRows) { (emoji, times) -> RiseSetRow(emoji, times) }
         }
 
         if (state.bestWindows.isNotEmpty()) {
             item { Spacer(GlanceModifier.height(10.dp)) }
-            item { SectionLabel("Best Photo Windows") }
+            item { SectionLabel(ctx.getString(R.string.card_best_windows)) }
             items(state.bestWindows) { w -> WindowRow(w) }
         }
     }
@@ -184,6 +188,7 @@ private fun SummaryCard(state: DashboardState, updatedAtMs: Long) {
 
 @Composable
 private fun CardHeader(state: DashboardState, updatedAtMs: Long) {
+    val ctx = androidx.glance.LocalContext.current
     val stale = isStale(updatedAtMs)
     Row(
         modifier = GlanceModifier.fillMaxWidth(),
@@ -209,8 +214,11 @@ private fun CardHeader(state: DashboardState, updatedAtMs: Long) {
                     maxLines = 1,
                 )
             }
+            val prefix = ctx.getString(
+                if (stale) R.string.widget_stale_prefix else R.string.widget_updated_prefix
+            )
             Text(
-                (if (stale) "Stale · " else "Updated ") + formatTime(updatedAtMs),
+                "$prefix ${formatTime(updatedAtMs)}",
                 style = TextStyle(
                     color = if (stale) GlanceTheme.colors.error
                     else GlanceTheme.colors.onSurfaceVariant,
@@ -225,24 +233,27 @@ private fun CardHeader(state: DashboardState, updatedAtMs: Long) {
 
 @Composable
 private fun MoonVerdict(moon: MoonInfo) {
+    val ctx = androidx.glance.LocalContext.current
     VerdictRow(
         moon.emoji,
-        if (moon.goodForAstro) "Dark Moon" else "Bright Moon",
+        ctx.getString(if (moon.goodForAstro) R.string.verdict_moon_good
+                      else R.string.verdict_moon_bright),
         moon.goodForAstro,
     )
 }
 
 @Composable
 private fun WeatherVerdict(weather: WeatherInfo) {
+    val ctx = androidx.glance.LocalContext.current
     val hasRain = weather.precipitationMm > 0.1
     val good = weather.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD && !hasRain
-    val label = when {
-        hasRain -> "Rain"
-        weather.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD -> "Clear Skies"
-        weather.cloudCoverPct <= AppConfig.CLOUD_COVER_PARTLY_THRESHOLD -> "Partly Cloudy"
-        else -> "Too Cloudy"
+    val labelRes = when {
+        hasRain -> R.string.verdict_rain
+        weather.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD -> R.string.verdict_clear
+        weather.cloudCoverPct <= AppConfig.CLOUD_COVER_PARTLY_THRESHOLD -> R.string.verdict_partly
+        else -> R.string.verdict_cloudy
     }
-    VerdictRow(weatherEmoji(weather.weatherCode), label, good)
+    VerdictRow(weatherEmoji(weather.weatherCode), ctx.getString(labelRes), good)
 }
 
 /** One verdict chip — emoji + label inside a soft-tinted rounded surface.
@@ -313,11 +324,13 @@ private fun RiseSetRow(emoji: String, times: String) {
 
 @Composable
 private fun WindowRow(w: PhotoWindow) {
-    val (chipColor, chipLabel) = when (w.rating) {
-        3 -> WINDOW_EXCELLENT to "Excellent"
-        2 -> WINDOW_GOOD to "Good"
-        else -> WINDOW_FAIR to "Fair"
+    val ctx = androidx.glance.LocalContext.current
+    val (chipColor, chipLabelRes) = when (w.rating) {
+        3 -> WINDOW_EXCELLENT to R.string.window_excellent
+        2 -> WINDOW_GOOD to R.string.window_good
+        else -> WINDOW_FAIR to R.string.window_fair
     }
+    val chipLabel = ctx.getString(chipLabelRes)
     val chipMark = when (w.rating) { 3 -> "⭐"; 2 -> "👍"; else -> "👌" }
     Row(
         modifier = GlanceModifier
@@ -355,9 +368,10 @@ private fun WindowRow(w: PhotoWindow) {
 
 @Composable
 private fun RefreshButton() {
+    val ctx = androidx.glance.LocalContext.current
     Image(
         provider = ImageProvider(android.R.drawable.ic_popup_sync),
-        contentDescription = "Refresh",
+        contentDescription = ctx.getString(R.string.widget_refresh_content_description),
         modifier = GlanceModifier
             .size(22.dp)
             .clickable(actionRunCallback<DashboardRefreshAction>()),

@@ -7,7 +7,6 @@ package com.ehrocha.pulsar.transport
 
 import com.ehrocha.pulsar.canonble.CanonBleLog
 import com.ehrocha.pulsar.canonble.CanonBleTransport
-import com.ehrocha.pulsar.ptp.PtpClient
 import com.ehrocha.pulsar.ptp.PtpIpTransport
 import com.ehrocha.pulsar.ptp.PtpTransport
 import com.ehrocha.pulsar.transport.ccapi.CcapiTransport
@@ -95,9 +94,6 @@ private fun reportPtpIp(t: PtpIpTransport) {
     reportCanonOpsAndProps(info.supportedOperations, info.supportedDeviceProperties)
 }
 
-private suspend fun PtpIpTransport.readBatteryPercentSafe(): Int? =
-    runCatching { readBatteryPercent() }.getOrNull()
-
 // ── CCAPI ──────────────────────────────────────────────────────────────────
 
 private fun reportCcapi(t: CcapiTransport) {
@@ -149,8 +145,4 @@ private fun reportCanonOpsAndProps(ops: Collection<Int>, props: Collection<Int>)
     for ((code, name) in propChecks) {
         CanonBleLog.i(TAG, "  0x${"%04X".format(code)}  ${if (code in props) "✓" else "·"}  $name")
     }
-    // Reference the unused constants so the import is "live" if Canon ops
-    // get extended later (silences future code-cleanup tools).
-    @Suppress("UNUSED_VARIABLE")
-    val _ref = PtpClient.OP_INITIATE_CAPTURE
 }

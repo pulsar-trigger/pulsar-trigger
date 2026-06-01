@@ -197,6 +197,12 @@
     <!-- Home-screen widget -->
     <string name="widget_dashboard_label">Pulsar Astro Dashboard</string>
     <string name="widget_dashboard_description">Moon, sun, twilight, weather, and tonight\'s photo windows at a glance.</string>
+    <string name="widget_empty_state">Open the app to populate the widget</string>
+    <string name="widget_empty_state_title">Pulsar — Astro dashboard</string>
+    <string name="widget_updated_prefix">Updated</string>
+    <string name="widget_stale_prefix">Stale ·</string>
+    <string name="widget_refresh_content_description">Refresh</string>
+    <string name="widget_verdict_sun">Sun</string>
 
     <!-- Intervalometer 2 -->
     <string name="iv2_tab_interval">Interval</string>
@@ -849,6 +855,7 @@
     <string name="ptp_ip_err_rejected">The camera rejected the connection.</string>
     <string name="ptp_ip_err_connect_failed">Could not reach the camera.</string>
     <string name="ptp_ip_err_session_failed">Could not open a session with the camera.</string>
+    <string name="ptp_ip_err_reconnect_failed">Lost the Wi-Fi link to the camera and couldn\'t recover. Check both devices are on the same network.</string>
     <string name="transport_tile_canon_ble_title">Canon BLE</string>
     <string name="transport_tile_canon_ble_subtitle">BR-E1 protocol, wireless</string>
 

@@ -293,14 +293,18 @@ fun MainMenuScreen(
                 TAB_TOOLS -> {
                     val canonOn = vm.canonCcapiTransport.collectAsState().value != null
                     // Star Focus needs a live-view-capable Canon transport.
-                    // CCAPI always supplies live view (gated by canonOn);
-                    // PTP / PTP/IP supply it only on bodies that advertise
-                    // GetViewFinderData (`supportsLiveView`).
-                    val ptpForLiveView = vm.ptpTransport.collectAsState().value
-                        ?.takeIf { it.supportsLiveView } != null
-                    val ptpIpForLiveView = vm.ptpIpTransport.collectAsState().value
-                        ?.takeIf { it.supportsLiveView } != null
-                    val starFocusEnabled = canonOn || ptpForLiveView || ptpIpForLiveView
+                    // CCAPI always supplies live view (gated by canonOn).
+                    // For PTP / PTP/IP we observe `liveViewSupportedFlow` so a
+                    // **runtime downgrade** (body advertised GetViewFinderData
+                    // but rejects SetEvfOutput — see EOS R / RP) re-greys the
+                    // tile without an app restart.
+                    val ptpTx = vm.ptpTransport.collectAsState().value
+                    val ptpLive = ptpTx?.liveViewSupportedFlow
+                        ?.collectAsState(initial = false)?.value == true
+                    val ptpIpTx = vm.ptpIpTransport.collectAsState().value
+                    val ptpIpLive = ptpIpTx?.liveViewSupportedFlow
+                        ?.collectAsState(initial = false)?.value == true
+                    val starFocusEnabled = canonOn || ptpLive || ptpIpLive
                     val simulatorActive by vm.simulatorActive.collectAsState()
                     // Camera Test exists to verify the *real* wire — pulsing
                     // the simulator would just prove the simulator works.
