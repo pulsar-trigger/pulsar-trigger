@@ -9,6 +9,8 @@ android/.gradle/
 android/build/
 android/app/build/
 android/app/release/
+android/wear/build/
+android/wear/release/
 android/local.properties
 android/captures/
 android/.idea/
