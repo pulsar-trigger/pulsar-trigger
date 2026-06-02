@@ -1,11 +1,16 @@
 # Pulsar
 
-An open-source camera intervalometer and trigger system for DSLR and mirrorless cameras. Two transports, one app:
+An open-source camera intervalometer and trigger system for DSLR and mirrorless cameras. **Five transports**, one app — Pulsar talks to your camera however it happens to be connected:
 
-- **ESP32 firmware** — wired remote-release driver over BLE. Works with any camera that has a remote port (Canon, Nikon, Sony, Fuji, etc.). Sub-millisecond accuracy, no WiFi required.
-- **Canon CCAPI** — drives EOS R-series bodies directly over WiFi, no ESP32 in the middle. Bulb, Timelapse, Astro, Dark Frame, Ramp, Manual — all without extra hardware.
+- **ESP32 firmware** ↔ BLE — wired remote-release driver. Works with any camera that has a remote-release port (Canon, Nikon, Sony, Fuji, …). Sub-millisecond accuracy, no Wi-Fi required.
+- **Canon CCAPI** ↔ Wi-Fi — drives EOS R-series bodies directly over HTTP. No ESP32 in the middle. Live view + lens info + battery + Star Focus available.
+- **USB PTP** ↔ USB-C — the EOS R (which doesn't activate CCAPI) and every PTP-capable Canon body. Lowest-latency Canon transport; doubles as a charging cable.
+- **Canon BLE direct** ↔ BLE — speaks Canon's own BR-E1 (older bodies) and smartphone-mode (R-series) protocols. Wireless, no hardware, no Wi-Fi.
+- **Canon Wi-Fi PTP (PTP/IP)** ↔ Wi-Fi — the EOS R's wireless control path; same op set as USB PTP over a TCP wire on port 15740.
 
-The Android app picks whichever transport you tapped in the scan screen. The wizards don't know or care which one is active.
+Plus a **simulator** for exploring the app without hardware. The Android app picks whichever you tapped in the scan screen; the wizards don't know or care which one is active — `runCanonBulb` / `runCanonTimelapse` / `runCanonRamp` in `transport/CanonRunner.kt` are shared across all four `CameraTransport` impls.
+
+Beyond triggering, the app ships a **session-intelligence** workflow: an astro dashboard with sun/moon/twilight/weather/Bortle/dew, a DSO-recommendations card that surfaces what's worth shooting tonight, a session log that captures conditions at run start, run-complete notifications, a home-screen widget mirroring the dashboard's summary card, and a multi-body compatibility-report tile for community-driven body matrix testing.
 
 I built this for my own photography, but figured if it's useful to me it might be useful to others. Open issues for bugs / feature requests; contribution mechanics are still loose, so reach out if you'd like to help.
 
@@ -27,8 +32,8 @@ I built this for my own photography, but figured if it's useful to me it might b
 
 | Component | Version | Source of truth |
 |-----------|---------|-----------------|
-| Firmware | 0.30.0 | `firmware/platformio.ini` build flags → `config.h` |
-| Android | 0.220.0 | `android/app/build.gradle.kts` → `BuildConfig.VERSION_NAME` |
+| Firmware | 0.31.0 | `firmware/platformio.ini` build flags → `config.h` |
+| Android | 0.334.0 | `android/app/build.gradle.kts` → `BuildConfig.VERSION_NAME` |
 
 > ### 🐉 Here Be Dragons — Safety Warning (BLE/ESP32 path only)
 >
@@ -44,17 +49,18 @@ I built this for my own photography, but figured if it's useful to me it might b
 
 ## Trigger Modes
 
-| Mode | Description | BLE | CCAPI |
-|------|-------------|:---:|:-----:|
-| **Intervalometer** | Bulb timelapse — configurable interval, exposure, shot count, start delay | ✅ | ✅\* |
-| **Astro** | Star photography — auto-calculates max exposure via 500/400/NPF rule from focal length + crop factor | ✅ | ✅\* |
-| **Timelapse** | Camera owns exposure (set shutter speed on the body); Pulsar pulses the shutter on a schedule | ✅ | ✅ |
-| **Dark Frame** | Same shape as Intervalometer with lens-cap reminder, separate preset library | ✅ | ✅\* |
-| **Ramp** | Exposure ramp — linear interpolation from start to end across N steps (sunset / sunrise) | ✅ | ✅\* |
-| **Manual** | Press & hold (shutter open while button held) or press & lock (toggle) | ✅ | ✅ (press only) |
-| **Custom Flow** | Multi-step sequence builder — chain any combination of modes and pauses | ✅ | ✅\* |
+| Mode | Description | ESP32 BLE | CCAPI | USB PTP | Canon BLE | PTP/IP |
+|------|-------------|:---:|:-----:|:----:|:----:|:----:|
+| **Intervalometer** | Bulb timelapse — configurable interval, exposure, shot count, start delay | ✅ | ✅\* | ✅\* | ✅ | ✅\* |
+| **Astro** | Star photography — exposure auto-computed via 500/400/NPF rule from focal length + crop factor, with a detectable-lens auto-fill button on supported transports | ✅ | ✅\* | ✅\* | ✅ | ✅\* |
+| **Timelapse** | Camera owns exposure (set shutter speed on the body); Pulsar pulses the shutter on a schedule | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Dark Frame** | Same wire path as Intervalometer-bulb, plus a "pair with last lights" affordance that auto-fills exposure + shot count from the most recent completed light session, and a persistent lens-cap reminder | ✅ | ✅\* | ✅\* | ✅ | ✅\* |
+| **Ramp** | Exposure ramp — linear interpolation from start to end across N steps (sunset / sunrise) | ✅ | ✅\* | ✅\* | ✅ | ✅\* |
+| **Manual** | Press & hold (shutter open while button held) or press & lock (toggle) | ✅ | ✅ (press only) | ✅ | ✅ | ✅ |
+| **Cable Release** | Dedicated single-shot screen with a big red trigger button — for "just take one" workflows where a wizard would be overkill | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Custom Flow** | Multi-step sequence builder — chain any combination of modes + pauses, save under a name, run | ✅ | ✅\* | ✅\* | ✅ | ✅\* |
 
-\* CCAPI bulb-based modes require `/shooting/control/shutterbutton/manual` support on the camera body. Pulsar detects this at connect time and dims the bulb modes if the body doesn't advertise it.
+\* Bulb-based modes need the camera to expose a bulb-class wire path: CCAPI `/shooting/control/shutterbutton/manual`, PTP `RemoteReleaseOn/Off` (`0x9128` / `0x9129`). Pulsar capability-detects per body at connect and dims the bulb tiles when missing.
 
 ---
 
@@ -117,39 +123,47 @@ Package: `com.ehrocha.pulsar`, `minSdk 26`, `compileSdk 35`. Navigation is a man
 
 | Package | Purpose |
 |---------|---------|
-| `ble/` | BLE transport — Nordic BLE manager, scanner, TLV protocol, command builder, firmware OTA |
-| `transport/` | `CameraTransport` interface + `ccapi/` subpackage for the Canon WiFi path |
-| `model/` | Domain types — `FlowStep` (sealed), `RunState` (sealed), `UserMode` (presets), `ShotLog` |
-| `viewmodel/` | `PulsarViewModel` — single state hub, flow runner, transport dispatch, persistence |
-| `astro/` | Astro dashboard — sun/moon ephemeris, Milky Way visibility, Bortle, photo windows |
+| `ble/` | Pulsar BLE transport — Nordic BLE manager, scanner, TLV protocol, command builder, firmware OTA |
+| `canonble/` | Canon BLE direct transport — BR-E1 + smartphone-mode protocols, discovery, GATT client, shared `CanonBleLog` ring buffer + `CrashPersister` for forensic diagnostics |
+| `ptp/` | USB PTP + PTP/IP — `PtpClient` op layer behind a `PtpWire` interface; `BulkPtpWire` (USB) and `PtpIpWire` (TCP) implementations; `PtpDataHelpers` for shared parsing |
+| `transport/` | `CameraTransport` interface, `CanonRunner` (shared bulb / timelapse / ramp loops), `CompatibilityReport`, `ccapi/` subpackage |
+| `astro/` | Astro dashboard data + ephemeris + `DsoCatalog` + `DsoRecommender` (suggested targets tonight) |
 | `planner/` | Event/session planner with weather feasibility checks (Open-Meteo) |
 | `sensor/` | Compass sensor wrapper (for Alignment screen) |
-| `service/` | Foreground notification for running jobs |
+| `notify/` | `RunCompleteNotifier` — one-shot completion notification when a phone-driven flow ends |
+| `service/` | Foreground notification for running OTA jobs |
 | `update/` | APK self-update and background update checks |
+| `widget/` | Home-screen widget — Glance + Dashboard summary snapshot + `WorkManager` 3 h refresh |
+| `model/` | Domain types — `FlowStep` (sealed), `RunState` (sealed), `UserMode` (presets), `ShotLog`, `ConditionSnapshot` (per-run sky/weather metadata) |
+| `viewmodel/` | `PulsarViewModel` — single state hub, flow runner, transport dispatch, persistence. Per-transport leaf helpers (`awaitXReady` + battery polling) live in extension files alongside their transport |
 | `ui/screens/` | All composable screens — see table below |
-| `ui/components/` | Reusable widgets (`PulsarTopBar`, `ScrubField`, `NumPad`, `BatteryIndicator`) |
+| `ui/components/` | Reusable widgets (`PulsarTopBar`, `ScrubField`, `NumPad`, `BatteryIndicator`, `WizardWarning`, `AutofocusToggle`) |
 
 **Screens**
 
 | Screen | Purpose |
 |--------|---------|
-| `ScanScreen` | Lists Pulsar BLE triggers + Canon CCAPI cameras, current WiFi SSID, connection dialogs, auth + setup help |
-| `MainMenuScreen` | Pager with Dashboard / Trigger / Tools tabs; mode tile grid, Canon banner with reconnect state |
-| `Intervalometer2Screen` | Wizard: Exposure → Interval → Delay → Shots tabs, Save preset, RunningView with battery chip |
-| `AstroMode2Screen` | Wizard: Focal length / crop factor / rule → Gap → Delay → Shots; auto-computes exposure |
-| `TimelapseScreen` | Wizard: Interval → Delay → Shots (no exposure tab — camera owns it) |
-| `DarkFrame2Screen` | Wizard: Exposure → Interval → Shots, with lens-cap reminder |
-| `Ramp2Screen` | Wizard: Start exposure → End exposure → Interval → Steps |
-| `PresetPickerScreen` | Lists saved presets for a given mode; tap to open the wizard pre-filled |
-| `ModeScreen` | Manual (press & hold / press & lock) — touch the big button to fire |
-| `CustomFlowScreen` | Multi-step flow editor — add/edit/reorder/delete steps, save/load named flows |
-| `ControlScreen` | Settings (device, GPIO pins, OTA, backup/restore, about) |
-| `DashboardScreen` | Astro ephemeris dashboard — sun/moon, Milky Way visibility, weather, best windows |
-| `PlannerScreen` / `SessionDetailScreen` / `MapLocationPicker` | Astro event planner with location/time/weather |
-| `AlignmentScreen` | Polar alignment helper using phone compass + Polaris position |
-| `WhatsUpScreen` | What's visible tonight — objects above horizon at the planned location/time |
-| `StarFocusScreen` | 4-step CCAPI focus wizard (Prep → Aim → Focus → Lock); live view + tap-to-mark + drive-focus stepper |
-| `ShotLogScreen` | History of completed runs — mode, shots, exposure, status |
+| `ScanLandingScreen` | Six-tile 2×3 transport landing — Pulsar BLE / Canon BLE / Wi-Fi CCAPI / Wi-Fi PTP / USB PTP / Simulator. Recents row underneath. Tools section with Diagnostics. |
+| `TransportSetupScreen` | Per-transport scan UI — discovered devices, paired cameras, "Confirm on camera" prompts, auth + setup help. One scaffold drives all five transport sub-flows. |
+| `MainMenuScreen` | Pager with Dashboard / Trigger / Tools tabs; mode tile grid grouped into Bulb / Standard / Favorites / Custom sections; Canon banner with reconnect state. |
+| `Intervalometer2Screen` | Wizard: Exposure → Interval → Delay → Shots tabs, sub-second-bulb warning, Save preset, RunningView with battery chip. |
+| `AstroMode2Screen` | Wizard: Focal length / crop factor / rule → Interval → Delay → Shots; exposure auto-computes via NPF / 500 / 400 rule; "Detect lens" button on transports that expose `LensName`. |
+| `TimelapseScreen` | Wizard: Interval → Delay → Shots (no exposure tab — camera owns it). |
+| `DarkFrame2Screen` | Wizard: Exposure → Interval → Shots, plus the "Pair with last lights" auto-fill chip and persistent lens-cap reminder. |
+| `Ramp2Screen` | Wizard: Start exposure → End exposure → Interval → Steps. |
+| `PresetPickerScreen` | Lists saved presets for a given mode; tap to open the wizard pre-filled. |
+| `ModeScreen` | Manual (press & hold / press & lock) — big touch button. |
+| `CableReleaseScreen` | Dedicated single-shot screen — large red trigger, gated on connected transport. |
+| `CustomFlowScreen` | Multi-step flow editor — add/edit/reorder/delete steps, save/load named flows. |
+| `SettingsScreen` | Settings sections (device, GPIO pins, OTA, backup/restore, language, planner, about) — connection-aware (GPIO/device sections hide on Canon transports). |
+| `DashboardScreen` | Astro ephemeris dashboard — Summary verdict card, sun/moon, Milky Way, Bortle, dew point, twilight timeline, hourly weather, planets, **DSO recommendations** ("Suggested Targets Tonight"). |
+| `PlannerScreen` / `SessionDetailScreen` / `EventSessionsScreen` / `MapLocationPicker` | Astro event planner with location/time/weather feasibility. |
+| `AlignmentScreen` | Polar alignment helper using phone compass + Polaris position. |
+| `WhatsUpScreen` | What's visible tonight — objects above horizon at the planned location/time. |
+| `StarFocusScreen` | 4-step focus wizard (Prep → Aim → Focus → Lock); live view + tap-to-mark + drive-focus stepper. Runs on any `CameraTransport` whose `liveViewSupportedFlow` is true (CCAPI / USB PTP / PTP/IP). |
+| `TestCameraScreen` | "Camera Test" tile — fires 25 shots across all 5 modes against the active transport to verify end-to-end behaviour. |
+| `DiagnosticsScreen` | Scrollable Canon transport wire log (every connect, handshake, arm, shutter / focus / mode write, spontaneous disconnect) + previous-session crash dump from `CrashPersister` if any. Copy / Share buttons. |
+| `ShotLogScreen` | History of completed runs — mode, shots, exposure, status, **plus the conditions snapshot** (moon, cloud, dew, Bortle) captured at run start. |
 
 **Key design decisions:**
 - **CompositionLocals** (`LocalDeviceStatus`, `LocalDeviceConnected`, `LocalRunState`, `LocalNightMode`) provide global device state and theme mode to all screens — avoids parameter threading through deeply nested composables.
@@ -191,7 +205,7 @@ The reason this transport exists: the Canon EOS R doesn't support CCAPI even on 
 - **Properties** — battery percentage via `GetDevicePropValue(0x5001)` polled every 30 s; lens name via Canon `0xD157` parsed into focal length for the Astro wizard's auto-fill (same shared helper as CCAPI). Best-effort programmatic Bulb selection via `SetDevicePropValue(0xD102, 0x000C)` at flow start.
 - **Auto-reconnect** — viewmodel remembers the last successfully-connected camera by `(vendorId, productId)`. If the cable replugs while no other transport is active, Pulsar reconnects automatically. Explicit user disconnect or switching transports clears the auto-reconnect target.
 - **Live view + Star Focus** — `StarFocusScreen` reads from whichever Canon transport is active. Over PTP that's Canon `GetViewFinderData` (op `0x9153`) for JPEG frames + `DriveLens` (op `0x9155`) for the focus stepper, gated on the body advertising the live-view op.
-- **Mid-shoot disconnect** — the reconnect banner shows on cable unplug; in-flight wire calls fail soft (no crash) but the running flow does not currently resume on replug. Full mid-shoot resume is future work.
+- **Mid-shoot disconnect** — cable bumps no longer end the run. `PtpTransport.reopen(ctx, newDevice)` (v0.320) swaps the dead USB handle in place when the OS reports a matching `(vid, pid)` ATTACHED, and `awaitCanonReady` pauses the runner; the flow resumes on replug.
 
 Honest caveats:
 
@@ -230,7 +244,7 @@ The reason this transport exists: the **EOS R** has no BLE shutter and no CCAPI,
 - **Discovery** — mDNS browse on `_ptp._tcp.local` via Android's `NsdManager`. Cameras in EOS Utility mode announce themselves on the local network; resolved entries surface as `PtpIpCamera(name, host, port)` in the scan list. Multicast must work on the LAN — some enterprise APs block it; use the camera's own Wi-Fi AP mode as a workaround.
 - **Pair** — body's Wireless menu → Wi-Fi → **"Remote Control (EOS Utility)"** (not "Connect to smartphone"). Both devices on the same network (or phone joins the camera's AP). Tap the camera card; Pulsar runs the four-message PTP/IP init handshake (two TCP sockets — command + event — with a persisted 16-byte client GUID); the camera shows "Connect this device?" — confirm on the body. Subsequent reconnects skip the prompt because the camera remembers our GUID.
 - **Capture** — `PtpIpTransport.fireShutter` / `startBulb` / `stopBulb` go through the same Canon op set as USB PTP (`InitiateCapture`, `RemoteRelease{On,Off}`). Adding a new Canon op needs zero PTP/IP-specific code — the wire abstraction (`PtpWire` / `PtpIpWire` / `BulkPtpWire`) keeps the client agnostic.
-- **Phases** — Phase 1 (v0.305, shipped): discovery + handshake + connect + capability detection. Phase 2: shutter (code in place, hardware-verify pending). Phase 3-5: settings/lens/battery, live view + Star Focus, auto-reconnect.
+- **Phases** — all shipped. Phase 1 (v0.305): discovery + handshake + connect + capability detection. Phase 2 (v0.307–v0.313): shutter, with EOS R quirks discovered along the way (`vendorExt=6` over Wi-Fi vs `11` over USB — gated on manufacturer string; `RemoteRelease(mode=2)` returns `DEVICE_BUSY` on Wi-Fi, force `mode=3`). Phase 3 (v0.314): lens info / battery / live view / drive focus over PTP/IP. Phase 5 (v0.315–v0.316): idle auto-reconnect + mid-flow pause-and-resume via `PtpIpTransport.reopen()`. See [docs/canon-body-matrix.md](docs/canon-body-matrix.md) for the per-body capability matrix discovered through the Compatibility Report tile.
 
 Honest caveats:
 
@@ -253,26 +267,28 @@ pulsar-trigger/
 │   └── src/                        ← main.cpp, ble_server.cpp, triggers.cpp, ...
 ├── android/                        ← Android Studio / Gradle project
 │   └── app/src/main/java/com/ehrocha/pulsar/
-│       ├── MainActivity.kt         ← Permissions, navigation, CompositionLocalProvider
-│       ├── PulsarApp.kt
+│       ├── MainActivity.kt         ← Permissions, navigation, CompositionLocalProvider, EXTRA_OPEN_TAB widget deep-link
+│       ├── PulsarApp.kt            ← Application — CrashPersister.install, schedules WorkManager workers
 │       ├── AppConfig.kt            ← Compile-time constants
 │       ├── ble/                    ← BleController, PulsarBleManager, Protocol, CommandBuilder, FirmwareUpdateManager
-│       ├── transport/              ← CameraTransport interface, CanonRunner (shared bulb/timelapse/ramp loops)
+│       ├── canonble/               ← CanonBleDiscovery, CanonBleClient, CanonBleTransport, CanonBleLog, CrashPersister
+│       ├── ptp/                    ← PtpTransport (USB), PtpIpTransport (Wi-Fi), PtpClient + PtpWire abstraction, PtpDataHelpers, PtpIpDiscovery
+│       ├── transport/              ← CameraTransport interface, CanonRunner (shared bulb/timelapse/ramp loops), CompatibilityReport
 │       │   └── ccapi/              ← CcapiDiscovery, CcapiClient, CcapiTransport, CanonCamera, CameraDescription
-│       ├── ptp/                    ← PtpTransport, PtpClient, UsbPermission (Canon USB PTP-over-USB)
-│       ├── canonble/               ← CanonBleDiscovery, CanonBleClient, CanonBleTransport, CanonBleLog (BR-E1 + smartphone-mode)
-│       ├── model/                  ← FlowStep, RunState, UserMode, ShotLog (sealed where appropriate)
-│       ├── viewmodel/
-│       │   └── PulsarViewModel.kt
-│       ├── astro/                  ← Astro dashboard data + ephemeris
-│       ├── planner/                ← Event planner + weather checks
+│       ├── astro/                  ← AstroDashboardData, DsoCatalog, DsoRecommender
+│       ├── planner/                ← Event planner + weather checks (Open-Meteo)
 │       ├── sensor/                 ← Compass for polar alignment
-│       ├── service/                ← Foreground notification
-│       ├── update/                 ← APK self-update
+│       ├── notify/                 ← RunCompleteNotifier
+│       ├── service/                ← Foreground notification for OTA
+│       ├── update/                 ← APK self-update + GitHub release polling
+│       ├── widget/                 ← Glance home-screen widget + DashboardSnapshotStore + DashboardWidgetWorker
+│       ├── model/                  ← FlowStep, RunState, UserMode, ShotLog + ConditionSnapshot
+│       ├── viewmodel/
+│       │   └── PulsarViewModel.kt  ← Plus per-transport extension files in canonble/ptp/transport/ccapi
 │       └── ui/
-│           ├── screens/            ← All composable screens
+│           ├── screens/            ← All composable screens (incl. SharedSections.kt — Settings panels grab-bag)
 │           ├── components/         ← Reusable widgets
-│           └── theme/              ← Color schemes, CompositionLocals
+│           └── theme/              ← Color schemes, CompositionLocals (Dark / Light / Outdoor / RedLight)
 ├── web/                            ← ESP Web Tools browser-based installer
 ├── scripts/                        ← bump.sh (version + commit + push), build-android.sh
 ├── .github/workflows/              ← CI/CD (android.yml, firmware.yml)
@@ -280,9 +296,10 @@ pulsar-trigger/
     ├── ble-protocol.md             ← Pulsar BLE wire format spec (TLV)
     ├── ccapi.md                    ← Canon CCAPI integration design
     ├── ptp.md                      ← USB PTP transport design (Canon EOS R / RP)
-    ├── ptp-ip.md                   ← Canon Wi-Fi PTP transport (PTP-over-TCP, EOS R wireless)
+    ├── ptp-ip.md                   ← Canon Wi-Fi PTP transport (PTP-over-TCP)
     ├── canon-ble.md                ← Canon BLE direct transport (BR-E1 + smartphone-mode)
-    ├── canon-ble-research.md       ← Reverse-engineering log (all refs + GATT dumps + the open M-mode toggle bug)
+    ├── canon-ble-research.md       ← Reverse-engineering log (refs + GATT dumps)
+    ├── canon-body-matrix.md       ← Per-body × per-transport capability matrix (R + RP populated)
     ├── mode-schema.md              ← User-mode preset JSON schema
     └── wiring.md                   ← Hardware schematics
 ```
@@ -393,7 +410,31 @@ Authentication: HTTP Digest (RFC 7616) when the camera requires it. The Activati
 
 ### Astro Dashboard
 
-A live ephemeris view: sun/moon altitude and azimuth, Milky Way visibility window, Bortle-scale light-pollution estimate, hourly weather forecast (Open-Meteo), and best-window highlighting for nightscapes. Powered by `astro/AstroDashboardData.kt`.
+A live ephemeris view: location header, **Summary card** with verdict chips (Sun, Moon, Weather, Milky Way, Bortle — each tinted green or orange based on whether tonight is shootable), sun rise/set, moon phase / illumination / rise / set / good-for-astro flag, Milky Way core window, Bortle-class light pollution, hourly weather forecast (Open-Meteo), dew-point risk, civil/nautical/astronomical twilight timeline, planet altitudes, and best photo-window highlighting. Powered by `astro/AstroDashboardData.kt`.
+
+### DSO Recommendations (Suggested Targets Tonight)
+
+A "what should I shoot tonight?" card on the Dashboard. Walks a curated ~45-target catalog (`astro/DsoCatalog.kt` — Messier highlights M1/8/13/16/17/20/22/27/31/33/42/45/51/57/63/64/65/66/78/81/82/97/101/104, plus popular NGC/IC nebulae like Veil, NA Nebula, Helix, Heart, Soul, Horsehead, Rosette, Crescent, Eta Carinae…), samples each one's altitude across tonight's astro-dark window via `AstroCalculator.lst()` + `altitude()`, scores by peak altitude minus a small magnitude penalty, returns the top 5 above 30°. Renders emoji + ID + common name + magnitude / size / type + peak-altitude + local peak time. Empty-state message when nothing clears 30° (high latitudes in summer, or wrap-around polar dark).
+
+### Session Conditions Log
+
+Every completed run snapshots the Dashboard state at the moment of `startFlow` and stores it on the `ShotLogEntry` as a `ConditionSnapshot`: city, moon phase + illumination + good-for-astro, cloud cover %, temperature, dew point + risk, Bortle class, MW visibility. The Shot Log screen renders a compact one-line summary (`🌑 23%  ☁ 12%  · dew 8°C  💡 B4`) on each row — retroactive "why did my last M31 session come out grainy?" diagnosis. Older entries (pre-v0.327) just don't have the field; they render normally with no conditions row.
+
+### Compatibility Report
+
+Tools tab → `Compatibility Report` runs a **read-only** wire-level capability probe against the active Canon transport — no shutter releases, no property writes. Walks `GetDeviceInfo` (manufacturer / model / firmware / serial / vendor extension ID), checks presence of a fixed set of Canon op codes and prop codes (`InitiateCapture`, `RemoteReleaseOn/Off`, `GetViewFinderData`, `DriveLens`, `BatteryLevel`, `LensName`, `EvfOutput`, `ShutterSpeed`, `Aperture`, `ISO`), tries `getLensInfo` + battery + a live-view round-trip, dumps everything to the shared diagnostics log. The intended workflow: a community tester with a body Pulsar hasn't been verified on (R5, R6, R7, R8, R10…) runs the report on each transport, shares the diag file, and the [body matrix doc](docs/canon-body-matrix.md) gets populated. EOS R and EOS RP are characterised this way.
+
+### Home-Screen Widget
+
+A read-only mirror of the in-app Summary card via Jetpack Glance. Verdict chips (Sun / Moon / Weather / Milky Way / Bortle) with the same green-for-good / orange-for-bad palette as the dashboard, plus rise/set times and the top photo windows. Two write paths to the snapshot:
+- `DashboardScreen` writes to `DashboardSnapshotStore` (SharedPrefs) every time `lastUpdated` changes and calls `Glance.updateAll`
+- `DashboardWidgetWorker` runs every 3 h via `WorkManager` so the widget stays fresh even if the user doesn't open the app
+
+Tap the widget → opens MainActivity on the Dashboard tab. A refresh icon in the widget enqueues a one-shot `DashboardWidgetWorker` for immediate refresh. Header tints amber + prefixes "Stale ·" when the snapshot is older than 12 h (Samsung's "Sleeping apps" hibernation, no network, etc). Responsive: small / medium / full layouts based on placed size. Lock-screen widget category is included (Android 17+ / One UI 7).
+
+### Run-Complete Notifications
+
+When a phone-driven flow ends — Completed, Stopped, or Failed — a one-shot notification posts on the `pulsar_run_complete` channel: title is `Completed · ASTRO`, body is `60 / 60 shots · 28m 14s`. Tap to reopen the app. Channel is at `IMPORTANCE_DEFAULT` so it's heard but not intrusive — useful when the phone is in a tent, asleep, or on the camera tripod while you're elsewhere.
 
 ### Planner
 
@@ -417,7 +458,13 @@ Every completed run gets a log entry: mode, exposure, interval, shot count, stat
 
 ### Diagnostics
 
-Tools tab has a Diagnostics tile (also reachable as Scan landing → Diagnostics when nothing's connected) that exposes the Canon BLE wire log — every connect, handshake, arm, shutter / focus / mode write, and any spontaneous disconnect — in a scrollable, selectable monospace viewer with Refresh / Copy / Share. The same text underlies Camera Test's "Collect diagnostics" export. The buffer is also captured to Logcat for `adb` users.
+Tools tab has a Diagnostics tile (also reachable as Scan landing → Diagnostics when nothing's connected). The export is one shareable text blob with:
+
+- App + device header (version, model, Android SDK, time, active transport, Canon BLE state)
+- **Previous-session crash dump** (if any) — installed at app start, `CrashPersister` hooks `Thread.setDefaultUncaughtExceptionHandler` so even a JVM-killing crash leaves a full stack + the wire log at moment of crash on disk; the next diagnostics share inlines it
+- **Transport wire log** — `CanonBleLog` ring buffer with every connect, handshake, arm, shutter / focus / mode write, and any spontaneous disconnect across CCAPI / USB PTP / Canon BLE / PTP/IP
+
+Same text underlies the Camera Test and Compatibility Report exports. The buffer is also captured to Logcat for `adb` users.
 
 ### Backup & Restore
 
