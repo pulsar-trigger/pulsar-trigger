@@ -488,6 +488,8 @@
     <string name="tw_nautical_start">Nautische Dämmerung beginnt</string>
     <string name="tw_civil_start">Bürgerliche Dämmerung beginnt</string>
     <string name="card_planets">Planeten heute Nacht</string>
+    <string name="card_dso_suggestions">Vorgeschlagene Ziele heute Nacht</string>
+    <string name="dso_peak_at">max. %1$s</string>
     <string name="planet_visible">Sichtbar</string>
     <string name="planet_low">Niedrig</string>
 

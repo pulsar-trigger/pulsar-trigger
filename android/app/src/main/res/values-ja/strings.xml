@@ -488,6 +488,8 @@
     <string name="tw_nautical_start">航海薄明開始</string>
     <string name="tw_civil_start">市民薄明開始</string>
     <string name="card_planets">今夜の惑星</string>
+    <string name="card_dso_suggestions">今夜のおすすめ天体</string>
+    <string name="dso_peak_at">ピーク %1$s</string>
     <string name="planet_visible">観測可能</string>
     <string name="planet_low">低い</string>
 

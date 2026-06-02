@@ -703,6 +703,8 @@
 
     <!-- Planets card -->
     <string name="card_planets">Planets Tonight</string>
+    <string name="card_dso_suggestions">Suggested Targets Tonight</string>
+    <string name="dso_peak_at">peak %1$s</string>
     <string name="planet_visible">Visible</string>
     <string name="planet_low">Low</string>
 

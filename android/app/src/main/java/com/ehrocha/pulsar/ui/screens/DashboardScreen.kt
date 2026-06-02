@@ -879,6 +879,39 @@ fun DashboardScreen(
                 }
             }
 
+            // ── Suggested DSO targets ────────────────────────────────
+            // Surfaces 3–5 deep-sky targets that peak in tonight's dark
+            // window above the minimum altitude. Source catalog +
+            // recommender live in [com.ehrocha.pulsar.astro.DsoRecommender].
+            run {
+                val loc = state.location ?: return@run
+                val tw = state.twilight ?: return@run
+                val ds = com.ehrocha.pulsar.astro.AstroCalculator
+                    .parseIsoHour(tw.astroEnd) ?: return@run
+                val de = com.ehrocha.pulsar.astro.AstroCalculator
+                    .parseIsoHour(tw.astroStart) ?: return@run
+                val recs = remember(loc, tw, state.selectedDate) {
+                    com.ehrocha.pulsar.astro.DsoRecommender.recommend(
+                        date = state.selectedDate,
+                        latDeg = loc.latitude,
+                        lonDeg = loc.longitude,
+                        darkStartUtcH = ds,
+                        darkEndUtcH = de,
+                    )
+                }
+                if (recs.isNotEmpty()) {
+                    DashCard(
+                        title = stringResource(R.string.card_dso_suggestions),
+                        icon = Icons.Default.Stars,
+                        initiallyExpanded = true,
+                    ) {
+                        recs.forEach { r ->
+                            DsoSuggestionRow(r)
+                        }
+                    }
+                }
+            }
+
             // ── Hourly forecast ──────────────────────────────────────
             state.weather?.hourlyForecast?.takeIf { it.isNotEmpty() }?.let { hours ->
                 val isToday2 = state.selectedDate == LocalDate.now()
@@ -1037,3 +1070,68 @@ internal fun formatTime(isoTime: String): String {
 }
 
 internal fun abs(d: Double): Double = kotlin.math.abs(d)
+
+@Composable
+private fun DsoSuggestionRow(r: com.ehrocha.pulsar.astro.DsoRecommender.Recommendation) {
+    val t = r.target
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(t.emoji, fontSize = 18.sp, modifier = Modifier.width(28.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    t.id,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    t.commonName,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(
+                String.format(
+                    Locale.US,
+                    "mag %.1f · %.0f′ · %s",
+                    t.magnitude,
+                    t.sizeArcmin,
+                    t.type.name.lowercase().replace('_', ' '),
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                String.format(Locale.US, "%.0f°", r.peakAltitudeDeg),
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                stringResource(R.string.dso_peak_at, formatUtcHourLocal(r.peakUtcHour)),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/** Convert a UTC hour-of-day to local HH:mm using the device's default
+ *  zone. Decimal hours from [DsoRecommender] don't carry a date — fine,
+ *  we just need the wall-clock minute. */
+private fun formatUtcHourLocal(utcHour: Double): String {
+    val zone = java.time.ZoneId.systemDefault()
+    // Pick a synthetic date so the offset is current. (Date doesn't
+    // matter for the time-of-day display; minor edge near DST switch.)
+    val today = java.time.LocalDate.now()
+    val utc = today.atTime(utcHour.toInt(), ((utcHour % 1) * 60).toInt())
+        .atZone(java.time.ZoneId.of("UTC"))
+    val local = utc.withZoneSameInstant(zone)
+    return "%02d:%02d".format(local.hour, local.minute)
+}

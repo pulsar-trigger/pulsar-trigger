@@ -488,6 +488,8 @@
     <string name="tw_nautical_start">航海暮光开始</string>
     <string name="tw_civil_start">民用暮光开始</string>
     <string name="card_planets">今晚的行星</string>
+    <string name="card_dso_suggestions">今晚推荐目标</string>
+    <string name="dso_peak_at">峰值 %1$s</string>
     <string name="planet_visible">可见</string>
     <string name="planet_low">低</string>
 

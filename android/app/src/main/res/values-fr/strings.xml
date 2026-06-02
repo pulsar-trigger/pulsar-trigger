@@ -488,6 +488,8 @@
     <string name="tw_nautical_start">Crépuscule nautique commence</string>
     <string name="tw_civil_start">Crépuscule civil commence</string>
     <string name="card_planets">Planètes ce soir</string>
+    <string name="card_dso_suggestions">Cibles suggérées ce soir</string>
+    <string name="dso_peak_at">culm. %1$s</string>
     <string name="planet_visible">Visible</string>
     <string name="planet_low">Bas</string>
 
