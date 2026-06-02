@@ -1,5 +1,5 @@
 <resources>
     <color name="pulsar_orange">#FFFF6B00</color>
     <color name="background_dark">#FF1A1A2E</color>
-    <color name="ic_launcher_background">#FF050814</color>
+    <color name="ic_launcher_background">#FF1A1A2E</color>
 </resources>
