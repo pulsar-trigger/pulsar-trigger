@@ -763,6 +763,12 @@
     <string name="iv2_tab_exposure">Exposition</string>
     <string name="iv2_tab_interval">Intervalle</string>
     <string name="iv2_tab_shots">Prises</string>
+    <string name="iv2_tab_camera">Boîtier</string>
+    <string name="iv2_camera_help">Optionnel — Pulsar les appliquera au boîtier avant la première prise. Laissez un champ sur \"conserver\" pour garder ce qui est sur le boîtier.</string>
+    <string name="iv2_camera_iso">ISO</string>
+    <string name="iv2_camera_aperture">Ouverture</string>
+    <string name="iv2_camera_leave_as_is">Conserver sur le boîtier</string>
+    <string name="iv2_camera_preset_skipped">Le préréglage enregistré contient des réglages (%1$s) que le transport actuel ne peut pas appliquer. Pulsar utilisera ce qui est sur le boîtier — réglez-les manuellement si nécessaire.</string>
     <string name="iv2_tap_to_edit">Touchez un chiffre pour saisir · glissez haut/bas pour ajuster</string>
     <string name="iv2_wizard_next">Suivant</string>
     <string name="iv2_wizard_prev">Précédent</string>

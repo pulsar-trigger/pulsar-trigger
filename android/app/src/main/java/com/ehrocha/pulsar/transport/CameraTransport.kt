@@ -76,9 +76,64 @@ interface CameraTransport {
     val supportsBulb: Boolean
 
     /** Transport can read or write exposure settings (ISO / aperture /
-     *  shutter speed). CCAPI: true (endpoints exist; the camera-params UI
-     *  tab is parked). */
+     *  shutter speed). Coarse flag — for per-setting capability see
+     *  [supportsIso] / [supportsAperture] / [supportsShutterSpeed] which
+     *  let the wizard show each row only when the body honors that
+     *  specific setting. The coarse flag stays for backwards compat with
+     *  the existing capability dimension and quick gates. */
     val supportsSettings: Boolean
+
+    /** Per-setting capability — does the body let us read+write ISO via
+     *  this transport? CCAPI: true if `/shooting/settings/iso` is in the
+     *  endpoint matrix. PTP: true if Canon `0xD103` is in the
+     *  `supportedDeviceProperties`. */
+    val supportsIso: Boolean get() = false
+
+    /** Reactive form of [supportsIso]. Runtime-downgrades to false on
+     *  the first `rc=0x2005 DEVICE_PROP_NOT_SUPPORTED` / `0x200A` write
+     *  failure — same pattern as `liveViewSupportedFlow`. */
+    val isoSupportedFlow: StateFlow<Boolean>
+        get() = MutableStateFlow(supportsIso)
+
+    /** Per-setting capability — aperture (Av). CCAPI: `/shooting/settings/av`.
+     *  PTP: Canon `0xD101`. */
+    val supportsAperture: Boolean get() = false
+
+    val apertureSupportedFlow: StateFlow<Boolean>
+        get() = MutableStateFlow(supportsAperture)
+
+    /** Per-setting capability — shutter speed (Tv). CCAPI:
+     *  `/shooting/settings/tv`. PTP: Canon `0xD102`. Only meaningful in
+     *  modes where the camera owns exposure (Timelapse); bulb-flow modes
+     *  hide this row regardless. */
+    val supportsShutterSpeed: Boolean get() = false
+
+    val shutterSpeedSupportedFlow: StateFlow<Boolean>
+        get() = MutableStateFlow(supportsShutterSpeed)
+
+    /** List of accepted values for ISO on this body. CCAPI returns this
+     *  in the `/shooting/settings/iso.ability` array. PTP needs a
+     *  vendor-prop lookup. Empty list = "we can't enumerate; user types
+     *  a value at their own risk". */
+    suspend fun listIsoValues(): List<String> = emptyList()
+
+    /** Accepted aperture values, e.g. "f/2.8" / "f/4.0". */
+    suspend fun listApertureValues(): List<String> = emptyList()
+
+    /** Accepted shutter-speed values, e.g. "1/30" / "30\"" / "BULB". */
+    suspend fun listShutterSpeedValues(): List<String> = emptyList()
+
+    /** Read the camera's current settings. Used by the Save Preset
+     *  dialog's "capture current camera settings" toggle, and by the
+     *  Camera tab's "current value" display in the wizard. */
+    suspend fun readCurrentSettings(): CameraSettings = CameraSettings.EMPTY
+
+    /** Apply the non-null fields of [settings] to the body. Returns
+     *  [SettingsApplyResult] describing what was applied vs skipped —
+     *  the runner logs skipped fields into [CanonBleLog] and the
+     *  shot-log's `ConditionSnapshot` so the user sees the truth. */
+    suspend fun applySettings(settings: CameraSettings): SettingsApplyResult =
+        SettingsApplyResult.NOOP
 
     /** Transport can serve a live-view JPEG stream. CCAPI: true (used by
      *  Star Focus). For UI gating that needs to react to **runtime

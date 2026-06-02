@@ -62,6 +62,10 @@ private enum class IvTab(val labelRes: Int, val isTime: Boolean) {
     INTERVAL(R.string.iv2_tab_interval, true),
     DELAY(R.string.iv2_tab_delay, true),
     SHOTS(R.string.iv2_tab_shots, false),
+    /** Camera-side ISO / aperture. Tab is hidden when the active transport
+     *  doesn't support either. Shutter speed isn't here — bulb-flow modes
+     *  have Pulsar owning exposure. */
+    CAMERA(R.string.iv2_tab_camera, false),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -96,6 +100,9 @@ fun Intervalometer2Screen(
     var useAutofocus by rememberSaveable {
         mutableStateOf(loadedPreset?.body?.useAutofocus ?: false)
     }
+    // Camera-side settings (v0.338). null = "don't manage; leave as-is on the body".
+    var iso by rememberSaveable { mutableStateOf(loadedPreset?.body?.iso) }
+    var aperture by rememberSaveable { mutableStateOf(loadedPreset?.body?.aperture) }
 
     // Save dialog state
     var showSaveDialog by remember { mutableStateOf(false) }
@@ -108,13 +115,32 @@ fun Intervalometer2Screen(
     val onCanonBle = vm.canonBleTransport.collectAsState().value != null
     val onPtpIp = vm.ptpIpTransport.collectAsState().value != null
     val canControlAf = vm.activeTransportSupportsAf.collectAsState().value
+    // Per-setting camera-side capabilities of the active transport.
+    // Reactive flows so a runtime downgrade (advertised-but-rejected
+    // PUT) flips the tab off without an app restart.
+    val activeTransport = vm.canonCcapiTransport.collectAsState().value
+        ?: vm.ptpTransport.collectAsState().value
+        ?: vm.canonBleTransport.collectAsState().value
+        ?: vm.ptpIpTransport.collectAsState().value
+    val supportsIso = activeTransport?.isoSupportedFlow
+        ?.collectAsState(initial = activeTransport.supportsIso)?.value == true
+    val supportsAperture = activeTransport?.apertureSupportedFlow
+        ?.collectAsState(initial = activeTransport.supportsAperture)?.value == true
+    val showCameraTab = supportsIso || supportsAperture
+    // Hide the Camera tab when the active transport supports neither
+    // setting — keeps the wizard tab strip clean on ESP32 / Canon BLE /
+    // bodies that don't expose iso+av in CCAPI's endpoint matrix.
+    val visibleTabs = remember(showCameraTab) {
+        if (showCameraTab) IvTab.entries.toList()
+        else IvTab.entries.filter { it != IvTab.CAMERA }
+    }
 
     // Jump to the final tab when a preset is loaded — its values are already
     // valid so the user is one tap away from Start.
     var tabIdx by rememberSaveable {
-        mutableIntStateOf(if (loadedPreset != null) IvTab.entries.size - 1 else 0)
+        mutableIntStateOf(if (loadedPreset != null) visibleTabs.size - 1 else 0)
     }
-    val tab = IvTab.entries[tabIdx]
+    val tab = visibleTabs.getOrNull(tabIdx) ?: visibleTabs.first()
 
     val continuous = shotCount == 0
     val totalMs = if (continuous) 0L
@@ -132,6 +158,7 @@ fun Intervalometer2Screen(
         IvTab.INTERVAL -> intervalMs > 0L
         IvTab.DELAY -> true
         IvTab.SHOTS -> true
+        IvTab.CAMERA -> true
     }
     // Sub-second host-timed bulb is unreliable on ANY camera transport (the
     // press/release round-trip — WiFi RTT, BLE toggle, or USB — can't bracket
@@ -200,7 +227,7 @@ fun Intervalometer2Screen(
             BottomBar(
                 running = running,
                 currentTabIdx = tabIdx,
-                tabCount = IvTab.entries.size,
+                tabCount = visibleTabs.size,
                 currentTabValid = currentTabValid,
                 // Start is clickable as long as we have a device — the action
                 // checks config and routes to the first missing-field tab if
@@ -209,7 +236,7 @@ fun Intervalometer2Screen(
                 hint = if (running) null else bottomHint,
                 hintIsAccent = hintIsContinuous,
                 onPrev = { if (tabIdx > 0) tabIdx-- },
-                onNext = { if (tabIdx < IvTab.entries.size - 1) tabIdx++ },
+                onNext = { if (tabIdx < visibleTabs.size - 1) tabIdx++ },
                 onStart = {
                     when {
                         exposureMs == 0L -> tabIdx = IvTab.EXPOSURE.ordinal
@@ -223,6 +250,11 @@ fun Intervalometer2Screen(
                                         shotCount = shotCount,
                                         delayMs = delayMs,
                                         useAutofocus = useAutofocus,
+                                        cameraSettings = com.ehrocha.pulsar.transport
+                                            .CameraSettings(
+                                                iso = iso,
+                                                aperture = aperture,
+                                            ),
                                     )
                                 )
                             )
@@ -236,7 +268,7 @@ fun Intervalometer2Screen(
     ) { pad ->
         Column(modifier = Modifier.padding(pad).fillMaxSize()) {
             TabRow(selectedTabIndex = tabIdx) {
-                IvTab.entries.forEachIndexed { i, t ->
+                visibleTabs.forEachIndexed { i, t ->
                     Tab(
                         selected = tabIdx == i,
                         onClick = { tabIdx = i },
@@ -256,6 +288,32 @@ fun Intervalometer2Screen(
                     return@Box
                 }
                 Column(modifier = Modifier.fillMaxSize()) {
+                    // Saved-preset has camera settings the active transport
+                    // can't apply — surface what was saved so the user can
+                    // dial it in on the body manually. Banner only shows on
+                    // load + dismissable.
+                    val unsupportedFromPreset = buildList {
+                        if (iso != null && !supportsIso) add("ISO $iso")
+                        if (aperture != null && !supportsAperture) add(aperture!!)
+                    }
+                    if (unsupportedFromPreset.isNotEmpty()) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.tertiaryContainer,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp),
+                            shape = RoundedCornerShape(8.dp),
+                        ) {
+                            Text(
+                                stringResource(
+                                    R.string.iv2_camera_preset_skipped,
+                                    unsupportedFromPreset.joinToString(" · "),
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(12.dp),
+                            )
+                        }
+                    }
                     com.ehrocha.pulsar.ui.components.WizardWarning(
                         wizardWarning,
                         modifier = Modifier.padding(horizontal = 16.dp),
@@ -296,6 +354,14 @@ fun Intervalometer2Screen(
                                 )
                             }
                         }
+                        IvTab.CAMERA -> CameraSettingsTab(
+                            transport = activeTransport,
+                            supportsIso = supportsIso,
+                            supportsAperture = supportsAperture,
+                            iso = iso, onIsoChange = { iso = it },
+                            aperture = aperture, onApertureChange = { aperture = it },
+                            enabled = !running,
+                        )
                     }
                 }
             }
@@ -321,6 +387,8 @@ fun Intervalometer2Screen(
                     shotCount = shotCount,
                     delayMs = delayMs,
                     useAutofocus = useAutofocus,
+                    iso = iso,
+                    aperture = aperture,
                 )
                 val mode = if (editingPreset != null) {
                     editingPreset.copy(name = name.trim(), body = body)
@@ -1083,4 +1151,128 @@ internal fun iv2FormatEndClock(durationFromNowMs: Long): String {
     }
     return String.format(Locale.US, "%02d:%02d",
         end.get(Calendar.HOUR_OF_DAY), end.get(Calendar.MINUTE))
+}
+
+// ── Camera-params tab (v0.338) ──────────────────────────────────────────
+
+/** Camera-side ISO + aperture editor. Each row is independently gated
+ *  on the active transport's per-setting capability; the "Leave as-is on
+ *  body" sentinel (null) means "Pulsar doesn't manage this setting".
+ *
+ *  Reads the body's accepted values via [com.ehrocha.pulsar.transport.CameraTransport.listIsoValues]
+ *  on first composition. If the body returns an empty list (i.e. we
+ *  can't enumerate) we fall back to a free-text input so the user can
+ *  type whatever the body actually accepts.
+ */
+@Composable
+private fun CameraSettingsTab(
+    transport: com.ehrocha.pulsar.transport.CameraTransport?,
+    supportsIso: Boolean,
+    supportsAperture: Boolean,
+    iso: String?,
+    onIsoChange: (String?) -> Unit,
+    aperture: String?,
+    onApertureChange: (String?) -> Unit,
+    enabled: Boolean,
+) {
+    var isoOptions by remember(transport, supportsIso) {
+        mutableStateOf<List<String>>(emptyList())
+    }
+    var apertureOptions by remember(transport, supportsAperture) {
+        mutableStateOf<List<String>>(emptyList())
+    }
+    LaunchedEffect(transport, supportsIso, supportsAperture) {
+        if (transport != null && supportsIso) {
+            isoOptions = runCatching { transport.listIsoValues() }.getOrDefault(emptyList())
+        }
+        if (transport != null && supportsAperture) {
+            apertureOptions = runCatching { transport.listApertureValues() }.getOrDefault(emptyList())
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
+    ) {
+        Spacer(Modifier.height(4.dp))
+        Text(
+            stringResource(R.string.iv2_camera_help),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (supportsIso) {
+            SettingPicker(
+                label = stringResource(R.string.iv2_camera_iso),
+                current = iso,
+                options = isoOptions,
+                onChange = onIsoChange,
+                enabled = enabled,
+            )
+        }
+        if (supportsAperture) {
+            SettingPicker(
+                label = stringResource(R.string.iv2_camera_aperture),
+                current = aperture,
+                options = apertureOptions,
+                onChange = onApertureChange,
+                enabled = enabled,
+            )
+        }
+    }
+}
+
+/** A single setting row — label on the left, picker on the right. Null
+ *  `current` shows as "Leave as-is", which means "Pulsar won't write
+ *  this; whatever's on the body wins". Empty `options` falls through to
+ *  a free-text editor. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingPicker(
+    label: String,
+    current: String?,
+    options: List<String>,
+    onChange: (String?) -> Unit,
+    enabled: Boolean,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    Column {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.height(6.dp))
+        ExposedDropdownMenuBox(
+            expanded = menuOpen,
+            onExpandedChange = { if (enabled) menuOpen = !menuOpen },
+        ) {
+            OutlinedTextField(
+                value = current ?: stringResource(R.string.iv2_camera_leave_as_is),
+                onValueChange = { },
+                readOnly = options.isNotEmpty(),
+                enabled = enabled,
+                modifier = Modifier.fillMaxWidth().menuAnchor(),
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = menuOpen)
+                },
+            )
+            ExposedDropdownMenu(
+                expanded = menuOpen,
+                onDismissRequest = { menuOpen = false },
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.iv2_camera_leave_as_is)) },
+                    onClick = { onChange(null); menuOpen = false },
+                )
+                options.forEach { v ->
+                    DropdownMenuItem(
+                        text = { Text(v) },
+                        onClick = { onChange(v); menuOpen = false },
+                    )
+                }
+            }
+        }
+    }
 }

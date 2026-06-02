@@ -2193,6 +2193,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 val transport = activeCameraTransport()
                 when {
                     transport != null -> {
+                        if (step.cameraSettings.hasAny) {
+                            val result = transport.applySettings(step.cameraSettings)
+                            com.ehrocha.pulsar.canonble.CanonBleLog.i(
+                                "applySettings",
+                                "applied=${result.applied.iso ?: "-"}/${result.applied.aperture ?: "-"}/${result.applied.shutterSpeed ?: "-"} " +
+                                    "skipped=${result.skipped.iso ?: "-"}/${result.skipped.aperture ?: "-"}/${result.skipped.shutterSpeed ?: "-"}"
+                            )
+                        }
                         // Timelapse wizard stores its pulse-length sentinel as
                         // exposureMs; the camera owns timing in that path. Any
                         // other exposureMs means a bulb-style run. awaitReady

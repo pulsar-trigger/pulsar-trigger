@@ -763,6 +763,12 @@
     <string name="iv2_tab_exposure">Belichtung</string>
     <string name="iv2_tab_interval">Intervall</string>
     <string name="iv2_tab_shots">Aufnahmen</string>
+    <string name="iv2_tab_camera">Kamera</string>
+    <string name="iv2_camera_help">Optional — Pulsar wendet dies vor der ersten Aufnahme an der Kamera an. Lass ein Feld auf \"unverändert\", um den Wert am Gehäuse zu behalten.</string>
+    <string name="iv2_camera_iso">ISO</string>
+    <string name="iv2_camera_aperture">Blende</string>
+    <string name="iv2_camera_leave_as_is">Am Gehäuse belassen</string>
+    <string name="iv2_camera_preset_skipped">Das gespeicherte Preset enthält Kameraeinstellungen (%1$s), die der aktuelle Transport nicht anwenden kann. Pulsar verwendet, was am Gehäuse eingestellt ist — bei Bedarf manuell setzen.</string>
     <string name="iv2_tap_to_edit">Auf eine Ziffer tippen zum Bearbeiten · hoch/runter wischen zum Ändern</string>
     <string name="iv2_wizard_next">Weiter</string>
     <string name="iv2_wizard_prev">Zurück</string>

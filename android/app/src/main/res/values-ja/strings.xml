@@ -763,6 +763,12 @@
     <string name="iv2_tab_exposure">露光</string>
     <string name="iv2_tab_interval">間隔</string>
     <string name="iv2_tab_shots">枚数</string>
+    <string name="iv2_tab_camera">カメラ</string>
+    <string name="iv2_camera_help">任意 — 最初の撮影前にPulsarがカメラに適用します。いずれかを\"そのまま\"にすると、ボディの設定が保持されます。</string>
+    <string name="iv2_camera_iso">ISO</string>
+    <string name="iv2_camera_aperture">絞り</string>
+    <string name="iv2_camera_leave_as_is">ボディ側を維持</string>
+    <string name="iv2_camera_preset_skipped">保存されたプリセットには、現在の接続では適用できないカメラ設定 (%1$s) があります。Pulsarはボディの値をそのまま使います — 必要なら手動で設定してください。</string>
     <string name="iv2_tap_to_edit">桁をタップで入力 · 上下スワイプで調整</string>
     <string name="iv2_wizard_next">次へ</string>
     <string name="iv2_wizard_prev">戻る</string>

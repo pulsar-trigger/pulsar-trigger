@@ -761,6 +761,12 @@
     <string name="iv2_tab_exposure">Exposición</string>
     <string name="iv2_tab_interval">Intervalo</string>
     <string name="iv2_tab_shots">Disparos</string>
+    <string name="iv2_tab_camera">Cámara</string>
+    <string name="iv2_camera_help">Opcional — Pulsar lo aplicará a la cámara antes del primer disparo. Deja cualquier campo en \"mantener\" para conservar lo que esté en el cuerpo.</string>
+    <string name="iv2_camera_iso">ISO</string>
+    <string name="iv2_camera_aperture">Apertura</string>
+    <string name="iv2_camera_leave_as_is">Mantener en el cuerpo</string>
+    <string name="iv2_camera_preset_skipped">El preset guardado tiene ajustes de cámara (%1$s) que el transporte actual no puede aplicar. Pulsar usará lo que esté en el cuerpo — ajústalos manualmente si es necesario.</string>
     <string name="iv2_tap_to_edit">Toca cualquier dígito para editar · desliza arriba/abajo para ajustar</string>
     <string name="iv2_wizard_next">Siguiente</string>
     <string name="iv2_wizard_prev">Atrás</string>
