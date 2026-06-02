@@ -20,8 +20,8 @@ android {
         applicationId = "com.ehrocha.pulsar"
         minSdk = 26
         targetSdk = 35
-        versionCode = 339
-        versionName = "0.328.0"
+        versionCode = 340
+        versionName = "0.329.0"
     }
 
     signingConfigs {
@@ -94,6 +94,12 @@ dependencies {
     // Jetpack Glance — Compose-style home-screen widget API
     implementation("androidx.glance:glance-appwidget:1.1.1")
     implementation("androidx.glance:glance-material3:1.1.1")
+
+    // Wear OS pairing — phone publishes run-state DataItems for the
+    // :wear companion to render; MessageClient receives Stop commands
+    // back. See com.ehrocha.pulsar.wearable.WearableSyncService.
+    implementation("com.google.android.gms:play-services-wearable:18.2.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
 
     // MapLibre — map-based location picker
     implementation("org.maplibre.gl:android-sdk:11.8.0")

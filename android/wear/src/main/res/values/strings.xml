@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="wear_app_name">Pulsar</string>
+    <string name="wear_disconnected">Phone not paired</string>
+    <string name="wear_idle">Idle</string>
+    <string name="wear_running">Running</string>
+    <string name="wear_waiting">Waiting</string>
+    <string name="wear_stop">Stop</string>
+    <string name="wear_shots_fmt">%1$d / %2$d</string>
+    <string name="wear_remaining_fmt">−%1$s</string>
+</resources>

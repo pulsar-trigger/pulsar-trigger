@@ -1,0 +1,94 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.ehrocha.pulsar.wear-mergeDebugResources-48:/values-sw/values-sw.xml",
+            "map": [
+                {
+                    "source": "/home/ehrocha/.gradle/caches/8.13/transforms/688853240a1fca713c6c76b919b10385/transformed/ui-release/res/values-sw/values-sw.xml",
+                    "from": {
+                        "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19",
+                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "105,199,280,381,482,568,649,750,841,923,1008,1095,1169,1244,1321,1398,1475,1545",
+                        "endColumns": "93,80,100,100,85,80,100,90,81,84,86,73,74,76,76,76,69,120",
+                        "endOffsets": "194,275,376,477,563,644,745,836,918,1003,1090,1164,1239,1316,1393,1470,1540,1661"
+                    },
+                    "to": {
+                        "startLines": "9,10,29,30,31,32,33,34,35,36,37,38,39,40,41,43,44,45",
+                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "828,922,3264,3365,3466,3552,3633,3734,3825,3907,3992,4079,4153,4228,4305,4483,4560,4630",
+                        "endColumns": "93,80,100,100,85,80,100,90,81,84,86,73,74,76,76,76,69,120",
+                        "endOffsets": "917,998,3360,3461,3547,3628,3729,3820,3902,3987,4074,4148,4223,4300,4377,4555,4625,4746"
+                    }
+                },
+                {
+                    "source": "/home/ehrocha/.gradle/caches/8.13/transforms/1243066ca9105b8455096cb88679412e/transformed/core-1.15.0/res/values-sw/values-sw.xml",
+                    "from": {
+                        "startLines": "2,3,4,5,6,7,8,9",
+                        "startColumns": "4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,149,251,348,449,556,663,778",
+                        "endColumns": "93,101,96,100,106,106,114,100",
+                        "endOffsets": "144,246,343,444,551,658,773,874"
+                    },
+                    "to": {
+                        "startLines": "2,3,4,5,6,7,8,42",
+                        "startColumns": "4,4,4,4,4,4,4,4",
+                        "startOffsets": "105,199,301,398,499,606,713,4382",
+                        "endColumns": "93,101,96,100,106,106,114,100",
+                        "endOffsets": "194,296,393,494,601,708,823,4478"
+                    }
+                },
+                {
+                    "source": "/home/ehrocha/.gradle/caches/8.13/transforms/78b4325b01290cb8ba2a2bf4a8ad9aa2/transformed/foundation-release/res/values-sw/values-sw.xml",
+                    "from": {
+                        "startLines": "2,3",
+                        "startColumns": "4,4",
+                        "startOffsets": "55,156",
+                        "endColumns": "100,102",
+                        "endOffsets": "151,254"
+                    },
+                    "to": {
+                        "startLines": "46,47",
+                        "startColumns": "4,4",
+                        "startOffsets": "4751,4852",
+                        "endColumns": "100,102",
+                        "endOffsets": "4847,4950"
+                    }
+                },
+                {
+                    "source": "/home/ehrocha/.gradle/caches/8.13/transforms/5d082a69ea0a6d37489f0fb77afe9d70/transformed/play-services-base-18.5.0/res/values-sw/values.xml",
+                    "from": {
+                        "startLines": "4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20",
+                        "startColumns": "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
+                        "startOffsets": "193,293,445,566,671,830,951,1066,1176,1337,1439,1589,1712,1858,2013,2077,2148",
+                        "endColumns": "99,151,120,104,158,120,114,109,160,101,149,122,145,154,63,70,91",
+                        "endOffsets": "292,444,565,670,829,950,1065,1175,1336,1438,1588,1711,1857,2012,2076,2147,2239"
+                    },
+                    "to": {
+                        "startLines": "11,12,13,14,15,16,17,18,20,21,22,23,24,25,26,27,28",
+                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "1003,1107,1263,1388,1497,1660,1785,1904,2164,2329,2435,2589,2716,2866,3025,3093,3168",
+                        "endColumns": "103,155,124,108,162,124,118,113,164,105,153,126,149,158,67,74,95",
+                        "endOffsets": "1102,1258,1383,1492,1655,1780,1899,2013,2324,2430,2584,2711,2861,3020,3088,3163,3259"
+                    }
+                },
+                {
+                    "source": "/home/ehrocha/.gradle/caches/8.13/transforms/ae88331bf0a41895f8c77b1b30336c8e/transformed/play-services-basement-18.4.0/res/values-sw/values.xml",
+                    "from": {
+                        "startLines": "4",
+                        "startColumns": "0",
+                        "startOffsets": "195",
+                        "endColumns": "141",
+                        "endOffsets": "336"
+                    },
+                    "to": {
+                        "startLines": "19",
+                        "startColumns": "4",
+                        "startOffsets": "2018",
+                        "endColumns": "145",
+                        "endOffsets": "2159"
+                    }
+                }
+            ]
+        }
+    ]
+}
