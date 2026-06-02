@@ -730,6 +730,11 @@
     <string name="dark_frame_hint">Las tomas dark se hacen con la tapa puesta. Capturan ruido del sensor a la misma exposición y temperatura que las tomas claras, permitiendo a los apiladores restar el ruido de patrón fijo.</string>
     <string name="data_stale">Los datos pueden estar desactualizados</string>
     <string name="df2_set_shots">Define el número de disparos para empezar</string>
+    <string name="df2_pair_title">Emparejar con la última sesión</string>
+    <string name="df2_pair_body">%1$d × %2$s de tu última sesión de %3$s</string>
+    <string name="df2_pair_apply">Usar</string>
+    <string name="df2_pair_dismiss">Descartar</string>
+    <string name="df2_lens_cap_reminder">Cubre el objetivo — los darks necesitan cero luz en el sensor.</string>
     <string name="event_share_calendar">Compartir como calendario</string>
     <string name="event_share_pulsar">Compartir como evento Pulsar</string>
     <string name="finishes_at">Termina a las %1$s</string>

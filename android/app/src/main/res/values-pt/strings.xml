@@ -732,6 +732,11 @@
     <string name="dark_frame_hint">Dark frames são captados com a tampa da lente. Eles capturam ruído do sensor na mesma exposição e temperatura dos light frames, permitindo que softwares de empilhamento subtraiam o ruído de padrão fixo.</string>
     <string name="data_stale">Dados podem estar desatualizados</string>
     <string name="df2_set_shots">Defina o número de disparos para iniciar</string>
+    <string name="df2_pair_title">Pareie com a última sessão</string>
+    <string name="df2_pair_body">%1$d × %2$s da sua última sessão de %3$s</string>
+    <string name="df2_pair_apply">Usar</string>
+    <string name="df2_pair_dismiss">Dispensar</string>
+    <string name="df2_lens_cap_reminder">Tape a lente — darks precisam de zero luz no sensor.</string>
     <string name="event_share_calendar">Compartilhar como calendário</string>
     <string name="event_share_pulsar">Compartilhar como evento Pulsar</string>
     <string name="finishes_at">Termina às %1$s</string>

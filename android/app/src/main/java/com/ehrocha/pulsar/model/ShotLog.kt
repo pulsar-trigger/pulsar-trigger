@@ -49,4 +49,21 @@ class ShotLog(private val prefs: SharedPreferences) {
         _entries.value = emptyList()
         prefs.edit().remove(KEY).apply()
     }
+
+    /** Find the most-recent completed bulb-style session whose exposure +
+     *  shot count make sense to match darks against. Used by the Dark Frame
+     *  wizard's "Pair with last lights" affordance.
+     *
+     *  Eligible: INTERVALOMETER (with a real bulb exposure, not the
+     *  timelapse pulse-length sentinel), ASTRO, RAMP, CUSTOM.
+     *  Excluded: TIMELAPSE (camera owns exposure), DARK_FRAME (don't pair
+     *  darks with darks), anything STOPPED / ERROR (incomplete data).
+     */
+    fun findLastLightSession(): ShotLogEntry? = _entries.value.firstOrNull { e ->
+        e.status == ShotLogStatus.COMPLETED &&
+            e.completedShots > 0 &&
+            e.exposureMs > 0 &&
+            e.modeLabel != "DARK_FRAME" &&
+            e.modeLabel != "TIMELAPSE"
+    }
 }

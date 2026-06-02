@@ -732,6 +732,11 @@
     <string name="dark_frame_hint">ダークフレームはレンズキャップを付けた状態で撮影します。ライトフレームと同じ露光・温度でセンサーノイズを記録し、スタッキングソフトで固定パターンノイズを除去できます。</string>
     <string name="data_stale">データが古い可能性があります</string>
     <string name="df2_set_shots">撮影枚数を設定してください</string>
+    <string name="df2_pair_title">前回のライトと一致させる</string>
+    <string name="df2_pair_body">前回の%3$sセッションから %1$d × %2$s</string>
+    <string name="df2_pair_apply">使用</string>
+    <string name="df2_pair_dismiss">閉じる</string>
+    <string name="df2_lens_cap_reminder">レンズキャップを付けて — ダークはセンサーに光を入れないこと。</string>
     <string name="event_share_calendar">カレンダーとして共有</string>
     <string name="event_share_pulsar">Pulsar イベントとして共有</string>
     <string name="finishes_at">%1$s に終了</string>

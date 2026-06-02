@@ -6,13 +6,19 @@
 package com.ehrocha.pulsar.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.LensBlur
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -58,6 +64,19 @@ fun DarkFrame2Screen(
         mutableStateOf(loadedPreset?.body?.useAutofocus ?: false)
     }
     var showSaveDialog by remember { mutableStateOf(false) }
+
+    // "Pair with last lights" affordance — read the most-recent COMPLETED
+    // bulb-style session and offer to auto-fill exposure + shot count from
+    // it. Only meaningful when entering fresh (no preset loaded, no values
+    // typed yet). Re-hidden once the user has dismissed it or values are set.
+    val shotLog by vm.shotLog.entries.collectAsState()
+    val pairCandidate = remember(loadedPreset, shotLog) {
+        if (loadedPreset != null) null
+        else vm.shotLog.findLastLightSession()
+    }
+    var pairDismissed by rememberSaveable { mutableStateOf(false) }
+    val pairAvailable = pairCandidate != null && !pairDismissed &&
+        exposureMs == 0L && shotCount == 0
 
     val runState = LocalRunState.current
     val running = runState !is RunState.Idle
@@ -175,6 +194,21 @@ fun DarkFrame2Screen(
                     )
                 }
             }
+            if (pairAvailable && pairCandidate != null) {
+                PairWithLastLightsCard(
+                    candidate = pairCandidate,
+                    onPair = {
+                        exposureMs = pairCandidate.exposureMs
+                        shotCount = pairCandidate.completedShots
+                        // intervalMs default: 2s gap between darks
+                        if (intervalMs == 0L) intervalMs = 2_000L
+                        pairDismissed = true
+                        // Jump to the last tab so the user can review + start.
+                        tabIdx = DfTab.entries.size - 1
+                    },
+                    onDismiss = { pairDismissed = true },
+                )
+            }
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (running) {
                     RunningView(
@@ -185,6 +219,9 @@ fun DarkFrame2Screen(
                     return@Box
                 }
                 Column(modifier = Modifier.fillMaxSize()) {
+                    LensCapReminder(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
                     com.ehrocha.pulsar.ui.components.WizardWarning(
                         wizardWarning,
                         modifier = Modifier.padding(horizontal = 16.dp),
@@ -254,5 +291,98 @@ fun DarkFrame2Screen(
             },
             onDismiss = { showSaveDialog = false },
         )
+    }
+}
+
+/** Suggests matching dark-frame parameters to the user's most-recent
+ *  completed bulb session (Astro / Intervalometer-bulb / Ramp). Tap →
+ *  exposure + shot count auto-fill, jump to the last tab so the user can
+ *  hit Start. Dismiss → hide for the rest of this wizard pass. */
+@Composable
+private fun PairWithLastLightsCard(
+    candidate: com.ehrocha.pulsar.model.ShotLogEntry,
+    onPair: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.primaryContainer,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Default.LensBlur,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp),
+            )
+            Spacer(Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.df2_pair_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    stringResource(
+                        R.string.df2_pair_body,
+                        candidate.completedShots,
+                        formatExposureMs(candidate.exposureMs),
+                        candidate.modeLabel.lowercase(),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+            TextButton(onClick = onPair) {
+                Text(stringResource(R.string.df2_pair_apply))
+            }
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = stringResource(R.string.df2_pair_dismiss),
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+    }
+}
+
+/** Quiet, persistent reminder that dark frames need the lens cap on. */
+@Composable
+private fun LensCapReminder(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Default.VisibilityOff,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(14.dp),
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            stringResource(R.string.df2_lens_cap_reminder),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** Compact human-readable exposure string for the pair card. Mirrors the
+ *  formatting elsewhere in the wizards — sub-1s in ms, sub-60s in s,
+ *  longer in mm:ss. */
+private fun formatExposureMs(ms: Long): String = when {
+    ms < 1000 -> "${ms}ms"
+    ms < 60_000 -> "${ms / 1000}s"
+    else -> {
+        val totalSec = ms / 1000
+        "%d:%02d".format(totalSec / 60, totalSec % 60)
     }
 }

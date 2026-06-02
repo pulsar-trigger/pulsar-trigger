@@ -732,6 +732,11 @@
     <string name="dark_frame_hint">Dark Frames werden mit aufgesetztem Objektivdeckel aufgenommen. Sie erfassen Sensorrauschen bei gleicher Belichtung und Temperatur wie Light Frames, sodass Stacking-Software das Fixed-Pattern-Rauschen subtrahieren kann.</string>
     <string name="data_stale">Daten könnten veraltet sein</string>
     <string name="df2_set_shots">Anzahl Aufnahmen festlegen, um zu starten</string>
+    <string name="df2_pair_title">Mit der letzten Session paaren</string>
+    <string name="df2_pair_body">%1$d × %2$s aus deiner letzten %3$s-Session</string>
+    <string name="df2_pair_apply">Übernehmen</string>
+    <string name="df2_pair_dismiss">Verwerfen</string>
+    <string name="df2_lens_cap_reminder">Objektivdeckel auf — Darks brauchen null Licht auf dem Sensor.</string>
     <string name="event_share_calendar">Als Kalendereintrag teilen</string>
     <string name="event_share_pulsar">Als Pulsar-Event teilen</string>
     <string name="finishes_at">Endet um %1$s</string>

@@ -732,6 +732,11 @@
     <string name="dark_frame_hint">Les dark frames sont pris avec le bouchon en place. Ils capturent le bruit du capteur à la même exposition et température que les light frames, permettant aux logiciels d\'empilement de soustraire le bruit de motif fixe.</string>
     <string name="data_stale">Les données peuvent être obsolètes</string>
     <string name="df2_set_shots">Définissez le nombre de prises pour démarrer</string>
+    <string name="df2_pair_title">Apparier avec la dernière session</string>
+    <string name="df2_pair_body">%1$d × %2$s de votre dernière session %3$s</string>
+    <string name="df2_pair_apply">Utiliser</string>
+    <string name="df2_pair_dismiss">Ignorer</string>
+    <string name="df2_lens_cap_reminder">Cachez l\'objectif — les darks ont besoin de zéro lumière sur le capteur.</string>
     <string name="event_share_calendar">Partager comme calendrier</string>
     <string name="event_share_pulsar">Partager comme événement Pulsar</string>
     <string name="finishes_at">Termine à %1$s</string>

@@ -728,6 +728,11 @@
     <string name="dark_frame_hint">暗场在盖上镜头盖的情况下拍摄。它们在与亮场相同的曝光和温度下记录传感器噪声，使堆栈软件能减去固定模式噪声。</string>
     <string name="data_stale">数据可能已过时</string>
     <string name="df2_set_shots">设置拍摄张数以开始</string>
+    <string name="df2_pair_title">与上次曝光匹配</string>
+    <string name="df2_pair_body">来自上次%3$s会话的 %1$d × %2$s</string>
+    <string name="df2_pair_apply">使用</string>
+    <string name="df2_pair_dismiss">忽略</string>
+    <string name="df2_lens_cap_reminder">盖上镜头盖 — 暗场需要没有光到达传感器。</string>
     <string name="event_share_calendar">作为日历共享</string>
     <string name="event_share_pulsar">作为 Pulsar 事件共享</string>
     <string name="finishes_at">%1$s 结束</string>

@@ -170,6 +170,11 @@
 
     <!-- DarkFrame 2 / Ramp 2 wizards -->
     <string name="df2_set_shots">Set shot count to start</string>
+    <string name="df2_pair_title">Pair with last lights</string>
+    <string name="df2_pair_body">%1$d × %2$s from your last %3$s session</string>
+    <string name="df2_pair_apply">Use</string>
+    <string name="df2_pair_dismiss">Dismiss</string>
+    <string name="df2_lens_cap_reminder">Cap the lens — darks need zero light reaching the sensor.</string>
     <string name="ramp2_tab_start">Start</string>
     <string name="ramp2_tab_end">End</string>
     <string name="ramp2_tab_steps">Steps</string>
