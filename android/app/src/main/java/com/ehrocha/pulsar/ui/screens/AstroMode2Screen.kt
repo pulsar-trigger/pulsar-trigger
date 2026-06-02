@@ -203,7 +203,14 @@ fun AstroMode2Screen(
             stringResource(R.string.astro2_set_lens_and_interval)
         else -> null
     }
+    // Sub-second host-timed bulb is unreliable on any camera transport
+    // (the press/release round-trip can't bracket a <1s exposure). The
+    // Astro exposure is computed from focal/crop/rule so short lenses
+    // (e.g. 8mm fisheye on NPF) can land in the sub-second band.
+    val subSecondAstro = canControlAf && maxExpMs in 1L..999L
     val wizardWarning = when {
+        tab == AstroTab.LENS && subSecondAstro ->
+            stringResource(R.string.canon_sub_second_warning)
         tab == AstroTab.INTERVAL && intervalMs in 1L..3999L ->
             stringResource(R.string.interval_short_warning)
         else -> null

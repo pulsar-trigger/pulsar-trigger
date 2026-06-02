@@ -194,6 +194,15 @@
     <string name="astro2_lens_detect">Detect lens</string>
     <string name="astro2_lens_detecting">Detecting…</string>
 
+    <!-- Run-complete notification -->
+    <string name="notif_channel_run_complete">Run complete</string>
+    <string name="notif_channel_run_complete_desc">Tells you when a phone-driven Astro / Intervalometer / Ramp / Dark Frame / Timelapse run finishes.</string>
+    <string name="notif_run_complete_completed">Completed</string>
+    <string name="notif_run_complete_stopped">Stopped</string>
+    <string name="notif_run_complete_error">Failed</string>
+    <string name="notif_run_complete_title">%1$s · %2$s</string>
+    <string name="notif_run_complete_body">%1$d / %2$d shots · %3$s</string>
+
     <!-- Home-screen widget -->
     <string name="widget_dashboard_label">Pulsar Astro Dashboard</string>
     <string name="widget_dashboard_description">Moon, sun, twilight, weather, and tonight\'s photo windows at a glance.</string>

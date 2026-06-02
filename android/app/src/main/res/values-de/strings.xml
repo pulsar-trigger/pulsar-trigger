@@ -87,6 +87,13 @@
     <string name="astro2_lens_not_mounted">Kein Objektiv an der Kamera erkannt.</string>
     <string name="astro2_lens_detect">Objektiv erkennen</string>
     <string name="astro2_lens_detecting">Erkennen…</string>
+    <string name="notif_channel_run_complete">Lauf abgeschlossen</string>
+    <string name="notif_channel_run_complete_desc">Meldet, wenn ein Astro / Intervallometer / Ramp / Dark / Timelapse-Lauf endet.</string>
+    <string name="notif_run_complete_completed">Abgeschlossen</string>
+    <string name="notif_run_complete_stopped">Gestoppt</string>
+    <string name="notif_run_complete_error">Fehlgeschlagen</string>
+    <string name="notif_run_complete_title">%1$s · %2$s</string>
+    <string name="notif_run_complete_body">%1$d / %2$d Aufnahmen · %3$s</string>
     <string name="widget_dashboard_label">Pulsar Astro-Dashboard</string>
     <string name="widget_dashboard_description">Mond, Sonne, Dämmerung, Wetter und heutige Fotofenster auf einen Blick.</string>
     <string name="widget_empty_state">Öffne die App, um das Widget zu befüllen</string>

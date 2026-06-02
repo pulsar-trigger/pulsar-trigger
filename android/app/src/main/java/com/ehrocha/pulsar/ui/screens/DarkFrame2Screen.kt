@@ -81,7 +81,10 @@ fun DarkFrame2Screen(
         DfTab.INTERVAL -> intervalMs > 0L
         DfTab.SHOTS -> shotCount > 0  // Dark frames need a finite count
     }
-    val subSecondCanon = onCanon && exposureMs in 1L..999L
+    // Sub-second host-timed bulb fails on every Canon transport, not just
+    // CCAPI — gate on the same canControlAf flag as the other wizards
+    // (was previously `onCanon` only, missing USB PTP / Canon BLE / PTP-IP).
+    val subSecondCanon = canControlAf && exposureMs in 1L..999L
     val bottomHint = when {
         tab == DfTab.EXPOSURE && exposureMs == 0L -> stringResource(R.string.iv2_set_exposure)
         tab == DfTab.INTERVAL && intervalMs == 0L -> stringResource(R.string.iv2_set_interval)

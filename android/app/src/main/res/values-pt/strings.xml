@@ -87,6 +87,13 @@
     <string name="astro2_lens_not_mounted">Nenhuma lente detectada na câmera.</string>
     <string name="astro2_lens_detect">Detectar lente</string>
     <string name="astro2_lens_detecting">Detectando…</string>
+    <string name="notif_channel_run_complete">Sessão concluída</string>
+    <string name="notif_channel_run_complete_desc">Avisa quando uma sessão Astro / Intervalômetro / Ramp / Dark / Timelapse termina.</string>
+    <string name="notif_run_complete_completed">Concluída</string>
+    <string name="notif_run_complete_stopped">Interrompida</string>
+    <string name="notif_run_complete_error">Falhou</string>
+    <string name="notif_run_complete_title">%1$s · %2$s</string>
+    <string name="notif_run_complete_body">%1$d / %2$d disparos · %3$s</string>
     <string name="widget_dashboard_label">Painel Astro Pulsar</string>
     <string name="widget_dashboard_description">Lua, sol, crepúsculo, clima e janelas de fotos desta noite num relance.</string>
     <string name="widget_empty_state">Abra o app para preencher o widget</string>

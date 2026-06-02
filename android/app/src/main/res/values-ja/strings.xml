@@ -87,6 +87,13 @@
     <string name="astro2_lens_not_mounted">カメラにレンズが装着されていません。</string>
     <string name="astro2_lens_detect">レンズを検出</string>
     <string name="astro2_lens_detecting">検出中…</string>
+    <string name="notif_channel_run_complete">撮影完了</string>
+    <string name="notif_channel_run_complete_desc">アストロ / インターバル / ランプ / ダーク / タイムラプスの撮影完了を通知します。</string>
+    <string name="notif_run_complete_completed">完了</string>
+    <string name="notif_run_complete_stopped">停止</string>
+    <string name="notif_run_complete_error">失敗</string>
+    <string name="notif_run_complete_title">%1$s · %2$s</string>
+    <string name="notif_run_complete_body">%1$d / %2$d 枚 · %3$s</string>
     <string name="widget_dashboard_label">Pulsar アストロ ダッシュボード</string>
     <string name="widget_dashboard_description">月、太陽、薄明、天気、今夜の撮影ウィンドウを一目で。</string>
     <string name="widget_empty_state">アプリを開いてウィジェットを更新</string>

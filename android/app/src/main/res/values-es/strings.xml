@@ -87,6 +87,13 @@
     <string name="astro2_lens_not_mounted">No se detecta objetivo en la cámara.</string>
     <string name="astro2_lens_detect">Detectar objetivo</string>
     <string name="astro2_lens_detecting">Detectando…</string>
+    <string name="notif_channel_run_complete">Sesión completa</string>
+    <string name="notif_channel_run_complete_desc">Avisa cuando una sesión Astro / Intervalómetro / Ramp / Dark / Timelapse termina.</string>
+    <string name="notif_run_complete_completed">Completa</string>
+    <string name="notif_run_complete_stopped">Detenida</string>
+    <string name="notif_run_complete_error">Falló</string>
+    <string name="notif_run_complete_title">%1$s · %2$s</string>
+    <string name="notif_run_complete_body">%1$d / %2$d disparos · %3$s</string>
     <string name="widget_dashboard_label">Panel Astro Pulsar</string>
     <string name="widget_dashboard_description">Luna, sol, crepúsculo, clima y ventanas fotográficas de esta noche de un vistazo.</string>
     <string name="widget_empty_state">Abre la app para llenar el widget</string>

@@ -2148,6 +2148,16 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                             status = status,
                         )
                     )
+                    // Tell the user the run ended — they're often away from
+                    // the phone (in a tent, asleep, on a tripod-mount climb).
+                    com.ehrocha.pulsar.notify.RunCompleteNotifier.post(
+                        context = getApplication<Application>(),
+                        modeLabel = modeLabel,
+                        completedShots = completed,
+                        plannedShots = plannedShots,
+                        durationMs = endedAt - startedAt,
+                        status = status,
+                    )
                     _flowRunning.value = false
                     _flowPaused.value = false
                     _flowCurrentStep.value = -1
