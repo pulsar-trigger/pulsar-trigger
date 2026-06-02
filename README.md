@@ -67,30 +67,58 @@ I built this for my own photography, but figured if it's useful to me it might b
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                         Android app                              │
-│                                                                  │
-│  Wizards (Intervalometer, Astro, Timelapse, DarkFrame, Ramp,    │
-│           Manual, Custom Flow) ── consume vm.runState           │
-│                          │                                       │
-│                          ▼                                       │
-│              PulsarViewModel  (flow runner, state)               │
-│                          │                                       │
-│      ┌───────────────────┼───────────────────┐                   │
-│      ▼                                       ▼                   │
-│  BleController                          CcapiTransport            │
-│  (Nordic BLE)                          (HTTP + digest auth)       │
-└──────┼─────────────────────────────────────────┼─────────────────┘
-       │                                         │
-       │ BLE GATT (TLV v2)                       │ WiFi HTTP/JSON
-       ▼                                         ▼
-   ┌────────┐                              ┌─────────────────┐
-   │ ESP32  │── optocouplers ──────────►   │ Canon EOS body  │
-   │firmware│   to camera remote port      │  (CCAPI v110+)  │
-   └────────┘                              └─────────────────┘
+┌───────────────────────────────────────────────────────────────────────────────────┐
+│                                  Android app                                       │
+│                                                                                    │
+│  Wizards (Intervalometer · Astro · Timelapse · DarkFrame · Ramp · Manual ·         │
+│           CableRelease · CustomFlow)        ── observe vm.runState                 │
+│                  │                                                                 │
+│  Tools (StarFocus · CameraTest · CompatibilityReport · Diagnostics · Planner ·     │
+│         Alignment · WhatsUp)                ── consume vm.{ccapi,ptp,…}Transport   │
+│                  │                                                                 │
+│  Dashboard (Summary verdicts · Sun/Moon · Twilight · Weather · DSO · Photo windows)│
+│                  │                                                                 │
+│                  ▼                                                                 │
+│   ┌─────────────────────────────────────────────────────────────────────────┐     │
+│   │              PulsarViewModel  (state hub · flow runner · persistence)   │     │
+│   │                                                                         │     │
+│   │   StateFlows:  bleController.connected · _canonCcapiTransport ·         │     │
+│   │                _ptpTransport · _canonBleTransport · _ptpIpTransport ·   │     │
+│   │                _simulatorActive · _status · _flowRunning · _flowSteps   │     │
+│   │   Run loop:    executeFlowStep → CanonRunner.runCanonBulb/Timelapse/    │     │
+│   │                Ramp(transport)  →  awaitCanonReady(transport)           │     │
+│   └─────────────────────────────────────────────────────────────────────────┘     │
+│      │       │            │              │              │              │           │
+│      ▼       ▼            ▼              ▼              ▼              ▼           │
+│  BleCtrl  CcapiTransport PtpTransport   PtpIpTransport CanonBleTransport Simulator │
+│  (Nordic) (HTTP+Digest)  (USB+PtpClient)(TCP+PtpClient)(GATT+BR-E1/Smart) (no-op)  │
+└─────┼──────────┼─────────────┼──────────────┼──────────────┼─────────────────────┘
+      │          │             │              │              │
+      │ BLE      │ Wi-Fi        │ USB-C        │ Wi-Fi        │ BLE
+      │ GATT/TLV │ HTTP+JSON   │ PIMA-15740   │ PTP/IP        │ GATT (BR-E1 /
+      │          │ (CCAPI)      │ vendor: 6/11 │ (port 15740)  │  smartphone-mode)
+      ▼          ▼             ▼              ▼              ▼
+  ┌──────┐  ┌────────────────────────────────────────────────────────────────┐
+  │ESP32 │  │                       Canon EOS body                            │
+  │ FW   │  │  CCAPI (R-series + CCAPI activation)                            │
+  │      │  │  USB PTP (every Canon w/ USB; RemoteRelease for bulb)           │
+  │      │  │  PTP/IP (Wi-Fi PTP; EOS Utility mode; same PtpClient as USB)    │
+  │      │  │  BLE direct (BR-E1 = older bodies; smartphone-mode = R-series)  │
+  └──┬───┘  └────────────────────────────────────────────────────────────────┘
+     │ optocouplers
+     ▼
+  Camera remote-release port (any vendor)
+
+  ── Session-intelligence layer ──
+  WorkManager  →  AstroDashboardManager  →  DashboardSnapshotStore (SharedPrefs)
+                                                   │
+                                                   ├──→  Home-screen widget (Glance)
+                                                   ├──→  DSO Recommendations card
+                                                   └──→  ShotLog ConditionSnapshot
+                                                         (captured at run start)
 ```
 
-The viewmodel holds one StateFlow per transport (`bleController` for Pulsar ESP32, `_canonCcapiTransport`, `_ptpTransport`, `_canonBleTransport`); whichever the user picks in the scan screen is the active transport. Wizards observe `vm.runState` and call `vm.startFlow()` — they don't reach down to any individual transport directly.
+The viewmodel holds one StateFlow per transport — `bleController.connected` (Pulsar ESP32), `_canonCcapiTransport`, `_ptpTransport`, `_canonBleTransport`, `_ptpIpTransport`, plus `_simulatorActive` — and every `connectX()` does mutual-exclusion teardown of the other five. Whichever the user picks in the scan landing is the active transport. Wizards observe `vm.runState` and call `vm.startFlow()` — they don't reach down to any individual transport directly. The four `CameraTransport` implementations share `CanonRunner.kt` for the actual run loops (bulb / timelapse / ramp); USB PTP and PTP/IP additionally share `PtpClient` and split only at the `PtpWire` layer (`BulkPtpWire` vs `PtpIpWire`). The flow runner pauses via `awaitCanonReady(transport)` during transient transport drops (CCAPI re-probe, USB cable replug, PTP/IP wire reopen) so runs resume mid-flight where the transport supports it.
 
 ### Firmware (ESP32 / PlatformIO / Arduino framework)
 
@@ -544,12 +572,66 @@ The running view updates in real time using a 100 ms client-side tick. The count
 
 ### Known Limitations
 
-- **CCAPI sub-second exposures** — bulb open/close costs two HTTP round-trips (~100–200 ms each). For exposures below 1 s the timing error is significant; the wizards show a warning when on CCAPI with `exposureMs < 1000`.
-- **CCAPI body-capability differences** — bulb-based modes (Intervalometer/Astro/Dark Frame/Ramp) require `/shooting/control/shutterbutton/manual`. Newer R-bodies expose it; older ones may not. Pulsar capability-detects at connect and dims the affected tiles when missing. Programmatic AF↔MF (`/shooting/settings/afoperation` PUT) likewise depends on the body — on the EOS RP it's read-only, so the user has to flip the lens AF/MF switch by hand. The per-shot `useAutofocus` toggle (defaults off for bulb modes) is the software backstop.
-- **CCAPI battery cost** — WiFi + CCAPI roughly halves a body's battery life. Plan ~2 h per LP-E17 on the RP for a bulb-no-liveview run; for longer sessions use USB-C power passthrough (DR-E18 dummy battery on the RP). The setup-help dialog in the scan screen has the same note.
-- **Single concurrent connection** — only one phone can control a Pulsar BLE device at a time. CCAPI sessions are similarly camera-singular.
-- **BLE pairing is Just Works** — no passkey, since the ESP32 has no I/O for PIN entry. Good enough for the threat model (someone in BLE range with intent to mess with your camera).
-- **Camera auto-off during long CCAPI runs** — set the body's auto-off to disabled in the camera menu before multi-hour sessions; Pulsar can reconnect but the run will stall during the nap.
+Grouped by area. Pulsar capability-detects and surfaces warnings in the UI where it can; this list is the honest catalog of corner cases worth knowing before they bite.
+
+#### Wire-level / cross-transport
+
+- **Sub-second host-timed bulb is unreliable on every Canon transport.** CCAPI bulb open/close is two HTTP round-trips (~100–200 ms each); PTP/PTP-IP `RemoteReleaseOn → delay → RemoteReleaseOff` has its own RTT. For exposures below 1 s the timing error swamps the exposure. Wizards show a `canon_sub_second_warning` when `exposureMs < 1000` on Intervalometer / Astro / Dark Frame / Ramp on any Canon transport. Use the ESP32 / wired path or set a longer exposure.
+- **PC-remote mode locks the camera dial.** Both USB PTP and PTP/IP enter `SetRemoteMode(1)`, which freezes the body's mode dial and menu ("busy" indicator). Disconnect first to change Bulb/Manual on the camera.
+- **Single concurrent connection per body.** Only one phone can drive a given Pulsar BLE / CCAPI / PTP / Canon BLE / PTP-IP session at a time. Trying to dual-control a body from two devices is undefined.
+- **Camera auto-off mid-session.** Long Canon runs need auto-off disabled in the body's menu. Pulsar auto-reconnects on most transports, but the run stalls (or ends with STOPPED) during the nap.
+
+#### R-series PTP false-positive capability advertisements
+
+Verified on EOS R + EOS RP, likely R-series PTP firmware trait (see [docs/canon-body-matrix.md](docs/canon-body-matrix.md) for the per-body matrix):
+
+- **Live view advertised but rejected.** Op `0x9153 GetViewFinderData` is in `supportedOperations`, but the underlying `SetDevicePropValue(0xD1B0 EvfOutput, 2)` returns `rc=0x200A PARAMETER_NOT_SUPPORTED`. Star Focus is unreachable over PTP / PTP-IP on these bodies. Pulsar **runtime-downgrades** `supportsLiveView` on the first failed call (v0.322) — Star Focus tile re-greys via the reactive `liveViewSupportedFlow`.
+- **Battery prop advertised but rejected.** `0x5001 BatteryLevel` is in `supportedDeviceProperties`, but `GetDevicePropValue` returns `rc=0x2005 DEVICE_PROP_NOT_SUPPORTED`. Same runtime-downgrade pattern; battery poll loop exits cleanly on the first failure instead of wire-spamming every 30 s.
+- **`vendorExtensionId = 6` (MTP), not `11` (Canon EOS).** Across USB *and* Wi-Fi PTP on both bodies. Pulsar gates on the manufacturer string (`startsWith("Canon")`) since the spec value isn't honoured in practice.
+- **`RemoteRelease mode=2` rejected on Wi-Fi.** Over PTP/IP the EOS R returns `0x2019 DEVICE_BUSY` for `mode=2` (no-AF full press) — only `mode=3` works. Pulsar forces `mode=3` on the PTP/IP wire and hides the per-shot AF toggle (`supportsAfToggle=false`). Disable AF on the body / lens MF switch if you don't want per-shot autofocus on bulb runs. USB PTP on the same bodies accepts `mode=2` normally.
+- **`SetShutterSpeed → Bulb` rejected.** `SetDevicePropValue(0xD102, 0x000C)` returns `rc=0x200A` on the EOS R. Pulsar logs and falls back to the "user sets Bulb on dial" workflow. Other Canon bodies may use different shutter-speed codes.
+
+#### CCAPI specifics
+
+- **Programmatic AF↔MF is body-dependent.** `/shooting/settings/afoperation` PUT works on the R but is read-only on the RP — the user has to flip the lens AF/MF switch by hand. The per-shot `useAutofocus` toggle (defaults off for bulb modes) is the software backstop.
+- **Battery cost.** Wi-Fi + CCAPI roughly halves the body's battery life. Plan ~2 h per LP-E17 on the RP for a bulb-no-liveview run; for longer sessions use USB-C power passthrough (e.g. DR-E18 dummy battery on the RP).
+- **No CCAPI on the EOS R 2018.** Activation tool refuses to enable it. Use USB PTP or PTP/IP instead.
+
+#### USB PTP specifics
+
+- **`0x000C` Bulb code is R-class only.** Other Canon bodies may need different `SetDevicePropValue(0xD102, ...)` values. Best-effort: if the write returns non-OK, Pulsar logs and falls back to the user-set-on-dial workflow.
+- **Bulb modes are Canon-only today.** `InitiateCapture` works on Nikon / Sony / Fuji for Timelapse, but `RemoteReleaseOn/Off` are Canon vendor ops. Non-Canon bulb needs vendor-specific plumbing.
+- **Cable-bump recovery requires the OS broadcast.** `PtpTransport.reopen()` swaps the dead USB handle in place when the OS reports a matching `(vid, pid)` ATTACHED. If the OS doesn't surface the reattach within `awaitCanonReady`'s timeout, the run ends with STOPPED.
+
+#### PTP/IP specifics
+
+- **Auto-reconnect can't span a network change.** `reopen()` retries against the original `(host, port)`. If the phone roams to a different Wi-Fi network mid-session (e.g. camera's AP → home Wi-Fi), the body becomes literally unreachable and reconnect fails after 4 attempts (3 / 5 / 10 / 30 s backoff). Surfaces as `reconnect_failed` with an actionable error string.
+- **mDNS discovery needs multicast on the LAN.** Some enterprise / hotel Wi-Fi blocks it. Workaround: use the camera's own AP mode (camera as access point) — multicast works on the direct link.
+- **Wi-Fi doubles camera battery drain** vs USB PTP — plan for a dummy-battery passthrough on long sessions.
+- **First connect prompts on the camera.** The body shows "Connect this device?" once per client GUID. Pulsar persists its GUID so it's a one-time prompt; wiping app data regenerates the GUID and re-prompts.
+
+#### Canon BLE direct specifics
+
+- **EOS R (2018) has no BLE shutter** — registers in smartphone mode but exposes no `00030000` control service. Pulsar detects this (`SMART_NO_SHUTTER`) and steers you to USB PTP or PTP/IP.
+- **No mode-dial write.** Neither BR-E1 nor smartphone-mode carries shutter-speed control. Bulb modes need the user to set Bulb on the body's dial.
+- **No live view / lens info / battery readout.** Both protocols are control-only. Star Focus, lens auto-fill, and the battery chip are gated off; use CCAPI / USB PTP / PTP-IP if you need them.
+- **AF toggle ignored on smartphone-mode.** BR-E1 honours the AF half-press, smartphone-mode doesn't. Pulsar reports `supportsAfToggle = !isSmart` and the wizards hide the toggle in smartphone-mode.
+- **Mid-shoot resume isn't implemented for Canon BLE.** Spontaneous link drops abort the running flow; the auto-reconnect re-arms on a 120 s window but doesn't pick the run back up.
+
+#### Pulsar BLE / ESP32 specifics
+
+- **Just Works pairing.** No passkey, since the ESP32 has no I/O for PIN entry. Threat model is "someone in BLE range with intent to mess with your camera" — manageable.
+- **Single concurrent connection** to the device — only one phone at a time.
+
+#### App / OS-level
+
+- **Samsung "Sleeping apps" hibernation breaks the widget refresh.** The 3 h `DashboardWidgetWorker` won't fire if Samsung's battery-optimisation puts Pulsar in the deep-sleep list. Workaround: **Settings → Battery → Background usage limits → Sleeping apps**, remove Pulsar. The widget header tints amber + prefixes "Stale ·" when the snapshot is older than 12 h to make this visible.
+- **Run-complete notifications need `POST_NOTIFICATIONS` on Android 13+.** If the user denies the prompt, the channel silently drops messages. `RunCompleteNotifier` catches the `SecurityException` so nothing crashes; the run-end notification just doesn't post.
+- **DSO recommendations need an astro-dark window.** At extreme latitudes in summer (or under the polar circle) the sun never drops below the astronomical-twilight threshold; the card shows "No targets above 30° during astro-dark tonight." instead of recommendations.
+- **DSO catalog is curated, not exhaustive.** ~45 popular Messier + NGC / IC targets in `DsoCatalog.kt`. Expanding it is just data — submit a PR or open an issue if your favourite isn't there.
+- **Compatibility Report is read-only.** It checks advertised capabilities + tries lens + battery + live-view round-trip, but never fires the shutter. To exercise the shutter end-to-end, use Tools → Camera Test (which does fire 25 shots across 5 modes).
+- **Launcher icon adaptive parallax is sacrificed.** v0.332 composited the foreground onto the background to fix Samsung's "blank corners" issue; the icon is now a single opaque layer rather than two with parallax depth. Acceptable tradeoff for the visual fill, but worth knowing if you replace the artwork later.
+- **Crash log is in-memory ring + on-disk dump.** The wire log lives in a 600-line ring buffer (`CanonBleLog`) — sufficient for one session but earlier logs roll off. `CrashPersister` writes the full log + stack to `filesDir/pulsar_last_crash.txt` only on JVM-killing exceptions; ordinary recoverable errors stay only in the ring.
 
 ---
 
