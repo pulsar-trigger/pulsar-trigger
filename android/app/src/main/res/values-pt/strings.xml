@@ -490,6 +490,7 @@
     <string name="card_planets">Planetas esta noite</string>
     <string name="card_dso_suggestions">Alvos sugeridos para esta noite</string>
     <string name="dso_peak_at">pico %1$s</string>
+    <string name="dso_none_tonight">Sem alvos acima de 30° durante o astro-escuro desta noite.</string>
     <string name="planet_visible">Visível</string>
     <string name="planet_low">Baixo</string>
 

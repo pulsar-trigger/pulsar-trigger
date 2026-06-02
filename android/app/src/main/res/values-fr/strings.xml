@@ -490,6 +490,7 @@
     <string name="card_planets">Planètes ce soir</string>
     <string name="card_dso_suggestions">Cibles suggérées ce soir</string>
     <string name="dso_peak_at">culm. %1$s</string>
+    <string name="dso_none_tonight">Aucune cible au-dessus de 30° pendant le crépuscule astro de cette nuit.</string>
     <string name="planet_visible">Visible</string>
     <string name="planet_low">Bas</string>
 

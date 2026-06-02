@@ -886,10 +886,19 @@ fun DashboardScreen(
             run {
                 val loc = state.location ?: return@run
                 val tw = state.twilight ?: return@run
-                val ds = com.ehrocha.pulsar.astro.AstroCalculator
-                    .parseIsoHour(tw.astroEnd) ?: return@run
-                val de = com.ehrocha.pulsar.astro.AstroCalculator
-                    .parseIsoHour(tw.astroStart) ?: return@run
+                // Twilight times come from AstroCalculator.fmtHour() as
+                // wall-clock "HH:mm" strings (already converted to the
+                // user's local zone). Parse them directly — they are NOT
+                // ISO timestamps, so parseIsoHour() can't handle them.
+                val astroEndH = parseHourMinute(tw.astroEnd) ?: return@run
+                val astroStartH = parseHourMinute(tw.astroStart) ?: return@run
+                // Convert local-clock hours → UTC hours so the recommender
+                // and AstroCalculator.lst() can do their math in the same
+                // reference frame they expect.
+                val zoneOffsetH = java.time.ZoneId.systemDefault()
+                    .rules.getOffset(java.time.Instant.now()).totalSeconds / 3600.0
+                val ds = (astroEndH - zoneOffsetH + 24.0) % 24.0
+                val de = (astroStartH - zoneOffsetH + 24.0) % 24.0
                 val recs = remember(loc, tw, state.selectedDate) {
                     com.ehrocha.pulsar.astro.DsoRecommender.recommend(
                         date = state.selectedDate,
@@ -899,15 +908,19 @@ fun DashboardScreen(
                         darkEndUtcH = de,
                     )
                 }
-                if (recs.isNotEmpty()) {
-                    DashCard(
-                        title = stringResource(R.string.card_dso_suggestions),
-                        icon = Icons.Default.Stars,
-                        initiallyExpanded = true,
-                    ) {
-                        recs.forEach { r ->
-                            DsoSuggestionRow(r)
-                        }
+                DashCard(
+                    title = stringResource(R.string.card_dso_suggestions),
+                    icon = Icons.Default.Stars,
+                    initiallyExpanded = true,
+                ) {
+                    if (recs.isEmpty()) {
+                        Text(
+                            stringResource(R.string.dso_none_tonight),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        recs.forEach { r -> DsoSuggestionRow(r) }
                     }
                 }
             }
@@ -1120,6 +1133,17 @@ private fun DsoSuggestionRow(r: com.ehrocha.pulsar.astro.DsoRecommender.Recommen
             )
         }
     }
+}
+
+/** Parse a wall-clock "HH:mm" string (e.g. "22:30") to a decimal hour.
+ *  Used for the local-time twilight strings produced by
+ *  [com.ehrocha.pulsar.astro.AstroCalculator.fmtHour]. */
+private fun parseHourMinute(s: String?): Double? {
+    if (s.isNullOrEmpty()) return null
+    val parts = s.split(":")
+    val h = parts.getOrNull(0)?.toDoubleOrNull() ?: return null
+    val m = parts.getOrNull(1)?.toDoubleOrNull() ?: 0.0
+    return h + m / 60.0
 }
 
 /** Convert a UTC hour-of-day to local HH:mm using the device's default

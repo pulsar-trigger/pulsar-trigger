@@ -490,6 +490,7 @@
     <string name="card_planets">今夜の惑星</string>
     <string name="card_dso_suggestions">今夜のおすすめ天体</string>
     <string name="dso_peak_at">ピーク %1$s</string>
+    <string name="dso_none_tonight">今夜の天文薄明中に30°以上の天体はありません。</string>
     <string name="planet_visible">観測可能</string>
     <string name="planet_low">低い</string>
 

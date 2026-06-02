@@ -490,6 +490,7 @@
     <string name="card_planets">Planeten heute Nacht</string>
     <string name="card_dso_suggestions">Vorgeschlagene Ziele heute Nacht</string>
     <string name="dso_peak_at">max. %1$s</string>
+    <string name="dso_none_tonight">Keine Ziele über 30° in der astronomischen Dunkelheit heute Nacht.</string>
     <string name="planet_visible">Sichtbar</string>
     <string name="planet_low">Niedrig</string>
 

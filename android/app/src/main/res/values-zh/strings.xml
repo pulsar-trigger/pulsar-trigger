@@ -490,6 +490,7 @@
     <string name="card_planets">今晚的行星</string>
     <string name="card_dso_suggestions">今晚推荐目标</string>
     <string name="dso_peak_at">峰值 %1$s</string>
+    <string name="dso_none_tonight">今晚天文暗夜期间没有高于30°的目标。</string>
     <string name="planet_visible">可见</string>
     <string name="planet_low">低</string>
 
