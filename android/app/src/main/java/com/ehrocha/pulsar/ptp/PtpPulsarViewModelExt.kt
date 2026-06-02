@@ -45,6 +45,29 @@ internal suspend fun PulsarViewModel.awaitPtpUsbReady(ptp: PtpTransport) {
     }
 }
 
+/** In-place USB reopen — see [PtpTransport.reopen]. Mirrors the PTP/IP
+ *  [com.ehrocha.pulsar.ptp.attemptPtpIpReconnect] structure (single attempt
+ *  since USB enumeration is fast; if the new device doesn't claim the
+ *  interface cleanly, fall back to a full disconnect so the next ATTACHED
+ *  can rebuild from scratch). Called from the USB attach-broadcast
+ *  collector in PulsarViewModel.init {} on a (vid, pid)-matching reattach. */
+internal suspend fun PulsarViewModel.attemptPtpReopen(
+    transport: PtpTransport,
+    newDevice: android.hardware.usb.UsbDevice,
+) {
+    val ok = runCatching {
+        transport.reopen(getApplication<android.app.Application>(), newDevice)
+    }.getOrDefault(false)
+    if (ok) {
+        _ptpReconnecting.value = false
+        return
+    }
+    android.util.Log.w("PtpReopen", "PTP reopen failed — falling back to full disconnect")
+    _ptpError.value = "reconnect_failed"
+    abortFlowOnTransportDrop()
+    disconnectPtp(clearAutoReconnect = false)
+}
+
 /** Periodic USB PTP battery poll — 30 s cadence. Body-side push events
  *  don't exist on PTP so we poll. Exits cleanly if the body runtime-
  *  downgrades `supportsBatteryReadout` (EOS R / RP: prop advertised but

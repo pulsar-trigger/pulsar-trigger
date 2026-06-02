@@ -21,11 +21,15 @@ import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.model.FlowPresets
 import com.ehrocha.pulsar.model.RunState
 import com.ehrocha.pulsar.model.SavedFlow
+import com.ehrocha.pulsar.ptp.attemptPtpIpReconnect
+import com.ehrocha.pulsar.ptp.attemptPtpReopen
 import com.ehrocha.pulsar.ptp.awaitPtpIpReady
 import com.ehrocha.pulsar.ptp.awaitPtpUsbReady
 import com.ehrocha.pulsar.ptp.startPtpBatteryPolling
 import com.ehrocha.pulsar.ptp.startPtpIpBatteryPolling
+import com.ehrocha.pulsar.ptp.watchPtpIpWire
 import com.ehrocha.pulsar.service.PulsarNotificationService
+import com.ehrocha.pulsar.transport.ccapi.attemptCanonCcapiReconnect
 import com.ehrocha.pulsar.transport.ccapi.awaitCcapiReady
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -69,8 +73,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         /** Cap on the reconnect loop after polling gave up. ~2 min covers the
          *  common case (camera woke from auto-off, phone re-joined the AP).
          *  Beyond that the session is treated as truly dead. */
-        private const val CANON_RECONNECT_TIMEOUT_MS = 120_000L
-        private const val CANON_RECONNECT_BACKOFF_MS = 3_000L
+        // CCAPI reconnect timing constants moved alongside the function
+        // that uses them — see CcapiPulsarViewModelExt.kt.
         const val DEFAULT_PIN_SHUTTER = AppConfig.DEFAULT_PIN_SHUTTER
         const val DEFAULT_PIN_FOCUS = AppConfig.DEFAULT_PIN_FOCUS
         val SAFE_OUTPUT_PINS = AppConfig.SAFE_OUTPUT_PINS
@@ -275,7 +279,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         _canonCcapiTransport
     private val _canonCcapiConnecting = MutableStateFlow(false)
     val canonCcapiConnecting: StateFlow<Boolean> = _canonCcapiConnecting
-    private val _canonCcapiError = MutableStateFlow<String?>(null)
+    internal val _canonCcapiError = MutableStateFlow<String?>(null)
     val canonCcapiError: StateFlow<String?> = _canonCcapiError
 
     /** When non-null, the UI should prompt for username + password — the
@@ -307,7 +311,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _ptpConnecting = MutableStateFlow(false)
     val ptpConnecting: StateFlow<Boolean> = _ptpConnecting
-    private val _ptpError = MutableStateFlow<String?>(null)
+    internal val _ptpError = MutableStateFlow<String?>(null)
     val ptpError: StateFlow<String?> = _ptpError
 
     /** True while a USB camera that was connected has lost its cable and
@@ -351,7 +355,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val _ptpIpAwaitingConfirm = MutableStateFlow(false)
     val ptpIpAwaitingConfirm: StateFlow<Boolean> = _ptpIpAwaitingConfirm
 
-    private val _ptpIpError = MutableStateFlow<String?>(null)
+    internal val _ptpIpError = MutableStateFlow<String?>(null)
     val ptpIpError: StateFlow<String?> = _ptpIpError
     fun clearPtpIpError() { _ptpIpError.value = null }
 
@@ -364,13 +368,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     /** Last camera we connected to over PTP/IP. Cleared on a user-initiated
      *  disconnect; kept on a wire drop so the auto-reconnect job knows what
      *  to re-dial. */
-    @Volatile private var lastPtpIpCamera: com.ehrocha.pulsar.ptp.PtpIpCamera? = null
+    @Volatile internal var lastPtpIpCamera: com.ehrocha.pulsar.ptp.PtpIpCamera? = null
 
     fun startPtpIpScan() = ptpIpDiscovery.start()
     fun stopPtpIpScan() = ptpIpDiscovery.stop()
 
     private var ptpIpConnectJob: Job? = null
-    private var ptpIpReconnectJob: Job? = null
+    internal var ptpIpReconnectJob: Job? = null
 
     /** Connect to a PTP/IP camera. Mutually exclusive with the other four
      *  transports — they're torn down first. The camera shows a "Connect
@@ -440,69 +444,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Watch the PTP/IP transport's `connected` flow. When the wire drops
-     *  while we still hold the transport (and we have a remembered camera),
-     *  arm [_ptpIpReconnecting] and attempt to re-dial the same body on a
-     *  backoff. Mid-flow runs that hit the dead wire will end with STOPPED;
-     *  resuming the run is a follow-up. */
-    private fun watchPtpIpWire(transport: com.ehrocha.pulsar.ptp.PtpIpTransport) {
-        viewModelScope.launch {
-            transport.connected.collect { isUp ->
-                if (isUp) return@collect
-                // Stale watch — transport already swapped out.
-                if (_ptpIpTransport.value !== transport) return@collect
-                val cam = lastPtpIpCamera ?: return@collect
-                if (_ptpIpReconnecting.value) return@collect
-                _ptpIpReconnecting.value = true
-                ptpIpReconnectJob?.cancel()
-                ptpIpReconnectJob = launch { attemptPtpIpReconnect(transport, cam) }
-            }
-        }
-    }
-
-    /** Re-run the handshake against the same transport instance on a backoff
-     *  (3 / 5 / 10 / 30 s). Calls [PtpIpTransport.reopen] so the outer
-     *  reference stays valid — runners that captured it via
-     *  `runCanonBulb(transport=...)` keep working once `_connected` flips
-     *  back to true. Caps at 4 attempts before giving up and clearing
-     *  the camera so the user has to re-pick. */
-    private suspend fun attemptPtpIpReconnect(
-        transport: com.ehrocha.pulsar.ptp.PtpIpTransport,
-        @Suppress("UNUSED_PARAMETER") camera: com.ehrocha.pulsar.ptp.PtpIpCamera,
-    ) {
-        try {
-            val backoffs = longArrayOf(3_000, 5_000, 10_000, 30_000)
-            for ((i, delayMs) in backoffs.withIndex()) {
-                delay(delayMs)
-                coroutineContext.ensureActive()
-                if (_ptpIpTransport.value !== transport) return  // user disconnected mid-retry
-                Log.i(TAG, "PTP/IP reconnect attempt ${i + 1}/${backoffs.size}")
-                val ok = runCatching { transport.reopen() }.getOrDefault(false)
-                if (ok) {
-                    _ptpIpReconnecting.value = false
-                    // Battery poll keeps running across reconnect — it just
-                    // sees null reads while _connected is false, then resumes
-                    // reporting real percentages once the wire is back.
-                    return
-                }
-            }
-            // Gave up — fall through to full disconnect.
-            _ptpIpError.value = "reconnect_failed"
-            lastPtpIpCamera = null
-            _ptpIpReconnecting.value = false
-            runCatching { transport.release() }
-            _ptpIpTransport.value = null
-            if (!bleController.connected.value && !_simulatorActive.value &&
-                _canonCcapiTransport.value == null && _ptpTransport.value == null &&
-                _canonBleTransport.value == null) {
-                _connected.value = false
-                _status.value = null
-            }
-        } catch (_: kotlinx.coroutines.CancellationException) {
-            _ptpIpReconnecting.value = false
-            throw kotlinx.coroutines.CancellationException("reconnect cancelled")
-        }
-    }
+    // watchPtpIpWire + attemptPtpIpReconnect live in
+    // ptp/PtpIpPulsarViewModelExt.kt as extensions on PulsarViewModel — see
+    // imports above. Per-transport reconnect concern lives next to the
+    // PtpIpTransport class it operates on.
 
     /** Periodic PTP/IP battery poll — same 30 s cadence as USB PTP since
      *  neither path pushes battery events. Cancelled in [disconnectPtpIp]. */
@@ -511,7 +456,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     // PulsarViewModel extension that reads internal poll-job state on this
     // class. Keeps the per-transport leaf concerns out of the main file.
 
-    private fun disconnectPtpIp() {
+    internal fun disconnectPtpIp() {
         ptpIpConnectJob?.cancel()
         ptpIpConnectJob = null
         ptpIpReconnectJob?.cancel()
@@ -560,7 +505,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val canonBleCameras: StateFlow<List<android.bluetooth.BluetoothDevice>> =
         canonBleDiscovery.cameras
 
-    private val _canonBleTransport =
+    internal val _canonBleTransport =
         MutableStateFlow<com.ehrocha.pulsar.canonble.CanonBleTransport?>(null)
     val canonBleTransport: StateFlow<com.ehrocha.pulsar.canonble.CanonBleTransport?> =
         _canonBleTransport
@@ -704,27 +649,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** In-place USB reopen — see [PtpTransport.reopen]. Mirrors the PTP/IP
-     *  [attemptPtpIpReconnect] structure (single attempt since USB
-     *  enumeration is fast; if the new device doesn't claim the interface
-     *  cleanly, fall back to a full disconnect so the next ATTACHED can
-     *  rebuild from scratch). */
-    private suspend fun attemptPtpReopen(
-        transport: com.ehrocha.pulsar.ptp.PtpTransport,
-        newDevice: android.hardware.usb.UsbDevice,
-    ) {
-        val ok = runCatching {
-            transport.reopen(getApplication<Application>(), newDevice)
-        }.getOrDefault(false)
-        if (ok) {
-            _ptpReconnecting.value = false
-            return
-        }
-        Log.w(TAG, "PTP reopen failed — falling back to full disconnect")
-        _ptpError.value = "reconnect_failed"
-        abortFlowOnTransportDrop()
-        disconnectPtp(clearAutoReconnect = false)
-    }
+    // attemptPtpReopen lives in ptp/PtpPulsarViewModelExt.kt — extension on
+    // PulsarViewModel. Keeps the per-transport reopen logic next to the
+    // PtpTransport class it operates on.
 
     /** True iff no other transport is currently in use — gates auto-reconnect
      *  so we don't snatch the user away from a deliberate BLE / CCAPI /
@@ -813,7 +740,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     // Connection-side flows. [status] is multiplexed below — BLE updates flow
     // in, but the simulator can write directly when it's running.
-    private val _connected = MutableStateFlow(false)
+    internal val _connected = MutableStateFlow(false)
     val connected: StateFlow<Boolean> = _connected
 
     internal val _status = MutableStateFlow<StatusFrame?>(null)
@@ -840,7 +767,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val appUpdateManager = com.ehrocha.pulsar.update.AppUpdateManager(app, viewModelScope)
 
     // ── Simulator ────────────────────────────────────────────────────────
-    private val _simulatorActive = MutableStateFlow(false)
+    internal val _simulatorActive = MutableStateFlow(false)
     val simulatorActive: StateFlow<Boolean> = _simulatorActive
     private var simulatorJob: Job? = null
 
@@ -868,7 +795,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         upsertUserMode(existing.copy(bookmarked = !existing.bookmarked))
     }
 
-    private val _deviceName = MutableStateFlow("Pulsar")
+    internal val _deviceName = MutableStateFlow("Pulsar")
     val deviceName: StateFlow<String> = _deviceName
 
     // ── Mode config state ────────────────────────────────────────────────
@@ -953,7 +880,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     /** A camera transport dropped while a flow was running: abort the loop
      *  (it would otherwise keep advancing through delays while silently firing
      *  nothing) and flag the interruption for the UI warning. */
-    private fun abortFlowOnTransportDrop() {
+    internal fun abortFlowOnTransportDrop() {
         if (!_flowRunning.value) return
         Log.i(TAG, "camera transport dropped mid-session — aborting flow")
         flowJob?.cancel()
@@ -1368,10 +1295,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Long-poll `/event/polling` for live battery + shot count. On a streak of
      *  failures the loop enters reconnect mode and re-probes `/ccapi` for up
-     *  to [CANON_RECONNECT_TIMEOUT_MS] — covers the common case of the camera
-     *  briefly napping or the phone roaming. Persistent failure drops the
-     *  session for real. The poll is independent of the run loop — it runs
-     *  whether or not a flow is active. */
+     *  to 2 minutes (see [com.ehrocha.pulsar.transport.ccapi.attemptCanonCcapiReconnect])
+     *  — covers the common case of the camera briefly napping or the phone
+     *  roaming. Persistent failure drops the session for real. The poll is
+     *  independent of the run loop — it runs whether or not a flow is active. */
     private fun startCanonPolling(transport: com.ehrocha.pulsar.transport.ccapi.CcapiTransport) {
         canonCcapiPollJob?.cancel()
         canonCcapiPollJob = viewModelScope.launch {
@@ -1414,31 +1341,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Re-probe `GET /ccapi` on a backoff until the camera responds or we hit
-     *  [CANON_RECONNECT_TIMEOUT_MS]. Keeps the existing transport / UI state
-     *  intact so the user doesn't get bounced back to the scan screen for a
-     *  transient blip. Returns true on recovery, false on giving up. */
-    private suspend fun attemptCanonCcapiReconnect(
-        transport: com.ehrocha.pulsar.transport.ccapi.CcapiTransport,
-    ): Boolean {
-        _canonCcapiReconnecting.value = true
-        val deadline = System.currentTimeMillis() + CANON_RECONNECT_TIMEOUT_MS
-        try {
-            while (System.currentTimeMillis() < deadline &&
-                   _canonCcapiTransport.value === transport) {
-                coroutineContext.ensureActive()
-                val r = transport.reconnect()
-                if (r is com.ehrocha.pulsar.transport.ccapi.CcapiClient.Result.Ok) {
-                    Log.i(TAG, "Canon reconnect succeeded")
-                    return true
-                }
-                delay(CANON_RECONNECT_BACKOFF_MS)
-            }
-            return false
-        } finally {
-            _canonCcapiReconnecting.value = false
-        }
-    }
+    // attemptCanonCcapiReconnect lives in transport/ccapi/CcapiPulsarViewModelExt.kt
+    // as an extension on PulsarViewModel — see imports.
 
     /** Maps the long-poll payload onto our [StatusFrame]: battery level
      *  string → percent, addedcontents → cumulative shot count. */
@@ -1488,7 +1392,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun disconnectCanonCcapi() {
+    internal fun disconnectCanonCcapi() {
         val transport = _canonCcapiTransport.value ?: return
         canonCcapiConnectJob?.cancel()
         canonCcapiConnectJob = null
@@ -1774,7 +1678,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun disconnectPtp(clearAutoReconnect: Boolean = true) {
+    internal fun disconnectPtp(clearAutoReconnect: Boolean = true) {
         val transport = _ptpTransport.value ?: return
         ptpConnectJob?.cancel()
         ptpConnectJob = null

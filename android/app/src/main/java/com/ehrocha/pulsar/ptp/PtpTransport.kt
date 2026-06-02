@@ -42,8 +42,13 @@ class PtpTransport private constructor(
     initialConnection: UsbDeviceConnection,
     initialIface: UsbInterface,
     initialClient: PtpClient,
-    val deviceInfo: PtpClient.DeviceInfo,
+    initialDeviceInfo: PtpClient.DeviceInfo,
 ) : CameraTransport {
+
+    /** Most-recent `GetDeviceInfo` payload. Re-fetched once after the Canon
+     *  PC-remote handshake so post-PC-remote ops/props appear here too. */
+    var deviceInfo: PtpClient.DeviceInfo = initialDeviceInfo
+        private set
 
     // Mutable so [reopen] can swap the underlying USB handle after a
     // cable-unplug → replug. The outer [PtpTransport] reference stays the
@@ -116,7 +121,7 @@ class PtpTransport private constructor(
                 initialConnection = connection,
                 initialIface = iface,
                 initialClient = client,
-                deviceInfo = info,
+                initialDeviceInfo = info,
             )
         }
 
@@ -233,6 +238,11 @@ class PtpTransport private constructor(
                         "SetRemoteMode=${rm?.code?.let { "0x%04X".format(it) }} " +
                         "EventMode=${em?.code?.let { "0x%04X".format(it) }} " +
                         "active=$pcRemoteActive")
+                    // Canon vendor ops appear in GetDeviceInfo only after
+                    // PC-remote is active — re-fetch so the cached
+                    // [deviceInfo] reflects the real surface, and upgrade
+                    // capability flows for ops that just became visible.
+                    if (pcRemoteActive) refreshDeviceInfoAfterPcRemote()
                 }
                 true
             } catch (e: PtpProtocolException) {
@@ -259,6 +269,33 @@ class PtpTransport private constructor(
             runCatching { connection.close() }
                 .onFailure { Log.d(TAG, "release: connection.close failed: ${it.message}") }
             Log.i(TAG, "Released")
+        }
+    }
+
+    /** Re-runs `GetDeviceInfo` and stores the result in [deviceInfo].
+     *  Called once after PC-remote activates Canon vendor ops. Upgrades
+     *  the runtime-mutable capability flows when an op/prop newly appears
+     *  in the post-PC-remote payload; runtime downgrade still handles the
+     *  false-positive case. */
+    private suspend fun refreshDeviceInfoAfterPcRemote() {
+        val fresh = runCatching { client.getDeviceInfo() }.getOrNull() ?: return
+        val deltaOps = fresh.supportedOperations.size - deviceInfo.supportedOperations.size
+        val deltaProps = fresh.supportedDeviceProperties.size - deviceInfo.supportedDeviceProperties.size
+        deviceInfo = fresh
+        Log.i(TAG, "DeviceInfo refresh after PC-remote: " +
+            "ops=${fresh.supportedOperations.size} " +
+            "(Δ${if (deltaOps >= 0) "+" else ""}$deltaOps), " +
+            "props=${fresh.supportedDeviceProperties.size} " +
+            "(Δ${if (deltaProps >= 0) "+" else ""}$deltaProps)")
+        if (!_liveViewSupported.value &&
+            PtpClient.OP_CANON_GET_VIEWFINDER_DATA in fresh.supportedOperations) {
+            _liveViewSupported.value = true
+            Log.i(TAG, "supportsLiveView upgraded to true (op appeared after PC-remote)")
+        }
+        if (!_batterySupported.value &&
+            PtpClient.PROP_BATTERY_LEVEL in fresh.supportedDeviceProperties) {
+            _batterySupported.value = true
+            Log.i(TAG, "supportsBatteryReadout upgraded to true (prop appeared after PC-remote)")
         }
     }
 
@@ -312,6 +349,7 @@ class PtpTransport private constructor(
                     val rm = runCatching { client.canonSetRemoteMode(1) }.getOrNull()
                     val em = runCatching { client.canonSetEventMode(1) }.getOrNull()
                     pcRemoteActive = rm?.ok == true && em?.ok == true
+                    if (pcRemoteActive) refreshDeviceInfoAfterPcRemote()
                 }
                 Log.i(TAG, "reopen: USB wire restored (pcRemote=$pcRemoteActive)")
                 true

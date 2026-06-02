@@ -46,7 +46,13 @@ class PtpIpTransport private constructor(
     // it keep working after reconnect.
     private var wire: PtpIpWire = initialWire
     private var client: PtpClient = initialClient
-    val deviceInfo: PtpClient.DeviceInfo = initialDeviceInfo
+
+    /** The most-recent `GetDeviceInfo` payload. Re-fetched once after the
+     *  Canon PC-remote handshake activates the vendor ops (RemoteReleaseOn /
+     *  Off etc.) so a Compatibility Report run AFTER PC-remote reflects
+     *  reality. External readers see the latest snapshot. */
+    var deviceInfo: PtpClient.DeviceInfo = initialDeviceInfo
+        private set
 
     companion object {
         private const val TAG = "PtpIpTransport"
@@ -225,12 +231,49 @@ class PtpIpTransport private constructor(
                         "SetRemoteMode=${rm?.code?.let { "0x%04X".format(it) }} " +
                         "EventMode=${em?.code?.let { "0x%04X".format(it) }} " +
                         "active=$pcRemoteActive")
+                    // Canon vendor ops only appear in GetDeviceInfo after
+                    // PC-remote is active. Re-fetch so deviceInfo reflects
+                    // the post-PC-remote op + prop list — Compatibility
+                    // Report and any later capability re-derivation see
+                    // the real surface.
+                    if (pcRemoteActive) refreshDeviceInfoAfterPcRemote()
                 }
                 true
             } catch (e: PtpProtocolException) {
                 Log.w(TAG, "Connect threw: ${e.message}")
                 false
             }
+        }
+    }
+
+    /** Re-runs `GetDeviceInfo` and stores the result in [deviceInfo].
+     *  Called once after PC-remote activates the Canon vendor ops.
+     *  Capability flags that started false (e.g. live view / battery
+     *  initially absent on a particular body) can flip true here when
+     *  the post-PC-remote DeviceInfo reveals new ops/props — runtime
+     *  downgrade still kicks in on a real failed call. */
+    private suspend fun refreshDeviceInfoAfterPcRemote() {
+        val fresh = runCatching { client.getDeviceInfo() }.getOrNull() ?: return
+        val newOps = fresh.supportedOperations.size
+        val newProps = fresh.supportedDeviceProperties.size
+        val deltaOps = newOps - deviceInfo.supportedOperations.size
+        val deltaProps = newProps - deviceInfo.supportedDeviceProperties.size
+        deviceInfo = fresh
+        CanonBleLog.i(TAG, "DeviceInfo refresh after PC-remote: " +
+            "ops=$newOps (Δ${if (deltaOps >= 0) "+" else ""}$deltaOps), " +
+            "props=$newProps (Δ${if (deltaProps >= 0) "+" else ""}$deltaProps)")
+        // Upgrade capability flows if a new op/prop appeared. Never
+        // downgrade here — runtime-rejection downgrade is the
+        // authoritative path for false-positive advertisements.
+        if (!_liveViewSupported.value &&
+            PtpClient.OP_CANON_GET_VIEWFINDER_DATA in fresh.supportedOperations) {
+            _liveViewSupported.value = true
+            CanonBleLog.i(TAG, "supportsLiveView upgraded to true (op appeared after PC-remote)")
+        }
+        if (!_batterySupported.value &&
+            PtpClient.PROP_BATTERY_LEVEL in fresh.supportedDeviceProperties) {
+            _batterySupported.value = true
+            CanonBleLog.i(TAG, "supportsBatteryReadout upgraded to true (prop appeared after PC-remote)")
         }
     }
 
@@ -287,6 +330,7 @@ class PtpIpTransport private constructor(
                     val rm = runCatching { client.canonSetRemoteMode(1) }.getOrNull()
                     val em = runCatching { client.canonSetEventMode(1) }.getOrNull()
                     pcRemoteActive = rm?.ok == true && em?.ok == true
+                    if (pcRemoteActive) refreshDeviceInfoAfterPcRemote()
                 }
                 CanonBleLog.i(TAG, "reopen: wire restored (pcRemote=$pcRemoteActive)")
                 true
