@@ -161,6 +161,17 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                 ) {
                     Text(stringResource(R.string.test_camera_start))
                 }
+                val probeRunning by vm.settingsProbeRunning.collectAsState()
+                OutlinedButton(
+                    onClick = { vm.runCameraSettingsProbe() },
+                    enabled = !probeRunning,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(
+                        if (probeRunning) R.string.test_camera_settings_probe_running
+                        else R.string.test_camera_settings_probe
+                    ))
+                }
                 OutlinedButton(
                     onClick = { showLogs = true },
                     modifier = Modifier.fillMaxWidth(),

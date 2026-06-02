@@ -2159,6 +2159,54 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         return cc ?: pu ?: cb ?: pi
     }
 
+    private val _settingsProbeRunning = MutableStateFlow(false)
+    val settingsProbeRunning: StateFlow<Boolean> = _settingsProbeRunning
+
+    /** Diagnostic probe for the camera-settings wire — enumerate values,
+     *  read current, round-trip write-back (no-op effect, real wire test).
+     *  Drives the Tools-tab "Test Camera Settings" button. Output goes to
+     *  [CanonBleLog] so it ships out via Collect Diagnostics. */
+    fun runCameraSettingsProbe() {
+        if (_settingsProbeRunning.value) return
+        val transport = activeCameraTransport()
+        val log = com.ehrocha.pulsar.canonble.CanonBleLog
+        if (transport == null) {
+            log.i("probe", "no camera transport active — connect CCAPI / PTP / PTP-IP first")
+            return
+        }
+        viewModelScope.launch {
+            _settingsProbeRunning.value = true
+            try {
+                log.i("probe", "=== camera-settings probe: ${transport.kind.name} ===")
+                log.i("probe", "supports iso=${transport.supportsIso} av=${transport.supportsAperture} tv=${transport.supportsShutterSpeed}")
+                if (transport.supportsIso) {
+                    val v = transport.listIsoValues()
+                    log.i("probe", "iso values (${v.size}): ${v.take(8).joinToString()}${if (v.size > 8) " …" else ""}")
+                }
+                if (transport.supportsAperture) {
+                    val v = transport.listApertureValues()
+                    log.i("probe", "av values (${v.size}): ${v.take(8).joinToString()}${if (v.size > 8) " …" else ""}")
+                }
+                if (transport.supportsShutterSpeed) {
+                    val v = transport.listShutterSpeedValues()
+                    log.i("probe", "tv values (${v.size}): ${v.take(8).joinToString()}${if (v.size > 8) " …" else ""}")
+                }
+                val cur = transport.readCurrentSettings()
+                log.i("probe", "current iso=${cur.iso ?: "-"} av=${cur.aperture ?: "-"} tv=${cur.shutterSpeed ?: "-"}")
+                if (cur.hasAny) {
+                    val r = transport.applySettings(cur)
+                    log.i("probe", "round-trip applied=${r.applied.iso ?: "-"}/${r.applied.aperture ?: "-"}/${r.applied.shutterSpeed ?: "-"} " +
+                        "skipped=${r.skipped.iso ?: "-"}/${r.skipped.aperture ?: "-"}/${r.skipped.shutterSpeed ?: "-"}")
+                }
+                log.i("probe", "=== done ===")
+            } catch (t: Throwable) {
+                log.e("probe", "failed: ${t.message}")
+            } finally {
+                _settingsProbeRunning.value = false
+            }
+        }
+    }
+
     fun stopFlow() {
         // Hand the BLE stop off immediately (don't wait on cancellation) so
         // the firmware halts ASAP; then await the flow's own finally to settle

@@ -154,6 +154,8 @@
     <string name="test_camera_step_ramp">5. ランプ — 5 ステップ × 4 秒 (一定)、間隔 2 秒</string>
     <string name="test_camera_prereqs">カメラはマニュアル、シャッターはバルブ (ステップ 2–5 用)。約 25 ショットの空きカードが必要です。</string>
     <string name="test_camera_start">テスト実行</string>
+    <string name="test_camera_settings_probe">カメラ設定をプローブ (ISO/絞り/シャッター)</string>
+    <string name="test_camera_settings_probe_running">プローブ中… (ログ参照)</string>
     <string name="tools_collect_diagnostics">診断を収集</string>
     <string name="tools_collect_diagnostics_hint">最近の Canon BLE 接続ログを共有できるファイルに書き出します — ペアリング失敗後に使用してください。</string>
     <string name="tools_view_logs">ログを表示</string>

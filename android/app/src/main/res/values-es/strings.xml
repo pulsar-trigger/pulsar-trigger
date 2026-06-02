@@ -154,6 +154,8 @@
     <string name="test_camera_step_ramp">5. Ramp — 5 pasos × 4 s (constante), intervalo de 2 s</string>
     <string name="test_camera_prereqs">Cámara en Manual, obturador en Bulb (para los pasos 2–5). Tarjeta con espacio para ~25 fotos.</string>
     <string name="test_camera_start">Ejecutar prueba</string>
+    <string name="test_camera_settings_probe">Sondar ajustes de cámara (ISO/apertura/obturador)</string>
+    <string name="test_camera_settings_probe_running">Sondando… (ver logs)</string>
     <string name="tools_collect_diagnostics">Recopilar diagnóstico</string>
     <string name="tools_collect_diagnostics_hint">Exporta el registro reciente de conexión Canon BLE a un archivo que puedes compartir — úsalo tras un fallo de emparejamiento.</string>
     <string name="tools_view_logs">Ver registros</string>
