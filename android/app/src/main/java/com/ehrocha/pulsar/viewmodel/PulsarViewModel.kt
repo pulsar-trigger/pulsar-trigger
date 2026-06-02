@@ -985,35 +985,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     init {
-        // Wear OS run-state writer. Streams (connected / running / status
-        // / step) → DataClient on /pulsar/run_state every time something
-        // changes. The watch's WearStateListenerService re-renders.
-        // No-op if Play Services aren't available or no watch is paired.
-        runCatching {
-            com.ehrocha.pulsar.wearable.WearableSync(
-                getApplication<Application>(), this, viewModelScope,
-            ).start()
-        }.onFailure { Log.w(TAG, "WearableSync start: ${it.message}") }
-    }
-
-    init {
-        // Wear OS Stop commands. The phone receives a MessageClient event
-        // on /pulsar/cmd/stop from the paired watch and emits a
-        // WearCommand.Stop on a SharedFlow — this collector lifts that
-        // into the same stopFlow() the in-app button calls. No-op when
-        // there's no flow running.
-        viewModelScope.launch {
-            com.ehrocha.pulsar.wearable.WearableCommandListener.commands.collect { cmd ->
-                when (cmd) {
-                    is com.ehrocha.pulsar.wearable.WearCommand.Stop -> {
-                        if (_flowRunning.value) stopFlow()
-                    }
-                }
-            }
-        }
-    }
-
-    init {
         // Forward BLE controller state into the viewmodel's writable flows.
         // [_status] is multiplexed — BLE updates land here, and the simulator
         // also writes to it directly while it's running.

@@ -16,4 +16,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "Pulsar"
 include(":app")
-include(":wear")

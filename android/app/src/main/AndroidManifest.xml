@@ -94,16 +94,6 @@
                 android:resource="@xml/file_provider_paths" />
         </provider>
 
-        <!-- Wear OS companion: receives Stop / future commands from the watch. -->
-        <service
-            android:name=".wearable.WearableCommandListener"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
-                <data android:scheme="wear" android:host="*" android:pathPrefix="/pulsar/cmd/" />
-            </intent-filter>
-        </service>
-
         <!-- Home-screen widget: read-only mirror of the Dashboard tab. -->
         <receiver
             android:name=".widget.DashboardWidgetReceiver"
