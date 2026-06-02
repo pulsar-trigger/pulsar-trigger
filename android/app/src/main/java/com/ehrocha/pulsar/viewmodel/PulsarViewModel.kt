@@ -2090,6 +2090,31 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         startFlow()
     }
 
+    /** Reads the cached dashboard snapshot (the same one that drives the
+     *  home-screen widget) and projects the fields the ShotLog cares about
+     *  — moon phase, cloud cover, dew, Bortle, etc. — into a small
+     *  [ConditionSnapshot]. Returns null when no snapshot is cached or it
+     *  fails to deserialize. */
+    private fun captureCurrentConditions(): com.ehrocha.pulsar.model.ConditionSnapshot? {
+        val ctx = getApplication<Application>()
+        val cached = com.ehrocha.pulsar.widget.DashboardSnapshotStore.load(ctx) ?: return null
+        val mgr = com.ehrocha.pulsar.astro.AstroDashboardManager(ctx)
+        if (!mgr.restoreState(cached.json)) return null
+        val s = mgr.state.value
+        return com.ehrocha.pulsar.model.ConditionSnapshot(
+            cityName = s.location?.cityName,
+            moonPhase = s.moon?.phaseName,
+            moonIlluminationPct = s.moon?.illuminationPct,
+            moonGoodForAstro = s.moon?.goodForAstro,
+            cloudCoverPct = s.weather?.cloudCoverPct,
+            temperatureC = s.weather?.temperatureC,
+            dewPointC = s.dewPoint?.dewPointC,
+            dewRisk = s.dewPoint?.risk?.name,
+            bortleClass = s.bortle?.bortleClass,
+            mwVisible = s.milkyWay?.visible,
+        )
+    }
+
     fun startFlow() {
         val steps = _flowSteps.value
         if (steps.isEmpty()) return
@@ -2105,6 +2130,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             val startedAt = System.currentTimeMillis()
             val plannedShots = steps.sumOf { plannedShotsFor(it) }
             val (modeLabel, expMs, intvMs) = summarizeSteps(steps)
+            // Snapshot the current dashboard conditions so the ShotLogEntry
+            // records what the sky / weather looked like at run start.
+            // Null on first install or when the user hasn't opened the
+            // Dashboard tab yet (no cached snapshot to read).
+            val conditions = captureCurrentConditions()
             var threw = false
             flowJob = launch {
                 try {
@@ -2146,6 +2176,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                             exposureMs = expMs,
                             intervalMs = intvMs,
                             status = status,
+                            conditions = conditions,
                         )
                     )
                     // Tell the user the run ended — they're often away from

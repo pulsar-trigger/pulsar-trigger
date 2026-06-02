@@ -200,8 +200,40 @@ private fun ShotLogRow(entry: ShotLogEntry) {
                     }
                 }
             }
+            entry.conditions?.let { ConditionsRow(it) }
         }
     }
+}
+
+/** Compact one-line summary of the conditions at run start, mirroring
+ *  the in-app Dashboard verdict chips (small icons + values). Renders
+ *  nothing when the snapshot is null (older entries / no snapshot
+ *  available at run time). */
+@Composable
+private fun ConditionsRow(c: com.ehrocha.pulsar.model.ConditionSnapshot) {
+    val parts = buildList {
+        c.moonIlluminationPct?.let { illum ->
+            val emoji = if (c.moonGoodForAstro == true) "🌑" else "🌖"
+            add("$emoji ${illum.toInt()}%")
+        }
+        c.cloudCoverPct?.let { add("☁ ${it}%") }
+        c.dewPointC?.let { dew ->
+            val risk = c.dewRisk
+            val mark = when (risk) {
+                "CRITICAL" -> "💧!"
+                "WARNING" -> "💧"
+                else -> "·"
+            }
+            add("$mark dew ${dew.toInt()}°C")
+        }
+        c.bortleClass?.let { add("💡 B${it.toInt()}") }
+    }
+    if (parts.isEmpty()) return
+    Text(
+        parts.joinToString("  "),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 @Composable
