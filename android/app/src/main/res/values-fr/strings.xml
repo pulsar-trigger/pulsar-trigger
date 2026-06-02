@@ -144,7 +144,7 @@
     <string name="mode_test_camera">Test caméra</string>
     <string name="mode_compat_report">Rapport de compatibilité</string>
     <string name="test_camera_title">Test caméra</string>
-    <string name="test_camera_blurb">Déclenche 25 prises sur les 5 modes pour vérifier le transport actif (BLE Pulsar, CCAPI, USB PTP ou BLE Canon) de bout en bout.</string>
+    <string name="test_camera_blurb">Sur les transports Canon : lance le rapport de compatibilité + sondage des réglages (lecture seule), puis déclenche 25 prises sur les 5 modes. Vérification de bout en bout du transport actif. Les résultats — capacités, optique, batterie, inventaire ISO/ouverture/vitesse, timings — vont dans Diagnostics.</string>
     <string name="test_camera_blurb_timelapse_only">Déclenche 5 prises en mode Timelapse. L\'appareil connecté n\'annonce pas le bulb sur ce transport ; les modes bulb (Intervallomètre-bulb, Astro, Dark Frame, Rampe) sont ignorés.</string>
     <string name="test_camera_sequence_title">Séquence</string>
     <string name="test_camera_step_timelapse">1. Timelapse — 5 prises, intervalle 2 s</string>

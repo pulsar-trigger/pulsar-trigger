@@ -1937,25 +1937,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
-    private val _compatReportRunning = MutableStateFlow(false)
-    val compatReportRunning: StateFlow<Boolean> = _compatReportRunning
-
-    /** Run the wire-level [com.ehrocha.pulsar.transport.runCompatibilityReport]
-     *  against the active Canon transport. Read-only — no shutter / property
-     *  writes. Output goes to [CanonBleLog] and ships out via Tools →
-     *  Collect Diagnostics. Use case: multi-body community testing. */
-    fun runCompatibilityReport() {
-        val transport = activeCameraTransport() ?: return
-        if (_compatReportRunning.value) return
-        viewModelScope.launch {
-            _compatReportRunning.value = true
-            try {
-                com.ehrocha.pulsar.transport.runCompatibilityReport(transport)
-            } finally {
-                _compatReportRunning.value = false
-            }
-        }
-    }
 
     fun runCameraTest() {
         val canBulb = activeTransportSupportsBulb.value
@@ -1991,7 +1972,22 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         saveFlowSteps(test)
-        startFlow()
+        // Preflight on Canon transports: run the compatibility report +
+        // settings probe before firing shots, so the diagnostics share
+        // carries body caps + settings inventory alongside shot results.
+        // Both are read-only (plus a no-op write-back) and sequential —
+        // must complete before shots fire so liveView/settings I/O doesn't
+        // interleave with the shot wire.
+        val transport = activeCameraTransport()
+        if (transport != null) {
+            viewModelScope.launch {
+                com.ehrocha.pulsar.transport.runCompatibilityReport(transport)
+                probeCameraSettings(transport)
+                startFlow()
+            }
+        } else {
+            startFlow()
+        }
     }
 
     /** Reads the cached dashboard snapshot (the same one that drives the
@@ -2159,51 +2155,33 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         return cc ?: pu ?: cb ?: pi
     }
 
-    private val _settingsProbeRunning = MutableStateFlow(false)
-    val settingsProbeRunning: StateFlow<Boolean> = _settingsProbeRunning
-
-    /** Diagnostic probe for the camera-settings wire — enumerate values,
-     *  read current, round-trip write-back (no-op effect, real wire test).
-     *  Drives the Tools-tab "Test Camera Settings" button. Output goes to
-     *  [CanonBleLog] so it ships out via Collect Diagnostics. */
-    fun runCameraSettingsProbe() {
-        if (_settingsProbeRunning.value) return
-        val transport = activeCameraTransport()
+    private suspend fun probeCameraSettings(transport: com.ehrocha.pulsar.transport.CameraTransport) {
         val log = com.ehrocha.pulsar.canonble.CanonBleLog
-        if (transport == null) {
-            log.i("probe", "no camera transport active — connect CCAPI / PTP / PTP-IP first")
-            return
-        }
-        viewModelScope.launch {
-            _settingsProbeRunning.value = true
-            try {
-                log.i("probe", "=== camera-settings probe: ${transport.kind.name} ===")
-                log.i("probe", "supports iso=${transport.supportsIso} av=${transport.supportsAperture} tv=${transport.supportsShutterSpeed}")
-                if (transport.supportsIso) {
-                    val v = transport.listIsoValues()
-                    log.i("probe", "iso values (${v.size}): ${v.take(8).joinToString()}${if (v.size > 8) " …" else ""}")
-                }
-                if (transport.supportsAperture) {
-                    val v = transport.listApertureValues()
-                    log.i("probe", "av values (${v.size}): ${v.take(8).joinToString()}${if (v.size > 8) " …" else ""}")
-                }
-                if (transport.supportsShutterSpeed) {
-                    val v = transport.listShutterSpeedValues()
-                    log.i("probe", "tv values (${v.size}): ${v.take(8).joinToString()}${if (v.size > 8) " …" else ""}")
-                }
-                val cur = transport.readCurrentSettings()
-                log.i("probe", "current iso=${cur.iso ?: "-"} av=${cur.aperture ?: "-"} tv=${cur.shutterSpeed ?: "-"}")
-                if (cur.hasAny) {
-                    val r = transport.applySettings(cur)
-                    log.i("probe", "round-trip applied=${r.applied.iso ?: "-"}/${r.applied.aperture ?: "-"}/${r.applied.shutterSpeed ?: "-"} " +
-                        "skipped=${r.skipped.iso ?: "-"}/${r.skipped.aperture ?: "-"}/${r.skipped.shutterSpeed ?: "-"}")
-                }
-                log.i("probe", "=== done ===")
-            } catch (t: Throwable) {
-                log.e("probe", "failed: ${t.message}")
-            } finally {
-                _settingsProbeRunning.value = false
+        try {
+            log.i("probe", "=== camera-settings probe: ${transport.kind.name} ===")
+            log.i("probe", "supports iso=${transport.supportsIso} av=${transport.supportsAperture} tv=${transport.supportsShutterSpeed}")
+            if (transport.supportsIso) {
+                val v = transport.listIsoValues()
+                log.i("probe", "iso values (${v.size}): ${v.take(8).joinToString()}${if (v.size > 8) " …" else ""}")
             }
+            if (transport.supportsAperture) {
+                val v = transport.listApertureValues()
+                log.i("probe", "av values (${v.size}): ${v.take(8).joinToString()}${if (v.size > 8) " …" else ""}")
+            }
+            if (transport.supportsShutterSpeed) {
+                val v = transport.listShutterSpeedValues()
+                log.i("probe", "tv values (${v.size}): ${v.take(8).joinToString()}${if (v.size > 8) " …" else ""}")
+            }
+            val cur = transport.readCurrentSettings()
+            log.i("probe", "current iso=${cur.iso ?: "-"} av=${cur.aperture ?: "-"} tv=${cur.shutterSpeed ?: "-"}")
+            if (cur.hasAny) {
+                val r = transport.applySettings(cur)
+                log.i("probe", "round-trip applied=${r.applied.iso ?: "-"}/${r.applied.aperture ?: "-"}/${r.applied.shutterSpeed ?: "-"} " +
+                    "skipped=${r.skipped.iso ?: "-"}/${r.skipped.aperture ?: "-"}/${r.skipped.shutterSpeed ?: "-"}")
+            }
+            log.i("probe", "=== done ===")
+        } catch (t: Throwable) {
+            log.e("probe", "failed: ${t.message}")
         }
     }
 

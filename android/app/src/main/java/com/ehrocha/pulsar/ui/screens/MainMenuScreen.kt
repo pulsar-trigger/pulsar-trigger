@@ -24,7 +24,6 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material.icons.filled.FactCheck
 import androidx.compose.material.icons.filled.LensBlur
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Settings
@@ -71,7 +70,6 @@ fun MainMenuScreen(
     onWhatsUpSelected: () -> Unit = {},
     onStarFocusSelected: () -> Unit = {},
     onTestCameraSelected: () -> Unit = {},
-    onCompatReportSelected: () -> Unit = {},
     onDiagnosticsSelected: () -> Unit = {},
     onUserModeRun: (com.ehrocha.pulsar.model.UserMode) -> Unit = {},
     onIntervalometer2Selected: () -> Unit = {},
@@ -309,15 +307,6 @@ fun MainMenuScreen(
                     // Camera Test exists to verify the *real* wire — pulsing
                     // the simulator would just prove the simulator works.
                     val cameraTestEnabled = !simulatorActive
-                    // Compatibility report only makes sense on a Canon
-                    // transport (CCAPI / USB PTP / Canon BLE / PTP/IP) —
-                    // ESP32-BLE and simulator have nothing body-specific
-                    // to inventory.
-                    val onCanonTransport = canonOn ||
-                        vm.ptpTransport.collectAsState().value != null ||
-                        vm.canonBleTransport.collectAsState().value != null ||
-                        vm.ptpIpTransport.collectAsState().value != null
-                    val compatRunning by vm.compatReportRunning.collectAsState()
                     val toolItems = listOf(
                         launcherItem(R.string.mode_planner, Icons.Default.DateRange) {
                             onPlannerSelected()
@@ -340,11 +329,6 @@ fun MainMenuScreen(
                             Icons.Default.Science,
                             enabled = cameraTestEnabled,
                         ) { onTestCameraSelected() },
-                        launcherItem(
-                            R.string.mode_compat_report,
-                            Icons.Default.FactCheck,
-                            enabled = onCanonTransport && !compatRunning,
-                        ) { onCompatReportSelected() },
                         launcherItem(R.string.mode_diagnostics, Icons.Default.Description) {
                             onDiagnosticsSelected()
                         },

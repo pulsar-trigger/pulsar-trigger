@@ -144,7 +144,7 @@
     <string name="mode_test_camera">相机测试</string>
     <string name="mode_compat_report">兼容性报告</string>
     <string name="test_camera_title">相机测试</string>
-    <string name="test_camera_blurb">在所有 5 个模式下共拍 25 张照片，端到端验证当前传输 (Pulsar BLE、CCAPI、USB PTP 或佳能 BLE)。</string>
+    <string name="test_camera_blurb">在 Canon 传输方式上：先运行兼容性报告 + 相机设置探测（只读），再在所有 5 个模式下共拍 25 张照片。端到端验证当前传输。结果（能力、镜头、电池、ISO/光圈/快门清单、时序）都会写入诊断日志。</string>
     <string name="test_camera_blurb_timelapse_only">在 Timelapse 模式下拍 5 张照片。已连接的相机在此传输上不公布 B 门支持，因此基于 B 门的模式（间隔计-B 门、天文、暗场、渐变）将被跳过。</string>
     <string name="test_camera_sequence_title">序列</string>
     <string name="test_camera_step_timelapse">1. 延时 — 5 张，间隔 2 秒</string>

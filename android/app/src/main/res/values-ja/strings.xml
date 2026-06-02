@@ -144,7 +144,7 @@
     <string name="mode_test_camera">カメラテスト</string>
     <string name="mode_compat_report">互換性レポート</string>
     <string name="test_camera_title">カメラテスト</string>
-    <string name="test_camera_blurb">5 つのモードすべてで合計 25 ショットを撮影し、アクティブなトランスポート (Pulsar BLE、CCAPI、USB PTP、または Canon BLE) を端から端まで検証します。</string>
+    <string name="test_camera_blurb">Canon トランスポートでは: 互換性レポートと設定プローブ (読み取り専用) を実行してから、5 つのモードで合計 25 ショットを撮影します。アクティブなトランスポートをエンドツーエンドで検証。機能・レンズ・電池・ISO/絞り/シャッターの一覧・タイミングはすべて Diagnostics に記録されます。</string>
     <string name="test_camera_blurb_timelapse_only">タイムラプスで 5 ショットを撮影します。接続中のカメラがこのトランスポートでバルブをサポートしないため、バルブベースのモード (インターバロメーター-バルブ、天体、ダークフレーム、ランプ) はスキップされます。</string>
     <string name="test_camera_sequence_title">シーケンス</string>
     <string name="test_camera_step_timelapse">1. タイムラプス — 5 ショット、間隔 2 秒</string>
