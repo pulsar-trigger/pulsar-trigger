@@ -473,6 +473,16 @@
     <string name="gatt_explorer_continue_stub">Continue (stub)</string>
     <string name="gatt_explorer_share_now">Share findings</string>
     <string name="gatt_explorer_back_to_tree">Back to tree</string>
+    <string name="gatt_explorer_no_bonded">No bonded BLE devices found. Pair your camera in Android Settings → Bluetooth first, then come back.</string>
+    <string name="gatt_explorer_discovering">Connecting and discovering services…</string>
+    <string name="gatt_explorer_service_unknown">Unknown service</string>
+    <string name="gatt_explorer_char_unknown">Unknown characteristic</string>
+    <string name="gatt_explorer_action_read">Read value</string>
+    <string name="gatt_explorer_action_subscribe">Subscribe (notify/indicate)</string>
+    <string name="gatt_explorer_action_write">Write bytes</string>
+    <string name="gatt_explorer_last_notify">Last notification: %1$s</string>
+    <string name="gatt_explorer_write_hex_label">Bytes (hex)</string>
+    <string name="gatt_explorer_write_response_label">Use WRITE (with response)</string>
     <string name="widget_appearance_title">Widget appearance</string>
     <string name="widget_configure_title">Widget settings</string>
     <string name="widget_bg_opacity_label">Background opacity: %1$d%%</string>
