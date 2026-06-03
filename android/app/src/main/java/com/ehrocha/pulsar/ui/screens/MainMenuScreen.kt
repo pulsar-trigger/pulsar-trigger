@@ -355,10 +355,6 @@ private fun MenuPageContent(
                     val ptpIpLive = ptpIpTx?.liveViewSupportedFlow
                         ?.collectAsState(initial = false)?.value == true
                     val starFocusEnabled = canonOn || ptpLive || ptpIpLive
-                    val simulatorActive by vm.simulatorActive.collectAsState()
-                    // Camera Test exists to verify the *real* wire — pulsing
-                    // the simulator would just prove the simulator works.
-                    val cameraTestEnabled = !simulatorActive
                     val toolItems = listOf(
                         launcherItem(R.string.mode_planner, Icons.Default.DateRange) {
                             onPlannerSelected()
@@ -376,14 +372,6 @@ private fun MenuPageContent(
                             Icons.Default.Star,
                             enabled = starFocusEnabled,
                         ) { onStarFocusSelected() },
-                        launcherItem(
-                            R.string.mode_test_camera,
-                            Icons.Default.Science,
-                            enabled = cameraTestEnabled,
-                        ) { onTestCameraSelected() },
-                        launcherItem(R.string.mode_diagnostics, Icons.Default.Description) {
-                            onDiagnosticsSelected()
-                        },
                     )
                     Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                         LauncherGrid(toolItems)

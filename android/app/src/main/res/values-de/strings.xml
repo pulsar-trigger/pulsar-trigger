@@ -287,6 +287,9 @@
     <string name="prefix_pulsar">Pulsar-</string>
     <string name="char_count">%1$d/%2$d Zeichen</string>
     <string name="section_updates">Aktualisierungen</string>
+    <string name="section_diagnostics">Diagnose</string>
+    <string name="section_diagnostics_test_camera_sub">Kompatibilitätsbericht + Einstellungs-Sondierung + 5-Aufnahmen-Sweep</string>
+    <string name="section_diagnostics_logs_sub">Aktuelle Transport- und Lauf-Logs ansehen / teilen</string>
     <string name="label_firmware">Firmware</string>
     <string name="label_current_version">Aktuell: v%1$s</string>
     <string name="btn_check_firmware">Nach Firmware-Update suchen</string>

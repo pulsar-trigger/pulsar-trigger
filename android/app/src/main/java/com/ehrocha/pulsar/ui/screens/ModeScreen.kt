@@ -215,6 +215,8 @@ fun SettingsScreen(
     vm: PulsarViewModel,
     initialSection: SettingsSection? = null,
     onBack: () -> Unit,
+    onTestCameraSelected: () -> Unit = {},
+    onDiagnosticsSelected: () -> Unit = {},
 ) {
     val deviceName by vm.deviceName.collectAsState()
     val otaState by vm.firmwareManager.state.collectAsState()
@@ -341,6 +343,10 @@ fun SettingsScreen(
                     SettingsSection.BACKGROUND -> BackgroundSectionContent(vm)
                     SettingsSection.BACKUP_RESTORE -> BackupRestoreSectionContent(vm)
                     SettingsSection.UPDATES -> UpdatesSectionContent(vm, showFirmware = onEsp)
+                    SettingsSection.DIAGNOSTICS -> DiagnosticsSectionContent(
+                        onTestCameraClick = onTestCameraSelected,
+                        onDiagnosticsClick = onDiagnosticsSelected,
+                    )
                     SettingsSection.ABOUT -> {
                         AboutSectionContent()
                         if (onEsp) {

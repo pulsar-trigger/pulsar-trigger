@@ -31,8 +31,10 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.History
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
@@ -988,6 +990,7 @@ enum class SettingsSection(val icon: ImageVector, @StringRes val titleRes: Int) 
     BACKGROUND(Icons.Default.BatteryFull, R.string.section_background),
     BACKUP_RESTORE(Icons.Default.SaveAlt, R.string.section_backup_restore),
     UPDATES(Icons.Default.SystemUpdate, R.string.section_updates),
+    DIAGNOSTICS(Icons.Default.Science, R.string.section_diagnostics),
     ABOUT(Icons.Outlined.Info, R.string.section_about),
 }
 
@@ -1393,6 +1396,73 @@ internal fun BackupRestoreSectionContent(vm: PulsarViewModel) {
 @Composable
 internal fun UpdatesSectionContent(vm: PulsarViewModel, showFirmware: Boolean = true) {
     UpdatesSection(vm = vm, showFirmware = showFirmware)
+}
+
+/**
+ * Drill-in entries for diagnostics screens that were previously surfaced as
+ * Tools-tab tiles. The actual screens (TestCamera, Diagnostics log) live
+ * elsewhere and are reached via the passed-in nav callbacks.
+ */
+@Composable
+internal fun DiagnosticsSectionContent(
+    onTestCameraClick: () -> Unit,
+    onDiagnosticsClick: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        DiagnosticsRow(
+            icon = Icons.Default.Science,
+            title = stringResource(R.string.mode_test_camera),
+            subtitle = stringResource(R.string.section_diagnostics_test_camera_sub),
+            onClick = onTestCameraClick,
+        )
+        DiagnosticsRow(
+            icon = Icons.Default.Description,
+            title = stringResource(R.string.mode_diagnostics),
+            subtitle = stringResource(R.string.section_diagnostics_logs_sub),
+            onClick = onDiagnosticsClick,
+        )
+    }
+}
+
+@Composable
+private fun DiagnosticsRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp),
+            )
+            Spacer(Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }
 
 @Composable

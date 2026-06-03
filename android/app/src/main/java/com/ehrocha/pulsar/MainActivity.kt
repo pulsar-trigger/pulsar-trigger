@@ -511,6 +511,8 @@ fun PulsarNavHost(
                     vm = vm,
                     initialSection = screen.initialSection,
                     onBack = { currentScreen = AppScreen.Menu },
+                    onTestCameraSelected = { currentScreen = AppScreen.TestCamera },
+                    onDiagnosticsSelected = { currentScreen = AppScreen.Diagnostics },
                 )
             }
             is AppScreen.CustomFlow -> {

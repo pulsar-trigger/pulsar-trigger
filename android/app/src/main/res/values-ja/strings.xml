@@ -287,6 +287,9 @@
     <string name="prefix_pulsar">Pulsar-</string>
     <string name="char_count">%1$d/%2$d 文字</string>
     <string name="section_updates">アップデート</string>
+    <string name="section_diagnostics">診断</string>
+    <string name="section_diagnostics_test_camera_sub">互換性レポート + 設定プローブ + 5 ショットスイープ</string>
+    <string name="section_diagnostics_logs_sub">最近のトランスポート/実行ログを表示・共有</string>
     <string name="label_firmware">ファームウェア</string>
     <string name="label_current_version">現在: v%1$s</string>
     <string name="btn_check_firmware">ファームウェアの更新を確認</string>

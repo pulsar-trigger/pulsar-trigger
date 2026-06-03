@@ -437,6 +437,9 @@
 
     <!-- Updates section -->
     <string name="section_updates">Updates</string>
+    <string name="section_diagnostics">Diagnostics</string>
+    <string name="section_diagnostics_test_camera_sub">Compatibility report + settings probe + 5-shot sweep across all modes</string>
+    <string name="section_diagnostics_logs_sub">View / share the recent transport + run logs</string>
     <string name="label_firmware">Firmware</string>
     <string name="label_current_version">Current: v%1$s</string>
     <string name="btn_check_firmware">Check for Firmware Update</string>
