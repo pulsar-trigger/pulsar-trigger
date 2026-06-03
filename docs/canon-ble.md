@@ -49,6 +49,20 @@ Verified across six open-source references (see `External references` below). An
 
 EOS R, RP, R5, R6, Ra, 6D Mark II, 77D, 800D / Rebel T7i, 200D / SL2, 850D, M50, M200, plus the PowerShots G7 X Mark III and G5 X Mark II.
 
+**Smartphone-mode coverage (research-confirmed, 22 bodies)** — a 2026-06-03
+cross-reference against [intervalometer.app](https://intervalometer.app/)'s
+per-body setup guides confirmed that every modern Canon body they support
+pairs over smartphone-mode (`00010000` + `00030000`), not BR-E1. Full
+list + per-body menu paths in
+**[canon-body-matrix.md → Expected to work — smartphone-mode BLE](canon-body-matrix.md#expected-to-work--smartphone-mode-ble-research-not-pulsar-tested)**.
+Strong prior that Pulsar's smart-mode path works on all of them; needs
+on-body verification before the *Snapshot* table.
+
+BR-E1 remote-mode (`00050000`) is the only BLE path on older bodies
+(pre-2018 DSLRs — 5D IV, 6D II, 7D II, 80D, T7i, T8i, etc.) and for
+users who already have a BR-E1 physical remote paired. Pulsar
+auto-detects at connect time — no user-visible toggle.
+
 Bodies without a BR-E1 listing won't advertise the service UUID (`00050000-…-d8492fffa821`) and won't show up in the Canon-BLE-remotes section of the scan screen.
 
 ## Architecture

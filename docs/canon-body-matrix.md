@@ -62,6 +62,80 @@ with all four characteristics (`name`, `iden`, `mode`, `shutter`). Bulb
 + M fire reliably; AF toggle is not honored at the wire level on smart
 mode (Pulsar hides the toggle when `isSmart=true`).
 
+## Expected to work — smartphone-mode BLE (research, not Pulsar-tested)
+
+Cross-referenced 2026-06-03 from
+[intervalometer.app](https://intervalometer.app/) — a commercial competitor
+that ships dedicated per-body BLE setup guides. Every one of the 22 bodies
+they support uses Canon's **smartphone-mode** BLE protocol (service
+`00010000` + control `00030000`), which is the same path Pulsar's
+`CanonBleTransport` arms in smart mode. The body has to be in *Connect to
+smartphone* on the Canon menu — pair via Pulsar, decline the QR code with
+`[Do not display]` (Pulsar is already installed). None of the 22 use
+BR-E1 in this flow.
+
+Treat the table below as **"strong prior" rather than confirmed** — these
+bodies should work but haven't been probed by Pulsar's
+[CompatibilityReport.kt](../android/app/src/main/java/com/ehrocha/pulsar/transport/CompatibilityReport.kt).
+Run the report and PR a row up to the *Snapshot* table above when you
+verify one.
+
+### Newer R-series — dedicated `[Bluetooth settings]` menu
+
+| Body | Menu path on the camera |
+|---|---|
+| EOS R3 | `MENU` → `Bluetooth settings` → `Smartphone` → `Pairing` |
+| EOS R5 | `Wireless features: Wi-Fi settings` → `Bluetooth settings` → `Wi-Fi/Bluetooth connection` → `Connect to smartphone` → `Pair via Bluetooth` |
+| EOS R6 Mark II | `Connect to smartphone(tablet)` → `Add a device to connect to` |
+| EOS R8 | `Connect to smartphone(tablet)` → `Add a device to connect to` |
+| EOS RP | `Wireless communication settings` → `Bluetooth function` → `Smartphone` → `Pairing` (confirmed in *Snapshot* above) |
+
+### Combined `[Wi-Fi/Bluetooth connection]` menu — most other R / M / PowerShot / mid-range DSLR
+
+| Body | Menu path on the camera |
+|---|---|
+| EOS R6 | `Wi-Fi/Bluetooth connection` → `Connect to smartphone` → `Pair via Bluetooth` |
+| EOS R7 | same |
+| EOS R10 | same |
+| EOS R50 | same |
+| EOS R100 | same |
+| EOS M50 | same |
+| EOS M50 Mark II | same |
+| EOS M6 | same |
+| EOS M6 Mark II | same |
+| EOS M200 | same |
+| EOS 1D X Mark III | same |
+| EOS 90D | same |
+| EOS 200D Mark II | same |
+| EOS 250D | same |
+| EOS 850D | same |
+| PowerShot G5 X Mark II | same |
+| PowerShot G7 X Mark III | same |
+| PowerShot G9 X Mark II | same |
+
+### Conspicuous absence — original EOS R (2018)
+
+intervalometer.app's catalog lists **no first-gen EOS R** guide. That's
+external validation of the local finding: the 2018 EOS R registers over
+smartphone-mode BLE but exposes no shutter characteristic
+(`SMART_NO_SHUTTER` — see *Snapshot* row). Use USB PTP or Wi-Fi PTP/IP on
+that body; the BLE path is for pairing only.
+
+### When BR-E1 protocol still matters
+
+The 22 bodies above all use smartphone-mode. **BR-E1 remote-mode**
+(service `00050000`) remains the only BLE path on older Canon bodies that
+either predate smartphone-mode or don't expose it to third parties:
+
+- DSLRs older than the 1D X Mark III / 90D era — 5D Mark IV, 6D Mark II,
+  7D Mark II, 80D, 77D, 800D, T7i, T8i
+- Anywhere the user has a physical BR-E1 remote paired and wants Pulsar
+  to drive the same wire
+
+Pulsar auto-detects protocol at connect time (see
+[canon-ble.md](canon-ble.md) — "Two protocols (auto-detected)"); no
+user-visible toggle.
+
 ## How to extend this table
 
 Run **Tools → Compatibility Report** on each transport that connects to
