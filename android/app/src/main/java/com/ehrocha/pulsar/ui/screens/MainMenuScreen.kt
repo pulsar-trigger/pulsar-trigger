@@ -56,6 +56,7 @@ import com.ehrocha.pulsar.ui.components.SectionContainer
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainMenuScreen(
     vm: PulsarViewModel,
@@ -194,7 +195,10 @@ fun MainMenuScreen(
         updateBanner()
 
         // ── Tab row ──────────────────────────────────────────────────
-        TabRow(
+        // Material 3 PrimaryTabRow uses a rounded pill indicator (vs the
+        // older TabRow underline) — modernizes the look without changing
+        // structure.
+        PrimaryTabRow(
             selectedTabIndex = pagerState.currentPage,
             containerColor = MaterialTheme.colorScheme.surface,
         ) {
@@ -611,31 +615,33 @@ private fun LauncherTile(
         label = "tileScale",
     )
 
+    // Denser tile: drop the 0.9 aspect-ratio square so the tile sizes to
+    // content (much shorter), bump corner radius for a more "expressive"
+    // M3 feel, use surfaceContainerHigh (M3 token) instead of plain
+    // surface + tonalElevation.
     Surface(
         onClick = onClick,
         enabled = enabled,
         interactionSource = interactionSource,
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp,
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(0.9f)
             .scale(scale),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(8.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 14.dp),
         ) {
             val contentAlpha = if (enabled) 1f else 0.35f
             Icon(
                 icon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary.copy(alpha = contentAlpha),
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(26.dp),
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelMedium,
