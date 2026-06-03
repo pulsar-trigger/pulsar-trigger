@@ -163,6 +163,14 @@
     <string name="test_camera_share_body">仅本次运行的日志行 — 能力、设置清单、拍摄时序。</string>
     <string name="test_camera_share_yes">分享</string>
     <string name="test_camera_share_no">暂不</string>
+    <string name="test_camera_continue">继续</string>
+    <string name="test_camera_step_label_only">步骤</string>
+    <string name="test_camera_step_label_1_of_2">步骤 1 / 2</string>
+    <string name="test_camera_step_label_2_of_2">步骤 2 / 2</string>
+    <string name="test_camera_dial_manual_title">将相机模式拨盘设置为 Manual (M)</string>
+    <string name="test_camera_dial_manual_body">Pulsar 将使用 press/release 模式拍摄一张照片。将拨盘旋至 M，然后点击继续。(单拍和 B 门的快门代码不同 — 位置错误会导致连续拍摄或无反应。)</string>
+    <string name="test_camera_dial_bulb_title">将相机模式拨盘设置为 Bulb</string>
+    <string name="test_camera_dial_bulb_body">阶段 2：四张 press-and-hold 时序的 B 门拍摄（间隔仪-B 门、天文、暗场、渐变）。将拨盘旋至 Bulb，然后点击继续。</string>
     <string name="test_camera_start">运行测试</string>
     <string name="test_camera_settings_probe">探测相机设置 (ISO/光圈/快门)</string>
     <string name="test_camera_settings_probe_running">探测中… (查看日志)</string>

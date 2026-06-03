@@ -163,6 +163,14 @@
     <string name="test_camera_share_body">Uniquement les lignes de log de cette exécution — capacités, inventaire des réglages, timings.</string>
     <string name="test_camera_share_yes">Partager</string>
     <string name="test_camera_share_no">Pas maintenant</string>
+    <string name="test_camera_continue">Continuer</string>
+    <string name="test_camera_step_label_only">Étape</string>
+    <string name="test_camera_step_label_1_of_2">Étape 1 sur 2</string>
+    <string name="test_camera_step_label_2_of_2">Étape 2 sur 2</string>
+    <string name="test_camera_dial_manual_title">Mettez le sélecteur sur Manuel (M)</string>
+    <string name="test_camera_dial_manual_body">Pulsar va déclencher une prise unique en utilisant le motif press/release. Mettez le sélecteur sur M, puis appuyez sur Continuer. (Les codes single-shot et bulb diffèrent — une mauvaise position peut provoquer des prises continues.)</string>
+    <string name="test_camera_dial_bulb_title">Mettez le sélecteur sur Bulb</string>
+    <string name="test_camera_dial_bulb_body">Phase 2 : quatre prises bulb (Intervallomètre-bulb, Astro, Dark Frame, Rampe) en press-and-hold. Mettez le sélecteur sur Bulb, puis appuyez sur Continuer.</string>
     <string name="test_camera_start">Lancer le test</string>
     <string name="test_camera_settings_probe">Sonder les réglages (ISO/ouverture/vitesse)</string>
     <string name="test_camera_settings_probe_running">Sondage… (voir les logs)</string>

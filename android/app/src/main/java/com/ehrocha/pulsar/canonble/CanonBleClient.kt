@@ -538,16 +538,19 @@ class CanonBleClient(
             writeNoResponse(smartModeChar, byteArrayOf(SMART_MODE_SHOOT), "smart MODE_SHOOT")
     }
 
-    /** Smartphone-mode shutter — **bulb path**: positional toggle on
-     *  `[0x00,0x01]` (button down ↔ up). Verified on the EOS RP: each
-     *  `[0x00,0x01]` flips the bulb state, and `[0x00,0x02]` is inert in
-     *  Bulb (the camera tracks shutter open/closed only on `[00,01]`
-     *  events). A complete bulb op is two toggles, returning to "up".
+    /** Smartphone-mode shutter — **bulb path**: explicit press/release
+     *  events. Press = `[0x00,0x01]`, release = `[0x00,0x02]`. Same byte
+     *  pattern as M-mode `smartShutterTap` because the empirical
+     *  "toggle on [00,01]" recipe for Bulb (claimed in v0.290 docs)
+     *  caused continuous shooting on the EOS RP in v0.357 testing —
+     *  the camera treats repeated `[00,01]` as repeated *presses* in
+     *  Bulb too, never registers the release. `[00,02]` is the release
+     *  on both dial settings.
      *  Used by `startBulb` / `stopBulb`. See docs/canon-ble-research.md §7. */
     suspend fun smartShutter(press: Boolean): Boolean = writeNoResponse(
         smartShutterChar,
-        byteArrayOf(0x00, 0x01),
-        if (press) "smart shutter DOWN [00,01]" else "smart shutter UP [00,01]",
+        if (press) byteArrayOf(0x00, 0x01) else byteArrayOf(0x00, 0x02),
+        if (press) "smart shutter DOWN [00,01]" else "smart shutter UP [00,02]",
     )
 
     /** Smartphone-mode shutter — **single-shot path**: distinct press / release

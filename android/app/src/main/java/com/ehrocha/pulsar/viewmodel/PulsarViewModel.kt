@@ -1938,50 +1938,20 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
 
-    fun runCameraTest() {
-        val canBulb = activeTransportSupportsBulb.value
-        val test = buildList<FlowStep> {
-            // Timelapse — always runs. Camera (or simulator/firmware)
-            // owns exposure timing; no bulb requirement.
-            // 1 shot per mode keeps the run short (~5 actuations on full
-            // bulb-capable bodies, 1 on timelapse-only). The user asked
-            // for "5 is enough" — the goal is wire verification, not a
-            // burn-in.
-            add(FlowStep.Intervalometer(
+    /** Phase 1 of the Tools → Test Camera wizard: single Timelapse shot
+     *  using the press/release shutter pattern. The user must set the
+     *  camera dial to **M** before tapping Continue — single-shot path
+     *  uses different shutter codes from bulb on most transports. Also
+     *  runs the compat-report + settings-probe preflight on Canon. */
+    fun runCameraTestManualPhase() {
+        val test = listOf<FlowStep>(
+            FlowStep.Intervalometer(
                 intervalMs = 2_000L,
                 exposureMs = AppConfig.TIMELAPSE_PULSE_MS,
                 shotCount = 1, delayMs = 0L, useAutofocus = false,
-            ))
-            // The remaining 4 modes all require bulb. Skip on transports
-            // that don't support it (e.g. a PowerShot over CCAPI with no
-            // /shutterbutton/manual, or a body whose PTP DeviceInfo
-            // doesn't advertise the Canon RemoteRelease ops).
-            if (canBulb) {
-                add(FlowStep.Intervalometer(
-                    intervalMs = 2_000L, exposureMs = 4_000L,
-                    shotCount = 1, delayMs = 0L, useAutofocus = false,
-                ))
-                add(FlowStep.Astro(
-                    focalLength = 125, cropFactor = 1.0f, ruleDivisor = 500,
-                    gapMs = 2_000L, shotCount = 1, delayMs = 0L, useAutofocus = false,
-                ))
-                add(FlowStep.DarkFrame(
-                    gapMs = 2_000L, exposureMs = 4_000L,
-                    shotCount = 1, useAutofocus = false,
-                ))
-                add(FlowStep.Ramp(
-                    startExposureMs = 4_000L, endExposureMs = 4_000L,
-                    steps = 1, intervalMs = 2_000L, useAutofocus = false,
-                ))
-            }
-        }
+            ),
+        )
         saveFlowSteps(test)
-        // Preflight on Canon transports: run the compatibility report +
-        // settings probe before firing shots, so the diagnostics share
-        // carries body caps + settings inventory alongside shot results.
-        // Both are read-only (plus a no-op write-back) and sequential —
-        // must complete before shots fire so liveView/settings I/O doesn't
-        // interleave with the shot wire.
         val transport = activeCameraTransport()
         if (transport != null) {
             viewModelScope.launch {
@@ -1992,6 +1962,35 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         } else {
             startFlow()
         }
+    }
+
+    /** Phase 2 of the Tools → Test Camera wizard: four bulb-style steps
+     *  (Intervalometer-bulb, Astro, DarkFrame, Ramp) in sequence. The
+     *  user must set the camera dial to **Bulb** before tapping Continue.
+     *  No preflight here — phase 1 already ran it. No-op when the active
+     *  transport doesn't advertise bulb. */
+    fun runCameraTestBulbPhase() {
+        if (!activeTransportSupportsBulb.value) return
+        val test = listOf<FlowStep>(
+            FlowStep.Intervalometer(
+                intervalMs = 2_000L, exposureMs = 4_000L,
+                shotCount = 1, delayMs = 0L, useAutofocus = false,
+            ),
+            FlowStep.Astro(
+                focalLength = 125, cropFactor = 1.0f, ruleDivisor = 500,
+                gapMs = 2_000L, shotCount = 1, delayMs = 0L, useAutofocus = false,
+            ),
+            FlowStep.DarkFrame(
+                gapMs = 2_000L, exposureMs = 4_000L,
+                shotCount = 1, useAutofocus = false,
+            ),
+            FlowStep.Ramp(
+                startExposureMs = 4_000L, endExposureMs = 4_000L,
+                steps = 1, intervalMs = 2_000L, useAutofocus = false,
+            ),
+        )
+        saveFlowSteps(test)
+        startFlow()
     }
 
     /** Reads the cached dashboard snapshot (the same one that drives the

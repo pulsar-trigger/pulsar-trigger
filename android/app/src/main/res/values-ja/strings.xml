@@ -163,6 +163,14 @@
     <string name="test_camera_share_body">この実行のログ行のみ — 機能、設定一覧、撮影タイミング。</string>
     <string name="test_camera_share_yes">共有</string>
     <string name="test_camera_share_no">後で</string>
+    <string name="test_camera_continue">続行</string>
+    <string name="test_camera_step_label_only">ステップ</string>
+    <string name="test_camera_step_label_1_of_2">ステップ 1 / 2</string>
+    <string name="test_camera_step_label_2_of_2">ステップ 2 / 2</string>
+    <string name="test_camera_dial_manual_title">ダイヤルを Manual (M) に設定</string>
+    <string name="test_camera_dial_manual_body">Pulsar は press/release パターンで 1 ショットを撮影します。カメラのダイヤルを M に合わせて続行を押してください。(シングルショットとバルブで信号が異なります — 位置を間違えると連続撮影や無反応の原因になります。)</string>
+    <string name="test_camera_dial_bulb_title">ダイヤルを Bulb に設定</string>
+    <string name="test_camera_dial_bulb_body">フェーズ 2: press-and-hold タイミングのバルブ撮影 4 枚 (インターバロメーター-バルブ、アストロ、ダークフレーム、ランプ)。ダイヤルを Bulb に合わせて続行を押してください。</string>
     <string name="test_camera_start">テスト実行</string>
     <string name="test_camera_settings_probe">カメラ設定をプローブ (ISO/絞り/シャッター)</string>
     <string name="test_camera_settings_probe_running">プローブ中… (ログ参照)</string>

@@ -163,6 +163,14 @@
     <string name="test_camera_share_body">Solo las líneas de log de esta ejecución — capacidades, inventario de ajustes, tiempos de disparo.</string>
     <string name="test_camera_share_yes">Compartir</string>
     <string name="test_camera_share_no">Ahora no</string>
+    <string name="test_camera_continue">Continuar</string>
+    <string name="test_camera_step_label_only">Paso</string>
+    <string name="test_camera_step_label_1_of_2">Paso 1 de 2</string>
+    <string name="test_camera_step_label_2_of_2">Paso 2 de 2</string>
+    <string name="test_camera_dial_manual_title">Pon el dial en Manual (M)</string>
+    <string name="test_camera_dial_manual_body">Pulsar disparará una foto única con el patrón press/release. Pon el dial en M y toca Continuar. (Los códigos de disparo único y bulb son distintos — la posición incorrecta puede causar disparos continuos.)</string>
+    <string name="test_camera_dial_bulb_title">Pon el dial en Bulb</string>
+    <string name="test_camera_dial_bulb_body">Fase 2: cuatro disparos estilo bulb (Intervalómetro-bulb, Astro, Dark Frame, Rampa) con press-and-hold. Pon el dial en Bulb y toca Continuar.</string>
     <string name="test_camera_start">Ejecutar prueba</string>
     <string name="test_camera_settings_probe">Sondar ajustes de cámara (ISO/apertura/obturador)</string>
     <string name="test_camera_settings_probe_running">Sondando… (ver logs)</string>

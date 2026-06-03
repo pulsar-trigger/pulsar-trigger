@@ -81,6 +81,9 @@ fun MainMenuScreen(
     onAstroMode2Selected: () -> Unit = {},
     onTimelapseSelected: () -> Unit = {},
     onSettingsSelected: () -> Unit = {},
+    /** Routed when the user taps the "Go to Settings" button on the
+     *  in-app update banner — should jump to Updates, not the menu root. */
+    onUpdatesSelected: () -> Unit = {},
     onDisconnect: () -> Unit = {},
     onShotLogSelected: () -> Unit = {},
     nightModeToggle: @Composable () -> Unit = {},
@@ -152,7 +155,7 @@ fun MainMenuScreen(
                             )
                         }
                     }
-                    TextButton(onClick = onSettingsSelected) {
+                    TextButton(onClick = onUpdatesSelected) {
                         Text(stringResource(R.string.btn_go_to_settings))
                     }
                     IconButton(
@@ -359,9 +362,10 @@ private fun MenuPageContent(
                     var triggerFilter by remember { mutableStateOf(TriggerFilter.ALL) }
                     Column(
                         modifier = Modifier
+                            .fillMaxSize()
                             .padding(horizontal = 16.dp)
                             .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.Top),
                     ) {
                         if (onCanon) {
                             CanonBulbBanner(
@@ -410,11 +414,15 @@ private fun MenuPageContent(
                             onClick = { onUserModeRun(mode) },
                         )
                     }
+                    // fillMaxSize + Arrangement.Top so sparse content
+                    // (0–1 favorites) sits at the top of the page instead
+                    // of getting visually centered by the pager.
                     Column(
                         modifier = Modifier
+                            .fillMaxSize()
                             .padding(horizontal = 16.dp)
                             .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.Top),
                     ) {
                         if (favoriteTiles.isEmpty()) {
                             // Empty state — guide the user to where the
@@ -480,7 +488,12 @@ private fun MenuPageContent(
                             enabled = starFocusEnabled,
                         ) { onStarFocusSelected() },
                     )
-                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.TopStart,
+                    ) {
                         LauncherGrid(toolItems)
                     }
                 }

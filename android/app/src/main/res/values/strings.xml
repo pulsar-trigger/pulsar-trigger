@@ -42,6 +42,14 @@
     <string name="test_camera_share_body">Just the log lines from this run — caps, settings inventory, shot timings.</string>
     <string name="test_camera_share_yes">Share</string>
     <string name="test_camera_share_no">Not now</string>
+    <string name="test_camera_continue">Continue</string>
+    <string name="test_camera_step_label_only">Step</string>
+    <string name="test_camera_step_label_1_of_2">Step 1 of 2</string>
+    <string name="test_camera_step_label_2_of_2">Step 2 of 2</string>
+    <string name="test_camera_dial_manual_title">Set the camera dial to Manual (M)</string>
+    <string name="test_camera_dial_manual_body">Pulsar will fire one single-shot using the press/release pattern. Set the dial to M on the camera body, then tap Continue. (The shutter codes for single-shot differ from bulb — using the wrong dial position can cause continuous shooting or no shot at all.)</string>
+    <string name="test_camera_dial_bulb_title">Set the camera dial to Bulb</string>
+    <string name="test_camera_dial_bulb_body">Phase 2: four bulb-style shots (Intervalometer-bulb, Astro, Dark Frame, Ramp) using press-and-hold timing. Set the dial to Bulb on the camera body, then tap Continue.</string>
     <string name="test_camera_start">Run test</string>
     <string name="test_camera_settings_probe">Probe camera settings (ISO/aperture/shutter)</string>
     <string name="test_camera_settings_probe_running">Probing… (see logs)</string>

@@ -59,39 +59,56 @@ import com.ehrocha.pulsar.ui.theme.LocalRunState
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 
 /**
- * Diagnostic screen that fires a fixed 5-step flow across all modes —
- * Timelapse, Intervalometer (bulb), Astro, Dark Frame, Ramp — with 5 shots
- * per mode. Used to verify a freshly-connected transport (BLE / CCAPI /
- * PTP) end-to-end without manually walking each wizard.
+ * Camera-test wizard. The Canon BLE / CCAPI / PTP shutter protocols use
+ * different press/release semantics in M (single-shot) vs Bulb. Firing the
+ * full sequence with the wrong dial position causes continuous shooting or
+ * silent failures, so the test pauses between phases to let the user swap
+ * the dial.
  *
- * Camera-side setup the user is expected to do before tapping Start:
- *  - Body in Manual mode with shutter speed = Bulb (for bulb-mode steps)
- *  - Lens AF/MF switch wherever they want (Pulsar passes `useAutofocus=false`
- *    to every step so AF is suppressed at the protocol level)
- *  - Memory card with space for ~25 shots
+ * Phase 1 (Manual dial): 1 Timelapse shot. Verifies the press/release
+ * single-shot path. Preceded by the read-only compat-report + settings-probe
+ * preflight on Canon transports.
+ *
+ * Phase 2 (Bulb dial): 4 shots (Intervalometer-bulb, Astro, Dark Frame,
+ * Ramp). Verifies the press-and-hold bulb path. Skipped on transports that
+ * don't advertise bulb.
  */
+private enum class TestPhase {
+    IDLE,
+    AWAIT_MANUAL,
+    RUNNING_MANUAL,
+    AWAIT_BULB,
+    RUNNING_BULB,
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     val runState = LocalRunState.current
     val running = runState !is RunState.Idle
     val stepCount by vm.cameraTestStepCount.collectAsState()
-    val fullSequence = stepCount >= 5
+    val fullSequence = stepCount >= 5  // i.e. bulb supported
     val ctx = LocalContext.current
     var showLogs by remember { mutableStateOf(false) }
-    // Probe-run state machine: idle(0) → pending(1) on tap → running(2) once
-    // the flow actually starts → back to idle, raising the share prompt.
-    // The pending → running transition handles preflight (compat + settings
-    // probe before any shot fires); without it the dialog would pop the
-    // instant the user tapped because runState is still Idle during preflight.
-    var probeState by remember { mutableStateOf(0) }
+    var phase by remember { mutableStateOf(TestPhase.IDLE) }
     var probeMark by remember { mutableStateOf(0L) }
     var sharePromptText by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(running, probeState) {
+
+    // Phase transitions driven by the running flag. The running flag is
+    // false during preflight (compat + probe), so we only advance when the
+    // *previously-running* phase completes — never when we were just
+    // expecting to start.
+    LaunchedEffect(running, phase) {
         when {
-            probeState == 1 && running -> probeState = 2
-            probeState == 2 && !running -> {
-                probeState = 0
+            phase == TestPhase.RUNNING_MANUAL && !running -> {
+                phase = if (fullSequence) TestPhase.AWAIT_BULB else TestPhase.IDLE
+                if (!fullSequence) {
+                    // No bulb phase → the entire test is done, raise share.
+                    sharePromptText = com.ehrocha.pulsar.canonble.CanonBleLog.dumpSince(probeMark)
+                }
+            }
+            phase == TestPhase.RUNNING_BULB && !running -> {
+                phase = TestPhase.IDLE
                 sharePromptText = com.ehrocha.pulsar.canonble.CanonBleLog.dumpSince(probeMark)
             }
         }
@@ -109,96 +126,130 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
             )
         },
     ) { pad ->
-        if (running) {
-            Column(
-                modifier = Modifier
-                    .padding(pad)
-                    .fillMaxSize(),
-            ) {
-                // 1 shot per mode × up to 5 modes when bulb is supported.
-                RunningView(plannedShots = if (fullSequence) 5 else 1)
-                Spacer(Modifier.height(16.dp))
-                OutlinedButton(
-                    onClick = { vm.stopFlow() },
+        when {
+            running -> {
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp),
+                        .padding(pad)
+                        .fillMaxSize(),
                 ) {
-                    Text(stringResource(R.string.test_camera_stop))
-                }
-                Spacer(Modifier.height(16.dp))
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .padding(pad)
-                    .padding(24.dp)
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Text(
-                    stringResource(
-                        if (fullSequence) R.string.test_camera_blurb
-                        else R.string.test_camera_blurb_timelapse_only,
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    val plannedShots = if (phase == TestPhase.RUNNING_MANUAL) 1 else 4
+                    RunningView(plannedShots = plannedShots)
+                    Spacer(Modifier.height(16.dp))
+                    OutlinedButton(
+                        onClick = { vm.stopFlow(); phase = TestPhase.IDLE },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp),
                     ) {
-                        Text(
-                            stringResource(R.string.test_camera_sequence_title),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        Text(stringResource(R.string.test_camera_step_timelapse))
-                        if (fullSequence) {
-                            Text(stringResource(R.string.test_camera_step_intervalometer))
-                            Text(stringResource(R.string.test_camera_step_astro))
-                            Text(stringResource(R.string.test_camera_step_dark))
-                            Text(stringResource(R.string.test_camera_step_ramp))
+                        Text(stringResource(R.string.test_camera_stop))
+                    }
+                    Spacer(Modifier.height(16.dp))
+                }
+            }
+            phase == TestPhase.AWAIT_MANUAL -> {
+                DialPrompt(
+                    pad = pad,
+                    stepLabel = stringResource(
+                        if (fullSequence) R.string.test_camera_step_label_1_of_2
+                        else R.string.test_camera_step_label_only
+                    ),
+                    title = stringResource(R.string.test_camera_dial_manual_title),
+                    body = stringResource(R.string.test_camera_dial_manual_body),
+                    onContinue = {
+                        probeMark = com.ehrocha.pulsar.canonble.CanonBleLog.mark()
+                        phase = TestPhase.RUNNING_MANUAL
+                        vm.runCameraTestManualPhase()
+                    },
+                    onCancel = { phase = TestPhase.IDLE },
+                )
+            }
+            phase == TestPhase.AWAIT_BULB -> {
+                DialPrompt(
+                    pad = pad,
+                    stepLabel = stringResource(R.string.test_camera_step_label_2_of_2),
+                    title = stringResource(R.string.test_camera_dial_bulb_title),
+                    body = stringResource(R.string.test_camera_dial_bulb_body),
+                    onContinue = {
+                        phase = TestPhase.RUNNING_BULB
+                        vm.runCameraTestBulbPhase()
+                    },
+                    onCancel = {
+                        phase = TestPhase.IDLE
+                        // Still offer to share Phase 1's results.
+                        sharePromptText = com.ehrocha.pulsar.canonble.CanonBleLog.dumpSince(probeMark)
+                    },
+                )
+            }
+            else -> {
+                // IDLE
+                Column(
+                    modifier = Modifier
+                        .padding(pad)
+                        .padding(24.dp)
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Text(
+                        stringResource(
+                            if (fullSequence) R.string.test_camera_blurb
+                            else R.string.test_camera_blurb_timelapse_only,
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Text(
+                                stringResource(R.string.test_camera_sequence_title),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(stringResource(R.string.test_camera_step_timelapse))
+                            if (fullSequence) {
+                                Text(stringResource(R.string.test_camera_step_intervalometer))
+                                Text(stringResource(R.string.test_camera_step_astro))
+                                Text(stringResource(R.string.test_camera_step_dark))
+                                Text(stringResource(R.string.test_camera_step_ramp))
+                            }
                         }
                     }
+                    Text(
+                        stringResource(R.string.test_camera_prereqs),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Button(
+                        onClick = { phase = TestPhase.AWAIT_MANUAL },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Text(stringResource(R.string.test_camera_start))
+                    }
+                    OutlinedButton(
+                        onClick = { showLogs = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.tools_view_logs))
+                    }
+                    OutlinedButton(
+                        onClick = { shareDiagnostics(ctx, vm.canonDiagnosticsText()) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.tools_collect_diagnostics))
+                    }
+                    Text(
+                        stringResource(R.string.tools_collect_diagnostics_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
-                Text(
-                    stringResource(R.string.test_camera_prereqs),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Button(
-                    onClick = {
-                        probeMark = com.ehrocha.pulsar.canonble.CanonBleLog.mark()
-                        probeState = 1
-                        vm.runCameraTest()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Text(stringResource(R.string.test_camera_start))
-                }
-                OutlinedButton(
-                    onClick = { showLogs = true },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(R.string.tools_view_logs))
-                }
-                OutlinedButton(
-                    onClick = { shareDiagnostics(ctx, vm.canonDiagnosticsText()) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(R.string.tools_collect_diagnostics))
-                }
-                Text(
-                    stringResource(R.string.tools_collect_diagnostics_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
         }
     }
@@ -258,6 +309,61 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun DialPrompt(
+    pad: androidx.compose.foundation.layout.PaddingValues,
+    stepLabel: String,
+    title: String,
+    body: String,
+    onContinue: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .padding(pad)
+            .padding(24.dp)
+            .fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Text(
+            stepLabel,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            title,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = RoundedCornerShape(12.dp),
+        ) {
+            Text(
+                body,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(16.dp),
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Button(
+            onClick = onContinue,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+        ) {
+            Text(stringResource(R.string.test_camera_continue))
+        }
+        OutlinedButton(
+            onClick = onCancel,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+        ) {
+            Text(stringResource(R.string.cancel))
+        }
     }
 }
 

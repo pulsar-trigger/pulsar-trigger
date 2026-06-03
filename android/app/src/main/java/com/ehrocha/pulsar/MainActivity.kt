@@ -490,7 +490,11 @@ fun PulsarNavHost(
                     onStarFocusSelected = { currentScreen = AppScreen.StarFocus },
                     onTestCameraSelected = { currentScreen = AppScreen.TestCamera },
                     onDiagnosticsSelected = { currentScreen = AppScreen.Diagnostics },
-                    onSettingsSelected = { currentScreen = AppScreen.Settings(SettingsSection.UPDATES) },
+                    // Top-bar Settings icon lands on the menu (no
+                    // pre-selected section). The update banner has its own
+                    // callback that lands on UPDATES.
+                    onSettingsSelected = { currentScreen = AppScreen.Settings() },
+                    onUpdatesSelected = { currentScreen = AppScreen.Settings(SettingsSection.UPDATES) },
                     onDisconnect = { vm.disconnect() },
                     onShotLogSelected = { currentScreen = AppScreen.ShotLog },
                     nightModeToggle = { NightModeToggle() },

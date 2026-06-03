@@ -414,29 +414,32 @@ toggle  → write [0x00, 0x01] → 00030030     (button DOWN ↔ UP)
 focus   → no-op (smartphone mode does not split AF; the camera AFs on release)
 ```
 
-**The RP shutter has two distinct events whose meaning is gated by the camera
-dial setting** (verified 2026-05-29, refined v0.290):
+**The RP shutter uses press/release codes on both dial settings** — the
+previously-documented "Bulb dial toggles on `[00 01]`" claim was wrong:
 
-- **Bulb dial** — `[00 01]` toggles the shutter-open state (open ↔ closed);
-  `[00 02]` is inert. Empirical proof: a probe firing 5 `[00 01]`s (odd
-  parity) interleaved with `[00 02]`/`[00 00]` left the camera **still
-  exposed** at the end. A bulb op is two `[00 01]` toggles → back to closed.
-- **M (non-bulb) dial** — `[00 01]` = shutter **press** event, `[00 02]` =
-  shutter **release** event. Sending two `[00 01]`s in M leaves the body
-  shooting non-stop (each `[00 01]` is interpreted as another press; verified
-  on RP via diagnostics log 2026-05-29 18:11 — every write GATT_SUCCESS, body
-  still pressed). A single shot in M is `[00 01]` → wait → `[00 02]` (verified
-  firing one frame on RP, v0.290).
+- **Both dials**: `[00 01]` = shutter **press**, `[00 02]` = shutter
+  **release**. Sending `[00 01]` twice in a row in Bulb (the v0.290 "toggle"
+  recipe) makes the body shoot non-stop — same failure mode as in M. The
+  release byte is not inert; it just doesn't visibly cancel the open bulb on
+  a casual log read, which is what created the original 2026-05-29
+  misinterpretation.
+- **v0.358 correction (verified 2026-06-03 on EOS RP)**: the in-app camera
+  test fired bulb continuously when `smartShutter` used `[00 01]` for both
+  press and release. Switching to the same `[00 01]/[00 02]` pattern as the
+  tap path stopped the runaway.
+- **Single shot in M**: `[00 01]` → wait → `[00 02]` (verified firing one
+  frame, v0.290 — still correct).
+- **Bulb sequence**: `[00 01]` → hold for exposure → `[00 02]` (v0.358).
 
-The earlier-read "[00 02] is inert" was a Bulb-only artifact — Bulb tracks
-state on `[00 01]` only and ignores release events.
+Pulsar keeps two methods at the wire layer for clarity:
+`CanonBleClient.smartShutter` (used by `startBulb` / `stopBulb`) and
+`CanonBleClient.smartShutterTap` (used by `fireShutter`). Both now write the
+same `[00 01]` press / `[00 02]` release pattern — the split survives
+mostly as a logging/observability convenience.
 
-Pulsar therefore splits the smartphone shutter into two methods:
-`CanonBleClient.smartShutter` (bulb-state toggle on `[00 01]` for both press
-and release, used by `startBulb` / `stopBulb`), and
-`CanonBleClient.smartShutterTap` (M-mode press/release on `[00 01]` / `[00 02]`,
-used by `fireShutter`). The UI gates the choice at the tile level (Manual ↔
-Bulb, Cable release ↔ M) since BLE can't read the dial.
+The UI still gates the *user's* dial choice at the wizard step level
+(Test Camera prompts the user to swap Manual ↔ Bulb between phases) since
+BLE can't read the dial directly.
 
 ### Geo / time-sync packet (optional, → 00040002, with response)
 

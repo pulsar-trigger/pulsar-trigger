@@ -163,6 +163,14 @@
     <string name="test_camera_share_body">Apenas as linhas de log desta execução — capacidades, inventário de ajustes, tempos de disparo.</string>
     <string name="test_camera_share_yes">Compartilhar</string>
     <string name="test_camera_share_no">Agora não</string>
+    <string name="test_camera_continue">Continuar</string>
+    <string name="test_camera_step_label_only">Etapa</string>
+    <string name="test_camera_step_label_1_of_2">Etapa 1 de 2</string>
+    <string name="test_camera_step_label_2_of_2">Etapa 2 de 2</string>
+    <string name="test_camera_dial_manual_title">Coloque o dial em Manual (M)</string>
+    <string name="test_camera_dial_manual_body">O Pulsar disparará uma foto única usando o padrão press/release. Coloque o dial em M e toque em Continuar. (Os códigos de single-shot e bulb são diferentes — posição errada pode causar disparos contínuos.)</string>
+    <string name="test_camera_dial_bulb_title">Coloque o dial em Bulb</string>
+    <string name="test_camera_dial_bulb_body">Fase 2: quatro disparos estilo bulb (Intervalômetro-bulb, Astro, Dark Frame, Rampa) com press-and-hold. Coloque o dial em Bulb e toque em Continuar.</string>
     <string name="test_camera_start">Executar teste</string>
     <string name="test_camera_settings_probe">Sondar ajustes da câmera (ISO/abertura/obturador)</string>
     <string name="test_camera_settings_probe_running">Sondando… (ver logs)</string>
