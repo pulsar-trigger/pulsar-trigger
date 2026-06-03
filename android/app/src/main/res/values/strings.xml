@@ -167,6 +167,8 @@
     <string name="dest_trigger">Trigger</string>
     <string name="dest_tools">Tools</string>
     <string name="dest_dashboard">Dashboard</string>
+    <string name="dest_favorites">Favorites</string>
+    <string name="favorites_empty_title">No favorites yet</string>
     <string name="mode_intervalometer">Intervalometer</string>
     <string name="mode_timelapse">Timelapse</string>
 
@@ -877,6 +879,12 @@
     <string name="trigger_section_standard">Standard modes</string>
     <string name="trigger_section_favorites">Favorites</string>
     <string name="trigger_section_custom">Custom</string>
+    <string name="trigger_chip_all">All</string>
+    <string name="trigger_chip_bulb">Bulb</string>
+    <string name="trigger_chip_standard">Standard</string>
+    <string name="trigger_chip_favorites">Favorites</string>
+    <string name="trigger_chip_custom">Custom</string>
+    <string name="trigger_no_favorites">No favorites yet — bookmark any saved preset to pin it here.</string>
     <string name="transport_tile_simulator_title">Simulator</string>
     <string name="transport_tile_simulator_subtitle">Try without hardware</string>
     <string name="transport_tile_pulsar_ble_title">Pulsar BLE</string>

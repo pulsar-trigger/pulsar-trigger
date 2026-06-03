@@ -644,6 +644,12 @@
     <string name="trigger_section_standard">Modes standard</string>
     <string name="trigger_section_favorites">Favoris</string>
     <string name="trigger_section_custom">Personnalisé</string>
+    <string name="trigger_chip_all">Tous</string>
+    <string name="trigger_chip_bulb">Bulb</string>
+    <string name="trigger_chip_standard">Standard</string>
+    <string name="trigger_chip_favorites">Favoris</string>
+    <string name="trigger_chip_custom">Personnalisé</string>
+    <string name="trigger_no_favorites">Aucun favori — épinglez n\'importe quel préréglage sauvegardé pour le retrouver ici.</string>
     <string name="transport_tile_simulator_title">Simulateur</string>
     <string name="transport_tile_simulator_subtitle">Essayer sans matériel</string>
     <string name="transport_tile_pulsar_ble_title">Pulsar BLE</string>
@@ -840,6 +846,8 @@
     <string name="ramp2_tab_steps">Étapes</string>
     <string name="ramp_hint">Le ramp d\'exposition (timelapse Holy Grail) transitionne doucement d\'une exposition courte à longue en plusieurs étapes. Idéal pour les transitions jour-nuit ou nuit-jour.</string>
     <string name="session_edit_title">Modifier la session</string>
+    <string name="dest_favorites">Favoris</string>
+    <string name="favorites_empty_title">Aucun favori pour l\'instant</string>
     <string name="dest_dashboard">Dashboard</string>
     <string name="dest_tools">Outils</string>
     <string name="dest_trigger">Trigger</string>

@@ -644,6 +644,12 @@
     <string name="trigger_section_standard">標準モード</string>
     <string name="trigger_section_favorites">お気に入り</string>
     <string name="trigger_section_custom">カスタム</string>
+    <string name="trigger_chip_all">すべて</string>
+    <string name="trigger_chip_bulb">バルブ</string>
+    <string name="trigger_chip_standard">標準</string>
+    <string name="trigger_chip_favorites">お気に入り</string>
+    <string name="trigger_chip_custom">カスタム</string>
+    <string name="trigger_no_favorites">お気に入りがまだありません — 保存したプリセットをブックマークするとここに表示されます。</string>
     <string name="transport_tile_simulator_title">シミュレーター</string>
     <string name="transport_tile_simulator_subtitle">ハードウェアなしで試す</string>
     <string name="transport_tile_pulsar_ble_title">Pulsar BLE</string>
@@ -840,6 +846,8 @@
     <string name="ramp2_tab_steps">ステップ</string>
     <string name="ramp_hint">露光ランプ (Holy Grail タイムラプス) は、短い露光から長い露光へ複数ステップで滑らかに移行します。昼夜・夜昼の遷移に最適。</string>
     <string name="session_edit_title">セッションを編集</string>
+    <string name="dest_favorites">お気に入り</string>
+    <string name="favorites_empty_title">お気に入りはまだありません</string>
     <string name="dest_dashboard">ダッシュボード</string>
     <string name="dest_tools">ツール</string>
     <string name="dest_trigger">トリガー</string>

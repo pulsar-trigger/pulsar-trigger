@@ -10,6 +10,8 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -93,10 +95,13 @@ fun MainMenuScreen(
 
     // Dashboard sits to the LEFT of Trigger so a left-swipe from the default
     // Trigger tab reveals the astro dashboard. Trigger is the default landing
-    // tab — the one users open the app for.
+    // tab — the one users open the app for. Favorites earns a dedicated
+    // destination (between Trigger and Tools) because power users live in
+    // their pinned presets.
     val destinations = listOf(
         stringResource(R.string.dest_dashboard),
         stringResource(R.string.dest_trigger),
+        stringResource(R.string.dest_favorites),
         stringResource(R.string.dest_tools),
     )
     val pagerState = rememberPagerState(initialPage = initialDest, pageCount = { destinations.size })
@@ -193,6 +198,7 @@ fun MainMenuScreen(
     val destIcons = listOf(
         Icons.Default.Stars,         // Dashboard
         Icons.Default.PhotoCamera,   // Trigger
+        Icons.Default.Bookmark,      // Favorites
         Icons.Default.Science,       // Tools
     )
     val hasAnyUpdate = hasFwUpdate || hasAppUpdate
@@ -240,7 +246,10 @@ fun MainMenuScreen(
             )
         },
         bottomBar = {
-            NavigationBar {
+            // Compact NavigationBar — Instagram-style height instead of
+            // Material's default 80dp. Icons-only at this density to keep
+            // hit targets readable.
+            NavigationBar(modifier = Modifier.height(64.dp)) {
                 destinations.forEachIndexed { index, title ->
                     NavigationBarItem(
                         selected = pagerState.currentPage == index,
@@ -337,21 +346,17 @@ private fun MenuPageContent(
                             onCableReleaseSelected()
                         },
                     )
-                    // Favorites — bookmarked user presets only. Other saved
-                    // presets live in the per-mode preset picker.
-                    val favoriteTiles = userModes.filter { it.bookmarked }.map { mode ->
-                        LauncherItem(
-                            key = "user:${mode.id}",
-                            label = mode.name,
-                            icon = Icons.Default.Bookmark,
-                            onClick = { onUserModeRun(mode) },
-                        )
-                    }
                     // Custom — multi-step flows authored by the user.
                     val customTiles = listOf(
                         launcherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList,
                             enabled = !bulbBlocked) { onCustomFlowSelected() },
                     )
+                    // Jetsnack-style filter chips — All / Bulb / Standard /
+                    // Favorites / Custom. Default = ALL preserves the current
+                    // sectioned view; selecting a single chip collapses to
+                    // just that section. The chip selection is per-session
+                    // (no persistence), so opening the app always lands on All.
+                    var triggerFilter by remember { mutableStateOf(TriggerFilter.ALL) }
                     Column(
                         modifier = Modifier
                             .padding(horizontal = 16.dp)
@@ -370,19 +375,74 @@ private fun MenuPageContent(
                         if (onCanonBle || canonBleReconnecting) {
                             CanonBleBanner(reconnecting = canonBleReconnecting)
                         }
-                        SectionContainer(title = stringResource(R.string.trigger_section_bulb)) {
-                            SectionGrid(bulbTiles)
-                        }
-                        SectionContainer(title = stringResource(R.string.trigger_section_standard)) {
-                            SectionGrid(standardTiles)
-                        }
-                        if (favoriteTiles.isNotEmpty()) {
-                            SectionContainer(title = stringResource(R.string.trigger_section_favorites)) {
-                                SectionGrid(favoriteTiles)
+                        TriggerFilterChips(
+                            selected = triggerFilter,
+                            onSelect = { triggerFilter = it },
+                        )
+                        val showBulb = triggerFilter == TriggerFilter.ALL || triggerFilter == TriggerFilter.BULB
+                        val showStandard = triggerFilter == TriggerFilter.ALL || triggerFilter == TriggerFilter.STANDARD
+                        val showCustom = triggerFilter == TriggerFilter.ALL || triggerFilter == TriggerFilter.CUSTOM
+                        if (showBulb) {
+                            SectionContainer(title = stringResource(R.string.trigger_section_bulb)) {
+                                SectionGrid(bulbTiles)
                             }
                         }
-                        SectionContainer(title = stringResource(R.string.trigger_section_custom)) {
-                            SectionGrid(customTiles)
+                        if (showStandard) {
+                            SectionContainer(title = stringResource(R.string.trigger_section_standard)) {
+                                SectionGrid(standardTiles)
+                            }
+                        }
+                        if (showCustom) {
+                            SectionContainer(title = stringResource(R.string.trigger_section_custom)) {
+                                SectionGrid(customTiles)
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
+                }
+                DEST_FAVORITES -> {
+                    val userModes by vm.userModes.collectAsState()
+                    val favoriteTiles = userModes.filter { it.bookmarked }.map { mode ->
+                        LauncherItem(
+                            key = "user:${mode.id}",
+                            label = mode.name,
+                            icon = Icons.Default.Bookmark,
+                            onClick = { onUserModeRun(mode) },
+                        )
+                    }
+                    Column(
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        if (favoriteTiles.isEmpty()) {
+                            // Empty state — guide the user to where the
+                            // bookmark gesture lives (in any wizard's Save
+                            // dialog).
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(20.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    Text(
+                                        stringResource(R.string.favorites_empty_title),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                    Text(
+                                        stringResource(R.string.trigger_no_favorites),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        } else {
+                            SectionGrid(favoriteTiles)
                         }
                         Spacer(Modifier.height(8.dp))
                     }
@@ -429,7 +489,37 @@ private fun MenuPageContent(
 
 const val DEST_DASHBOARD = 0
 const val DEST_TRIGGER = 1
-const val DEST_TOOLS = 2
+const val DEST_FAVORITES = 2
+const val DEST_TOOLS = 3
+
+/** Filter chip values for the Trigger destination. ALL keeps the original
+ *  sectioned view; the others collapse to a single category. Favorites
+ *  is its own destination so it doesn't appear as a chip here. */
+private enum class TriggerFilter(val labelRes: Int) {
+    ALL(R.string.trigger_chip_all),
+    BULB(R.string.trigger_chip_bulb),
+    STANDARD(R.string.trigger_chip_standard),
+    CUSTOM(R.string.trigger_chip_custom),
+}
+
+@Composable
+private fun TriggerFilterChips(
+    selected: TriggerFilter,
+    onSelect: (TriggerFilter) -> Unit,
+) {
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        items(TriggerFilter.entries) { filter ->
+            FilterChip(
+                selected = selected == filter,
+                onClick = { onSelect(filter) },
+                label = { Text(stringResource(filter.labelRes)) },
+            )
+        }
+    }
+}
 
 private data class LauncherItem(
     val key: String,
