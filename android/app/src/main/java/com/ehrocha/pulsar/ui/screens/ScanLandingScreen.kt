@@ -103,13 +103,23 @@ fun ScanLandingScreen(
 
         // ── Brand mark ────────────────────────────────────────────────────
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Image(
-                painter = painterResource(R.mipmap.ic_launcher),
-                contentDescription = null,
+            // Use the foreground PNG, NOT the mipmap adaptive-icon XML —
+            // Compose's painterResource crashes on AdaptiveIconDrawable.
+            // Foreground is sized for a 108dp canvas with 72dp safe zone,
+            // so it self-centers fine in a smaller circular clip.
+            Box(
                 modifier = Modifier
                     .size(40.dp)
-                    .clip(CircleShape),
-            )
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary),
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.ic_launcher_foreground),
+                    contentDescription = null,
+                    modifier = Modifier.size(56.dp),
+                )
+            }
             Spacer(Modifier.width(14.dp))
             Text(
                 stringResource(R.string.app_name),

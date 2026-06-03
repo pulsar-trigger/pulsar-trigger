@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -79,6 +80,23 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     val fullSequence = stepCount >= 5
     val ctx = LocalContext.current
     var showLogs by remember { mutableStateOf(false) }
+    // Probe-run state machine: idle(0) → pending(1) on tap → running(2) once
+    // the flow actually starts → back to idle, raising the share prompt.
+    // The pending → running transition handles preflight (compat + settings
+    // probe before any shot fires); without it the dialog would pop the
+    // instant the user tapped because runState is still Idle during preflight.
+    var probeState by remember { mutableStateOf(0) }
+    var probeMark by remember { mutableStateOf(0L) }
+    var sharePromptText by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(running, probeState) {
+        when {
+            probeState == 1 && running -> probeState = 2
+            probeState == 2 && !running -> {
+                probeState = 0
+                sharePromptText = com.ehrocha.pulsar.canonble.CanonBleLog.dumpSince(probeMark)
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -98,8 +116,8 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                     .padding(pad)
                     .fillMaxSize(),
             ) {
-                // Total planned shots across all 5 steps = 5*5 = 25.
-                RunningView(plannedShots = 25)
+                // 1 shot per mode × up to 5 modes when bulb is supported.
+                RunningView(plannedShots = if (fullSequence) 5 else 1)
                 Spacer(Modifier.height(16.dp))
                 OutlinedButton(
                     onClick = { vm.stopFlow() },
@@ -155,7 +173,11 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Button(
-                    onClick = { vm.runCameraTest() },
+                    onClick = {
+                        probeMark = com.ehrocha.pulsar.canonble.CanonBleLog.mark()
+                        probeState = 1
+                        vm.runCameraTest()
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     contentPadding = PaddingValues(16.dp),
                 ) {
@@ -180,6 +202,25 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                 )
             }
         }
+    }
+
+    sharePromptText?.let { runLog ->
+        AlertDialog(
+            onDismissRequest = { sharePromptText = null },
+            title = { Text(stringResource(R.string.test_camera_share_title)) },
+            text = { Text(stringResource(R.string.test_camera_share_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    shareDiagnostics(ctx, runLog)
+                    sharePromptText = null
+                }) { Text(stringResource(R.string.test_camera_share_yes)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { sharePromptText = null }) {
+                    Text(stringResource(R.string.test_camera_share_no))
+                }
+            },
+        )
     }
 
     if (showLogs) {

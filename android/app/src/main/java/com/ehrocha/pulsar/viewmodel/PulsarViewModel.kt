@@ -1943,10 +1943,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         val test = buildList<FlowStep> {
             // Timelapse — always runs. Camera (or simulator/firmware)
             // owns exposure timing; no bulb requirement.
+            // 1 shot per mode keeps the run short (~5 actuations on full
+            // bulb-capable bodies, 1 on timelapse-only). The user asked
+            // for "5 is enough" — the goal is wire verification, not a
+            // burn-in.
             add(FlowStep.Intervalometer(
                 intervalMs = 2_000L,
                 exposureMs = AppConfig.TIMELAPSE_PULSE_MS,
-                shotCount = 5, delayMs = 0L, useAutofocus = false,
+                shotCount = 1, delayMs = 0L, useAutofocus = false,
             ))
             // The remaining 4 modes all require bulb. Skip on transports
             // that don't support it (e.g. a PowerShot over CCAPI with no
@@ -1955,19 +1959,19 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             if (canBulb) {
                 add(FlowStep.Intervalometer(
                     intervalMs = 2_000L, exposureMs = 4_000L,
-                    shotCount = 5, delayMs = 0L, useAutofocus = false,
+                    shotCount = 1, delayMs = 0L, useAutofocus = false,
                 ))
                 add(FlowStep.Astro(
                     focalLength = 125, cropFactor = 1.0f, ruleDivisor = 500,
-                    gapMs = 2_000L, shotCount = 5, delayMs = 0L, useAutofocus = false,
+                    gapMs = 2_000L, shotCount = 1, delayMs = 0L, useAutofocus = false,
                 ))
                 add(FlowStep.DarkFrame(
                     gapMs = 2_000L, exposureMs = 4_000L,
-                    shotCount = 5, useAutofocus = false,
+                    shotCount = 1, useAutofocus = false,
                 ))
                 add(FlowStep.Ramp(
                     startExposureMs = 4_000L, endExposureMs = 4_000L,
-                    steps = 5, intervalMs = 2_000L, useAutofocus = false,
+                    steps = 1, intervalMs = 2_000L, useAutofocus = false,
                 ))
             }
         }

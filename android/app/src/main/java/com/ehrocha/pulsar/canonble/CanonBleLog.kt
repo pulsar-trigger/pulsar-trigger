@@ -20,12 +20,14 @@ object CanonBleLog {
     private const val MAX_LINES = 600
     private val buf = ArrayDeque<String>()
     @Volatile private var origin = System.currentTimeMillis()
+    private var totalAdded = 0L
 
     @Synchronized
     private fun add(tag: String, level: Char, msg: String) {
         val t = (System.currentTimeMillis() - origin) / 1000.0
         if (buf.size >= MAX_LINES) buf.removeFirst()
         buf.addLast("[%9.3f] %c %s: %s".format(t, level, tag, msg))
+        totalAdded++
     }
 
     fun d(tag: String, msg: String) { Log.d(tag, msg); add(tag, 'D', msg) }
@@ -36,6 +38,20 @@ object CanonBleLog {
     /** The captured lines as a single string (oldest first). */
     @Synchronized
     fun dump(): String = buf.joinToString("\n")
+
+    /** Monotonic line counter — pair with [dumpSince] to extract lines
+     *  added after this mark. Survives ring-buffer eviction. */
+    @Synchronized
+    fun mark(): Long = totalAdded
+
+    /** Lines appended after [mark] was taken. If the buffer has rotated past
+     *  the mark, returns everything still in the buffer. */
+    @Synchronized
+    fun dumpSince(mark: Long): String {
+        val firstAvailable = totalAdded - buf.size
+        val skip = (mark - firstAvailable).toInt().coerceIn(0, buf.size)
+        return buf.drop(skip).joinToString("\n")
+    }
 
     @Synchronized
     fun clear() {
