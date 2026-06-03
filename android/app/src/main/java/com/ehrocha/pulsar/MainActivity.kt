@@ -96,16 +96,16 @@ import com.google.accompanist.permissions.rememberMultiplePermissionsState
 class MainActivity : AppCompatActivity() {
 
     companion object {
-        /** Intent extra: integer tab index to select on launch. Used by the
-         *  home-screen [com.ehrocha.pulsar.widget.DashboardWidget]. */
-        const val EXTRA_OPEN_TAB = "com.ehrocha.pulsar.OPEN_TAB"
+        /** Intent extra: integer destination index to select on launch. Used
+         *  by the home-screen [com.ehrocha.pulsar.widget.DashboardWidget]. */
+        const val EXTRA_OPEN_DEST = "com.ehrocha.pulsar.OPEN_DEST"
 
         // Mirror the consts in MainMenuScreen.kt so callers outside that file
         // (the widget receiver lives in a different package) don't have to
         // import the screen module.
-        const val TAB_DASHBOARD = 0
-        const val TAB_TRIGGER = 1
-        const val TAB_TOOLS = 2
+        const val DEST_DASHBOARD = 0
+        const val DEST_TRIGGER = 1
+        const val DEST_TOOLS = 2
     }
 
     /** Read event JSON from an incoming VIEW/SEND intent (.pulsar file). */
@@ -185,7 +185,7 @@ class MainActivity : AppCompatActivity() {
                     if (permissions.allPermissionsGranted) {
                         PulsarNavHost(
                             importJson = pendingImportJson,
-                            initialMenuTab = intent?.getIntExtra(EXTRA_OPEN_TAB, -1)
+                            initialMenuDest = intent?.getIntExtra(EXTRA_OPEN_DEST, -1)
                                 ?.takeIf { it >= 0 },
                         )
                     } else {
@@ -251,16 +251,16 @@ private fun PermissionsRequiredScreen(onRequestAgain: () -> Unit) {
 fun PulsarNavHost(
     vm: PulsarViewModel = viewModel(),
     importJson: String? = null,
-    initialMenuTab: Int? = null,
+    initialMenuDest: Int? = null,
 ) {
     // Widget tap → launch straight into the main menu on the requested tab.
     var currentScreen by remember {
         mutableStateOf<AppScreen>(
-            if (initialMenuTab != null) AppScreen.Menu else AppScreen.ScanLanding
+            if (initialMenuDest != null) AppScreen.Menu else AppScreen.ScanLanding
         )
     }
-    var menuTab by remember {
-        mutableIntStateOf(initialMenuTab ?: com.ehrocha.pulsar.ui.screens.TAB_TRIGGER)
+    var menuDest by remember {
+        mutableIntStateOf(initialMenuDest ?: com.ehrocha.pulsar.ui.screens.DEST_TRIGGER)
     }
     val connected by vm.connected.collectAsState()
 
@@ -446,8 +446,8 @@ fun PulsarNavHost(
             AppScreen.Menu -> {
                 MainMenuScreen(
                     vm = vm,
-                    initialTab = menuTab,
-                    onTabChanged = { menuTab = it },
+                    initialDest = menuDest,
+                    onDestChanged = { menuDest = it },
                     onQuickFlow = { type ->
                         // All capture modes are now wizard-driven. Anything
                         // arriving here is a fallback path that should route

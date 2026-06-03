@@ -839,9 +839,9 @@
     <string name="ramp2_tab_steps">ステップ</string>
     <string name="ramp_hint">露光ランプ (Holy Grail タイムラプス) は、短い露光から長い露光へ複数ステップで滑らかに移行します。昼夜・夜昼の遷移に最適。</string>
     <string name="session_edit_title">セッションを編集</string>
-    <string name="tab_dashboard">ダッシュボード</string>
-    <string name="tab_tools">ツール</string>
-    <string name="tab_trigger">トリガー</string>
+    <string name="dest_dashboard">ダッシュボード</string>
+    <string name="dest_tools">ツール</string>
+    <string name="dest_trigger">トリガー</string>
     <string name="wake_on_pause_hint">このポーズで画面を点灯し、バイブする</string>
     <string name="whats_up_help">現在地で地平線より上にあるディープスカイ天体 (星雲・銀河・星団) を表示します。\n\n• 高度で並べ替え — 高いほど良いポジション\n• 緑アイコン: 30° 以上、撮影に最適\n• 灰色アイコン: 10–30°、撮影可能だがやや低め\n• 天文薄明帯の時間が最適\n\nカタログには天体撮影で人気の ~27 ターゲットを収録。</string>
     <string name="whats_up_none_visible">現在地で地平線から 10° 以上にあるカタログターゲットはありません。</string>

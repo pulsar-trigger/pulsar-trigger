@@ -101,7 +101,7 @@ class DashboardWidgetReceiver : GlanceAppWidgetReceiver() {
 private fun openAppIntent(context: Context): Intent =
     Intent(context, MainActivity::class.java).apply {
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        putExtra(MainActivity.EXTRA_OPEN_TAB, MainActivity.TAB_DASHBOARD)
+        putExtra(MainActivity.EXTRA_OPEN_DEST, MainActivity.DEST_DASHBOARD)
     }
 
 private fun isStale(updatedAtMs: Long): Boolean =

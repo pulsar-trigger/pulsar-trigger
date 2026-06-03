@@ -839,9 +839,9 @@
     <string name="ramp2_tab_steps">Schritte</string>
     <string name="ramp_hint">Belichtungs-Ramp (Holy-Grail-Timelapse) wechselt über mehrere Schritte glatt von kurzer zu langer Belichtung. Ideal für Tag-Nacht- oder Nacht-Tag-Übergänge.</string>
     <string name="session_edit_title">Session bearbeiten</string>
-    <string name="tab_dashboard">Dashboard</string>
-    <string name="tab_tools">Werkzeuge</string>
-    <string name="tab_trigger">Trigger</string>
+    <string name="dest_dashboard">Dashboard</string>
+    <string name="dest_tools">Werkzeuge</string>
+    <string name="dest_trigger">Trigger</string>
     <string name="wake_on_pause_hint">Bei Erreichen dieser Pause Bildschirm einschalten und vibrieren</string>
     <string name="whats_up_help">Zeigt Deep-Sky-Objekte (Nebel, Galaxien, Sternhaufen), die aktuell über dem Horizont an deinem Standort sind.\n\n• Objekte sortiert nach Höhe — höher = besser positioniert\n• Grünes Icon: gut platziert (über 30°), ideal zum Imaging\n• Graues Icon: niedrig am Himmel (10–30°), möglich aber weniger ideal\n• Beste Ergebnisse während astronomischer Dunkelheit\n\nDer Katalog enthält ~27 beliebte Astrofotografie-Ziele.</string>
     <string name="whats_up_none_visible">Aktuell sind keine Katalog-Ziele über 10° an deinem Standort sichtbar.</string>

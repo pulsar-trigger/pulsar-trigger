@@ -62,8 +62,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainMenuScreen(
     vm: PulsarViewModel,
-    initialTab: Int = TAB_TRIGGER,
-    onTabChanged: (Int) -> Unit = {},
+    initialDest: Int = DEST_TRIGGER,
+    onDestChanged: (Int) -> Unit = {},
     onQuickFlow: (FlowStepType) -> Unit,
     onManualSelected: () -> Unit,
     onCableReleaseSelected: () -> Unit = {},
@@ -94,14 +94,14 @@ fun MainMenuScreen(
     // Dashboard sits to the LEFT of Trigger so a left-swipe from the default
     // Trigger tab reveals the astro dashboard. Trigger is the default landing
     // tab — the one users open the app for.
-    val tabs = listOf(
-        stringResource(R.string.tab_dashboard),
-        stringResource(R.string.tab_trigger),
-        stringResource(R.string.tab_tools),
+    val destinations = listOf(
+        stringResource(R.string.dest_dashboard),
+        stringResource(R.string.dest_trigger),
+        stringResource(R.string.dest_tools),
     )
-    val pagerState = rememberPagerState(initialPage = initialTab, pageCount = { tabs.size })
+    val pagerState = rememberPagerState(initialPage = initialDest, pageCount = { destinations.size })
     val scope = rememberCoroutineScope()
-    LaunchedEffect(pagerState.currentPage) { onTabChanged(pagerState.currentPage) }
+    LaunchedEffect(pagerState.currentPage) { onDestChanged(pagerState.currentPage) }
 
     // Update banner extracted into a lambda so both layout branches render
     // the same dismissible banner without duplicating the markup.
@@ -190,7 +190,7 @@ fun MainMenuScreen(
 
 
     // Per-destination icons for the bottom NavigationBar.
-    val tabIcons = listOf(
+    val destIcons = listOf(
         Icons.Default.Stars,         // Dashboard
         Icons.Default.PhotoCamera,   // Trigger
         Icons.Default.Science,       // Tools
@@ -204,7 +204,7 @@ fun MainMenuScreen(
             TopAppBar(
                 title = {
                     Text(
-                        tabs[pagerState.currentPage],
+                        destinations[pagerState.currentPage],
                         fontWeight = FontWeight.SemiBold,
                     )
                 },
@@ -241,11 +241,11 @@ fun MainMenuScreen(
         },
         bottomBar = {
             NavigationBar {
-                tabs.forEachIndexed { index, title ->
+                destinations.forEachIndexed { index, title ->
                     NavigationBarItem(
                         selected = pagerState.currentPage == index,
                         onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                        icon = { Icon(tabIcons[index], contentDescription = title) },
+                        icon = { Icon(destIcons[index], contentDescription = title) },
                         label = { Text(title) },
                     )
                 }
@@ -291,10 +291,10 @@ private fun MenuPageContent(
     onTimelapseSelected: () -> Unit,
 ) {
     when (page) {
-        TAB_DASHBOARD -> {
+        DEST_DASHBOARD -> {
             DashboardScreen(dashboardManager = vm.dashboardManager)
         }
-        TAB_TRIGGER -> {
+        DEST_TRIGGER -> {
                     val userModes by vm.userModes.collectAsState()
                     val canonCcapiTransport by vm.canonCcapiTransport.collectAsState()
                     val canonCcapiReconnecting by vm.canonCcapiReconnecting.collectAsState()
@@ -388,7 +388,7 @@ private fun MenuPageContent(
                         Spacer(Modifier.height(8.dp))
                     }
                 }
-                TAB_TOOLS -> {
+                DEST_TOOLS -> {
                     val canonOn = vm.canonCcapiTransport.collectAsState().value != null
                     // Star Focus needs a live-view-capable Canon transport.
                     // CCAPI always supplies live view (gated by canonOn).
@@ -428,9 +428,9 @@ private fun MenuPageContent(
             }
 }
 
-const val TAB_DASHBOARD = 0
-const val TAB_TRIGGER = 1
-const val TAB_TOOLS = 2
+const val DEST_DASHBOARD = 0
+const val DEST_TRIGGER = 1
+const val DEST_TOOLS = 2
 
 private data class LauncherItem(
     val key: String,

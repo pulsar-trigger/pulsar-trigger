@@ -164,9 +164,9 @@
     <string name="canon_auth_hide_pass">Hide password</string>
 
     <!-- MainMenuScreen -->
-    <string name="tab_trigger">Trigger</string>
-    <string name="tab_tools">Tools</string>
-    <string name="tab_dashboard">Dashboard</string>
+    <string name="dest_trigger">Trigger</string>
+    <string name="dest_tools">Tools</string>
+    <string name="dest_dashboard">Dashboard</string>
     <string name="mode_intervalometer">Intervalometer</string>
     <string name="mode_timelapse">Timelapse</string>
 

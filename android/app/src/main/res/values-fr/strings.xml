@@ -839,9 +839,9 @@
     <string name="ramp2_tab_steps">Étapes</string>
     <string name="ramp_hint">Le ramp d\'exposition (timelapse Holy Grail) transitionne doucement d\'une exposition courte à longue en plusieurs étapes. Idéal pour les transitions jour-nuit ou nuit-jour.</string>
     <string name="session_edit_title">Modifier la session</string>
-    <string name="tab_dashboard">Dashboard</string>
-    <string name="tab_tools">Outils</string>
-    <string name="tab_trigger">Trigger</string>
+    <string name="dest_dashboard">Dashboard</string>
+    <string name="dest_tools">Outils</string>
+    <string name="dest_trigger">Trigger</string>
     <string name="wake_on_pause_hint">Allumer l\'écran et vibrer quand cette pause est atteinte</string>
     <string name="whats_up_help">Affiche les objets du ciel profond (nébuleuses, galaxies, amas) actuellement au-dessus de l\'horizon depuis votre position.\n\n• Objets triés par altitude — plus haut = mieux placé\n• Icône verte : bien placé (au-dessus de 30°), idéal pour l\'imagerie\n• Icône grise : bas dans le ciel (10–30°), possible mais moins idéal\n• Meilleurs résultats pendant l\'obscurité astronomique\n\nLe catalogue contient ~27 cibles populaires d\'astrophoto.</string>
     <string name="whats_up_none_visible">Aucune cible du catalogue n\'est visible au-dessus de 10° depuis votre position.</string>
