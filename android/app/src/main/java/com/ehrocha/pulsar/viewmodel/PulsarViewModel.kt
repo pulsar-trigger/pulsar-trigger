@@ -1938,6 +1938,65 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
 
+    /** Build a single-step flow from a bookmarked [UserMode] and start it
+     *  immediately — used by the Favorites destination so a tap fires the
+     *  preset without re-walking the wizard. */
+    fun runUserModeNow(mode: com.ehrocha.pulsar.model.UserMode) {
+        val step: FlowStep = when (mode.body.fwMode) {
+            com.ehrocha.pulsar.ble.TriggerMode.INTERVALOMETER -> FlowStep.Intervalometer(
+                intervalMs = mode.body.intervalMs,
+                exposureMs = mode.body.exposureMs,
+                shotCount = mode.body.shotCount,
+                delayMs = mode.body.delayMs,
+                useAutofocus = mode.body.useAutofocus,
+                cameraSettings = com.ehrocha.pulsar.transport.CameraSettings(
+                    iso = mode.body.iso,
+                    aperture = mode.body.aperture,
+                    shutterSpeed = mode.body.shutterSpeed,
+                ),
+            )
+            com.ehrocha.pulsar.ble.TriggerMode.ASTRO -> FlowStep.Astro(
+                focalLength = mode.body.focalLength,
+                cropFactor = mode.body.cropFactor,
+                ruleDivisor = mode.body.ruleDivisor,
+                gapMs = mode.body.intervalMs,
+                shotCount = mode.body.shotCount,
+                delayMs = mode.body.delayMs,
+                useAutofocus = mode.body.useAutofocus,
+            )
+            com.ehrocha.pulsar.ble.TriggerMode.TIMELAPSE -> FlowStep.Intervalometer(
+                intervalMs = mode.body.intervalMs,
+                exposureMs = AppConfig.TIMELAPSE_PULSE_MS,
+                shotCount = mode.body.shotCount,
+                delayMs = mode.body.delayMs,
+                useAutofocus = mode.body.useAutofocus,
+                cameraSettings = com.ehrocha.pulsar.transport.CameraSettings(
+                    iso = mode.body.iso,
+                    aperture = mode.body.aperture,
+                    shutterSpeed = mode.body.shutterSpeed,
+                ),
+            )
+            com.ehrocha.pulsar.ble.TriggerMode.DARK_FRAME -> FlowStep.DarkFrame(
+                exposureMs = mode.body.exposureMs,
+                shotCount = mode.body.shotCount,
+                gapMs = mode.body.intervalMs,
+                useAutofocus = mode.body.useAutofocus,
+            )
+            com.ehrocha.pulsar.ble.TriggerMode.RAMP -> FlowStep.Ramp(
+                startExposureMs = mode.body.rampStartExposureMs,
+                endExposureMs = mode.body.rampEndExposureMs,
+                steps = mode.body.rampSteps,
+                intervalMs = mode.body.intervalMs,
+                useAutofocus = mode.body.useAutofocus,
+            )
+            else -> return  // PRESS_HOLD / PRESS_LOCK / TRACKER / CUSTOM_FLOW aren't presetable.
+        }
+        saveFlowSteps(listOf(step))
+        // Apply camera-side settings (when on Canon) before the run via the
+        // existing executeFlowStep code path.
+        startFlow()
+    }
+
     /** Phase 1 of the Tools → Test Camera wizard: single Timelapse shot
      *  using the press/release shutter pattern. The user must set the
      *  camera dial to **M** before tapping Continue — single-shot path

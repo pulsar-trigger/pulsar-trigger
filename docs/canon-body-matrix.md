@@ -66,13 +66,12 @@ mode (Pulsar hides the toggle when `isSmart=true`).
 
 Cross-referenced 2026-06-03 from
 [intervalometer.app](https://intervalometer.app/) — a commercial competitor
-that ships dedicated per-body BLE setup guides. Every one of the 22 bodies
-they support uses Canon's **smartphone-mode** BLE protocol (service
-`00010000` + control `00030000`), which is the same path Pulsar's
-`CanonBleTransport` arms in smart mode. The body has to be in *Connect to
-smartphone* on the Canon menu — pair via Pulsar, decline the QR code with
-`[Do not display]` (Pulsar is already installed). None of the 22 use
-BR-E1 in this flow.
+that ships dedicated per-body BLE setup guides. **All 22 bodies they
+support use Canon's smartphone-mode** BLE protocol (service `00010000` +
+control `00030000`), which is the same path Pulsar's `CanonBleTransport`
+arms in smart mode. The body has to be in *Connect to smartphone* on the
+Canon menu — pair via Pulsar, decline the QR code with `[Do not display]`
+(Pulsar is already installed). **None of the 22 use BR-E1** in this flow.
 
 Treat the table below as **"strong prior" rather than confirmed** — these
 bodies should work but haven't been probed by Pulsar's
@@ -80,7 +79,17 @@ bodies should work but haven't been probed by Pulsar's
 Run the report and PR a row up to the *Snapshot* table above when you
 verify one.
 
-### Newer R-series — dedicated `[Bluetooth settings]` menu
+Canon ships several different menu layouts depending on body generation /
+class. Pulsar's pair flow is the same; only the in-camera menu path
+differs. Five patterns observed:
+
+### Pattern A — pro DSLR `[Network settings]`
+
+| Body | Menu path on the camera |
+|---|---|
+| EOS 1D X Mark III | `Network settings` → `Bluetooth settings` → `Pairing` |
+
+### Pattern B — newer R-series dedicated `[Bluetooth settings]`
 
 | Body | Menu path on the camera |
 |---|---|
@@ -90,28 +99,44 @@ verify one.
 | EOS R8 | `Connect to smartphone(tablet)` → `Add a device to connect to` |
 | EOS RP | `Wireless communication settings` → `Bluetooth function` → `Smartphone` → `Pairing` (confirmed in *Snapshot* above) |
 
-### Combined `[Wi-Fi/Bluetooth connection]` menu — most other R / M / PowerShot / mid-range DSLR
+### Pattern C — combined `[Wi-Fi/Bluetooth connection]` (most R / mid-range DSLR / newer M)
 
 | Body | Menu path on the camera |
 |---|---|
 | EOS R6 | `Wi-Fi/Bluetooth connection` → `Connect to smartphone` → `Pair via Bluetooth` |
 | EOS R7 | same |
 | EOS R10 | same |
-| EOS R50 | same |
-| EOS R100 | same |
-| EOS M50 | same |
-| EOS M50 Mark II | same |
-| EOS M6 | same |
+| EOS R50 | `Connect to smartphone(tablet)` → `Add a device to connect to` |
+| EOS R100 | `Wireless settings: Wi-Fi/Bluetooth connection` → `Connect to smartphone` → `Pair via Bluetooth` |
+| EOS M50 Mark II | `Wireless settings: Wi-Fi/Bluetooth connection` → `Connect to smartphone` → `Pair via Bluetooth` |
 | EOS M6 Mark II | same |
 | EOS M200 | same |
-| EOS 1D X Mark III | same |
 | EOS 90D | same |
 | EOS 200D Mark II | same |
 | EOS 250D | same |
-| EOS 850D | same |
-| PowerShot G5 X Mark II | same |
-| PowerShot G7 X Mark III | same |
-| PowerShot G9 X Mark II | same |
+| EOS 850D | `Wireless settings: Wi-Fi/Bluetooth connection` → `Connect to smartphone` → `Pair via Bluetooth` |
+
+### Pattern D — older `[Wireless communication settings]` → `[Bluetooth function]` → `[Smartphone]`
+
+| Body | Menu path on the camera |
+|---|---|
+| EOS M50 | `Wireless communication settings` → `Bluetooth function` → `Bluetooth function` → `Smartphone` |
+| PowerShot G5 X Mark II | `Wireless communication settings` → `Bluetooth function` → `Bluetooth function` → `Smartphone` → `Pairing` |
+| PowerShot G7 X Mark III | same pattern, slight wording variations |
+
+### Pattern E — touchscreen `[Wireless settings]` → `[Bluetooth settings]`
+
+| Body | Menu path on the camera |
+|---|---|
+| EOS M6 | `Wireless settings` → `Bluetooth settings` → `Pairing` |
+| PowerShot G9 X Mark II | `Wireless settings` → `Bluetooth settings` → `Pairing` (touchscreen) |
+
+### Cross-cutting observations
+
+- **QR-code skip is universal**: every body shows a QR code during first-pair and expects the user to pick `[Do not display]` since the app is already installed. Worth surfacing in Pulsar's BLE setup screen.
+- **Dual confirmation is universal**: phone confirms Bluetooth pair dialog, then user confirms on the body. No quirks beyond timing.
+- **Conflicting Canon-app warning**: intervalometer.app calls out that Canon's own Camera Connect app should be closed before connecting. Same applies to Pulsar — worth noting in the setup guide.
+- **No BR-E1 usage anywhere**: intervalometer.app appears to have entirely skipped the BR-E1 protocol. Pulsar's BR-E1 path (`CanonBleClient` BR-E1 mode) remains useful only for pre-2018 bodies that don't support smartphone-mode (5D Mark IV, 6D Mark II, T7i, etc., which intervalometer.app doesn't list).
 
 ### Conspicuous absence — original EOS R (2018)
 
