@@ -139,7 +139,7 @@
     <string name="usb_camera_subtitle">USB上的PTP</string>
     <string name="section_canon_ble_remotes">佳能 BLE 遥控器</string>
     <string name="canon_ble_remotes_subtitle">将相机置于蓝牙配对模式以在此处显示</string>
-    <string name="canon_ble_camera_subtitle">基于 BLE 的佳能 BR-E1 协议</string>
+    <string name="canon_ble_camera_subtitle">通过蓝牙连接佳能机身 — 无需额外硬件</string>
     <string name="canon_ble_camera_fallback_name">佳能 BLE 相机</string>
     <string name="canon_ble_err_connect_failed">无法连接到佳能 BLE 相机。请检查机身上的配对模式后重试。</string>
     <string name="canon_ble_err_no_ble_shutter">此佳能机身不支持蓝牙快门（例如 EOS R）。请使用 USB-C 或 Wi-Fi 拍摄。</string>
@@ -569,13 +569,13 @@
     <!-- User Guide -->
     <string name="section_user_guide">用户指南</string>
     <string name="guide_overview_title">概述</string>
-    <string name="guide_overview_body">Pulsar Trigger 将您的手机变成强大的相机控制器，提供四种独立的连接方式：\n\n• Pulsar BLE——与连接到相机快门端口的 Pulsar ESP32 硬件模块配对。适用于任何带有遥控快门接口的相机。\n• Wi-Fi（CCAPI）——通过内置 Wi-Fi API 直接控制佳能 EOS R 系列机身。无需额外硬件。\n• USB-C（PTP）——通过 USB-C 数据线从手机直接控制佳能机身（及大多数 PTP 兼容相机）。对于无法激活 CCAPI 的佳能 EOS R，这是唯一的手机端接入方式。\n• 佳能 BLE——直接用佳能自家的 BR-E1 BLE 协议与机身通信。无线、无需 Pulsar 硬件。\n\n应用程序在您选择的传输方式下提供对曝光、间隔、B 门序列和复杂多步骤流程的精确控制——它们互斥：连接一个会断开其他。</string>
+    <string name="guide_overview_body">Pulsar Trigger 将您的手机变成强大的相机控制器，提供五种独立的连接方式：\n\n• Pulsar BLE——与连接到相机快门端口的 Pulsar ESP32 硬件模块配对。适用于任何带有遥控快门接口的相机。\n• 佳能 Wi-Fi（CCAPI）——通过内置 Wi-Fi API 直接控制佳能 EOS R 系列机身。无需额外硬件。\n• 佳能 USB-C（PTP）——通过 USB-C 数据线从手机直接控制佳能机身（及大多数 PTP 兼容相机）。对于无法激活 CCAPI 的初代佳能 EOS R，这是唯一的手机端接入方式。\n• 佳能 Wi-Fi PTP——与 USB-C PTP 同一套命令，但通过 Wi-Fi 实现；机身需处于 EOS Utility / 遥控模式。Pulsar 为 EOS R 提供的无线控制路径。\n• 佳能 BLE——直接用佳能原生的 Bluetooth 协议与机身通信。无线、无需 Pulsar 硬件。\n\n应用程序在您选择的传输方式下提供对曝光、间隔、B 门序列和复杂多步骤流程的精确控制——它们互斥：连接一个会断开其他。</string>
     <string name="guide_getting_started_title">快速入门</string>
-    <string name="guide_getting_started_body">1. 在首次启动时授予应用请求的权限（蓝牙、定位、USB）。\n2. 打开扫描屏幕，选择您想要的连接方式：\n   • Pulsar ESP32 模块：开机，点击"蓝牙设备"下的卡片。\n   • Wi-Fi 连接佳能：在相机上启用 CCAPI（需要一次性 PC 端激活），加入相机的网络，然后点击"佳能相机"下的卡片。\n   • USB-C 连接佳能：插入数据线，接受 Android 权限对话框，点击"USB 相机"下的相机卡片。\n   • 佳能 BLE 直连：将相机置于 蓝牙 → 遥控器 配对模式，点击"佳能 BLE 遥控器"下的卡片，确认 Android 的配对对话框。\n3. 连接后，菜单会显示该传输方式可用的拍摄模式。\n\n提示：扫描屏幕上有一个"相机设置帮助"按钮，提供针对佳能路径的机身专属说明。完整的 BR-E1 配对步骤请参见下面的"佳能 BLE 详解"部分。</string>
+    <string name="guide_getting_started_body">1. 在首次启动时授予应用请求的权限（蓝牙、定位、USB）。\n2. 打开扫描屏幕，选择您想要的连接方式：\n   • Pulsar ESP32 模块：开机，点击"蓝牙设备"下的卡片。\n   • Wi-Fi 连接佳能：在相机上启用 CCAPI（需要一次性 PC 端激活），加入相机的网络，然后点击"佳能相机"下的卡片。\n   • USB-C 连接佳能：插入数据线，接受 Android 权限对话框，点击"USB 相机"下的相机卡片。\n   • 佳能 BLE：将相机置于蓝牙配对模式（较新机身："连接到智能手机"→"通过蓝牙配对"；附带 BR-E1 遥控器的较旧机身："蓝牙"→"遥控器"→"配对"），点击"佳能 BLE 遥控器"下的卡片，确认 Android 的配对对话框。\n3. 连接后，菜单会显示该传输方式可用的拍摄模式。\n\n提示：扫描屏幕上有一个"相机设置帮助"按钮，提供针对佳能路径的机身专属说明。完整的佳能 BLE 配对步骤请参见下面的"佳能 BLE 详解"部分。</string>
     <string name="guide_transports_title">传输方式</string>
-    <string name="guide_transports_body">五种控制相机的方式。根据您的设备选择：\n\n• Pulsar BLE（ESP32 模块）——通用：任何具有有线遥控端口的相机。相机端电池消耗最低。固件拥有运行循环，因此手机可以在流程进行中睡眠。\n• CCAPI（Wi-Fi）——已激活 CCAPI 的佳能 EOS R 系列。增加实时取景、星点对焦、镜头检测和电池读取。由于机身 Wi-Fi 保持开启，相机电池消耗大致翻倍；长时间会话请考虑 USB-C 假电池直通供电。\n• PTP（USB-C）——佳能 EOS R / RP 及大多数 PTP 相机。延迟最低（每张约 10–30 毫秒）。由于 Wi-Fi 关闭，相机仅消耗约 5%/小时。对于 CCAPI 无法激活的 EOS R 是必需的。注意：在 PC 远程模式下，机身的模式拨盘在断开前会锁定。\n• 佳能 Wi-Fi PTP——EOS 机身在 Wi-Fi「遥控（EOS Utility）」模式下。与 USB PTP 同一套操作，只是无线。EOS R 唯一可用的无线控制路径。两台设备须在同一 Wi-Fi 上（或手机连接相机的热点）。\n• 佳能 BLE——直接使用佳能的 BR-E1 协议。无线、无需 Pulsar 硬件、无需 Wi-Fi 设置。任何 BR-E1 兼容机身（EOS R/RP/R5/R6/Ra、6D II、77D、200D、800D、850D、M50、M200，加上 G7X III / G5X II）。B 门通过按下保持-释放工作。无实时取景、镜头信息或电池读取——这些都不在 BR-E1 协议中。\n\n扫描屏幕上的"模拟器"条目让您在没有任何硬件连接的情况下试用界面和流程。</string>
+    <string name="guide_transports_body">五种控制相机的方式。根据您的设备选择：\n\n• Pulsar BLE（ESP32 模块）——通用：任何具有有线遥控端口的相机。相机端电池消耗最低。固件拥有运行循环，因此手机可以在流程进行中睡眠。\n• 佳能 Wi-Fi（CCAPI）——已激活 CCAPI 的佳能 EOS R 系列。增加实时取景、星点对焦、镜头检测和电池读取。由于机身 Wi-Fi 保持开启，相机电池消耗大致翻倍；长时间会话请考虑 USB-C 假电池直通供电。\n• 佳能 USB-C（PTP）——佳能 EOS R / RP 及大多数 PTP 相机。延迟最低（每张约 10–30 毫秒）。由于 Wi-Fi 关闭，相机仅消耗约 5%/小时。注意：在 PC 远程模式下，机身的模式拨盘在断开前会锁定。\n• 佳能 Wi-Fi PTP——EOS 机身在 Wi-Fi「遥控（EOS Utility）」模式下。与 USB PTP 同一套命令，只是无线。初代 EOS R 唯一可用的无线控制路径。两台设备须在同一 Wi-Fi 上（或手机连接相机的热点）。\n• 佳能 BLE——直接使用佳能原生的 Bluetooth 协议与机身通信。自动判别相机使用哪种佳能 BLE 协议（R 系列 / 近期 M 系列 / 中端 DSLR 上的现代智能手机模式，或较旧机身上的经典 BR-E1）。无线、无需 Pulsar 硬件、无需 Wi-Fi 设置。B 门通过按下保持-释放工作。无实时取景、镜头信息或电池读取——这些都不在任何佳能 BLE 协议中。\n\n扫描屏幕上的"模拟器"条目让您在没有任何硬件连接的情况下试用界面和流程。</string>
     <string name="guide_canon_ble_title">佳能 BLE 详解</string>
-    <string name="guide_canon_ble_body">佳能 BLE 直连让您无需 Pulsar 硬件、无需 Wi-Fi 设置即可无线控制佳能机身。Pulsar 通过低功耗蓝牙说佳能自家的 BR-E1 遥控协议——与佳能 BR-E1 硬件遥控器使用的是同一个协议。\n\n兼容机身\n• 佳能 BR-E1 兼容列表中的任何机身：EOS R、RP、R5、R6、Ra、6D Mark II、77D、800D（Rebel T7i）、200D（Rebel SL2）、850D、M50、M200，以及 PowerShot G7 X Mark III 和 G5 X Mark II。\n• 不支持 BR-E1 的机身不会广播该服务，也不会出现在佳能 BLE 遥控器部分。\n\n首次配对\n• 在相机上：启用 无线通讯 → 蓝牙 → 模式设为"遥控器"，然后在机身菜单中选择"配对"开始广播。\n• 在手机上：打开 Pulsar 的扫描屏幕。您的相机会出现在"佳能 BLE 遥控器"下。点击它的卡片。\n• Android 弹出系统配对对话框；确认密钥与相机屏幕上显示的一致。此后绑定会保存在 Android 的密钥库中，相机的设备列表会显示"已与 Pulsar 配对"。\n• 后续连接会跳过配对对话框，自动复用绑定。\n\n可以做什么\n• 单张 Timelapse 拍摄（相机控制曝光）。\n• B 门类流程：长曝光的间隔计、天文模式、暗场、曝光渐变。Pulsar 在曝光时长内保持无线快门按钮按下，结束时释放——与物理 BR-E1 完全一样。\n• 逐张自动对焦切换：开启后，Pulsar 会在全按之前发送一个简短的半按以锁定 AF。\n\n不可以做什么\n• 实时取景 / 星点对焦：BR-E1 协议没有实时取景端点。星点对焦请使用 CCAPI 或 USB-C PTP。\n• 天文模式下的焦距自动填充：协议中没有。请手动输入。\n• 电池读取：协议中没有。状态芯片显示 0%。\n• 程序化设置（ISO / 光圈 / 快门速度）：协议中没有。\n\n模式拨盘约束\n协议无法更改相机的模式拨盘或快门速度设置。对于 B 门类流程，您必须自己在机身上将模式拨盘设为 B 门，并将曝光模式设为 M。对于 Timelapse，相机的快门速度即为实际曝光时间。\n\n自动重连\n如果相机进入休眠或超出范围，连接会断开并显示重连横幅。唤醒相机，Pulsar 会自动重新连接。绑定会跨越应用重启——在以前已配对的相机附近打开 Pulsar，它会自动重新连接。</string>
+    <string name="guide_canon_ble_body">佳能 BLE 让您无需 Pulsar 硬件、无需 Wi-Fi 设置即可无线控制佳能机身。Pulsar 同时支持佳能两种原生 Bluetooth 协议，连接时自动识别机身使用的协议——无需任何设置。\n\n兼容机身（已经研究确认，22+ 机型）\n• EOS R 系列：R3、R5、R6、R6 Mark II、R7、R8、R10、R50、R100、RP、Ra。\n• EOS M 系列：M50、M50 Mark II、M6、M6 Mark II、M200。\n• EOS DSLR：1D X Mark III、90D、200D Mark II、250D、850D、6D Mark II、77D、800D（Rebel T7i）。\n• PowerShot：G5 X Mark II、G7 X Mark III、G9 X Mark II。\n• 例外：初代 EOS R（2018）虽可配对，但根本没有 BLE 快门——Pulsar 会检测到并引导您使用 USB 或 Wi-Fi PTP。\n\n首次配对\n• 较新机身（R 系列、M 系列、近期 DSLR）：MENU →"连接到智能手机"（或"Wi-Fi/Bluetooth 连接"→"连接到智能手机"）→"添加设备"→"通过蓝牙配对"。出现二维码界面时选择"不显示"——Pulsar 已安装。\n• 附带 BR-E1 遥控器的较旧机身：无线通讯 → 蓝牙 →"遥控器"模式 →"配对"。\n• 在手机上：打开 Pulsar 的扫描屏幕。您的相机会出现在"佳能 BLE 遥控器"下。点击它的卡片。\n• Android 弹出系统配对对话框；确认密钥与相机屏幕上显示的一致。此后绑定会保存在 Android 的密钥库中，相机会显示"已与 Pulsar 配对"。\n• 后续连接会跳过配对对话框，自动复用绑定。\n• 重要：如果佳能官方的 Camera Connect 应用正在运行，请先关闭——它会占用 BLE 链接。\n\n可以做什么\n• 单张 Timelapse 拍摄（相机控制曝光）。\n• B 门类流程：长曝光的间隔计、天文模式、暗场、曝光渐变。Pulsar 在曝光时长内保持无线快门按下，结束时释放。\n• 较旧机身（BR-E1 协议）上的逐张自动对焦切换——全按前发送半按以锁定 AF。智能手机模式的新机身不在 BLE 层面单独暴露 AF。\n\n不可以做什么\n• 实时取景 / 星点对焦：任何佳能 BLE 协议都没有实时取景。星点对焦请使用佳能 Wi-Fi（CCAPI）、USB-C PTP 或佳能 Wi-Fi PTP。\n• 天文模式下的焦距自动填充：BLE 协议中没有。请手动输入。\n• 电池读取：BLE 协议中没有。状态芯片显示 0%。\n• 程序化设置（ISO / 光圈 / 快门速度）：BLE 协议中没有。\n\n模式拨盘约束\n任何 BLE 协议都无法更改相机的模式拨盘或快门速度设置。对于 B 门类流程，您必须自己在机身上将模式拨盘设为 B 门，并将曝光模式设为 M。对于 Timelapse，相机的快门速度即为实际曝光时间。"工具 → 测试相机"向导会逐步引导您完成 M→B 门切换。\n\n自动重连\n如果相机进入休眠或超出范围，连接会断开并显示重连横幅。唤醒相机，Pulsar 会自动重新连接。绑定会跨越应用重启——在以前已配对的相机附近打开 Pulsar，它会自动重新连接。</string>
     <string name="guide_intervalometer_title">间隔计</string>
     <string name="guide_intervalometer_body">以固定间隔拍摄一系列照片——非常适合延时摄影。\n\n• 曝光：每次拍摄时快门打开的时间。\n• 间隔（间隙）：一次曝光结束到下一次开始之间的暂停时间。\n• 张数：要拍摄的总照片数（0 = 无限制）。\n\n每帧总周期时间 = 曝光 + 间隔。\n\n在佳能传输方式（Wi-Fi 或 USB-C）上，如果曝光时间设置为约 1 秒以下，应用会发起单张拍摄，由相机控制时间；较长的曝光使用 B 门。B 门运行请将机身模式拨盘设置为 Bulb。</string>
     <string name="guide_astro_title">天文模式</string>
@@ -589,11 +589,11 @@
     <string name="guide_flows_title">工作流与预设</string>
     <string name="guide_flows_body">工作流允许您将多个拍摄步骤串联成一个自动化序列。\n\n• 每个步骤可以是间隔计、天文、暗场、渐变或暂停。\n• 步骤按顺序执行——非常适合"拍摄 100 张亮场，然后 30 张暗场"的工作流。\n• 将工作流保存到库中并添加标签以便检索。\n• 收藏常用工作流使其显示在最前面。\n• 内置预设为常见场景提供快速起点。\n• 当前步骤的模式和关键参数会显示在运行视图的标签中，让您随时了解正在拍摄的内容。</string>
     <string name="guide_star_focus_title">星点对焦辅助</string>
-    <string name="guide_star_focus_body">在启动天文运行之前，通过四步引导向导精确对准星点对焦。可用于支持实时取景的两个佳能传输：通过 Wi-Fi 的 CCAPI，以及在公布实时取景操作的机身上通过 USB-C 的 PTP。佳能 BLE 直连不可用——BR-E1 协议没有实时取景端点。\n\n• 准备：镜头 AF/MF 开关设为 AF；模式拨盘设为 M（B 门时实时取景禁用）。\n• 瞄准：实时取景流式传输；点击一颗明亮的恒星以在其上锁定小区域。\n• 对焦：逐帧更新的峰值亮度锐度读数；六个对焦驱动按钮（«««、««、«、»、»»、»»»）步进电机——1 = 精细，3 = 粗略。\n• 锁定：实时取景自动停止以节省电池。如有 MF 开关的镜头切换至 MF；没有开关的镜头保持 AF——Pulsar 已在 B 门运行时发送 af=false。\n\n在通过 Wi-Fi 或 USB-C 连接的佳能相机时，可在工具选项卡中找到。</string>
+    <string name="guide_star_focus_body">在启动天文运行之前，通过四步引导向导精确对准星点对焦。可用于支持实时取景的佳能传输：佳能 Wi-Fi（CCAPI）、USB-C PTP 以及在公布实时取景操作的机身上通过的佳能 Wi-Fi PTP。佳能 BLE 不可用——任何佳能 BLE 协议都不暴露实时取景。\n\n• 准备：镜头 AF/MF 开关设为 AF；模式拨盘设为 M（B 门时实时取景禁用）。\n• 瞄准：实时取景流式传输；点击一颗明亮的恒星以在其上锁定小区域。\n• 对焦：逐帧更新的峰值亮度锐度读数；六个对焦驱动按钮（«««、««、«、»、»»、»»»）步进电机——1 = 精细，3 = 粗略。\n• 锁定：实时取景自动停止以节省电池。如有 MF 开关的镜头切换至 MF；没有开关的镜头保持 AF——Pulsar 已在 B 门运行时发送 af=false。\n\n在通过 Wi-Fi 或 USB-C 连接的佳能相机时，可在工具选项卡中找到。</string>
     <string name="guide_polar_align_title">极轴对齐</string>
     <string name="guide_polar_align_body">使用手机的指南针 + GPS 位置 + 当前北极星时角辅助赤道仪极轴对齐。\n\n• 将手机稳定地贴在赤道仪的极轴上（或使用热靴/冷靴支架）。\n• 屏幕上的十字线显示北极星此刻应在极轴镜中的位置。\n• 调整赤道仪的高度和方位旋钮，直至视野匹配。\n\n离线工作——一旦 GPS 定位完成，就不需要网络。</string>
     <string name="guide_camera_test_title">相机测试</string>
-    <string name="guide_camera_test_body">对当前连接的传输方式（Pulsar BLE、CCAPI、USB-C PTP 或佳能 BLE 直连）在所有可用拍摄模式上发起拍摄的端到端诊断。\n\n• 当传输支持 B 门时：在全部 5 个向导（延时、间隔计-B 门、天文、暗场、渐变）中共拍 25 张。\n• 当传输不支持 B 门时（CCAPI 上的部分 PowerShot、不支持佳能 RemoteRelease op 的 PTP 机身等）：只运行 5 张的 Timelapse 步骤，B 门类向导自动跳过。瓷砖文案也会相应更新。\n• 在更换数据线、切换机身、首次配对一台佳能 BLE 机身或升级固件后非常有用，可在真实会话前确认有效传输方式端到端工作。\n• 在工具选项卡中找到。请确保相机存储卡有空间，并在测试需要的环节将拨盘设为 Bulb（B 门步骤需要将佳能机身设为 Manual + Bulb）。</string>
+    <string name="guide_camera_test_body">对当前连接的传输方式（Pulsar BLE、佳能 Wi-Fi CCAPI、佳能 USB-C PTP、佳能 Wi-Fi PTP 或佳能 BLE）在所有可用拍摄模式上发起拍摄的端到端诊断。\n\n• 两阶段向导：Pulsar 提示您在阶段 1 将拨盘设为 Manual（M），在阶段 2 设为 Bulb。在每种佳能传输上，单拍与 B 门的快门代码都不同——拨盘位置错误会导致连续拍摄或无反应。\n• 阶段 1（Manual）：1 张 Timelapse 风格的拍摄。在佳能传输上会先执行只读的兼容性报告 + 设置探测。\n• 阶段 2（B 门）：4 张 B 门风格拍摄（间隔计-B 门、天文、暗场、渐变）。不支持 B 门的传输跳过此阶段。\n• 在更换数据线、切换机身、首次配对一台佳能 BLE 机身或升级固件后非常有用，可在真实会话前确认有效传输方式端到端工作。\n• 完成后会提示是否分享本次运行的日志行（与完整的 Diagnostics 日志分离）。\n• 入口位于 设置 → 诊断 → 测试相机。</string>
     <string name="guide_dashboard_title">天文仪表板</string>
     <string name="guide_dashboard_body">天文摄影师的实时天况面板。\n\n• 月相和照明百分比。\n• 日落、暮光（民用/航海/天文）和日出时间。\n• 基于 GPS 位置的 Bortle 等级估算。\n• 今晚星空：地平线以上的深空天体目录，按高度排序。</string>
     <string name="guide_planner_title">会话规划器</string>
@@ -629,12 +629,12 @@
     <string name="ptp_setup_step3">检测到数据线后，相机将出现在下方。点击其卡片以连接。</string>
     <string name="ptp_setup_cameras_header">USB 相机</string>
     <string name="ptp_setup_empty">未检测到 USB 相机。检查数据线和相机电源。某些数据线仅充电 — 如果相机未出现，请尝试另一根。</string>
-    <string name="canon_ble_setup_step1">在相机上：无线通讯 → 蓝牙 → 模式设为"遥控器"，然后选择"配对"。</string>
+    <string name="canon_ble_setup_step1">在相机上启用蓝牙并开始配对。较新的佳能机身使用"连接到智能手机"→"通过蓝牙配对"；附带 BR-E1 遥控器的较旧机身使用"蓝牙"→"遥控器"→"配对"。Pulsar 会自动识别机身所用的协议。</string>
     <string name="canon_ble_setup_step2">配对期间请保持距相机 ~10 米以内。</string>
     <string name="canon_ble_setup_step3">点击下方相机 — Android 会弹出系统配对对话框。确认密钥与相机屏幕上显示的一致。</string>
     <string name="canon_ble_setup_step4">配对后，绑定可在应用重启后保留。靠近相机时打开 Pulsar 即可自动重新连接。</string>
     <string name="canon_ble_setup_cameras_header">佳能 BLE 相机</string>
-    <string name="canon_ble_setup_empty">没有佳能 BLE 相机在广播。请确保相机处于 蓝牙 → 遥控器 配对模式，然后点击"重新扫描"。</string>
+    <string name="canon_ble_setup_empty">没有佳能 BLE 相机在广播。请确保相机处于蓝牙配对模式（"连接到智能手机"或"遥控器"），然后点击"重新扫描"。</string>
 
     <!-- 扫描入口屏幕（传输方式选择） -->
     <string name="scan_landing_pick_transport">选择传输方式</string>
@@ -679,7 +679,7 @@
     <string name="ptp_ip_err_session_failed">无法与相机建立会话。</string>
     <string name="ptp_ip_err_reconnect_failed">与相机的 Wi-Fi 连接已断开且无法恢复。请确认两台设备在同一网络中。</string>
     <string name="transport_tile_canon_ble_title">佳能 BLE</string>
-    <string name="transport_tile_canon_ble_subtitle">BR-E1 协议，无线</string>
+    <string name="transport_tile_canon_ble_subtitle">无线，无需额外硬件</string>
 
     <!-- Permissions screen -->
     <string name="permissions_required_title">需要权限</string>
