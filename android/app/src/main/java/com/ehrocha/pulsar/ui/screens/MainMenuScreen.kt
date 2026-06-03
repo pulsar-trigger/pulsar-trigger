@@ -16,6 +16,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -43,9 +45,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -55,7 +57,6 @@ import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.ui.components.SectionContainer
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
-import kotlinx.coroutines.launch
 
 @Composable
 fun MainMenuScreen(
@@ -95,24 +96,7 @@ fun MainMenuScreen(
         stringResource(R.string.tab_tools),
     )
     val pagerState = rememberPagerState(initialPage = initialTab, pageCount = { tabs.size })
-    val scope = rememberCoroutineScope()
-    // Adaptive nav: NavigationRail on the side when there's room (>=600dp
-    // width — landscape phones, foldables, tablets); top tabs + swipe pager
-    // otherwise. Same destinations, same content composables.
-    val configuration = LocalConfiguration.current
-    val useRail = configuration.screenWidthDp >= 600
-    // Source of truth for the selected tab. In compact mode the pager owns
-    // it (and we mirror via LaunchedEffect); in rail mode the rail owns it.
-    var railSelected by remember { mutableIntStateOf(initialTab) }
-    LaunchedEffect(useRail, pagerState.currentPage, railSelected) {
-        onTabChanged(if (useRail) railSelected else pagerState.currentPage)
-    }
-    // Per-tab icons for the rail.
-    val tabIcons = listOf(
-        Icons.Default.Stars,        // Dashboard
-        Icons.Default.PhotoCamera,  // Trigger
-        Icons.Default.Science,      // Tools
-    )
+    LaunchedEffect(pagerState.currentPage) { onTabChanged(pagerState.currentPage) }
 
     // Update banner extracted into a lambda so both layout branches render
     // the same dismissible banner without duplicating the markup.
@@ -199,29 +183,6 @@ fun MainMenuScreen(
         )
     }
 
-    if (useRail) {
-        Row(modifier = Modifier.fillMaxSize()) {
-            NavigationRail {
-                tabs.forEachIndexed { index, title ->
-                    NavigationRailItem(
-                        selected = railSelected == index,
-                        onClick = { railSelected = index },
-                        icon = { Icon(tabIcons[index], contentDescription = null) },
-                        label = { Text(title) },
-                    )
-                }
-            }
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(vertical = 12.dp),
-            ) {
-                updateBanner()
-                Box(modifier = Modifier.weight(1f)) { pageContent(railSelected) }
-            }
-        }
-        return
-    }
 
     // Horizontal padding lives on each page, not on the outer Column — the
     // Dashboard page wants edge-to-edge so its inner padding doesn't double.
@@ -233,21 +194,27 @@ fun MainMenuScreen(
 
         updateBanner()
 
-        // ── Tab row ──────────────────────────────────────────────────
-        TabRow(
-            selectedTabIndex = pagerState.currentPage,
-            containerColor = MaterialTheme.colorScheme.surface,
-        ) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = pagerState.currentPage == index,
-                    onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                    text = { Text(title) },
-                )
+        // ── Page header (current destination name) ───────────────────
+        // Tracks the pager mid-swipe via currentPageOffsetFraction so the
+        // label switches at the halfway point and feels continuous with
+        // the gesture instead of snapping after settle.
+        val headerIndex = remember {
+            derivedStateOf {
+                (pagerState.currentPage + pagerState.currentPageOffsetFraction)
+                    .let { kotlin.math.round(it).toInt() }
+                    .coerceIn(0, tabs.size - 1)
             }
         }
-
-        Spacer(Modifier.height(12.dp))
+        Text(
+            text = tabs[headerIndex.value],
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(8.dp))
 
         // ── Pager ────────────────────────────────────────────────────
         HorizontalPager(
@@ -255,6 +222,29 @@ fun MainMenuScreen(
             modifier = Modifier.weight(1f),
         ) { page ->
             pageContent(page)
+        }
+
+        // ── Page indicator (dots) ────────────────────────────────────
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            repeat(tabs.size) { i ->
+                val selected = pagerState.currentPage == i
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 4.dp)
+                        .size(if (selected) 10.dp else 8.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (selected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
+                        )
+                )
+            }
         }
     }
 }
