@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.History
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PowerSettingsNew
@@ -1451,6 +1452,8 @@ internal fun UpdatesSectionContent(vm: PulsarViewModel, showFirmware: Boolean = 
 internal fun DiagnosticsSectionContent(
     onTestCameraClick: () -> Unit,
     onDiagnosticsClick: () -> Unit,
+    debugMode: Boolean = false,
+    onGattExplorerClick: () -> Unit = {},
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         DiagnosticsRow(
@@ -1465,6 +1468,16 @@ internal fun DiagnosticsSectionContent(
             subtitle = stringResource(R.string.section_diagnostics_logs_sub),
             onClick = onDiagnosticsClick,
         )
+        // GATT Explorer drill-in — debug-mode only. See
+        // docs/gatt-explorer-draft.md.
+        if (debugMode) {
+            DiagnosticsRow(
+                icon = Icons.Default.BugReport,
+                title = stringResource(R.string.section_gatt_explorer),
+                subtitle = stringResource(R.string.section_gatt_explorer_sub),
+                onClick = onGattExplorerClick,
+            )
+        }
     }
 }
 
@@ -1688,7 +1701,10 @@ private fun GuideSection(title: String, body: String) {
 }
 
 @Composable
-internal fun AboutSectionContent() {
+internal fun AboutSectionContent(
+    debugMode: Boolean = false,
+    onDebugModeChanged: (Boolean) -> Unit = {},
+) {
     val uriHandler = LocalUriHandler.current
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1786,6 +1802,40 @@ internal fun AboutSectionContent() {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+
+        // ── Developer options ───────────────────────────────────────
+        // Single switch that gates the GATT Explorer (and any future
+        // debug tooling). See docs/gatt-explorer-draft.md.
+        Spacer(Modifier.height(8.dp))
+        HorizontalDivider()
+        Spacer(Modifier.height(8.dp))
+        Text(
+            stringResource(R.string.about_developer_options),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.about_debug_mode_title),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Text(
+                        stringResource(R.string.about_debug_mode_sub),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(checked = debugMode, onCheckedChange = onDebugModeChanged)
+            }
+        }
     }
 }
 

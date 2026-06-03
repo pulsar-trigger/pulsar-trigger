@@ -124,6 +124,17 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     val shotLog = com.ehrocha.pulsar.model.ShotLog(prefs)
 
+    // ── Debug mode (gates the in-app GATT Explorer + future dev tools) ──
+    // Off by default. Toggled from Settings → About → Developer options.
+    // Reactive so the Diagnostics section can show/hide the GATT Explorer
+    // entry without restarting the activity. See docs/gatt-explorer-draft.md.
+    private val _debugMode = MutableStateFlow(prefs.getBoolean("debug_mode", false))
+    val debugMode: StateFlow<Boolean> = _debugMode
+    fun setDebugMode(enabled: Boolean) {
+        prefs.edit().putBoolean("debug_mode", enabled).apply()
+        _debugMode.value = enabled
+    }
+
     // ── Last successful connection (drives Scan-landing's reconnect CTA) ─
     private val lastConnectionPrefs = app.getSharedPreferences(
         com.ehrocha.pulsar.model.LastConnection.SHARED_PREFS_NAME,

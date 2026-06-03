@@ -521,6 +521,7 @@ fun PulsarNavHost(
                     onBack = { currentScreen = AppScreen.Menu },
                     onTestCameraSelected = { currentScreen = AppScreen.TestCamera },
                     onDiagnosticsSelected = { currentScreen = AppScreen.Diagnostics },
+                    onGattExplorerSelected = { currentScreen = AppScreen.GattExplorer },
                 )
             }
             is AppScreen.CustomFlow -> {
@@ -615,6 +616,13 @@ fun PulsarNavHost(
                 com.ehrocha.pulsar.ui.screens.DiagnosticsScreen(
                     vm = vm,
                     onBack = { currentScreen = AppScreen.Menu },
+                )
+            }
+            AppScreen.GattExplorer -> {
+                BackHandler { currentScreen = AppScreen.Settings(SettingsSection.DIAGNOSTICS) }
+                com.ehrocha.pulsar.ui.screens.GattExplorerScreen(
+                    vm = vm,
+                    onBack = { currentScreen = AppScreen.Settings(SettingsSection.DIAGNOSTICS) },
                 )
             }
             AppScreen.CableRelease -> {
@@ -739,6 +747,10 @@ private sealed class AppScreen {
     data object StarFocus : AppScreen()
     data object TestCamera : AppScreen()
     data object Diagnostics : AppScreen()
+    /** Raw GATT explorer for unsupported bodies. Settings → Diagnostics
+     *  → GATT Explorer (debug mode only). Scaffold; see
+     *  docs/gatt-explorer-draft.md. */
+    data object GattExplorer : AppScreen()
     data object CableRelease : AppScreen()
     data class Intervalometer2(val presetId: String? = null) : AppScreen()
     data class AstroMode2(val presetId: String? = null) : AppScreen()

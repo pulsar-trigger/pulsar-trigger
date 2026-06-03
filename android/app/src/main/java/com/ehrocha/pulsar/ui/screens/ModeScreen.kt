@@ -217,7 +217,9 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onTestCameraSelected: () -> Unit = {},
     onDiagnosticsSelected: () -> Unit = {},
+    onGattExplorerSelected: () -> Unit = {},
 ) {
+    val debugMode by vm.debugMode.collectAsState()
     val deviceName by vm.deviceName.collectAsState()
     val otaState by vm.firmwareManager.state.collectAsState()
     val otaProgress by vm.firmwareManager.progress.collectAsState()
@@ -346,9 +348,14 @@ fun SettingsScreen(
                     SettingsSection.DIAGNOSTICS -> DiagnosticsSectionContent(
                         onTestCameraClick = onTestCameraSelected,
                         onDiagnosticsClick = onDiagnosticsSelected,
+                        debugMode = debugMode,
+                        onGattExplorerClick = onGattExplorerSelected,
                     )
                     SettingsSection.ABOUT -> {
-                        AboutSectionContent()
+                        AboutSectionContent(
+                            debugMode = debugMode,
+                            onDebugModeChanged = vm::setDebugMode,
+                        )
                         if (onEsp) {
                             Spacer(Modifier.height(16.dp))
                             HorizontalDivider()
