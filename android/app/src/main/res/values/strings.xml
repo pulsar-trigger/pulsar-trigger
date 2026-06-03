@@ -441,6 +441,7 @@
     <string name="section_diagnostics_test_camera_sub">Compatibility report + settings probe + 5-shot sweep across all modes</string>
     <string name="section_diagnostics_logs_sub">View / share the recent transport + run logs</string>
     <string name="widget_appearance_title">Widget appearance</string>
+    <string name="widget_configure_title">Widget settings</string>
     <string name="widget_bg_opacity_label">Background opacity: %1$d%%</string>
     <string name="label_firmware">Firmware</string>
     <string name="label_current_version">Current: v%1$s</string>

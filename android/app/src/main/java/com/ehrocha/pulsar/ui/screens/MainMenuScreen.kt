@@ -246,7 +246,6 @@ fun MainMenuScreen(
                         selected = pagerState.currentPage == index,
                         onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
                         icon = { Icon(destIcons[index], contentDescription = title) },
-                        label = { Text(title) },
                     )
                 }
             }

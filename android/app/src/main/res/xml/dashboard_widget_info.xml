@@ -9,4 +9,6 @@
     android:widgetCategory="home_screen|keyguard"
     android:updatePeriodMillis="10800000"
     android:description="@string/widget_dashboard_description"
-    android:previewLayout="@layout/widget_initial_layout" />
+    android:previewLayout="@layout/widget_initial_layout"
+    android:configure="com.ehrocha.pulsar.widget.DashboardWidgetConfigureActivity"
+    android:widgetFeatures="reconfigurable|configuration_optional" />

@@ -290,6 +290,7 @@
     <string name="section_diagnostics">Diagnósticos</string>
     <string name="section_diagnostics_test_camera_sub">Informe de compatibilidad + sondeo de ajustes + secuencia de 5 disparos</string>
     <string name="section_diagnostics_logs_sub">Ver / compartir logs recientes de transporte y ejecución</string>
+    <string name="widget_configure_title">Ajustes del widget</string>
     <string name="widget_appearance_title">Apariencia del widget</string>
     <string name="widget_bg_opacity_label">Opacidad del fondo: %1$d%%</string>
     <string name="label_firmware">Firmware</string>

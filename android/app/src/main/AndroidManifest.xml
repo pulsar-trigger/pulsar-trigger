@@ -106,5 +106,17 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/dashboard_widget_info" />
         </receiver>
+
+        <!-- Widget configure screen — opens via the launcher's long-press
+             "edit" affordance (reconfigurable) or on first add (when
+             configuration_optional is omitted). Themed Compose activity. -->
+        <activity
+            android:name=".widget.DashboardWidgetConfigureActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Pulsar">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
     </application>
 </manifest>
