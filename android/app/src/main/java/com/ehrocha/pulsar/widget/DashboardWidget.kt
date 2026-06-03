@@ -74,16 +74,24 @@ class DashboardWidget : GlanceAppWidget() {
             val m = AstroDashboardManager(context)
             if (m.restoreState(snap.json)) m.state.value else null
         }
+        val bgAlpha = DashboardSnapshotStore.backgroundAlpha(context)
         provideContent {
             GlanceTheme {
                 if (state == null) {
-                    EmptyState()
+                    EmptyState(bgAlpha)
                 } else {
-                    SummaryCard(state, snapshot.updatedAtMs)
+                    SummaryCard(state, snapshot.updatedAtMs, bgAlpha)
                 }
             }
         }
     }
+}
+
+@Composable
+private fun widgetBgWithAlpha(alpha: Float): ColorProvider {
+    val ctx = androidx.glance.LocalContext.current
+    val base = GlanceTheme.colors.widgetBackground.getColor(ctx)
+    return ColorProvider(base.copy(alpha = alpha))
 }
 
 class DashboardWidgetReceiver : GlanceAppWidgetReceiver() {
@@ -100,12 +108,12 @@ private fun isStale(updatedAtMs: Long): Boolean =
     updatedAtMs > 0 && System.currentTimeMillis() - updatedAtMs > 12L * 3600_000L
 
 @Composable
-private fun EmptyState() {
+private fun EmptyState(bgAlpha: Float) {
     val ctx = androidx.glance.LocalContext.current
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(GlanceTheme.colors.widgetBackground)
+            .background(widgetBgWithAlpha(bgAlpha))
             .padding(14.dp)
             .clickable(actionStartActivity(openAppIntent(ctx))),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -140,12 +148,12 @@ private fun EmptyState() {
  * resizes it small enough that everything doesn't fit.
  */
 @Composable
-private fun SummaryCard(state: DashboardState, updatedAtMs: Long) {
+private fun SummaryCard(state: DashboardState, updatedAtMs: Long, bgAlpha: Float) {
     val ctx = androidx.glance.LocalContext.current
     LazyColumn(
         modifier = GlanceModifier
             .fillMaxSize()
-            .background(GlanceTheme.colors.widgetBackground)
+            .background(widgetBgWithAlpha(bgAlpha))
             .padding(14.dp)
             .clickable(actionStartActivity(openAppIntent(ctx))),
     ) {

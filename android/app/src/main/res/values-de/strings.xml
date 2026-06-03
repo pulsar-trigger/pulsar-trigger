@@ -290,6 +290,8 @@
     <string name="section_diagnostics">Diagnose</string>
     <string name="section_diagnostics_test_camera_sub">Kompatibilitätsbericht + Einstellungs-Sondierung + 5-Aufnahmen-Sweep</string>
     <string name="section_diagnostics_logs_sub">Aktuelle Transport- und Lauf-Logs ansehen / teilen</string>
+    <string name="widget_appearance_title">Widget-Aussehen</string>
+    <string name="widget_bg_opacity_label">Hintergrund-Deckkraft: %1$d%%</string>
     <string name="label_firmware">Firmware</string>
     <string name="label_current_version">Aktuell: v%1$s</string>
     <string name="btn_check_firmware">Nach Firmware-Update suchen</string>

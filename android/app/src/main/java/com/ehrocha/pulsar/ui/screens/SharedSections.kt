@@ -1324,7 +1324,51 @@ internal fun BackgroundSectionContent(vm: PulsarViewModel) {
                 Text(stringResource(R.string.background_request_btn))
             }
         }
+
+        // ── Widget appearance ──────────────────────────────────────
+        Spacer(Modifier.height(8.dp))
+        HorizontalDivider()
+        Spacer(Modifier.height(4.dp))
+        WidgetOpacitySlider()
     }
+}
+
+@Composable
+private fun WidgetOpacitySlider() {
+    val context = LocalContext.current
+    var alpha by remember {
+        mutableStateOf(com.ehrocha.pulsar.widget.DashboardSnapshotStore.backgroundAlpha(context))
+    }
+    val scope = rememberCoroutineScope()
+    Text(
+        stringResource(R.string.widget_appearance_title),
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.SemiBold,
+    )
+    Text(
+        stringResource(R.string.widget_bg_opacity_label, (alpha * 100).toInt()),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Slider(
+        value = alpha,
+        onValueChange = { alpha = it },
+        onValueChangeFinished = {
+            com.ehrocha.pulsar.widget.DashboardSnapshotStore.setBackgroundAlpha(context, alpha)
+            // Refresh the widget host so the new alpha lands immediately.
+            scope.launch {
+                runCatching {
+                    androidx.glance.appwidget.GlanceAppWidgetManager(context)
+                        .getGlanceIds(com.ehrocha.pulsar.widget.DashboardWidget::class.java)
+                        .forEach { id ->
+                            com.ehrocha.pulsar.widget.DashboardWidget().update(context, id)
+                        }
+                }
+            }
+        },
+        valueRange = 0f..1f,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @Composable

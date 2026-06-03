@@ -290,6 +290,8 @@
     <string name="section_diagnostics">診断</string>
     <string name="section_diagnostics_test_camera_sub">互換性レポート + 設定プローブ + 5 ショットスイープ</string>
     <string name="section_diagnostics_logs_sub">最近のトランスポート/実行ログを表示・共有</string>
+    <string name="widget_appearance_title">ウィジェットの外観</string>
+    <string name="widget_bg_opacity_label">背景の不透明度: %1$d%%</string>
     <string name="label_firmware">ファームウェア</string>
     <string name="label_current_version">現在: v%1$s</string>
     <string name="btn_check_firmware">ファームウェアの更新を確認</string>
