@@ -30,6 +30,12 @@
     <string name="canon_manual_add_subtitle">SSDP でカメラが見つからないとき (AP がマルチキャストをブロック / 機体が UPnP を出さない) は、カメラの IP (および 8080 以外のポート) を入力してください。Pulsar は /ccapi に直接問い合わせます — ブラウザで開ける URL と同じです。</string>
     <string name="btn_download_install">ダウンロードしてインストール</string>
     <string name="btn_install_now">今すぐインストール</string>
+    <string name="btn_pick_previous_version">以前のバージョンを選択…</string>
+    <string name="dialog_pick_previous_title">以前のリリース</string>
+    <string name="dialog_pick_previous_empty">以前のリリースが見つかりません。</string>
+    <string name="dialog_install_specific_title">v%1$s をインストール?</string>
+    <string name="dialog_install_specific_body">選択した APK をダウンロードして Android のインストーラーに渡します。「アプリの更新を確認」からいつでも最新版に戻せます。</string>
+    <string name="label_current">現在</string>
     <string name="status_downloading_apk">APK をダウンロード中… %1$d%%</string>
     <string name="status_apk_ready">ダウンロード完了 — 下のインストーラを開いてください。</string>
     <string name="canon_manual_add_label">ホスト または host:port</string>

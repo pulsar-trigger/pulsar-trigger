@@ -30,6 +30,12 @@
     <string name="canon_manual_add_subtitle">Quand SSDP ne trouve pas l\'appareil (AP bloquant le multicast, ou boîtier qui ne diffuse pas l\'UPnP), saisissez son IP (et le port si différent de 8080). Pulsar interroge /ccapi directement — la même URL que celle qui s\'ouvre dans le navigateur.</string>
     <string name="btn_download_install">Télécharger et Installer</string>
     <string name="btn_install_now">Installer Maintenant</string>
+    <string name="btn_pick_previous_version">Choisir une version précédente…</string>
+    <string name="dialog_pick_previous_title">Versions précédentes</string>
+    <string name="dialog_pick_previous_empty">Aucune version précédente trouvée.</string>
+    <string name="dialog_install_specific_title">Installer v%1$s ?</string>
+    <string name="dialog_install_specific_body">Télécharge l\'APK sélectionné et le passe à l\'installateur Android. Vous pouvez revenir à la dernière version à tout moment via \"Vérifier les mises à jour\".</string>
+    <string name="label_current">Actuelle</string>
     <string name="status_downloading_apk">Téléchargement de l\'APK… %1$d%%</string>
     <string name="status_apk_ready">Téléchargement terminé — ouvrez l\'installeur ci-dessous.</string>
     <string name="canon_manual_add_label">Hôte ou hôte:port</string>

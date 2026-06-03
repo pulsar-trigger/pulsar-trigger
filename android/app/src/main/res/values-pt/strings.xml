@@ -30,6 +30,12 @@
     <string name="canon_manual_add_subtitle">Quando o SSDP não encontra a câmera (AP bloqueia multicast ou o corpo não publica UPnP), informe o IP da câmera (e a porta se não for 8080). A Pulsar consulta /ccapi diretamente — a mesma URL que abre no navegador.</string>
     <string name="btn_download_install">Baixar e Instalar</string>
     <string name="btn_install_now">Instalar Agora</string>
+    <string name="btn_pick_previous_version">Escolher versão anterior…</string>
+    <string name="dialog_pick_previous_title">Versões anteriores</string>
+    <string name="dialog_pick_previous_empty">Nenhuma versão anterior encontrada.</string>
+    <string name="dialog_install_specific_title">Instalar v%1$s?</string>
+    <string name="dialog_install_specific_body">Baixa o APK selecionado e entrega ao instalador do Android. Você pode voltar para a versão mais recente a qualquer momento via \"Verificar atualizações\".</string>
+    <string name="label_current">Atual</string>
     <string name="status_downloading_apk">Baixando APK… %1$d%%</string>
     <string name="status_apk_ready">Download concluído — abra o instalador abaixo.</string>
     <string name="canon_manual_add_label">Host ou host:porta</string>

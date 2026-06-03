@@ -28,6 +28,9 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.History
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.SystemUpdate
@@ -2007,6 +2010,130 @@ private fun UpdatesSection(vm: PulsarViewModel, showFirmware: Boolean = true) {
                 ) { Text(stringResource(R.string.dismiss)) }
             }
         }
+
+        // ── Rollback picker: pick from the last ~10 published releases ──
+        // Always available, regardless of update state — useful for testers
+        // who want to A/B between versions or roll back from a bad release.
+        VersionRollbackPicker(updateManager)
+    }
+}
+
+@Composable
+private fun VersionRollbackPicker(updateManager: com.ehrocha.pulsar.update.AppUpdateManager) {
+    var showPicker by remember { mutableStateOf(false) }
+    var confirmRelease by remember { mutableStateOf<com.ehrocha.pulsar.update.AppRelease?>(null) }
+    val releases by updateManager.recentReleases.collectAsState()
+    val loading by updateManager.recentReleasesLoading.collectAsState()
+    val currentVersion = BuildConfig.VERSION_NAME
+
+    OutlinedButton(
+        onClick = {
+            showPicker = true
+            if (releases.isEmpty()) updateManager.fetchRecentReleases()
+        },
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+    ) {
+        Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(stringResource(R.string.btn_pick_previous_version))
+    }
+
+    if (showPicker) {
+        AlertDialog(
+            onDismissRequest = { showPicker = false },
+            title = { Text(stringResource(R.string.dialog_pick_previous_title)) },
+            text = {
+                if (loading && releases.isEmpty()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(12.dp))
+                        Text(stringResource(R.string.status_checking_github))
+                    }
+                } else if (releases.isEmpty()) {
+                    Text(stringResource(R.string.dialog_pick_previous_empty))
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 380.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        releases.forEach { release ->
+                            val isCurrent = release.version == currentVersion
+                            Surface(
+                                onClick = { if (!isCurrent) confirmRelease = release },
+                                enabled = !isCurrent,
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            "v${release.version}",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.Bold,
+                                        )
+                                        Text(
+                                            release.publishedAt.take(10),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    if (isCurrent) {
+                                        Text(
+                                            stringResource(R.string.label_current),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Bold,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPicker = false }) {
+                    Text(stringResource(R.string.tools_logs_close))
+                }
+            },
+            dismissButton = {
+                if (!loading && releases.isNotEmpty()) {
+                    TextButton(onClick = { updateManager.fetchRecentReleases() }) {
+                        Text(stringResource(R.string.refresh))
+                    }
+                }
+            },
+        )
+    }
+
+    confirmRelease?.let { release ->
+        AlertDialog(
+            onDismissRequest = { confirmRelease = null },
+            title = { Text(stringResource(R.string.dialog_install_specific_title, release.version)) },
+            text = { Text(stringResource(R.string.dialog_install_specific_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmRelease = null
+                    showPicker = false
+                    updateManager.downloadAndInstall(override = release)
+                }) {
+                    Text(stringResource(R.string.btn_install_now))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmRelease = null }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
     }
 }
 

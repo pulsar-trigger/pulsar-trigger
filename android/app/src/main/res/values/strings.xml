@@ -454,6 +454,12 @@
     <string name="btn_open_release_page">Open Release Page</string>
     <string name="btn_download_install">Download &amp; Install</string>
     <string name="btn_install_now">Install Now</string>
+    <string name="btn_pick_previous_version">Pick a previous version…</string>
+    <string name="dialog_pick_previous_title">Previous releases</string>
+    <string name="dialog_pick_previous_empty">No previous releases found.</string>
+    <string name="dialog_install_specific_title">Install v%1$s?</string>
+    <string name="dialog_install_specific_body">This downloads the selected APK and hands it to Android\'s installer. You can roll forward again any time via "Check for app update".</string>
+    <string name="label_current">Current</string>
     <string name="status_downloading_apk">Downloading APK… %1$d%%</string>
     <string name="status_apk_ready">Download complete — open installer below.</string>
     <string name="status_update_check_failed">Update check failed</string>

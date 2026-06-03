@@ -94,6 +94,76 @@ fun fetchGitHubRelease(
     }
 }
 
+/**
+ * Fetch up to [count] most-recent GitHub releases matching [tagPrefix] that
+ * contain an asset whose name ends with [assetSuffix]. Returned newest-first
+ * (by parsed semver). Used by the Settings → Updates "pick previous version"
+ * picker for rollbacks.
+ */
+fun fetchGitHubReleases(
+    tagPrefix: String,
+    assetSuffix: String,
+    count: Int = 10,
+): List<GitHubAsset> {
+    val url = URL("${AppConfig.GITHUB_RELEASES_URL}?per_page=${count.coerceAtLeast(1) * 3}")
+    val conn = url.openConnection() as HttpURLConnection
+    conn.setRequestProperty("Accept", "application/vnd.github+json")
+    conn.connectTimeout = AppConfig.API_CONNECT_TIMEOUT_MS
+    conn.readTimeout = AppConfig.API_READ_TIMEOUT_MS
+    try {
+        if (conn.responseCode != 200) throw Exception("GitHub API returned ${conn.responseCode}")
+        val body = conn.inputStream.bufferedReader().use { it.readText() }
+        val releases = JSONArray(body)
+        val out = mutableListOf<GitHubAsset>()
+        for (i in 0 until releases.length()) {
+            val rel = releases.getJSONObject(i)
+            val tagName = rel.getString("tag_name")
+            if (!tagName.startsWith(tagPrefix)) continue
+            val version = tagName.removePrefix(tagPrefix)
+            val assets = rel.getJSONArray("assets")
+            for (j in 0 until assets.length()) {
+                val asset = assets.getJSONObject(j)
+                val assetName = asset.getString("name")
+                if (assetName.endsWith(assetSuffix)) {
+                    var checksumUrl: String? = null
+                    for (k in 0 until assets.length()) {
+                        val cs = assets.getJSONObject(k)
+                        if (cs.getString("name") == "$assetName.sha256") {
+                            checksumUrl = cs.getString("browser_download_url")
+                            break
+                        }
+                    }
+                    out += GitHubAsset(
+                        version = version,
+                        downloadUrl = asset.getString("browser_download_url"),
+                        checksumUrl = checksumUrl,
+                        publishedAt = rel.getString("published_at"),
+                        body = rel.optString("body", ""),
+                    )
+                    break
+                }
+            }
+        }
+        // Newest first by semver, capped at [count].
+        return out.sortedWith(
+            Comparator { a, b -> versionPartComparator.compare(b.version.toVersionParts(), a.version.toVersionParts()) }
+        ).take(count)
+    } finally {
+        conn.disconnect()
+    }
+}
+
+private fun String.toVersionParts(): List<Int> =
+    split(".").map { it.toIntOrNull() ?: 0 }
+
+private val versionPartComparator: Comparator<List<Int>> = Comparator { a, b ->
+    for (i in 0 until maxOf(a.size, b.size)) {
+        val cmp = a.getOrElse(i) { 0 }.compareTo(b.getOrElse(i) { 0 })
+        if (cmp != 0) return@Comparator cmp
+    }
+    0
+}
+
 /** Compute SHA-256 hex digest of a file. */
 fun sha256Hex(file: File): String {
     val digest = MessageDigest.getInstance("SHA-256")

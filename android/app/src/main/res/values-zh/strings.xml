@@ -30,6 +30,12 @@
     <string name="canon_manual_add_subtitle">当 SSDP 未能发现相机（AP 屏蔽多播或机身未广播 UPnP）时，请输入相机的 IP（端口不是 8080 时也需指定）。Pulsar 会直接探测 /ccapi，与浏览器中打开的 URL 一致。</string>
     <string name="btn_download_install">下载并安装</string>
     <string name="btn_install_now">立即安装</string>
+    <string name="btn_pick_previous_version">选择以前的版本…</string>
+    <string name="dialog_pick_previous_title">以前的版本</string>
+    <string name="dialog_pick_previous_empty">未找到以前的版本。</string>
+    <string name="dialog_install_specific_title">安装 v%1$s?</string>
+    <string name="dialog_install_specific_body">下载选定的 APK 并交给 Android 安装器。随时可以通过\"检查应用更新\"回到最新版本。</string>
+    <string name="label_current">当前</string>
     <string name="status_downloading_apk">正在下载 APK… %1$d%%</string>
     <string name="status_apk_ready">下载完成 — 点击下方打开安装程序。</string>
     <string name="canon_manual_add_label">Host 或 host:port</string>

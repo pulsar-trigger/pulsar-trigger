@@ -60,6 +60,14 @@ class AppUpdateManager(
     private val _latestRelease = MutableStateFlow<AppRelease?>(null)
     val latestRelease: StateFlow<AppRelease?> = _latestRelease
 
+    /** Recent releases (newest first, up to ~10). Populated by
+     *  [fetchRecentReleases]. Drives the Settings rollback picker. */
+    private val _recentReleases = MutableStateFlow<List<AppRelease>>(emptyList())
+    val recentReleases: StateFlow<List<AppRelease>> = _recentReleases
+
+    private val _recentReleasesLoading = MutableStateFlow(false)
+    val recentReleasesLoading: StateFlow<Boolean> = _recentReleasesLoading
+
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
 
@@ -119,11 +127,44 @@ class AppUpdateManager(
         }
     }
 
+    /** Populate [recentReleases] with up to 10 prior published releases —
+     *  used by the Settings rollback picker. Safe to call repeatedly; just
+     *  refreshes the list. */
+    fun fetchRecentReleases() {
+        scope.launch(Dispatchers.IO) {
+            _recentReleasesLoading.value = true
+            try {
+                val list = fetchGitHubReleases(tagPrefix = "app-v", assetSuffix = ".apk", count = 10)
+                _recentReleases.value = list.map { asset ->
+                    val pageUrl = asset.downloadUrl.replace(
+                        Regex("/download/([^/]+)/[^/]+$"), "/tag/$1"
+                    )
+                    AppRelease(
+                        version = asset.version,
+                        apkUrl = asset.downloadUrl,
+                        apkChecksumUrl = asset.checksumUrl,
+                        releasePageUrl = pageUrl,
+                        publishedAt = asset.publishedAt,
+                        body = asset.body,
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "fetchRecentReleases failed", e)
+                _errorMessage.value = e.message
+            } finally {
+                _recentReleasesLoading.value = false
+            }
+        }
+    }
+
     /** Download the APK from GitHub, validate its SHA-256 (when published),
      *  then trigger the system package installer. The user still has to
-     *  approve the install — we just shortcut the browser-download dance. */
-    fun downloadAndInstall() {
-        val release = _latestRelease.value ?: return
+     *  approve the install — we just shortcut the browser-download dance.
+     *  Pass [override] to install a specific (older) release from
+     *  [recentReleases] instead of [latestRelease]. */
+    fun downloadAndInstall(override: AppRelease? = null) {
+        val release = override ?: _latestRelease.value ?: return
+        if (override != null) _latestRelease.value = override
         downloadJob?.cancel()
         downloadJob = scope.launch(Dispatchers.IO) {
             _state.value = AppUpdateState.DOWNLOADING
