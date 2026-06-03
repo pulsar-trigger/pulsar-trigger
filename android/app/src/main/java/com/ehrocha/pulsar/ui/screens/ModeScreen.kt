@@ -351,6 +351,7 @@ fun SettingsScreen(
                         debugMode = debugMode,
                         onGattExplorerClick = onGattExplorerSelected,
                     )
+                    SettingsSection.DEVICES -> DevicesSectionContent(vm)
                     SettingsSection.ABOUT -> {
                         AboutSectionContent(
                             debugMode = debugMode,

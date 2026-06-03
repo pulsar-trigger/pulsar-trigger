@@ -40,6 +40,22 @@ data class LastConnection(
      *  with a delimiter that can't appear in a MAC, UDN, or URL. */
     fun serialise(): String = "${kind.name}$label$identifier"
 
+    /** Map a [LastConnection] to a [ManagedDevice] so callers can use
+     *  [com.ehrocha.pulsar.viewmodel.PulsarViewModel.forgetDevice] for a
+     *  full unpair (OS bond + creds + Pulsar hint). Returns null for
+     *  transports without persistent device state (PTP USB). */
+    fun toManagedDevice(): ManagedDevice? = when (kind) {
+        TransportKind.BLE_ESP -> ManagedDevice(DeviceKind.PULSAR_BLE, identifier, label)
+        TransportKind.CANON_BLE -> ManagedDevice(DeviceKind.CANON_BLE, identifier, label)
+        TransportKind.CCAPI -> {
+            // CCAPI identifier is "udn|accessUrl|ip|port|friendly" —
+            // forgetDevice keys on UDN.
+            val udn = identifier.substringBefore('|', "")
+            if (udn.isNotEmpty()) ManagedDevice(DeviceKind.CANON_CCAPI, udn, label) else null
+        }
+        else -> null  // PTP USB / PTP-IP — no persistent state to forget.
+    }
+
     companion object {
         const val SHARED_PREFS_NAME = "pulsar_last_connection"
         const val PREF_KEY = "last"

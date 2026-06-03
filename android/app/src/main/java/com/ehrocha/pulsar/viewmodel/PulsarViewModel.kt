@@ -164,6 +164,91 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             .apply()
     }
 
+    /** One-tap "forget everywhere" — removes every trace of a device:
+     *  OS-level BLE bond, Pulsar's last-connection hint, Canon BLE's MAC
+     *  hint, CCAPI credentials + nickname. Used by the Manage Devices
+     *  screen (Settings → Devices) and by the Scan landing's ⓧ button.
+     *  Safe to call on a device that's only partially persisted (each
+     *  step no-ops if the matching state isn't present). */
+    fun forgetDevice(device: com.ehrocha.pulsar.model.ManagedDevice) {
+        val app = getApplication<Application>()
+        when (device.kind) {
+            com.ehrocha.pulsar.model.DeviceKind.PULSAR_BLE,
+            com.ehrocha.pulsar.model.DeviceKind.CANON_BLE -> {
+                // Remove the OS bond. removeBond() is a hidden API but
+                // public-callable via reflection on every Android version
+                // we ship for (26+). BLUETOOTH_CONNECT is already in the
+                // manifest for the main flow.
+                runCatching {
+                    val mgr = app.getSystemService(Context.BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager
+                    val adapter = mgr.adapter
+                    val btDevice = adapter?.getRemoteDevice(device.id)
+                    if (btDevice != null) {
+                        val m = btDevice.javaClass.getMethod("removeBond")
+                        m.invoke(btDevice)
+                    }
+                }
+                if (device.kind == com.ehrocha.pulsar.model.DeviceKind.CANON_BLE) {
+                    if (lastCanonBleAddress == device.id) lastCanonBleAddress = null
+                }
+            }
+            com.ehrocha.pulsar.model.DeviceKind.CANON_CCAPI -> {
+                clearCanonCcapiCreds(device.id)
+                // Clear the nickname too — same UDN keys both stores.
+                setCanonCcapiNickname(device.id, "")
+            }
+        }
+        // If the device matches the persisted last-connection hint, drop
+        // that too so the Reconnect card doesn't stick around.
+        val last = _lastConnection.value
+        if (last != null && last.identifier == device.id) forgetLastConnection()
+    }
+
+    /** Enumerate every device Pulsar has stored state for, regardless of
+     *  which transport it's on. Used by the Manage Devices screen.
+     *  Sources:
+     *   - All currently-bonded BLE devices on the OS (Pulsar BLE + Canon
+     *     BLE bodies pair through the standard Android BLE flow).
+     *   - Every UDN with stored CCAPI credentials. */
+    @SuppressLint("MissingPermission")
+    fun managedDevices(): List<com.ehrocha.pulsar.model.ManagedDevice> {
+        val out = mutableListOf<com.ehrocha.pulsar.model.ManagedDevice>()
+        val app = getApplication<Application>()
+        // BLE bonds. We tag the device kind based on whether the body has
+        // the smart-mode service UUID anywhere in its stored services —
+        // but without an active connection we can't read that. Heuristic:
+        // if the address matches our last Canon-BLE hint, call it
+        // CANON_BLE. Otherwise everything else gets PULSAR_BLE; users can
+        // always still forget the wrong kind safely (the operation is
+        // identical for both — both call removeBond on the OS).
+        runCatching {
+            val mgr = app.getSystemService(Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager
+            mgr?.adapter?.bondedDevices?.forEach { dev ->
+                val addr = dev.address ?: return@forEach
+                val name = runCatching { dev.name }.getOrNull() ?: addr
+                val kind =
+                    if (addr == lastCanonBleAddress) com.ehrocha.pulsar.model.DeviceKind.CANON_BLE
+                    else com.ehrocha.pulsar.model.DeviceKind.PULSAR_BLE
+                out += com.ehrocha.pulsar.model.ManagedDevice(
+                    kind = kind, id = addr, displayName = name,
+                )
+            }
+        }
+        // CCAPI credentials — every UDN that has a saved "u:" key.
+        canonCcapiCredsPrefs.all.keys
+            .filter { it.startsWith("u:") }
+            .map { it.removePrefix("u:") }
+            .forEach { udn ->
+                val nick = _canonCcapiNicknames.value[udn]
+                out += com.ehrocha.pulsar.model.ManagedDevice(
+                    kind = com.ehrocha.pulsar.model.DeviceKind.CANON_CCAPI,
+                    id = udn,
+                    displayName = nick ?: udn,
+                )
+            }
+        return out
+    }
+
     /** One-tap reconnect to whatever [lastConnection] points at. Dispatches
      *  to the per-transport `connectX` after reconstructing the right device
      *  handle from the persisted identifier. Whether the connect succeeds

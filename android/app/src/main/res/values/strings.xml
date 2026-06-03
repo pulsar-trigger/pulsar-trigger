@@ -450,6 +450,15 @@
     <string name="section_diagnostics">Diagnostics</string>
     <string name="section_diagnostics_test_camera_sub">Compatibility report + settings probe + 5-shot sweep across all modes</string>
     <string name="section_diagnostics_logs_sub">View / share the recent transport + run logs</string>
+    <string name="section_devices">Devices</string>
+    <string name="devices_help">Devices Pulsar has stored state for — BLE bonds, Canon Wi-Fi credentials, and the last-connection hint. Forget a row to wipe its state in one tap (also removes the OS-level Bluetooth bond).</string>
+    <string name="devices_empty">No stored devices yet. Connect to one and it\'ll appear here.</string>
+    <string name="devices_kind_pulsar_ble">Pulsar BLE</string>
+    <string name="devices_kind_canon_ble">Canon BLE</string>
+    <string name="devices_kind_canon_ccapi">Canon Wi-Fi (CCAPI)</string>
+    <string name="devices_forget">Forget</string>
+    <string name="devices_forget_confirm_title">Forget device?</string>
+    <string name="devices_forget_confirm_body">Removes %1$s\'s OS Bluetooth bond, any stored Canon credentials, and Pulsar\'s reconnect hint. You can re-pair from scratch any time.</string>
     <string name="section_gatt_explorer">GATT Explorer</string>
     <string name="section_gatt_explorer_sub">Raw GATT probing for unsupported bodies (debug only)</string>
     <string name="about_developer_options">Developer options</string>

@@ -193,7 +193,14 @@ fun ScanLandingScreen(
                     last = last,
                     reconnecting = reconnecting,
                     onReconnect = { vm.reconnectLast() },
-                    onForget = { vm.forgetLastConnection() },
+                    // Full-forget: clears the Pulsar hint AND the OS bond
+                    // (BLE) or CCAPI credentials (Wi-Fi) when the kind is
+                    // known. Falls back to hint-only when the transport is
+                    // PTP (no persistent state) or unrecognised.
+                    onForget = {
+                        val device = last?.toManagedDevice()
+                        if (device != null) vm.forgetDevice(device) else vm.forgetLastConnection()
+                    },
                 )
             }
         }

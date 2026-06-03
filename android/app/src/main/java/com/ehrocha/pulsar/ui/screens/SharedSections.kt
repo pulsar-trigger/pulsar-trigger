@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.History
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Language
@@ -992,6 +993,7 @@ enum class SettingsSection(val icon: ImageVector, @StringRes val titleRes: Int) 
     BACKUP_RESTORE(Icons.Default.SaveAlt, R.string.section_backup_restore),
     UPDATES(Icons.Default.SystemUpdate, R.string.section_updates),
     DIAGNOSTICS(Icons.Default.Science, R.string.section_diagnostics),
+    DEVICES(Icons.Default.Bluetooth, R.string.section_devices),
     ABOUT(Icons.Outlined.Info, R.string.section_about),
 }
 
@@ -1441,6 +1443,111 @@ internal fun BackupRestoreSectionContent(vm: PulsarViewModel) {
 @Composable
 internal fun UpdatesSectionContent(vm: PulsarViewModel, showFirmware: Boolean = true) {
     UpdatesSection(vm = vm, showFirmware = showFirmware)
+}
+
+/**
+ * Lists every device Pulsar has stored state for — BLE bonds, Canon
+ * CCAPI credentials, the last-connection hint — with a per-row Forget
+ * button that wipes all matching state in one tap. See
+ * [PulsarViewModel.managedDevices] / [PulsarViewModel.forgetDevice].
+ */
+@Composable
+internal fun DevicesSectionContent(vm: PulsarViewModel) {
+    // Recompute the device list whenever nicknames change (covers forget
+    // → list shrinks; rename → label updates) and when a force-refresh
+    // tick is bumped by the row's Forget action below.
+    val nicks by vm.canonCcapiNicknames.collectAsState()
+    var refreshTick by remember { mutableIntStateOf(0) }
+    val devices = remember(nicks, refreshTick) { vm.managedDevices() }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        PanelHelpHeader(
+            title = stringResource(R.string.section_devices),
+            helpText = stringResource(R.string.devices_help),
+        )
+        if (devices.isEmpty()) {
+            Text(
+                stringResource(R.string.devices_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            devices.forEach { d ->
+                DeviceRow(vm, d, onForgotten = { refreshTick += 1 })
+            }
+        }
+    }
+}
+
+@Composable
+private fun DeviceRow(
+    vm: PulsarViewModel,
+    device: com.ehrocha.pulsar.model.ManagedDevice,
+    onForgotten: () -> Unit,
+) {
+    var pendingForget by remember { mutableStateOf(false) }
+    val transportLabel = when (device.kind) {
+        com.ehrocha.pulsar.model.DeviceKind.PULSAR_BLE -> stringResource(R.string.devices_kind_pulsar_ble)
+        com.ehrocha.pulsar.model.DeviceKind.CANON_BLE -> stringResource(R.string.devices_kind_canon_ble)
+        com.ehrocha.pulsar.model.DeviceKind.CANON_CCAPI -> stringResource(R.string.devices_kind_canon_ccapi)
+    }
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    device.displayName,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    transportLabel,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    device.id,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                )
+            }
+            TextButton(onClick = { pendingForget = true }) {
+                Text(stringResource(R.string.devices_forget))
+            }
+        }
+    }
+    if (pendingForget) {
+        AlertDialog(
+            onDismissRequest = { pendingForget = false },
+            title = { Text(stringResource(R.string.devices_forget_confirm_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.devices_forget_confirm_body,
+                        device.displayName,
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.forgetDevice(device)
+                    pendingForget = false
+                    onForgotten()
+                }) { Text(stringResource(R.string.devices_forget)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingForget = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
 }
 
 /**
