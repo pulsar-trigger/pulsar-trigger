@@ -27,14 +27,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.BluetoothSearching
-import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Badge
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -495,6 +491,9 @@ fun PulsarNavHost(
                     onTestCameraSelected = { currentScreen = AppScreen.TestCamera },
                     onDiagnosticsSelected = { currentScreen = AppScreen.Diagnostics },
                     onSettingsSelected = { currentScreen = AppScreen.Settings(SettingsSection.UPDATES) },
+                    onDisconnect = { vm.disconnect() },
+                    onShotLogSelected = { currentScreen = AppScreen.ShotLog },
+                    nightModeToggle = { NightModeToggle() },
                 )
             }
             is AppScreen.Mode -> {
@@ -706,51 +705,6 @@ fun PulsarNavHost(
             }
         }
     }
-        // ── Bottom bar (Menu screen only) ────────────────────────────
-        if (currentScreen is AppScreen.Menu) {
-            val hasAnyUpdate = hasFwUpdate || hasAppUpdate
-            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
-            Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                ) {
-                    IconButton(onClick = { vm.disconnect() }) {
-                        Icon(
-                            Icons.Default.LinkOff,
-                            contentDescription = stringResource(R.string.disconnect),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    NightModeToggle()
-                    IconButton(onClick = { currentScreen = AppScreen.ShotLog }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ListAlt,
-                            contentDescription = stringResource(R.string.shot_log_title),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    IconButton(onClick = { currentScreen = AppScreen.Settings() }) {
-                        BadgedBox(
-                            badge = {
-                                if (hasAnyUpdate) {
-                                    Badge(containerColor = MaterialTheme.colorScheme.error)
-                                }
-                            }
-                        ) {
-                            Icon(
-                                Icons.Default.Settings,
-                                contentDescription = stringResource(R.string.menu_settings),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                }
-            }
-        }
     }
     }
 }

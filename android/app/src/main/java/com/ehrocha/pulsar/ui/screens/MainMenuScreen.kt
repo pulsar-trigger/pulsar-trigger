@@ -25,6 +25,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.LensBlur
+import androidx.compose.material.icons.filled.LinkOff
+import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
@@ -77,6 +79,9 @@ fun MainMenuScreen(
     onAstroMode2Selected: () -> Unit = {},
     onTimelapseSelected: () -> Unit = {},
     onSettingsSelected: () -> Unit = {},
+    onDisconnect: () -> Unit = {},
+    onShotLogSelected: () -> Unit = {},
+    nightModeToggle: @Composable () -> Unit = {},
 ) {
     val fwState by vm.firmwareManager.state.collectAsState()
     val appState by vm.appUpdateManager.state.collectAsState()
@@ -184,41 +189,84 @@ fun MainMenuScreen(
     }
 
 
-    // Horizontal padding lives on each page, not on the outer Column — the
-    // Dashboard page wants edge-to-edge so its inner padding doesn't double.
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(vertical = 12.dp),
-    ) {
+    // Per-destination icons for the bottom NavigationBar.
+    val tabIcons = listOf(
+        Icons.Default.Stars,         // Dashboard
+        Icons.Default.PhotoCamera,   // Trigger
+        Icons.Default.Science,       // Tools
+    )
+    val hasAnyUpdate = hasFwUpdate || hasAppUpdate
 
-        updateBanner()
-
-        // ── Tab row ──────────────────────────────────────────────────
-        // Material 3 PrimaryTabRow uses a rounded pill indicator (vs the
-        // older TabRow underline) — modernizes the look without changing
-        // structure.
-        PrimaryTabRow(
-            selectedTabIndex = pagerState.currentPage,
-            containerColor = MaterialTheme.colorScheme.surface,
-        ) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = pagerState.currentPage == index,
-                    onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                    text = { Text(title) },
-                )
+    Scaffold(
+        topBar = {
+            // Global actions move from the old bottom strip into the
+            // TopAppBar so the bottom belongs entirely to navigation.
+            TopAppBar(
+                title = {
+                    Text(
+                        tabs[pagerState.currentPage],
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                },
+                actions = {
+                    IconButton(onClick = onDisconnect) {
+                        Icon(
+                            Icons.Default.LinkOff,
+                            contentDescription = stringResource(R.string.disconnect),
+                        )
+                    }
+                    nightModeToggle()
+                    IconButton(onClick = onShotLogSelected) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ListAlt,
+                            contentDescription = stringResource(R.string.shot_log_title),
+                        )
+                    }
+                    IconButton(onClick = onSettingsSelected) {
+                        BadgedBox(
+                            badge = {
+                                if (hasAnyUpdate) {
+                                    Badge(containerColor = MaterialTheme.colorScheme.error)
+                                }
+                            }
+                        ) {
+                            Icon(
+                                Icons.Default.Settings,
+                                contentDescription = stringResource(R.string.menu_settings),
+                            )
+                        }
+                    }
+                },
+            )
+        },
+        bottomBar = {
+            NavigationBar {
+                tabs.forEachIndexed { index, title ->
+                    NavigationBarItem(
+                        selected = pagerState.currentPage == index,
+                        onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
+                        icon = { Icon(tabIcons[index], contentDescription = title) },
+                        label = { Text(title) },
+                    )
+                }
             }
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        // ── Pager ────────────────────────────────────────────────────
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.weight(1f),
-        ) { page ->
-            pageContent(page)
+        },
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(vertical = 8.dp),
+        ) {
+            updateBanner()
+            // Pager body — swipe still works to change destinations, the
+            // NavigationBar reflects the swipe and vice-versa.
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.weight(1f),
+            ) { page ->
+                pageContent(page)
+            }
         }
     }
 }
