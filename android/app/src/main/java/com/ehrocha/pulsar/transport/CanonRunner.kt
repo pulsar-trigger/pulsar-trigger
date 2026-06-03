@@ -164,7 +164,12 @@ internal suspend fun runCanonBulb(
  *  ACKs synchronously. */
 internal suspend fun canonBleSettleIfNeeded(transport: CameraTransport) {
     if (transport.kind == com.ehrocha.pulsar.transport.TransportKind.CANON_BLE) {
-        delay(300)
+        // v0.361 used 300 ms which was enough between same-step shots but
+        // not enough at the END of a step (R6 stayed exposed after the
+        // final UP write). 500 ms is a budget compromise: harmless on
+        // typical multi-shot bulb runs (~1–2 % overhead on a 30 s bulb),
+        // robust enough for end-of-step state isolation.
+        delay(500)
     }
 }
 
@@ -184,6 +189,13 @@ internal suspend fun runCanonRamp(
     }
     transport.setShutterMode(bulb = true)
     try {
+        // Start delay before the first shot — used by the Camera Test
+        // wizard to enforce a multi-second gap between diagnostic steps
+        // on Canon BLE so the camera registers the previous release.
+        if (step.delayMs > 0) {
+            status.value = status.value?.copy(state = DeviceState.WAITING, shotsTaken = 0)
+            delay(step.delayMs)
+        }
         for (i in 0 until rampSteps) {
             coroutineContext.ensureActive()
             awaitReady()

@@ -2038,9 +2038,17 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  (Intervalometer-bulb, Astro, DarkFrame, Ramp) in sequence. The
      *  user must set the camera dial to **Bulb** before tapping Continue.
      *  No preflight here — phase 1 already ran it. No-op when the active
-     *  transport doesn't advertise bulb. */
+     *  transport doesn't advertise bulb.
+     *
+     *  Each subsequent step gets `delayMs = 3000` so the body has time
+     *  to fully register the previous step's shutter release before the
+     *  next press. Without it the EOS RP / R6 either skip shots or stay
+     *  in bulb-open state after the run ends (verified v0.361). The
+     *  larger gap is only needed for the diagnostic — real flows use
+     *  whatever the user configured. */
     fun runCameraTestBulbPhase() {
         if (!activeTransportSupportsBulb.value) return
+        val interStepGapMs = 3_000L
         val test = listOf<FlowStep>(
             FlowStep.Intervalometer(
                 intervalMs = 2_000L, exposureMs = 4_000L,
@@ -2048,15 +2056,16 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             ),
             FlowStep.Astro(
                 focalLength = 125, cropFactor = 1.0f, ruleDivisor = 500,
-                gapMs = 2_000L, shotCount = 1, delayMs = 0L, useAutofocus = false,
+                gapMs = 2_000L, shotCount = 1,
+                delayMs = interStepGapMs, useAutofocus = false,
             ),
             FlowStep.DarkFrame(
-                gapMs = 2_000L, exposureMs = 4_000L,
+                gapMs = interStepGapMs, exposureMs = 4_000L,
                 shotCount = 1, useAutofocus = false,
             ),
             FlowStep.Ramp(
                 startExposureMs = 4_000L, endExposureMs = 4_000L,
-                steps = 1, intervalMs = 2_000L, useAutofocus = false,
+                steps = 1, intervalMs = interStepGapMs, useAutofocus = false,
             ),
         )
         saveFlowSteps(test)
@@ -2356,7 +2365,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 when {
                     transport != null -> com.ehrocha.pulsar.transport.runCanonBulb(
                         transport, step.shotCount, step.exposureMs,
-                        step.gapMs, 0L, af = step.useAutofocus,
+                        step.gapMs, step.delayMs, af = step.useAutofocus,
                         status = _status, awaitReady = { awaitCanonReady(transport) },
                     )
                     _simulatorActive.value -> simulateShots(step.shotCount, step.exposureMs, step.gapMs, 0L)
