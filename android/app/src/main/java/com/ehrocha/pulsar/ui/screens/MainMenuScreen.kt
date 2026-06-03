@@ -45,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -95,20 +96,27 @@ fun MainMenuScreen(
     )
     val pagerState = rememberPagerState(initialPage = initialTab, pageCount = { tabs.size })
     val scope = rememberCoroutineScope()
-
-    LaunchedEffect(pagerState.currentPage) {
-        onTabChanged(pagerState.currentPage)
+    // Adaptive nav: NavigationRail on the side when there's room (>=600dp
+    // width — landscape phones, foldables, tablets); top tabs + swipe pager
+    // otherwise. Same destinations, same content composables.
+    val configuration = LocalConfiguration.current
+    val useRail = configuration.screenWidthDp >= 600
+    // Source of truth for the selected tab. In compact mode the pager owns
+    // it (and we mirror via LaunchedEffect); in rail mode the rail owns it.
+    var railSelected by remember { mutableIntStateOf(initialTab) }
+    LaunchedEffect(useRail, pagerState.currentPage, railSelected) {
+        onTabChanged(if (useRail) railSelected else pagerState.currentPage)
     }
+    // Per-tab icons for the rail.
+    val tabIcons = listOf(
+        Icons.Default.Stars,        // Dashboard
+        Icons.Default.PhotoCamera,  // Trigger
+        Icons.Default.Science,      // Tools
+    )
 
-    // Horizontal padding lives on each page, not on the outer Column — the
-    // Dashboard page wants edge-to-edge so its inner padding doesn't double.
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(vertical = 12.dp),
-    ) {
-
-        // ── Update banner (non-blocking, dismissible) ────────────────
+    // Update banner extracted into a lambda so both layout branches render
+    // the same dismissible banner without duplicating the markup.
+    val updateBanner: @Composable () -> Unit = {
         if ((hasFwUpdate || hasAppUpdate) && !bannerDismissed) {
             Surface(
                 color = MaterialTheme.colorScheme.primaryContainer,
@@ -168,6 +176,62 @@ fun MainMenuScreen(
             }
             Spacer(Modifier.height(12.dp))
         }
+    }
+
+    // Per-tab content. Same composables in both layouts.
+    val pageContent: @Composable (Int) -> Unit = { page ->
+        MenuPageContent(
+            page = page, vm = vm,
+            onQuickFlow = onQuickFlow,
+            onManualSelected = onManualSelected,
+            onCableReleaseSelected = onCableReleaseSelected,
+            onCustomFlowSelected = onCustomFlowSelected,
+            onPlannerSelected = onPlannerSelected,
+            onAlignmentSelected = onAlignmentSelected,
+            onWhatsUpSelected = onWhatsUpSelected,
+            onStarFocusSelected = onStarFocusSelected,
+            onTestCameraSelected = onTestCameraSelected,
+            onDiagnosticsSelected = onDiagnosticsSelected,
+            onUserModeRun = onUserModeRun,
+            onIntervalometer2Selected = onIntervalometer2Selected,
+            onAstroMode2Selected = onAstroMode2Selected,
+            onTimelapseSelected = onTimelapseSelected,
+        )
+    }
+
+    if (useRail) {
+        Row(modifier = Modifier.fillMaxSize()) {
+            NavigationRail {
+                tabs.forEachIndexed { index, title ->
+                    NavigationRailItem(
+                        selected = railSelected == index,
+                        onClick = { railSelected = index },
+                        icon = { Icon(tabIcons[index], contentDescription = null) },
+                        label = { Text(title) },
+                    )
+                }
+            }
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(vertical = 12.dp),
+            ) {
+                updateBanner()
+                Box(modifier = Modifier.weight(1f)) { pageContent(railSelected) }
+            }
+        }
+        return
+    }
+
+    // Horizontal padding lives on each page, not on the outer Column — the
+    // Dashboard page wants edge-to-edge so its inner padding doesn't double.
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(vertical = 12.dp),
+    ) {
+
+        updateBanner()
 
         // ── Tab row ──────────────────────────────────────────────────
         TabRow(
@@ -190,11 +254,35 @@ fun MainMenuScreen(
             state = pagerState,
             modifier = Modifier.weight(1f),
         ) { page ->
-            when (page) {
-                TAB_DASHBOARD -> {
-                    DashboardScreen(dashboardManager = vm.dashboardManager)
-                }
-                TAB_TRIGGER -> {
+            pageContent(page)
+        }
+    }
+}
+
+@Composable
+private fun MenuPageContent(
+    page: Int,
+    vm: PulsarViewModel,
+    onQuickFlow: (FlowStepType) -> Unit,
+    onManualSelected: () -> Unit,
+    onCableReleaseSelected: () -> Unit,
+    onCustomFlowSelected: () -> Unit,
+    onPlannerSelected: () -> Unit,
+    onAlignmentSelected: () -> Unit,
+    onWhatsUpSelected: () -> Unit,
+    onStarFocusSelected: () -> Unit,
+    onTestCameraSelected: () -> Unit,
+    onDiagnosticsSelected: () -> Unit,
+    onUserModeRun: (com.ehrocha.pulsar.model.UserMode) -> Unit,
+    onIntervalometer2Selected: () -> Unit,
+    onAstroMode2Selected: () -> Unit,
+    onTimelapseSelected: () -> Unit,
+) {
+    when (page) {
+        TAB_DASHBOARD -> {
+            DashboardScreen(dashboardManager = vm.dashboardManager)
+        }
+        TAB_TRIGGER -> {
                     val userModes by vm.userModes.collectAsState()
                     val canonCcapiTransport by vm.canonCcapiTransport.collectAsState()
                     val canonCcapiReconnecting by vm.canonCcapiReconnecting.collectAsState()
@@ -338,9 +426,6 @@ fun MainMenuScreen(
                     }
                 }
             }
-        }
-
-    }
 }
 
 const val TAB_DASHBOARD = 0
