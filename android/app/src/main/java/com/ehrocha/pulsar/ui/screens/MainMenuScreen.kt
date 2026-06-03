@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -52,6 +54,7 @@ import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.ui.components.SectionContainer
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun MainMenuScreen(
@@ -90,15 +93,9 @@ fun MainMenuScreen(
         stringResource(R.string.tab_trigger),
         stringResource(R.string.tab_tools),
     )
-    // App is portrait-locked (manifest), so a single always-on NavigationRail
-    // works — no orientation branch needed.
-    var selectedTab by remember { mutableIntStateOf(initialTab) }
-    LaunchedEffect(selectedTab) { onTabChanged(selectedTab) }
-    val tabIcons = listOf(
-        Icons.Default.Stars,        // Dashboard
-        Icons.Default.PhotoCamera,  // Trigger
-        Icons.Default.Science,      // Tools
-    )
+    val pagerState = rememberPagerState(initialPage = initialTab, pageCount = { tabs.size })
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(pagerState.currentPage) { onTabChanged(pagerState.currentPage) }
 
     // Update banner extracted into a lambda so both layout branches render
     // the same dismissible banner without duplicating the markup.
@@ -186,25 +183,38 @@ fun MainMenuScreen(
     }
 
 
-    // Layout: slim icon-only NavigationRail on the left, content fills the
-    // rest. Long-press an icon to see its tooltip with the destination name.
-    Row(modifier = Modifier.fillMaxSize()) {
-        NavigationRail {
+    // Horizontal padding lives on each page, not on the outer Column — the
+    // Dashboard page wants edge-to-edge so its inner padding doesn't double.
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(vertical = 12.dp),
+    ) {
+
+        updateBanner()
+
+        // ── Tab row ──────────────────────────────────────────────────
+        TabRow(
+            selectedTabIndex = pagerState.currentPage,
+            containerColor = MaterialTheme.colorScheme.surface,
+        ) {
             tabs.forEachIndexed { index, title ->
-                NavigationRailItem(
-                    selected = selectedTab == index,
-                    onClick = { selectedTab = index },
-                    icon = { Icon(tabIcons[index], contentDescription = title) },
+                Tab(
+                    selected = pagerState.currentPage == index,
+                    onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
+                    text = { Text(title) },
                 )
             }
         }
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(vertical = 12.dp),
-        ) {
-            updateBanner()
-            Box(modifier = Modifier.weight(1f)) { pageContent(selectedTab) }
+
+        Spacer(Modifier.height(12.dp))
+
+        // ── Pager ────────────────────────────────────────────────────
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.weight(1f),
+        ) { page ->
+            pageContent(page)
         }
     }
 }
