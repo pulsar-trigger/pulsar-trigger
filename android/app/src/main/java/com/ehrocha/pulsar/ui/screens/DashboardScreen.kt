@@ -108,20 +108,10 @@ fun DashboardScreen(
             .fillMaxSize()
             .padding(horizontal = 16.dp),
     ) {
-        // Tab-embedded — no back arrow or title (the tab strip already labels it).
-        // Refresh stays available aligned to the right of the date selector below.
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            horizontalArrangement = Arrangement.End,
-        ) {
-            IconButton(onClick = { scope.launch { dashboardManager.refresh(state.selectedDate) } }) {
-                Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.refresh))
-            }
-        }
-
-        // ── Date selector chip ───────────────────────────────────────
+        // ── Date selector + refresh on a single row ─────────────────
+        // Date chip + (when not today) "Today" shortcut stretch across the
+        // left; refresh sits on the right. Previously these were on two
+        // rows which ate vertical space for no benefit.
         val isToday = state.selectedDate == LocalDate.now()
         val dateLabel = if (isToday)
             stringResource(R.string.date_today)
@@ -131,8 +121,7 @@ fun DashboardScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 8.dp),
-            horizontalArrangement = Arrangement.Center,
+                .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Surface(
@@ -163,6 +152,10 @@ fun DashboardScreen(
                 TextButton(onClick = { scope.launch { dashboardManager.refresh(LocalDate.now()) } }) {
                     Text(stringResource(R.string.date_today))
                 }
+            }
+            Spacer(Modifier.weight(1f))
+            IconButton(onClick = { scope.launch { dashboardManager.refresh(state.selectedDate) } }) {
+                Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.refresh))
             }
         }
 
