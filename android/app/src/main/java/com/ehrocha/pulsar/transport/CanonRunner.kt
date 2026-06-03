@@ -147,9 +147,25 @@ internal suspend fun runCanonBulb(
         // makes it through the transport.
         withContext(NonCancellable) {
             runCatching { transport.stopBulb() }
+            canonBleSettleIfNeeded(transport)
         }
     }
     status.value = status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
+}
+
+/** Canon BLE specifically needs ~300 ms to process a shutter-release
+ *  write on its internal state machine before another write to the same
+ *  characteristic hits — otherwise the body misses the release and stays
+ *  in bulb-open state. Verified on EOS RP 2026-06-03 (the camera test
+ *  wizard fired 5 bulbs back-to-back across 4 FlowSteps with <13 ms
+ *  inter-step gaps; the RP stayed exposed at the end despite every UP
+ *  byte landing GATT_SUCCESS). CCAPI / PTP / PTP-IP don't have this
+ *  issue — their bulb release is a request-response op the wire layer
+ *  ACKs synchronously. */
+internal suspend fun canonBleSettleIfNeeded(transport: CameraTransport) {
+    if (transport.kind == com.ehrocha.pulsar.transport.TransportKind.CANON_BLE) {
+        delay(300)
+    }
 }
 
 /** Exposure ramp: a sequence of bulb shots whose exposure interpolates
@@ -192,6 +208,7 @@ internal suspend fun runCanonRamp(
     } finally {
         withContext(NonCancellable) {
             runCatching { transport.stopBulb() }
+            canonBleSettleIfNeeded(transport)
         }
     }
     status.value = status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)

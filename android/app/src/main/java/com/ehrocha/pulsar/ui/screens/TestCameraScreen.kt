@@ -133,7 +133,11 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                         .padding(pad)
                         .fillMaxSize(),
                 ) {
-                    val plannedShots = if (phase == TestPhase.RUNNING_MANUAL) 1 else 4
+                    // Phase 1 = 1 timelapse shot.
+                    // Phase 2 = 5 bulb shots: Intervalometer (1) + Astro (1) +
+                    // DarkFrame (1) + Ramp (FlowStep.Ramp.steps gets coerced
+                    // to a minimum of 2 in executeFlowStep, so 2 ramp shots).
+                    val plannedShots = if (phase == TestPhase.RUNNING_MANUAL) 1 else 5
                     RunningView(plannedShots = plannedShots)
                     Spacer(Modifier.height(16.dp))
                     OutlinedButton(
