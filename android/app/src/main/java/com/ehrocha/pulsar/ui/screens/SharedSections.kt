@@ -1014,7 +1014,7 @@ internal fun SettingsMenu(
             Surface(
                 onClick = { onSectionSelected(section) },
                 shape = RoundedCornerShape(12.dp),
-                tonalElevation = 2.dp,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Row(
@@ -2135,7 +2135,7 @@ private fun VersionRollbackPicker(updateManager: com.ehrocha.pulsar.update.AppUp
                             Surface(
                                 onClick = { if (!isCurrent) confirmRelease = release },
                                 enabled = !isCurrent,
-                                shape = RoundedCornerShape(10.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
