@@ -631,12 +631,12 @@
     <string name="ptp_setup_step3">检测到数据线后，相机将出现在下方。点击其卡片以连接。</string>
     <string name="ptp_setup_cameras_header">USB 相机</string>
     <string name="ptp_setup_empty">未检测到 USB 相机。检查数据线和相机电源。某些数据线仅充电 — 如果相机未出现，请尝试另一根。</string>
-    <string name="canon_ble_setup_step1">在相机上启用蓝牙并开始配对。较新的佳能机身使用"连接到智能手机"→"通过蓝牙配对"；附带 BR-E1 遥控器的较旧机身使用"蓝牙"→"遥控器"→"配对"。Pulsar 会自动识别机身所用的协议。</string>
+    <string name="canon_ble_setup_step1">在相机上打开"连接到智能手机"→"通过蓝牙配对"。（附带 BR-E1 遥控器的较旧机身使用 蓝牙 → 遥控器 → 配对 — Pulsar 会自动识别。）</string>
     <string name="canon_ble_setup_step2">配对期间请保持距相机 ~10 米以内。</string>
     <string name="canon_ble_setup_step3">点击下方相机 — Android 会弹出系统配对对话框。确认密钥与相机屏幕上显示的一致。</string>
     <string name="canon_ble_setup_step4">配对后，绑定可在应用重启后保留。靠近相机时打开 Pulsar 即可自动重新连接。</string>
     <string name="canon_ble_setup_cameras_header">佳能 BLE 相机</string>
-    <string name="canon_ble_setup_empty">没有佳能 BLE 相机在广播。请确保相机处于蓝牙配对模式（"连接到智能手机"或"遥控器"），然后点击"重新扫描"。</string>
+    <string name="canon_ble_setup_empty">没有佳能 BLE 相机在广播。请将相机设为"连接到智能手机"→"通过蓝牙配对"，然后点击"重新扫描"。</string>
 
     <!-- 扫描入口屏幕（传输方式选择） -->
     <string name="scan_landing_pick_transport">选择传输方式</string>

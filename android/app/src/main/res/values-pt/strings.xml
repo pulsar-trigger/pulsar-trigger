@@ -631,12 +631,12 @@
     <string name="ptp_setup_step3">A câmera aparece abaixo assim que o cabo é detectado. Toque no card para conectar.</string>
     <string name="ptp_setup_cameras_header">CÂMERAS USB</string>
     <string name="ptp_setup_empty">Nenhuma câmera USB detectada. Verifique o cabo e se a câmera está ligada. Alguns cabos são apenas de carregamento — tente outro se a câmera não aparecer.</string>
-    <string name="canon_ble_setup_step1">Na câmera, ative o Bluetooth e inicie o pareamento. Corpos Canon mais novos usam \"Conectar a smartphone\" → \"Parear via Bluetooth\"; corpos mais antigos compatíveis com o controle BR-E1 usam \"Bluetooth\" → \"Remoto\" → \"Parear\". O Pulsar detecta automaticamente qual protocolo o corpo fala.</string>
+    <string name="canon_ble_setup_step1">Na câmera, abra \"Conectar a smartphone\" → \"Parear via Bluetooth\". (Corpos mais antigos com controle BR-E1 usam Bluetooth → Remoto → Parear — o Pulsar detecta qualquer um automaticamente.)</string>
     <string name="canon_ble_setup_step2">Fique a até ~10 m da câmera durante o pareamento.</string>
     <string name="canon_ble_setup_step3">Toque na câmera abaixo — o Android exibirá um diálogo de pareamento. Confirme que a senha numérica bate com a mostrada na câmera.</string>
     <string name="canon_ble_setup_step4">Após o pareamento, o vínculo sobrevive a reinícios do app. Basta abrir o Pulsar próximo à câmera para reconectar automaticamente.</string>
     <string name="canon_ble_setup_cameras_header">CÂMERAS CANON BLE</string>
-    <string name="canon_ble_setup_empty">Nenhuma câmera Canon BLE anunciando. Verifique se a câmera está em modo de pareamento Bluetooth (\"Conectar a smartphone\" ou \"Remoto\"), depois toque em Buscar novamente.</string>
+    <string name="canon_ble_setup_empty">Nenhuma câmera Canon BLE anunciando. Coloque a câmera em \"Conectar a smartphone\" → \"Parear via Bluetooth\", depois toque em Buscar novamente.</string>
 
     <!-- Tela inicial de busca (seletor de transporte) -->
     <string name="scan_landing_pick_transport">Escolha um transporte</string>

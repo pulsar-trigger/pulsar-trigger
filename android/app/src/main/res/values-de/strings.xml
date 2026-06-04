@@ -631,12 +631,12 @@
     <string name="ptp_setup_step3">Die Kamera erscheint unten, sobald das Kabel erkannt ist. Tippen Sie auf die Karte, um zu verbinden.</string>
     <string name="ptp_setup_cameras_header">USB-KAMERAS</string>
     <string name="ptp_setup_empty">Keine USB-Kamera erkannt. Prüfen Sie das Kabel und ob die Kamera eingeschaltet ist. Manche Kabel laden nur — probieren Sie ein anderes, wenn die Kamera nicht erscheint.</string>
-    <string name="canon_ble_setup_step1">An der Kamera Bluetooth aktivieren und Pairing starten. Neuere Canon-Bodies: „Mit Smartphone verbinden" → „Über Bluetooth koppeln"; ältere Bodies mit BR-E1-Fernauslöser: „Bluetooth" → „Fernauslöser" → „Koppeln". Pulsar erkennt das Protokoll automatisch.</string>
+    <string name="canon_ble_setup_step1">An der Kamera „Mit Smartphone verbinden" → „Über Bluetooth koppeln" öffnen. (Ältere Bodies mit BR-E1-Fernauslöser nutzen Bluetooth → Fernauslöser → Koppeln — Pulsar erkennt beide Wege automatisch.)</string>
     <string name="canon_ble_setup_step2">Bleiben Sie während des Koppelns in ~10 m Nähe zur Kamera.</string>
     <string name="canon_ble_setup_step3">Tippen Sie unten auf die Kamera — Android öffnet einen Kopplungsdialog. Bestätigen Sie, dass der Passkey mit dem an der Kamera übereinstimmt.</string>
     <string name="canon_ble_setup_step4">Nach der Kopplung überlebt die Bindung App-Neustarts. Öffnen Sie Pulsar einfach in Kameranähe für automatische Wiederverbindung.</string>
     <string name="canon_ble_setup_cameras_header">CANON-BLE-KAMERAS</string>
-    <string name="canon_ble_setup_empty">Keine Canon-BLE-Kameras werben. Prüfen Sie, dass die Kamera im Bluetooth-Pairing-Modus ist („Mit Smartphone verbinden" oder „Fernauslöser"), dann „Erneut suchen".</string>
+    <string name="canon_ble_setup_empty">Keine Canon-BLE-Kameras werben. Setze die Kamera auf „Mit Smartphone verbinden" → „Über Bluetooth koppeln", dann „Erneut suchen".</string>
 
     <!-- Such-Landing (Transport-Auswahl) -->
     <string name="scan_landing_pick_transport">Transport wählen</string>

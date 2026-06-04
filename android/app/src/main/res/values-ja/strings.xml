@@ -631,12 +631,12 @@
     <string name="ptp_setup_step3">ケーブルが認識されると、下にカメラが表示されます。カードをタップして接続してください。</string>
     <string name="ptp_setup_cameras_header">USB カメラ</string>
     <string name="ptp_setup_empty">USB カメラが検出されません。ケーブルとカメラの電源を確認してください。充電専用ケーブルもあります — 表示されない場合は別のケーブルをお試しください。</string>
-    <string name="canon_ble_setup_step1">カメラで Bluetooth を有効にしてペアリングを開始します。新しい Canon ボディは「スマートフォンに接続」→「Bluetooth でペアリング」、BR-E1 リモコン対応の古いボディは「Bluetooth」→「リモコン」→「ペアリング」を使います。Pulsar はどちらのプロトコルかを自動で判別します。</string>
+    <string name="canon_ble_setup_step1">カメラで「スマートフォンに接続」→「Bluetooth でペアリング」を開きます。（BR-E1 リモコン対応の古いボディは Bluetooth → リモコン → ペアリング を使用 — Pulsar はどちらも自動で判別します。）</string>
     <string name="canon_ble_setup_step2">ペアリング中はカメラから ~10 m 以内にいてください。</string>
     <string name="canon_ble_setup_step3">下のカメラをタップ — Android のペアリングダイアログが開きます。カメラに表示されるパスキーと一致することを確認してください。</string>
     <string name="canon_ble_setup_step4">ペアリング後、ボンドはアプリ再起動を超えて残ります。カメラの近くで Pulsar を開くだけで自動再接続します。</string>
     <string name="canon_ble_setup_cameras_header">Canon BLE カメラ</string>
-    <string name="canon_ble_setup_empty">アドバタイズ中の Canon BLE カメラがありません。カメラを Bluetooth ペアリングモードに設定して（「スマートフォンに接続」または「リモコン」）「再スキャン」をタップしてください。</string>
+    <string name="canon_ble_setup_empty">アドバタイズ中の Canon BLE カメラがありません。カメラを「スマートフォンに接続」→「Bluetooth でペアリング」に設定して、「再スキャン」をタップしてください。</string>
 
     <!-- スキャン入口画面（トランスポート選択） -->
     <string name="scan_landing_pick_transport">トランスポートを選択</string>

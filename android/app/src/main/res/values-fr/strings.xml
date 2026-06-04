@@ -631,12 +631,12 @@
     <string name="ptp_setup_step3">L\'appareil apparaît ci-dessous dès que le câble est détecté. Appuyez sur sa carte pour vous connecter.</string>
     <string name="ptp_setup_cameras_header">APPAREILS USB</string>
     <string name="ptp_setup_empty">Aucun appareil USB détecté. Vérifiez le câble et que l\'appareil est allumé. Certains câbles ne servent qu\'à charger — essayez-en un autre si l\'appareil n\'apparaît pas.</string>
-    <string name="canon_ble_setup_step1">Sur l\'appareil, activez le Bluetooth et lancez l\'appairage. Les boîtiers Canon récents utilisent \"Connecter au smartphone\" → \"Appairer via Bluetooth\" ; les boîtiers plus anciens compatibles avec la télécommande BR-E1 utilisent \"Bluetooth\" → \"Télécommande\" → \"Appairer\". Pulsar détecte automatiquement quel protocole le boîtier parle.</string>
+    <string name="canon_ble_setup_step1">Sur l\'appareil, ouvrez \"Connecter au smartphone\" → \"Appairer via Bluetooth\". (Les boîtiers plus anciens livrés avec une télécommande BR-E1 utilisent Bluetooth → Télécommande → Appairer — Pulsar détecte les deux automatiquement.)</string>
     <string name="canon_ble_setup_step2">Restez à ~10 m de l\'appareil pendant l\'appairage.</string>
     <string name="canon_ble_setup_step3">Appuyez sur l\'appareil ci-dessous — Android ouvre une boîte de dialogue d\'appairage. Confirmez que le code correspond à celui affiché sur l\'appareil.</string>
     <string name="canon_ble_setup_step4">Après l\'appairage, le lien survit aux redémarrages. Ouvrez simplement Pulsar près de l\'appareil pour vous reconnecter automatiquement.</string>
     <string name="canon_ble_setup_cameras_header">APPAREILS CANON BLE</string>
-    <string name="canon_ble_setup_empty">Aucun appareil Canon BLE en annonce. Vérifiez que l\'appareil est en mode appairage Bluetooth (\"Connecter au smartphone\" ou \"Télécommande\"), puis appuyez sur Rechercher.</string>
+    <string name="canon_ble_setup_empty">Aucun appareil Canon BLE en annonce. Mettez l\'appareil sur \"Connecter au smartphone\" → \"Appairer via Bluetooth\", puis appuyez sur Rechercher.</string>
 
     <!-- Écran d'accueil de recherche (sélecteur de transport) -->
     <string name="scan_landing_pick_transport">Choisissez un transport</string>
