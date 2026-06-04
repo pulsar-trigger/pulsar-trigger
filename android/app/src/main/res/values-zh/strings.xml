@@ -304,6 +304,7 @@
     <string name="widget_configure_title">小部件设置</string>
     <string name="widget_appearance_title">小部件外观</string>
     <string name="widget_bg_opacity_label">背景不透明度: %1$d%%</string>
+    <string name="widget_text_scale_label">文字大小: %1$d%%</string>
     <string name="label_firmware">固件</string>
     <string name="label_current_version">当前版本：v%1$s</string>
     <string name="btn_check_firmware">检查固件更新</string>

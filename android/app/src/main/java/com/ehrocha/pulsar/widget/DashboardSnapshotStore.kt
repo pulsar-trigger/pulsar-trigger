@@ -21,6 +21,12 @@ object DashboardSnapshotStore {
     private const val KEY_BG_ALPHA = "bg_alpha"
     /** Default opacity used when the user hasn't set one yet. 1.0 = opaque. */
     private const val DEFAULT_BG_ALPHA = 1.0f
+    private const val KEY_TEXT_SCALE = "text_scale"
+    /** Multiplier applied to every widget font size. 1.0 = the post-v0.367
+     *  baseline (which itself is +2sp over the original v0.355 sizes). */
+    private const val DEFAULT_TEXT_SCALE = 1.0f
+    const val TEXT_SCALE_MIN = 0.8f
+    const val TEXT_SCALE_MAX = 1.5f
 
     private fun prefs(context: Context) =
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -45,6 +51,18 @@ object DashboardSnapshotStore {
 
     fun setBackgroundAlpha(context: Context, alpha: Float) {
         prefs(context).edit().putFloat(KEY_BG_ALPHA, alpha.coerceIn(0f, 1f)).apply()
+    }
+
+    /** Text-size multiplier applied to every widget font size. Clamped to
+     *  [[TEXT_SCALE_MIN], [TEXT_SCALE_MAX]] to keep layout sane. */
+    fun textScale(context: Context): Float =
+        prefs(context).getFloat(KEY_TEXT_SCALE, DEFAULT_TEXT_SCALE)
+            .coerceIn(TEXT_SCALE_MIN, TEXT_SCALE_MAX)
+
+    fun setTextScale(context: Context, scale: Float) {
+        prefs(context).edit()
+            .putFloat(KEY_TEXT_SCALE, scale.coerceIn(TEXT_SCALE_MIN, TEXT_SCALE_MAX))
+            .apply()
     }
 
     data class Snapshot(val json: String, val updatedAtMs: Long)

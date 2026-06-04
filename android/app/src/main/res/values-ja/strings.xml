@@ -302,6 +302,7 @@
     <string name="widget_configure_title">ウィジェット設定</string>
     <string name="widget_appearance_title">ウィジェットの外観</string>
     <string name="widget_bg_opacity_label">背景の不透明度: %1$d%%</string>
+    <string name="widget_text_scale_label">文字サイズ: %1$d%%</string>
     <string name="label_firmware">ファームウェア</string>
     <string name="label_current_version">現在: v%1$s</string>
     <string name="btn_check_firmware">ファームウェアの更新を確認</string>

@@ -75,12 +75,13 @@ class DashboardWidget : GlanceAppWidget() {
             if (m.restoreState(snap.json)) m.state.value else null
         }
         val bgAlpha = DashboardSnapshotStore.backgroundAlpha(context)
+        val textScale = DashboardSnapshotStore.textScale(context)
         provideContent {
             GlanceTheme {
                 if (state == null) {
-                    EmptyState(bgAlpha)
+                    EmptyState(bgAlpha, textScale)
                 } else {
-                    SummaryCard(state, snapshot.updatedAtMs, bgAlpha)
+                    SummaryCard(state, snapshot.updatedAtMs, bgAlpha, textScale)
                 }
             }
         }
@@ -108,7 +109,7 @@ private fun isStale(updatedAtMs: Long): Boolean =
     updatedAtMs > 0 && System.currentTimeMillis() - updatedAtMs > 12L * 3600_000L
 
 @Composable
-private fun EmptyState(bgAlpha: Float) {
+private fun EmptyState(bgAlpha: Float, scale: Float) {
     val ctx = androidx.glance.LocalContext.current
     Column(
         modifier = GlanceModifier
@@ -124,7 +125,7 @@ private fun EmptyState(bgAlpha: Float) {
             style = TextStyle(
                 color = GlanceTheme.colors.onSurface,
                 fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
+                fontSize = (16 * scale).sp,
             ),
         )
         Spacer(GlanceModifier.height(4.dp))
@@ -132,7 +133,7 @@ private fun EmptyState(bgAlpha: Float) {
             ctx.getString(R.string.widget_empty_state),
             style = TextStyle(
                 color = GlanceTheme.colors.onSurfaceVariant,
-                fontSize = 14.sp,
+                fontSize = (14 * scale).sp,
             ),
         )
     }
@@ -148,7 +149,7 @@ private fun EmptyState(bgAlpha: Float) {
  * resizes it small enough that everything doesn't fit.
  */
 @Composable
-private fun SummaryCard(state: DashboardState, updatedAtMs: Long, bgAlpha: Float) {
+private fun SummaryCard(state: DashboardState, updatedAtMs: Long, bgAlpha: Float, scale: Float) {
     val ctx = androidx.glance.LocalContext.current
     LazyColumn(
         modifier = GlanceModifier
@@ -157,13 +158,13 @@ private fun SummaryCard(state: DashboardState, updatedAtMs: Long, bgAlpha: Float
             .padding(14.dp)
             .clickable(actionStartActivity(openAppIntent(ctx))),
     ) {
-        item { CardHeader(state, updatedAtMs) }
+        item { CardHeader(state, updatedAtMs, scale) }
         item { Spacer(GlanceModifier.height(10.dp)) }
         state.sun?.let {
-            item { VerdictRow("☀️", ctx.getString(R.string.widget_verdict_sun), true) }
+            item { VerdictRow("☀️", ctx.getString(R.string.widget_verdict_sun), true, scale) }
         }
-        state.moon?.let { moon -> item { MoonVerdict(moon) } }
-        state.weather?.let { w -> item { WeatherVerdict(w) } }
+        state.moon?.let { moon -> item { MoonVerdict(moon, scale) } }
+        state.weather?.let { w -> item { WeatherVerdict(w, scale) } }
         state.milkyWay?.let { mw ->
             item {
                 VerdictRow(
@@ -171,31 +172,32 @@ private fun SummaryCard(state: DashboardState, updatedAtMs: Long, bgAlpha: Float
                     ctx.getString(if (mw.visible) R.string.verdict_mw_visible
                                   else R.string.verdict_mw_not_visible),
                     mw.visible,
+                    scale,
                 )
             }
         }
         state.bortle?.let { b ->
             val bInt = b.bortleClass.toInt().coerceIn(1, 9)
-            item { VerdictRow("💡", ctx.getString(R.string.verdict_bortle, bInt), bInt <= 4) }
+            item { VerdictRow("💡", ctx.getString(R.string.verdict_bortle, bInt), bInt <= 4, scale) }
         }
 
         val riseSetRows = buildRiseSetRows(state)
         if (riseSetRows.isNotEmpty()) {
             item { Spacer(GlanceModifier.height(10.dp)) }
-            item { SectionLabel(ctx.getString(R.string.label_rise_set)) }
-            items(riseSetRows) { (emoji, times) -> RiseSetRow(emoji, times) }
+            item { SectionLabel(ctx.getString(R.string.label_rise_set), scale) }
+            items(riseSetRows) { (emoji, times) -> RiseSetRow(emoji, times, scale) }
         }
 
         if (state.bestWindows.isNotEmpty()) {
             item { Spacer(GlanceModifier.height(10.dp)) }
-            item { SectionLabel(ctx.getString(R.string.card_best_windows)) }
-            items(state.bestWindows) { w -> WindowRow(w) }
+            item { SectionLabel(ctx.getString(R.string.card_best_windows), scale) }
+            items(state.bestWindows) { w -> WindowRow(w, scale) }
         }
     }
 }
 
 @Composable
-private fun CardHeader(state: DashboardState, updatedAtMs: Long) {
+private fun CardHeader(state: DashboardState, updatedAtMs: Long, scale: Float) {
     val ctx = androidx.glance.LocalContext.current
     val stale = isStale(updatedAtMs)
     Row(
@@ -208,7 +210,7 @@ private fun CardHeader(state: DashboardState, updatedAtMs: Long) {
                 style = TextStyle(
                     color = GlanceTheme.colors.onSurface,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 19.sp,
+                    fontSize = (19 * scale).sp,
                 ),
                 maxLines = 1,
             )
@@ -217,7 +219,7 @@ private fun CardHeader(state: DashboardState, updatedAtMs: Long) {
                     formatCoords(loc),
                     style = TextStyle(
                         color = GlanceTheme.colors.onSurfaceVariant,
-                        fontSize = 14.sp,
+                        fontSize = (14 * scale).sp,
                     ),
                     maxLines = 1,
                 )
@@ -230,7 +232,7 @@ private fun CardHeader(state: DashboardState, updatedAtMs: Long) {
                 style = TextStyle(
                     color = if (stale) GlanceTheme.colors.error
                     else GlanceTheme.colors.onSurfaceVariant,
-                    fontSize = 13.sp,
+                    fontSize = (13 * scale).sp,
                     fontWeight = if (stale) FontWeight.Medium else FontWeight.Normal,
                 ),
             )
@@ -240,18 +242,19 @@ private fun CardHeader(state: DashboardState, updatedAtMs: Long) {
 }
 
 @Composable
-private fun MoonVerdict(moon: MoonInfo) {
+private fun MoonVerdict(moon: MoonInfo, scale: Float) {
     val ctx = androidx.glance.LocalContext.current
     VerdictRow(
         moon.emoji,
         ctx.getString(if (moon.goodForAstro) R.string.verdict_moon_good
                       else R.string.verdict_moon_bright),
         moon.goodForAstro,
+        scale,
     )
 }
 
 @Composable
-private fun WeatherVerdict(weather: WeatherInfo) {
+private fun WeatherVerdict(weather: WeatherInfo, scale: Float) {
     val ctx = androidx.glance.LocalContext.current
     val hasRain = weather.precipitationMm > 0.1
     val good = weather.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD && !hasRain
@@ -261,14 +264,14 @@ private fun WeatherVerdict(weather: WeatherInfo) {
         weather.cloudCoverPct <= AppConfig.CLOUD_COVER_PARTLY_THRESHOLD -> R.string.verdict_partly
         else -> R.string.verdict_cloudy
     }
-    VerdictRow(weatherEmoji(weather.weatherCode), ctx.getString(labelRes), good)
+    VerdictRow(weatherEmoji(weather.weatherCode), ctx.getString(labelRes), good, scale)
 }
 
 /** One verdict chip — emoji + label inside a soft-tinted rounded surface.
  *  Green tint for "good" conditions, orange for "bad". Matches
  *  [com.ehrocha.pulsar.ui.screens.DashboardScreen]'s `VerdictRow`. */
 @Composable
-private fun VerdictRow(emoji: String, label: String, good: Boolean) {
+private fun VerdictRow(emoji: String, label: String, good: Boolean, scale: Float) {
     val accent = if (good) VERDICT_GOOD else VERDICT_BAD
     val bg = accent.copy(alpha = 0.14f)
     Row(
@@ -285,14 +288,14 @@ private fun VerdictRow(emoji: String, label: String, good: Boolean) {
                 .padding(horizontal = 10.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(emoji, style = TextStyle(fontSize = 17.sp))
+            Text(emoji, style = TextStyle(fontSize = (17 * scale).sp))
             Spacer(GlanceModifier.width(6.dp))
             Text(
                 label,
                 style = TextStyle(
                     color = ColorProvider(accent),
                     fontWeight = FontWeight.Medium,
-                    fontSize = 15.sp,
+                    fontSize = (15 * scale).sp,
                 ),
             )
         }
@@ -300,38 +303,42 @@ private fun VerdictRow(emoji: String, label: String, good: Boolean) {
 }
 
 @Composable
-private fun SectionLabel(text: String) {
+private fun SectionLabel(text: String, scale: Float) {
     Text(
         text,
         style = TextStyle(
             color = GlanceTheme.colors.primary,
             fontWeight = FontWeight.Bold,
-            fontSize = 14.sp,
+            fontSize = (14 * scale).sp,
         ),
     )
 }
 
 @Composable
-private fun RiseSetRow(emoji: String, times: String) {
+private fun RiseSetRow(emoji: String, times: String, scale: Float) {
     Row(
         modifier = GlanceModifier
             .fillMaxWidth()
             .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(emoji, style = TextStyle(fontSize = 17.sp), modifier = GlanceModifier.width(28.dp))
+        Text(
+            emoji,
+            style = TextStyle(fontSize = (17 * scale).sp),
+            modifier = GlanceModifier.width((28 * scale).dp),
+        )
         Text(
             times,
             style = TextStyle(
                 color = GlanceTheme.colors.onSurfaceVariant,
-                fontSize = 15.sp,
+                fontSize = (15 * scale).sp,
             ),
         )
     }
 }
 
 @Composable
-private fun WindowRow(w: PhotoWindow) {
+private fun WindowRow(w: PhotoWindow, scale: Float) {
     val ctx = androidx.glance.LocalContext.current
     val (chipColor, chipLabelRes) = when (w.rating) {
         3 -> WINDOW_EXCELLENT to R.string.window_excellent
@@ -346,13 +353,17 @@ private fun WindowRow(w: PhotoWindow) {
             .padding(vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(chipMark, style = TextStyle(fontSize = 18.sp), modifier = GlanceModifier.width(30.dp))
+        Text(
+            chipMark,
+            style = TextStyle(fontSize = (18 * scale).sp),
+            modifier = GlanceModifier.width((30 * scale).dp),
+        )
         Text(
             "${w.startTime} – ${w.endTime}",
             style = TextStyle(
                 color = GlanceTheme.colors.onSurface,
                 fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
+                fontSize = (15 * scale).sp,
             ),
             modifier = GlanceModifier.defaultWeight(),
         )
@@ -367,7 +378,7 @@ private fun WindowRow(w: PhotoWindow) {
                 style = TextStyle(
                     color = ColorProvider(chipColor),
                     fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
+                    fontSize = (13 * scale).sp,
                 ),
             )
         }

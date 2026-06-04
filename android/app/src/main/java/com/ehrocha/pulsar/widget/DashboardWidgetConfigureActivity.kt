@@ -50,9 +50,9 @@ import kotlinx.coroutines.launch
  * is off) or via the launcher's reconfigure affordance on long-press for
  * existing widgets (widgetFeatures="reconfigurable").
  *
- * Currently exposes just the background-opacity slider (a global pref, not
- * per-widget — all instances share the value). On Done we update every
- * Glance instance so the change shows immediately.
+ * Exposes background-opacity and text-scale sliders (both global prefs,
+ * not per-widget — all instances share the values). On Done we update
+ * every Glance instance so the change shows immediately.
  */
 class DashboardWidgetConfigureActivity : ComponentActivity() {
     private var appWidgetId: Int = AppWidgetManager.INVALID_APPWIDGET_ID
@@ -101,6 +101,9 @@ class DashboardWidgetConfigureActivity : ComponentActivity() {
         var alpha by remember {
             mutableStateOf(DashboardSnapshotStore.backgroundAlpha(context))
         }
+        var textScale by remember {
+            mutableStateOf(DashboardSnapshotStore.textScale(context))
+        }
         Column(
             modifier = modifier
                 .fillMaxSize()
@@ -126,10 +129,29 @@ class DashboardWidgetConfigureActivity : ComponentActivity() {
                 valueRange = 0f..1f,
                 modifier = Modifier.fillMaxWidth(),
             )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                stringResource(R.string.widget_text_scale_label, (textScale * 100).toInt()),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Slider(
+                value = textScale,
+                onValueChange = { textScale = it },
+                onValueChangeFinished = {
+                    DashboardSnapshotStore.setTextScale(context, textScale)
+                },
+                valueRange = DashboardSnapshotStore.TEXT_SCALE_MIN..DashboardSnapshotStore.TEXT_SCALE_MAX,
+                // 0.8 → 1.5 in 0.1 steps gives 7 stops; steps = stops between
+                // ends − 1 = 6.
+                steps = 6,
+                modifier = Modifier.fillMaxWidth(),
+            )
             Spacer(Modifier.height(8.dp))
             Button(
                 onClick = {
                     DashboardSnapshotStore.setBackgroundAlpha(context, alpha)
+                    DashboardSnapshotStore.setTextScale(context, textScale)
                     scope.launch {
                         runCatching {
                             GlanceAppWidgetManager(context)

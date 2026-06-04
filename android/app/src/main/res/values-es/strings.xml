@@ -302,6 +302,7 @@
     <string name="widget_configure_title">Ajustes del widget</string>
     <string name="widget_appearance_title">Apariencia del widget</string>
     <string name="widget_bg_opacity_label">Opacidad del fondo: %1$d%%</string>
+    <string name="widget_text_scale_label">Tamaño del texto: %1$d%%</string>
     <string name="label_firmware">Firmware</string>
     <string name="label_current_version">Actual: v%1$s</string>
     <string name="btn_check_firmware">Buscar Actualización de Firmware</string>
