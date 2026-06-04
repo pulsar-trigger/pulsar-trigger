@@ -208,30 +208,39 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     /** Enumerate every device Pulsar has stored state for, regardless of
      *  which transport it's on. Used by the Manage Devices screen.
      *  Sources:
-     *   - All currently-bonded BLE devices on the OS (Pulsar BLE + Canon
-     *     BLE bodies pair through the standard Android BLE flow).
+     *   - Bonded BLE devices that look Pulsar-compatible (name starts with
+     *     "Pulsar" → ESP32 firmware, or "Canon" / contains "EOS" → Canon
+     *     body BLE pairing). The user's earbuds / watch / keyboard are also
+     *     in the OS bond list but have nothing to do with us, so they're
+     *     filtered out.
      *   - Every UDN with stored CCAPI credentials. */
     @SuppressLint("MissingPermission")
     fun managedDevices(): List<com.ehrocha.pulsar.model.ManagedDevice> {
         val out = mutableListOf<com.ehrocha.pulsar.model.ManagedDevice>()
         val app = getApplication<Application>()
-        // BLE bonds. We tag the device kind based on whether the body has
-        // the smart-mode service UUID anywhere in its stored services —
-        // but without an active connection we can't read that. Heuristic:
-        // if the address matches our last Canon-BLE hint, call it
-        // CANON_BLE. Otherwise everything else gets PULSAR_BLE; users can
-        // always still forget the wrong kind safely (the operation is
-        // identical for both — both call removeBond on the OS).
+        // BLE bonds — but only the ones we recognise. We can't query GATT
+        // services without an active connection so we rely on the cached
+        // advertising name (set by `firmware/src/ble_server.cpp` for Pulsar,
+        // or by Canon's BLE stack for the body). The `lastCanonBleAddress`
+        // hint is a stronger CANON_BLE signal — if it matches, that wins
+        // even if the name was renamed by the user.
         runCatching {
             val mgr = app.getSystemService(Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager
             mgr?.adapter?.bondedDevices?.forEach { dev ->
                 val addr = dev.address ?: return@forEach
-                val name = runCatching { dev.name }.getOrNull() ?: addr
-                val kind =
-                    if (addr == lastCanonBleAddress) com.ehrocha.pulsar.model.DeviceKind.CANON_BLE
-                    else com.ehrocha.pulsar.model.DeviceKind.PULSAR_BLE
+                val name = runCatching { dev.name }.getOrNull()
+                val matchedByLastCanon = addr == lastCanonBleAddress
+                val isPulsar = name?.startsWith("Pulsar", ignoreCase = true) == true
+                val isCanon = matchedByLastCanon ||
+                    name?.startsWith("Canon", ignoreCase = true) == true ||
+                    name?.contains("EOS", ignoreCase = true) == true
+                val kind = when {
+                    isCanon -> com.ehrocha.pulsar.model.DeviceKind.CANON_BLE
+                    isPulsar -> com.ehrocha.pulsar.model.DeviceKind.PULSAR_BLE
+                    else -> return@forEach
+                }
                 out += com.ehrocha.pulsar.model.ManagedDevice(
-                    kind = kind, id = addr, displayName = name,
+                    kind = kind, id = addr, displayName = name ?: addr,
                 )
             }
         }
