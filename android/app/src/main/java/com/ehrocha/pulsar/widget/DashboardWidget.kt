@@ -124,7 +124,7 @@ private fun EmptyState(bgAlpha: Float) {
             style = TextStyle(
                 color = GlanceTheme.colors.onSurface,
                 fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
+                fontSize = 16.sp,
             ),
         )
         Spacer(GlanceModifier.height(4.dp))
@@ -132,7 +132,7 @@ private fun EmptyState(bgAlpha: Float) {
             ctx.getString(R.string.widget_empty_state),
             style = TextStyle(
                 color = GlanceTheme.colors.onSurfaceVariant,
-                fontSize = 12.sp,
+                fontSize = 14.sp,
             ),
         )
     }
@@ -208,7 +208,7 @@ private fun CardHeader(state: DashboardState, updatedAtMs: Long) {
                 style = TextStyle(
                     color = GlanceTheme.colors.onSurface,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp,
+                    fontSize = 19.sp,
                 ),
                 maxLines = 1,
             )
@@ -217,7 +217,7 @@ private fun CardHeader(state: DashboardState, updatedAtMs: Long) {
                     formatCoords(loc),
                     style = TextStyle(
                         color = GlanceTheme.colors.onSurfaceVariant,
-                        fontSize = 12.sp,
+                        fontSize = 14.sp,
                     ),
                     maxLines = 1,
                 )
@@ -230,7 +230,7 @@ private fun CardHeader(state: DashboardState, updatedAtMs: Long) {
                 style = TextStyle(
                     color = if (stale) GlanceTheme.colors.error
                     else GlanceTheme.colors.onSurfaceVariant,
-                    fontSize = 11.sp,
+                    fontSize = 13.sp,
                     fontWeight = if (stale) FontWeight.Medium else FontWeight.Normal,
                 ),
             )
@@ -285,14 +285,14 @@ private fun VerdictRow(emoji: String, label: String, good: Boolean) {
                 .padding(horizontal = 10.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(emoji, style = TextStyle(fontSize = 15.sp))
+            Text(emoji, style = TextStyle(fontSize = 17.sp))
             Spacer(GlanceModifier.width(6.dp))
             Text(
                 label,
                 style = TextStyle(
                     color = ColorProvider(accent),
                     fontWeight = FontWeight.Medium,
-                    fontSize = 13.sp,
+                    fontSize = 15.sp,
                 ),
             )
         }
@@ -306,7 +306,7 @@ private fun SectionLabel(text: String) {
         style = TextStyle(
             color = GlanceTheme.colors.primary,
             fontWeight = FontWeight.Bold,
-            fontSize = 12.sp,
+            fontSize = 14.sp,
         ),
     )
 }
@@ -319,12 +319,12 @@ private fun RiseSetRow(emoji: String, times: String) {
             .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(emoji, style = TextStyle(fontSize = 15.sp), modifier = GlanceModifier.width(26.dp))
+        Text(emoji, style = TextStyle(fontSize = 17.sp), modifier = GlanceModifier.width(28.dp))
         Text(
             times,
             style = TextStyle(
                 color = GlanceTheme.colors.onSurfaceVariant,
-                fontSize = 13.sp,
+                fontSize = 15.sp,
             ),
         )
     }
@@ -346,13 +346,13 @@ private fun WindowRow(w: PhotoWindow) {
             .padding(vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(chipMark, style = TextStyle(fontSize = 16.sp), modifier = GlanceModifier.width(28.dp))
+        Text(chipMark, style = TextStyle(fontSize = 18.sp), modifier = GlanceModifier.width(30.dp))
         Text(
             "${w.startTime} – ${w.endTime}",
             style = TextStyle(
                 color = GlanceTheme.colors.onSurface,
                 fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
+                fontSize = 15.sp,
             ),
             modifier = GlanceModifier.defaultWeight(),
         )
@@ -367,7 +367,7 @@ private fun WindowRow(w: PhotoWindow) {
                 style = TextStyle(
                     color = ColorProvider(chipColor),
                     fontWeight = FontWeight.Bold,
-                    fontSize = 11.sp,
+                    fontSize = 13.sp,
                 ),
             )
         }
