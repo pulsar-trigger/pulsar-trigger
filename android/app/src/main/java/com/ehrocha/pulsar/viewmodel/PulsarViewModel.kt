@@ -44,6 +44,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
@@ -985,7 +986,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         // flickers true→false→true if another path starts a new flow.
         viewModelScope.launch {
             cancelRunningFlowSync()
-            _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
+            _status.update { it?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L) }
         }
     }
 
@@ -1267,6 +1268,15 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             val (h, p) = trimmed.split(':', limit = 2)
             h to p.toIntOrNull()
         } else trimmed to null
+        // CCAPI is cleartext HTTP; we accept that for cameras on a private
+        // LAN but refuse to dial a public host from a user-typed field.
+        // RFC1918 + loopback + link-local covers every real-world case
+        // (camera-AP mode, home LAN, USB-tether-fallback).
+        if (!isPrivateIpv4(host)) {
+            _canonCcapiManualError.value = "not_private"
+            onResult(false)
+            return
+        }
         val portsToTry = explicitPort?.let { listOf(it) } ?: listOf(8080, 80, 8612)
 
         viewModelScope.launch {
@@ -1337,6 +1347,27 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun clearCanonCcapiManualError() { _canonCcapiManualError.value = null }
+
+    /** True if [host] is an IPv4 literal in a private / loopback / link-local
+     *  range. Used to refuse user-typed CCAPI hosts that aren't on a LAN —
+     *  the manifest permits cleartext globally because cameras serve plain
+     *  HTTP, but the user-facing input is the only path that could be
+     *  steered to a public IP, so we gate it here. */
+    private fun isPrivateIpv4(host: String): Boolean {
+        val parts = host.split('.')
+        if (parts.size != 4) return false
+        val octets = IntArray(4) { i -> parts[i].toIntOrNull() ?: return false }
+        if (octets.any { it !in 0..255 }) return false
+        val a = octets[0]; val b = octets[1]
+        return when {
+            a == 10 -> true                  // 10.0.0.0/8
+            a == 172 && b in 16..31 -> true  // 172.16.0.0/12
+            a == 192 && b == 168 -> true     // 192.168.0.0/16
+            a == 127 -> true                 // loopback
+            a == 169 && b == 254 -> true     // link-local
+            else -> false
+        }
+    }
 
     /** Fire-and-forget stop of any running Canon live-view session. Safe to
      *  call from non-suspending contexts (e.g. `DisposableEffect.onDispose`)
@@ -1454,7 +1485,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             ?: json.optJSONArray("battery")?.optJSONObject(0)
         if (battObj != null) {
             val pct = canonBatteryToPct(battObj.optString("level"))
-            if (pct != null) _status.value = current.copy(batteryPct = pct)
+            if (pct != null) _status.update { it?.copy(batteryPct = pct) }
         }
 
         // `addedcontents` is the list of files added since the last poll. Add
@@ -1465,9 +1496,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             nextShots += added.length()
             // Only stomp shotsTaken if the run loop isn't authoritative for
             // this moment (e.g. while we're in WAITING / IDLE between shots).
-            val s = _status.value ?: return nextShots
-            if (s.state != DeviceState.RUNNING) {
-                _status.value = s.copy(shotsTaken = nextShots.coerceAtLeast(s.shotsTaken))
+            _status.update { s ->
+                if (s == null || s.state == DeviceState.RUNNING) s
+                else s.copy(shotsTaken = nextShots.coerceAtLeast(s.shotsTaken))
             }
         }
         return nextShots
@@ -2344,7 +2375,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             _canonBleTransport.value?.stop()
             flowJob?.cancelAndJoin()
             flowJob = null
-            _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
+            _status.update { it?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L) }
         }
     }
 
@@ -2511,30 +2542,30 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     /** Simulate a sequence of shots by updating _status directly (for flow steps in simulator). */
     private suspend fun simulateShots(totalShots: Int, expMs: Long, gapMs: Long, startDelayMs: Long) {
         if (startDelayMs > 0) {
-            _status.value = _status.value?.copy(
+            _status.update { it?.copy(
                 state = DeviceState.WAITING, shotsTaken = 0,
                 timeRemainingMs = startDelayMs + totalShots * (expMs + gapMs) - gapMs,
-            )
+            ) }
             delay(startDelayMs)
         }
         for (shot in 1..totalShots) {
             coroutineContext.ensureActive()
             val remaining = (totalShots - shot + 1) * (expMs + gapMs) - gapMs
             // Exposure starts
-            _status.value = _status.value?.copy(
+            _status.update { it?.copy(
                 state = DeviceState.RUNNING, shotsTaken = shot - 1, timeRemainingMs = remaining,
-            )
+            ) }
             delay(expMs)
             // Exposure ends — transition to WAITING with updated shot count
-            _status.value = _status.value?.copy(
+            _status.update { it?.copy(
                 state = DeviceState.WAITING, shotsTaken = shot,
                 timeRemainingMs = (remaining - expMs).coerceAtLeast(0),
-            )
+            ) }
             if (shot < totalShots) {
                 delay(gapMs)
             }
         }
-        _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
+        _status.update { it?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L) }
     }
 
     private fun sendModeCommand(packet: ByteArray) {
@@ -2705,12 +2736,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         // mode silently no-opped on PTP and Canon BLE.
         val transport = activeCameraTransport()
         if (transport != null) {
-            _status.value = _status.value?.copy(state = DeviceState.RUNNING)
+            _status.update { it?.copy(state = DeviceState.RUNNING) }
             viewModelScope.launch { transport.startBulb(af = true) }
             return
         }
         if (_simulatorActive.value) {
-            _status.value = _status.value?.copy(state = DeviceState.RUNNING)
+            _status.update { it?.copy(state = DeviceState.RUNNING) }
             return
         }
         sendConfig()
@@ -2724,12 +2755,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         val transport = activeCameraTransport()
         if (transport != null) {
             viewModelScope.launch {
-                _status.value = _status.value?.copy(state = DeviceState.RUNNING)
+                _status.update { it?.copy(state = DeviceState.RUNNING) }
                 val fired = runCatching { transport.fireShutter(af = false) }.isSuccess
-                _status.value = _status.value?.copy(
+                _status.update { it?.copy(
                     state = DeviceState.IDLE,
-                    shotsTaken = (_status.value?.shotsTaken ?: 0) + if (fired) 1 else 0,
-                )
+                    shotsTaken = it.shotsTaken + if (fired) 1 else 0,
+                ) }
             }
             return
         }
@@ -2742,11 +2773,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         val transport = activeCameraTransport()
         if (transport != null) {
             viewModelScope.launch { transport.stopBulb() }
-            _status.value = _status.value?.copy(state = DeviceState.IDLE)
+            _status.update { it?.copy(state = DeviceState.IDLE) }
             return
         }
         if (_simulatorActive.value) {
-            _status.value = _status.value?.copy(state = DeviceState.IDLE)
+            _status.update { it?.copy(state = DeviceState.IDLE) }
             return
         }
         bleController.sendCommand(CommandBuilder.stop())
@@ -2816,45 +2847,45 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         simulatorJob = viewModelScope.launch {
             if (startDelayMs > 0) {
                 val totalTimeMs = startDelayMs + totalShots * (expMs + gapMs) - gapMs
-                _status.value = _status.value?.copy(
+                _status.update { it?.copy(
                     state = DeviceState.WAITING, shotsTaken = 0,
                     timeRemainingMs = totalTimeMs,
-                )
+                ) }
                 delay(startDelayMs)
             }
 
             for (shot in 1..totalShots) {
                 val remaining = (totalShots - shot + 1) * (expMs + gapMs) - gapMs
-                _status.value = _status.value?.copy(
+                _status.update { it?.copy(
                     state = DeviceState.RUNNING,
                     shotsTaken = shot - 1,
                     timeRemainingMs = remaining,
-                )
+                ) }
                 delay(expMs)
-                _status.value = _status.value?.copy(
+                _status.update { it?.copy(
                     state = DeviceState.WAITING,
                     shotsTaken = shot,
                     timeRemainingMs = (remaining - expMs).coerceAtLeast(0),
-                )
+                ) }
                 if (shot < totalShots) {
                     delay(gapMs)
                 }
             }
 
-            _status.value = _status.value?.copy(
+            _status.update { it?.copy(
                 state = DeviceState.IDLE,
                 timeRemainingMs = 0L,
-            )
+            ) }
         }
     }
 
     private fun stopSimulatorRun() {
         simulatorJob?.cancel()
         simulatorJob = null
-        _status.value = _status.value?.copy(
+        _status.update { it?.copy(
             state = DeviceState.IDLE,
             timeRemainingMs = 0L,
-        )
+        ) }
     }
 
     // ── Notification helpers ─────────────────────────────────────────────

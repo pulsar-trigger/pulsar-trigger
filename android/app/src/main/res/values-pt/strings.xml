@@ -43,6 +43,7 @@
     <string name="canon_manual_add_probing">Tentando…</string>
     <string name="canon_manual_add_not_found">Nenhuma câmera Canon respondeu nesse endereço. Confirme o IP e que a página da API abre no navegador.</string>
     <string name="canon_manual_add_invalid">Informe o IP ou host[:porta] da câmera.</string>
+    <string name="canon_manual_add_not_private">Só IPs privados (192.168.x, 10.x, 172.16–31.x) são aceitos. Câmeras servem HTTP em texto claro, então recusamos hosts públicos aqui.</string>
     <string name="canon_camera_capabilities">Recursos…</string>
     <string name="canon_capabilities_probing">Consultando a câmera…</string>
     <string name="canon_capabilities_failed">Não foi possível acessar a câmera. Verifique Wi-Fi e credenciais.</string>

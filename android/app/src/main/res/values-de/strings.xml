@@ -43,6 +43,7 @@
     <string name="canon_manual_add_probing">Prüfung…</string>
     <string name="canon_manual_add_not_found">Keine Canon-Kamera hat unter dieser Adresse geantwortet. IP prüfen und sicherstellen, dass die API-Seite im Browser lädt.</string>
     <string name="canon_manual_add_invalid">Gib die IP oder host[:port] der Kamera ein.</string>
+    <string name="canon_manual_add_not_private">Nur private IPs (192.168.x, 10.x, 172.16–31.x) sind erlaubt. Kameras liefern Klartext-HTTP, daher lehnen wir öffentliche Hosts hier ab.</string>
     <string name="canon_camera_capabilities">Funktionen…</string>
     <string name="canon_capabilities_probing">Kamera wird abgefragt…</string>
     <string name="canon_capabilities_failed">Kamera nicht erreichbar. WLAN und Anmeldedaten prüfen.</string>

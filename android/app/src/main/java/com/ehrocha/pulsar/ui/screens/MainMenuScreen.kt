@@ -97,10 +97,10 @@ fun MainMenuScreen(
     var bannerDismissed by remember { mutableStateOf(false) }
 
     // Dashboard sits to the LEFT of Trigger so a left-swipe from the default
-    // Trigger tab reveals the astro dashboard. Trigger is the default landing
-    // tab — the one users open the app for. Favorites earns a dedicated
-    // destination (between Trigger and Tools) because power users live in
-    // their pinned presets.
+    // Trigger destination reveals the astro dashboard. Trigger is the default
+    // landing destination — the one users open the app for. Favorites earns
+    // a dedicated destination (between Trigger and Tools) because power users
+    // live in their pinned presets.
     val destinations = listOf(
         stringResource(R.string.dest_dashboard),
         stringResource(R.string.dest_trigger),
@@ -175,7 +175,7 @@ fun MainMenuScreen(
         }
     }
 
-    // Per-tab content. Same composables in both layouts.
+    // Per-destination content — drives the HorizontalPager body below.
     val pageContent: @Composable (Int) -> Unit = { page ->
         MenuPageContent(
             page = page, vm = vm,

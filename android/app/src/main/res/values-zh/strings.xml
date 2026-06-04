@@ -43,6 +43,7 @@
     <string name="canon_manual_add_probing">正在探测…</string>
     <string name="canon_manual_add_not_found">该地址未收到佳能相机的响应。请确认 IP 并尝试在浏览器中打开 API 页面。</string>
     <string name="canon_manual_add_invalid">请输入相机的 IP 或 host[:port]。</string>
+    <string name="canon_manual_add_not_private">仅允许私有 IP（192.168.x、10.x、172.16–31.x）。相机以明文 HTTP 提供服务，因此此处拒绝公网主机。</string>
     <string name="canon_camera_capabilities">功能…</string>
     <string name="canon_capabilities_probing">正在查询相机…</string>
     <string name="canon_capabilities_failed">无法访问相机。请检查 Wi-Fi 与凭据。</string>

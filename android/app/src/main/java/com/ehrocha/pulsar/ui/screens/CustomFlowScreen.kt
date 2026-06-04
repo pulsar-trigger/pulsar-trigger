@@ -20,6 +20,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
@@ -641,7 +643,7 @@ private fun SavedFlowCard(
                 if (!flow.builtIn) {
                     if (onEditTags != null) {
                         IconButton(onClick = onEditTags, modifier = Modifier.size(36.dp)) {
-                            Icon(Icons.Default.Label, contentDescription = stringResource(R.string.label_tags), modifier = Modifier.size(20.dp))
+                            Icon(Icons.AutoMirrored.Filled.Label, contentDescription = stringResource(R.string.label_tags), modifier = Modifier.size(20.dp))
                         }
                     }
                     IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
@@ -682,7 +684,7 @@ private fun SavedFlowCard(
                         val context = LocalContext.current
                         if (idx > 0) {
                             Icon(
-                                Icons.Default.ArrowForward,
+                                Icons.AutoMirrored.Filled.ArrowForward,
                                 contentDescription = null,
                                 modifier = Modifier.size(12.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
@@ -712,7 +714,7 @@ private fun SavedFlowCard(
                     }
                     if (flow.steps.size > 6) {
                         Icon(
-                            Icons.Default.ArrowForward,
+                            Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = null,
                             modifier = Modifier.size(12.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),

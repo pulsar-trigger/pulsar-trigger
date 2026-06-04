@@ -43,6 +43,7 @@
     <string name="canon_manual_add_probing">Sondage…</string>
     <string name="canon_manual_add_not_found">Aucun appareil Canon n\'a répondu à cette adresse. Vérifiez l\'IP et que la page API s\'ouvre dans le navigateur.</string>
     <string name="canon_manual_add_invalid">Saisissez l\'IP ou hôte[:port] de l\'appareil.</string>
+    <string name="canon_manual_add_not_private">Seules les IPs privées (192.168.x, 10.x, 172.16–31.x) sont acceptées. Les appareils servent du HTTP en clair, on refuse donc les hôtes publics ici.</string>
     <string name="canon_camera_capabilities">Fonctionnalités…</string>
     <string name="canon_capabilities_probing">Interrogation de l\'appareil…</string>
     <string name="canon_capabilities_failed">Impossible d\'atteindre l\'appareil. Vérifiez le Wi-Fi et les identifiants.</string>

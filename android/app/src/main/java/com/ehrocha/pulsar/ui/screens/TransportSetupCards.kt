@@ -317,6 +317,7 @@ internal fun CanonManualAddDialog(
                         text = when (error) {
                             "not_found" -> stringResource(R.string.canon_manual_add_not_found)
                             "invalid" -> stringResource(R.string.canon_manual_add_invalid)
+                            "not_private" -> stringResource(R.string.canon_manual_add_not_private)
                             else -> error
                         },
                         style = MaterialTheme.typography.bodySmall,

@@ -27,7 +27,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BluetoothSearching
+import androidx.compose.material.icons.automirrored.filled.BluetoothSearching
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.AlertDialog
@@ -236,7 +236,7 @@ private fun PermissionsRequiredScreen(onRequestAgain: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(
-            imageVector = Icons.Default.BluetoothSearching,
+            imageVector = Icons.AutoMirrored.Filled.BluetoothSearching,
             contentDescription = null,
             modifier = Modifier.size(72.dp),
             tint = MaterialTheme.colorScheme.primary,

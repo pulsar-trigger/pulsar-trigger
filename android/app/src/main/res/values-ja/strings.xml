@@ -43,6 +43,7 @@
     <string name="canon_manual_add_probing">確認中…</string>
     <string name="canon_manual_add_not_found">そのアドレスでは Canon カメラの応答がありませんでした。IP を確認し、ブラウザで API ページを開けるかご確認ください。</string>
     <string name="canon_manual_add_invalid">カメラの IP または host[:port] を入力してください。</string>
+    <string name="canon_manual_add_not_private">プライベート IP（192.168.x、10.x、172.16–31.x）のみ受け付けます。カメラは平文 HTTP を提供するため、ここでは公開ホストを拒否します。</string>
     <string name="canon_camera_capabilities">対応機能…</string>
     <string name="canon_capabilities_probing">カメラを確認中…</string>
     <string name="canon_capabilities_failed">カメラに接続できません。Wi-Fi と認証情報を確認してください。</string>

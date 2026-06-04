@@ -6,6 +6,14 @@
   (camera AP, home LAN, hotel WiFi, etc.) and we can't enumerate them in
   advance. The manifest also sets `usesCleartextTraffic="true"` as a
   belt-and-braces fallback for older Android versions / OEM overrides.
+
+  Why not scope to RFC1918 ranges here? Android's `<domain>` element does
+  exact string matching of hostnames/IP literals — there's no CIDR or
+  subnet syntax. Enumerating /16 + /8 + /12 as individual entries isn't
+  workable. The user-input boundary (manual CCAPI host dialog) instead
+  validates that the typed host is a private-range IPv4 literal — see
+  `PulsarViewModel.isPrivateIpv4`. All other HTTP call sites (update
+  manifests, planner APIs, weather, etc.) hit HTTPS endpoints we control.
 -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="true">
