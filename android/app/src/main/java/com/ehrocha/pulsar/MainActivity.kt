@@ -105,10 +105,20 @@ class MainActivity : AppCompatActivity() {
         // import the screen module.
         const val DEST_DASHBOARD = 0
         const val DEST_TRIGGER = 1
-        const val DEST_TOOLS = 2
+        const val DEST_FAVORITES = 2
+        const val DEST_TOOLS = 3
+
+        /** Maximum byte size of an imported .pulsar event file. The
+         *  largest event file we'd reasonably expect (a fully-populated
+         *  shot log with months of entries) clocks in well under 1 MB. */
+        private const val IMPORT_MAX_BYTES = 1_048_576
     }
 
-    /** Read event JSON from an incoming VIEW/SEND intent (.pulsar file). */
+    /** Read event JSON from an incoming VIEW/SEND intent (.pulsar file).
+     *  Caps the read at [IMPORT_MAX_BYTES] so a malicious or oversized
+     *  attachment can't OOM the app — the activity is exported with a
+     *  .pulsar mime-type intent filter, so any installed app can hand us
+     *  arbitrary URIs. */
     private fun readImportIntent(): String? {
         val intent = intent ?: return null
         return try {
@@ -122,7 +132,22 @@ class MainActivity : AppCompatActivity() {
                 }
                 else -> null
             }
-            uri?.let { contentResolver.openInputStream(it)?.bufferedReader()?.readText() }
+            uri?.let { contentResolver.openInputStream(it)?.use { stream ->
+                val buf = ByteArray(IMPORT_MAX_BYTES + 1)
+                var total = 0
+                while (total <= IMPORT_MAX_BYTES) {
+                    val n = stream.read(buf, total, buf.size - total)
+                    if (n < 0) break
+                    total += n
+                }
+                if (total > IMPORT_MAX_BYTES) {
+                    android.util.Log.w("MainActivity",
+                        "Refusing import: file exceeds ${IMPORT_MAX_BYTES} bytes")
+                    null
+                } else {
+                    String(buf, 0, total)
+                }
+            } }
         } catch (_: Exception) { null }
     }
 

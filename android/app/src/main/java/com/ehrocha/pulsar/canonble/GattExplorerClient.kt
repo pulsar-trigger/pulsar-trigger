@@ -16,6 +16,7 @@ import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.os.Build
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -42,6 +43,14 @@ class GattExplorerClient(private val context: Context) {
     private companion object { const val TAG = "GattExplorer" }
 
     private var gatt: BluetoothGatt? = null
+
+    /** Single-flight guard: Android's BluetoothGatt only handles one
+     *  read/write/CCCD op at a time. Without this, a fast UI tap
+     *  sequence (Read then Write before the read callback fires) makes
+     *  the second op silently return false with no retry. The flag flips
+     *  to true on op-queue, back to false when the matching callback
+     *  arrives. The UI sees rejected ops in the log so they can retry. */
+    private val opInFlight = AtomicBoolean(false)
 
     private val _services = MutableStateFlow<List<BluetoothGattService>>(emptyList())
     val services: StateFlow<List<BluetoothGattService>> = _services
@@ -105,6 +114,7 @@ class GattExplorerClient(private val context: Context) {
             } else {
                 GattExplorerLog.e(TAG, "READ ${characteristic.uuid} failed status=$status")
             }
+            opInFlight.set(false)
         }
 
         @Suppress("DEPRECATION")
@@ -121,6 +131,7 @@ class GattExplorerClient(private val context: Context) {
                 } else {
                     GattExplorerLog.e(TAG, "READ ${characteristic.uuid} failed status=$status")
                 }
+                opInFlight.set(false)
             }
         }
 
@@ -134,6 +145,17 @@ class GattExplorerClient(private val context: Context) {
             } else {
                 GattExplorerLog.e(TAG, "WRITE ${characteristic.uuid} failed status=$status")
             }
+            opInFlight.set(false)
+        }
+
+        override fun onDescriptorWrite(
+            g: BluetoothGatt,
+            descriptor: BluetoothGattDescriptor,
+            status: Int,
+        ) {
+            // CCCD write (subscribe/unsubscribe) finished — release the
+            // single-flight guard so the next op can proceed.
+            opInFlight.set(false)
         }
 
         override fun onCharacteristicChanged(
@@ -180,8 +202,15 @@ class GattExplorerClient(private val context: Context) {
 
     fun readChar(svcUuid: UUID, charUuid: UUID) {
         val char = findChar(svcUuid, charUuid) ?: return
+        if (!opInFlight.compareAndSet(false, true)) {
+            GattExplorerLog.w(TAG, "READ ${charUuid} rejected — another op is in flight")
+            return
+        }
         val ok = gatt?.readCharacteristic(char) == true
-        if (!ok) GattExplorerLog.e(TAG, "READ ${charUuid} could not be queued")
+        if (!ok) {
+            GattExplorerLog.e(TAG, "READ ${charUuid} could not be queued")
+            opInFlight.set(false)
+        }
     }
 
     /** Write bytes to a characteristic. Passes [withResponse] = true →
@@ -189,13 +218,18 @@ class GattExplorerClient(private val context: Context) {
     fun writeChar(svcUuid: UUID, charUuid: UUID, bytes: ByteArray, withResponse: Boolean = false) {
         val char = findChar(svcUuid, charUuid) ?: return
         val g = gatt ?: return
+        if (!opInFlight.compareAndSet(false, true)) {
+            GattExplorerLog.w(TAG, "WRITE ${charUuid} rejected — another op is in flight")
+            return
+        }
         val writeType = if (withResponse)
             BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
         else
             BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val queued = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val rc = g.writeCharacteristic(char, bytes, writeType)
             GattExplorerLog.i(TAG, "WRITE ${charUuid} ${bytes.toHex()} (response=$withResponse, rc=$rc)")
+            rc == BluetoothGatt.GATT_SUCCESS
         } else {
             @Suppress("DEPRECATION")
             char.writeType = writeType
@@ -204,7 +238,13 @@ class GattExplorerClient(private val context: Context) {
             @Suppress("DEPRECATION")
             val ok = g.writeCharacteristic(char)
             GattExplorerLog.i(TAG, "WRITE ${charUuid} ${bytes.toHex()} (response=$withResponse, queued=$ok)")
+            ok
         }
+        // WRITE_NO_RESPONSE doesn't get an onCharacteristicWrite callback
+        // on some Android versions, so release the guard immediately;
+        // WRITE-with-response is released by the callback. Either way,
+        // release on failed-queue so we don't get stuck.
+        if (!queued || !withResponse) opInFlight.set(false)
     }
 
     /** Toggle notification subscription on a characteristic. CCCD is
@@ -213,9 +253,16 @@ class GattExplorerClient(private val context: Context) {
     fun setNotify(svcUuid: UUID, charUuid: UUID, enabled: Boolean) {
         val char = findChar(svcUuid, charUuid) ?: return
         val g = gatt ?: return
-        val ok = g.setCharacteristicNotification(char, enabled)
+        if (!opInFlight.compareAndSet(false, true)) {
+            GattExplorerLog.w(TAG, "SUBSCRIBE ${charUuid} rejected — another op is in flight")
+            return
+        }
+        val notifyOk = g.setCharacteristicNotification(char, enabled)
         // CCCD descriptor 2902 — required for the camera to actually start
-        // sending notify/indicate packets.
+        // sending notify/indicate packets. The descriptor write is what
+        // triggers onDescriptorWrite, which releases the single-flight
+        // guard. setCharacteristicNotification is local-only and never
+        // gets a callback.
         val cccd = char.getDescriptor(CCCD_UUID)
         if (cccd != null) {
             val value = if (!enabled) BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE
@@ -230,8 +277,12 @@ class GattExplorerClient(private val context: Context) {
                 @Suppress("DEPRECATION")
                 g.writeDescriptor(cccd)
             }
+        } else {
+            // No CCCD → no descriptor write → no callback to release the
+            // guard. Release now.
+            opInFlight.set(false)
         }
-        GattExplorerLog.i(TAG, "${if (enabled) "SUBSCRIBE" else "UNSUBSCRIBE"} ${charUuid} ok=$ok")
+        GattExplorerLog.i(TAG, "${if (enabled) "SUBSCRIBE" else "UNSUBSCRIBE"} ${charUuid} ok=$notifyOk")
     }
 
     private fun findChar(svcUuid: UUID, charUuid: UUID): BluetoothGattCharacteristic? {

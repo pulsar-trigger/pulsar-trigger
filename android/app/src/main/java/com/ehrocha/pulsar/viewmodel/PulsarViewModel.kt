@@ -979,13 +979,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     internal fun abortFlowOnTransportDrop() {
         if (!_flowRunning.value) return
         Log.i(TAG, "camera transport dropped mid-session — aborting flow")
-        flowJob?.cancel()
-        flowJob = null
-        _flowRunning.value = false
-        _flowPaused.value = false
-        _flowCurrentStep.value = -1
         _sessionInterrupted.value = true
-        _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
+        // cancelAndJoin via the helper so the flow's finally lands before
+        // the caller sees IDLE — prevents a race where the running flag
+        // flickers true→false→true if another path starts a new flow.
+        viewModelScope.launch {
+            cancelRunningFlowSync()
+            _status.value = _status.value?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L)
+        }
     }
 
     /** Single derived run-state — UI consumers should prefer this over the
@@ -1793,70 +1794,47 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Cancel any in-flight flow and wait for its `finally` to settle
+     *  before returning. Used by [disconnect] and other paths that need
+     *  to guarantee state consistency before tearing down a transport.
+     *  Without the join, the flow's own cleanup can land *after* the
+     *  caller has already set new state — clobbering it. */
+    private suspend fun cancelRunningFlowSync() {
+        val job = flowJob ?: return
+        flowJob = null
+        job.cancelAndJoin()
+        // The flow's finally block already clears these, but set them
+        // defensively in case the job was never properly started.
+        _flowRunning.value = false
+        _flowPaused.value = false
+        _flowCurrentStep.value = -1
+    }
+
     fun disconnect() {
-        if (_canonCcapiTransport.value != null) {
-            // Cancel any running flow first so the Canon loop stops firing.
-            if (_flowRunning.value) {
-                flowJob?.cancel()
-                flowJob = null
-                _flowRunning.value = false
-                _flowPaused.value = false
-                _flowCurrentStep.value = -1
+        // All four Canon-transport disconnects + the ESP32 path share the
+        // same "cancel the flow first" preamble. Run the whole thing inside
+        // a viewModelScope.launch so we can cancelAndJoin properly — the
+        // old fire-and-forget cancel() had a race where the flow's finally
+        // could land after the caller already set _flowRunning=false.
+        viewModelScope.launch {
+            cancelRunningFlowSync()
+            when {
+                _canonCcapiTransport.value != null -> disconnectCanonCcapi()
+                _ptpTransport.value != null -> disconnectPtp()
+                _canonBleTransport.value != null -> disconnectCanonBle()
+                _ptpIpTransport.value != null -> disconnectPtpIp()
+                _simulatorActive.value -> disconnectSimulator()
+                else -> {
+                    // ESP32 BLE path: send the stop command before tearing
+                    // down the link so the firmware doesn't keep firing.
+                    val running = _status.value?.state.let {
+                        it == DeviceState.RUNNING || it == DeviceState.WAITING
+                    }
+                    if (running) bleController.sendCommand(CommandBuilder.stop())
+                    bleController.disconnect()
+                }
             }
-            disconnectCanonCcapi()
-            return
         }
-        if (_ptpTransport.value != null) {
-            if (_flowRunning.value) {
-                flowJob?.cancel()
-                flowJob = null
-                _flowRunning.value = false
-                _flowPaused.value = false
-                _flowCurrentStep.value = -1
-            }
-            disconnectPtp()
-            return
-        }
-        if (_canonBleTransport.value != null) {
-            if (_flowRunning.value) {
-                flowJob?.cancel()
-                flowJob = null
-                _flowRunning.value = false
-                _flowPaused.value = false
-                _flowCurrentStep.value = -1
-            }
-            disconnectCanonBle()
-            return
-        }
-        if (_ptpIpTransport.value != null) {
-            if (_flowRunning.value) {
-                flowJob?.cancel()
-                flowJob = null
-                _flowRunning.value = false
-                _flowPaused.value = false
-                _flowCurrentStep.value = -1
-            }
-            disconnectPtpIp()
-            return
-        }
-        if (_simulatorActive.value) {
-            disconnectSimulator()
-            return
-        }
-        // Stop any running job on the device before disconnecting so the
-        // firmware doesn't keep firing after the BLE link drops.
-        val running = _status.value?.state.let {
-            it == DeviceState.RUNNING || it == DeviceState.WAITING
-        }
-        if (running || _flowRunning.value) {
-            flowJob?.cancel()
-            flowJob = null
-            _flowRunning.value = false
-            _flowPaused.value = false
-            _flowCurrentStep.value = -1
-            bleController.sendCommand(CommandBuilder.stop())
-        }
-        bleController.disconnect()
     }
 
 
@@ -2606,32 +2584,46 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  surfaces the message. Files without a schema tag are accepted as
      *  legacy (pre-v0.238) and read as v1. */
     fun importSettingsJson(json: String) {
-        val obj = org.json.JSONObject(json)
+        // Two-phase: parse and validate every field into local variables
+        // first (anything that can throw — bad JSON, malformed FlowStep,
+        // unknown schema — fails before any mutation lands). Phase 2 is
+        // pure assignment with no parsing left, so it can't leave the
+        // user's settings in a partially-applied state.
+        val obj = try {
+            org.json.JSONObject(json)
+        } catch (e: Exception) {
+            throw IllegalArgumentException("Invalid JSON: ${e.message}", e)
+        }
         val schema = obj.optString("schema", SETTINGS_EXPORT_SCHEMA)
         if (schema != SETTINGS_EXPORT_SCHEMA && !schema.startsWith("pulsar-settings/")) {
             throw IllegalArgumentException("Unknown settings-file schema: $schema")
         }
-        setIntervalMs(obj.optLong("intv_interval_ms", AppConfig.DEFAULT_INTERVAL_MS))
-        setExposureMs(obj.optLong("intv_exposure_ms", AppConfig.DEFAULT_EXPOSURE_MS))
-        setShotCount(obj.optInt("intv_shot_count", AppConfig.DEFAULT_SHOT_COUNT))
-        setDelayMs(obj.optLong("intv_delay_ms", AppConfig.DEFAULT_DELAY_MS))
+        val intervalMs = obj.optLong("intv_interval_ms", AppConfig.DEFAULT_INTERVAL_MS)
+        val exposureMs = obj.optLong("intv_exposure_ms", AppConfig.DEFAULT_EXPOSURE_MS)
+        val shotCount = obj.optInt("intv_shot_count", AppConfig.DEFAULT_SHOT_COUNT)
+        val delayMs = obj.optLong("intv_delay_ms", AppConfig.DEFAULT_DELAY_MS)
         val shutter = obj.optInt("pin_shutter", DEFAULT_PIN_SHUTTER)
         val focus = obj.optInt("pin_focus", DEFAULT_PIN_FOCUS)
         val validPins = safeOutputPins.value
-        if (shutter in validPins && focus in validPins && shutter != focus) {
-            savePins(shutter, focus)
+        val applyPins = shutter in validPins && focus in validPins && shutter != focus
+        val flowSteps: List<FlowStep>? = obj.optJSONArray("flow_steps")?.let { arr ->
+            (0 until arr.length()).map { FlowStep.fromJson(arr.getJSONObject(it)) }
         }
-        // Import custom flow steps
-        obj.optJSONArray("flow_steps")?.let { arr ->
-            val steps = (0 until arr.length()).map { FlowStep.fromJson(arr.getJSONObject(it)) }
-            saveFlowSteps(steps)
+        val savedFlows: List<SavedFlow>? = obj.optJSONArray("saved_flows")?.let { arr ->
+            (0 until arr.length()).map { SavedFlow.fromJson(arr.getJSONObject(it)) }
         }
-        // Import saved flows library
-        obj.optJSONArray("saved_flows")?.let { arr ->
-            val flows = (0 until arr.length()).map { SavedFlow.fromJson(arr.getJSONObject(it)) }
-            _savedFlows.value = flows
-            _combinedFlows.value = FlowPresets.ALL + flows
-            prefs.edit().putString(KEY_SAVED_FLOWS, SavedFlow.serializeList(flows)).apply()
+
+        // Phase 2 — pure assignment, can't throw past here.
+        setIntervalMs(intervalMs)
+        setExposureMs(exposureMs)
+        setShotCount(shotCount)
+        setDelayMs(delayMs)
+        if (applyPins) savePins(shutter, focus)
+        if (flowSteps != null) saveFlowSteps(flowSteps)
+        if (savedFlows != null) {
+            _savedFlows.value = savedFlows
+            _combinedFlows.value = FlowPresets.ALL + savedFlows
+            prefs.edit().putString(KEY_SAVED_FLOWS, SavedFlow.serializeList(savedFlows)).apply()
         }
     }
 
@@ -2876,11 +2868,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             putExtra(PulsarNotificationService.EXTRA_OTA_DONE, done)
         }
         app.startForegroundService(intent)
-    }
-
-    private fun dismissOtaNotification() {
-        val app = getApplication<Application>()
-        app.stopService(Intent(app, PulsarNotificationService::class.java))
     }
 
     /** Turn the screen on briefly so the user sees the pause prompt. */
