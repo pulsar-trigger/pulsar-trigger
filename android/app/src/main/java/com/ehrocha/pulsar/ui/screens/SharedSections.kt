@@ -993,7 +993,9 @@ enum class SettingsSection(val icon: ImageVector, @StringRes val titleRes: Int) 
     BACKUP_RESTORE(Icons.Default.SaveAlt, R.string.section_backup_restore),
     UPDATES(Icons.Default.SystemUpdate, R.string.section_updates),
     DIAGNOSTICS(Icons.Default.Science, R.string.section_diagnostics),
-    DEVICES(Icons.Default.Bluetooth, R.string.section_devices),
+    // DEVICES moved to the Scan landing (pre-connect only) so the user
+    // can't forget the body they're currently driving. See
+    // ManageDevicesScreen + AppScreen.ManageDevices.
     ABOUT(Icons.Outlined.Info, R.string.section_about),
 }
 

@@ -59,6 +59,7 @@ import com.ehrocha.pulsar.ui.components.LatencyIndicator
 import com.ehrocha.pulsar.ui.components.SignalStrengthIndicator
 import com.ehrocha.pulsar.ui.components.NightModeToggle
 import com.ehrocha.pulsar.ui.screens.MainMenuScreen
+import com.ehrocha.pulsar.ui.screens.ManageDevicesScreen
 import com.ehrocha.pulsar.ui.screens.ModeScreen
 import com.ehrocha.pulsar.ui.screens.ScanLandingScreen
 import com.ehrocha.pulsar.ui.screens.TransportSetupScreen
@@ -455,7 +456,15 @@ fun PulsarNavHost(
                     currentScreen = AppScreen.Menu
                 },
                 onConnected = { currentScreen = AppScreen.Menu },
+                onManageDevicesSelected = { currentScreen = AppScreen.ManageDevices },
             )
+            AppScreen.ManageDevices -> {
+                BackHandler { currentScreen = AppScreen.ScanLanding }
+                ManageDevicesScreen(
+                    vm = vm,
+                    onBack = { currentScreen = AppScreen.ScanLanding },
+                )
+            }
             is AppScreen.TransportSetup -> {
                 // Without this, system-back on a transport-setup panel finishes
                 // the activity (closes the app) instead of returning to the
@@ -772,6 +781,10 @@ private sealed class AppScreen {
     data object StarFocus : AppScreen()
     data object TestCamera : AppScreen()
     data object Diagnostics : AppScreen()
+    /** Manage Devices — reachable only from the Scan landing (pre-connect)
+     *  so the user can't accidentally forget the body they're currently
+     *  driving. Lists every BLE bond + CCAPI credential and offers Forget. */
+    data object ManageDevices : AppScreen()
     /** Raw GATT explorer for unsupported bodies. Settings → Diagnostics
      *  → GATT Explorer (debug mode only). Scaffold; see
      *  docs/gatt-explorer-draft.md. */

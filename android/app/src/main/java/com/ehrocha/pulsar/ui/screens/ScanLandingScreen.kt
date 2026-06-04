@@ -72,6 +72,7 @@ fun ScanLandingScreen(
     onTransportSelected: (TransportKind) -> Unit,
     onSimulatorSelected: () -> Unit,
     onConnected: () -> Unit,
+    onManageDevicesSelected: () -> Unit,
 ) {
     val connected by vm.connected.collectAsState()
     val lastConnection by vm.lastConnection.collectAsState()
@@ -207,8 +208,16 @@ fun ScanLandingScreen(
 
         // ── Tools ─────────────────────────────────────────────────────────
         // Simulator moved to the Transports grid above (it's a peer way
-        // to drive the app). Tools is just diagnostics now.
+        // to drive the app). Tools holds the pre-connect utilities:
+        // forgetting paired devices (deliberately only here — see
+        // AppScreen.ManageDevices) and collecting diagnostics.
         SectionContainer(title = stringResource(R.string.scan_section_tools)) {
+            ActionRow(
+                icon = Icons.Default.Bluetooth,
+                title = stringResource(R.string.section_devices),
+                subtitle = stringResource(R.string.devices_help),
+                onClick = onManageDevicesSelected,
+            )
             ActionRow(
                 icon = Icons.Default.Description,
                 title = stringResource(R.string.tools_collect_diagnostics),
