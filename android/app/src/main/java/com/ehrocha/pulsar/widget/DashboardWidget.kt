@@ -64,6 +64,14 @@ private val WINDOW_EXCELLENT = Color(0xFF2E7D32)
 private val WINDOW_GOOD = Color(0xFF558B2F)
 private val WINDOW_FAIR = Color(0xFFF9A825)
 
+// Glance's RemoteViews-backed Text path can silently drop fractional sp
+// (e.g. 15.6.sp from `15 * 1.2`), so we round to integer sp before handing
+// the value over. Same for the emoji-column widths in dp.
+private fun scaledSp(base: Int, scale: Float) =
+    (base * scale).toInt().coerceAtLeast(1).sp
+private fun scaledDp(base: Int, scale: Float) =
+    (base * scale).toInt().coerceAtLeast(1).dp
+
 class DashboardWidget : GlanceAppWidget() {
 
     override val sizeMode = SizeMode.Exact
@@ -125,7 +133,7 @@ private fun EmptyState(bgAlpha: Float, scale: Float) {
             style = TextStyle(
                 color = GlanceTheme.colors.onSurface,
                 fontWeight = FontWeight.Bold,
-                fontSize = (16 * scale).sp,
+                fontSize = scaledSp(16, scale),
             ),
         )
         Spacer(GlanceModifier.height(4.dp))
@@ -133,7 +141,7 @@ private fun EmptyState(bgAlpha: Float, scale: Float) {
             ctx.getString(R.string.widget_empty_state),
             style = TextStyle(
                 color = GlanceTheme.colors.onSurfaceVariant,
-                fontSize = (14 * scale).sp,
+                fontSize = scaledSp(14, scale),
             ),
         )
     }
@@ -210,7 +218,7 @@ private fun CardHeader(state: DashboardState, updatedAtMs: Long, scale: Float) {
                 style = TextStyle(
                     color = GlanceTheme.colors.onSurface,
                     fontWeight = FontWeight.Bold,
-                    fontSize = (19 * scale).sp,
+                    fontSize = scaledSp(19, scale),
                 ),
                 maxLines = 1,
             )
@@ -219,7 +227,7 @@ private fun CardHeader(state: DashboardState, updatedAtMs: Long, scale: Float) {
                     formatCoords(loc),
                     style = TextStyle(
                         color = GlanceTheme.colors.onSurfaceVariant,
-                        fontSize = (14 * scale).sp,
+                        fontSize = scaledSp(14, scale),
                     ),
                     maxLines = 1,
                 )
@@ -232,7 +240,7 @@ private fun CardHeader(state: DashboardState, updatedAtMs: Long, scale: Float) {
                 style = TextStyle(
                     color = if (stale) GlanceTheme.colors.error
                     else GlanceTheme.colors.onSurfaceVariant,
-                    fontSize = (13 * scale).sp,
+                    fontSize = scaledSp(13, scale),
                     fontWeight = if (stale) FontWeight.Medium else FontWeight.Normal,
                 ),
             )
@@ -288,14 +296,14 @@ private fun VerdictRow(emoji: String, label: String, good: Boolean, scale: Float
                 .padding(horizontal = 10.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(emoji, style = TextStyle(fontSize = (17 * scale).sp))
+            Text(emoji, style = TextStyle(fontSize = scaledSp(17, scale)))
             Spacer(GlanceModifier.width(6.dp))
             Text(
                 label,
                 style = TextStyle(
                     color = ColorProvider(accent),
                     fontWeight = FontWeight.Medium,
-                    fontSize = (15 * scale).sp,
+                    fontSize = scaledSp(15, scale),
                 ),
             )
         }
@@ -309,7 +317,7 @@ private fun SectionLabel(text: String, scale: Float) {
         style = TextStyle(
             color = GlanceTheme.colors.primary,
             fontWeight = FontWeight.Bold,
-            fontSize = (14 * scale).sp,
+            fontSize = scaledSp(14, scale),
         ),
     )
 }
@@ -324,14 +332,14 @@ private fun RiseSetRow(emoji: String, times: String, scale: Float) {
     ) {
         Text(
             emoji,
-            style = TextStyle(fontSize = (17 * scale).sp),
-            modifier = GlanceModifier.width((28 * scale).dp),
+            style = TextStyle(fontSize = scaledSp(17, scale)),
+            modifier = GlanceModifier.width(scaledDp(28, scale)),
         )
         Text(
             times,
             style = TextStyle(
                 color = GlanceTheme.colors.onSurfaceVariant,
-                fontSize = (15 * scale).sp,
+                fontSize = scaledSp(15, scale),
             ),
         )
     }
@@ -355,15 +363,15 @@ private fun WindowRow(w: PhotoWindow, scale: Float) {
     ) {
         Text(
             chipMark,
-            style = TextStyle(fontSize = (18 * scale).sp),
-            modifier = GlanceModifier.width((30 * scale).dp),
+            style = TextStyle(fontSize = scaledSp(18, scale)),
+            modifier = GlanceModifier.width(scaledDp(30, scale)),
         )
         Text(
             "${w.startTime} – ${w.endTime}",
             style = TextStyle(
                 color = GlanceTheme.colors.onSurface,
                 fontWeight = FontWeight.Bold,
-                fontSize = (15 * scale).sp,
+                fontSize = scaledSp(15, scale),
             ),
             modifier = GlanceModifier.defaultWeight(),
         )
@@ -378,7 +386,7 @@ private fun WindowRow(w: PhotoWindow, scale: Float) {
                 style = TextStyle(
                     color = ColorProvider(chipColor),
                     fontWeight = FontWeight.Bold,
-                    fontSize = (13 * scale).sp,
+                    fontSize = scaledSp(13, scale),
                 ),
             )
         }
