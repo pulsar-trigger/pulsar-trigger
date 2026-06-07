@@ -47,10 +47,14 @@ class OpenSkyFeed : AircraftFeed {
     // Per-aircraft metadata is keyed on the 24-bit ICAO transponder
     // address, which is fixed for the lifetime of the airframe — so a
     // process-lifetime cache is correct and never goes stale. Misses (404,
-    // network error) are cached as null entries to avoid hammering the
-    // metadata endpoint for unknown tails.
-    private val metadataCache = ConcurrentHashMap<String, Metadata?>()
-    private val photoCache = ConcurrentHashMap<String, PlanespottersClient.Photo?>()
+    // network error) are stored as sentinel values, NOT null —
+    // ConcurrentHashMap rejects null values at runtime (would NPE the
+    // whole poll), so we use distinguishable "empty" instances and treat
+    // them as misses on read.
+    private val metadataCache = ConcurrentHashMap<String, Metadata>()
+    private val photoCache = ConcurrentHashMap<String, PlanespottersClient.Photo>()
+    private val NO_METADATA = Metadata(null, null, null, null, null, null)
+    private val NO_PHOTO = PlanespottersClient.Photo("", "", "")
 
     override suspend fun nearby(
         centreLat: Double,
@@ -106,15 +110,17 @@ class OpenSkyFeed : AircraftFeed {
         // Fan out metadata + photo fetches in parallel. Both endpoints are
         // independent and idempotent — awaitAll waits for the whole set.
         val metaJobs = toFetchMeta.map { hex ->
-            async { metadataCache[hex] = fetchMetadata(hex) }
+            async { metadataCache[hex] = fetchMetadata(hex) ?: NO_METADATA }
         }
         val photoJobs = toFetchPhoto.map { hex ->
-            async { photoCache[hex] = PlanespottersClient.photoByIcao(hex) }
+            async { photoCache[hex] = PlanespottersClient.photoByIcao(hex) ?: NO_PHOTO }
         }
         (metaJobs + photoJobs).awaitAll()
         sightings.map { s ->
-            val md = metadataCache[s.icaoHex]
-            val ph = photoCache[s.icaoHex]
+            // Treat sentinel entries as "we tried, got nothing" — read
+            // through them so the sighting keeps whatever it already had.
+            val md = metadataCache[s.icaoHex]?.takeIf { it !== NO_METADATA }
+            val ph = photoCache[s.icaoHex]?.takeIf { it !== NO_PHOTO }
             s.copy(
                 registration = md?.registration ?: s.registration,
                 model = md?.model ?: s.model,
