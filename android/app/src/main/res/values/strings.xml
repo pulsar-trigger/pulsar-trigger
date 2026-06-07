@@ -437,7 +437,7 @@
     <string name="about_github">View on GitHub</string>
     <string name="about_instagram">@ehrocha.br on Instagram</string>
     <string name="about_data_sources_title">Data Sources</string>
-    <string name="about_data_sources">Weather &amp; sunrise/sunset: Open-Meteo (open-meteo.com)\nLight pollution &amp; Bortle scale: lightpollutionmap.app\nMoon phase &amp; rise/set: calculated locally</string>
+    <string name="about_data_sources">Weather &amp; sunrise/sunset: Open-Meteo (open-meteo.com)\nLight pollution &amp; Bortle scale: lightpollutionmap.app\nMoon phase &amp; rise/set: calculated locally\nAircraft positions &amp; metadata: OpenSky Network (opensky-network.org)\nAircraft photos: Planespotters.net (planespotters.net) — © respective photographers\nMap tiles: OpenFreeMap (openfreemap.org)</string>
 
     <!-- Rename dialog -->
     <string name="dialog_rename_device">Rename Device</string>
@@ -518,6 +518,20 @@
     <string name="aircraft_detail_heading">Heading</string>
     <string name="aircraft_detail_vertical">Vertical rate</string>
     <string name="aircraft_detail_position">Position</string>
+    <string name="aircraft_log_this">Log sighting</string>
+    <string name="aircraft_log_added">Logged.</string>
+    <string name="aircraft_photo_credit">Photo © %1$s / Planespotters.net (tap to open)</string>
+    <string name="aircraft_badge_emergency">EMERGENCY</string>
+    <string name="aircraft_badge_vintage">Vintage</string>
+    <string name="aircraft_badge_military">Military</string>
+    <string name="aircraft_badge_heavy">Heavy</string>
+    <string name="spotting_log_title">Spotting log</string>
+    <string name="spotting_log_empty">Your spotting log is empty. Tap a plane in Aircraft Watch, then \"Log sighting\".</string>
+    <string name="spotting_log_share">Share</string>
+    <string name="spotting_log_clear">Clear</string>
+    <string name="spotting_log_delete">Delete</string>
+    <string name="spotting_log_clear_confirm_title">Clear spotting log?</string>
+    <string name="spotting_log_clear_confirm_body">All logged sightings will be deleted. This can\'t be undone.</string>
     <string name="aircraft_watch_updated_at">Updated %1$s · %2$s</string>
     <string name="aircraft_watch_fetching">Fetching nearby aircraft…</string>
     <string name="aircraft_watch_paused">Paused.</string>

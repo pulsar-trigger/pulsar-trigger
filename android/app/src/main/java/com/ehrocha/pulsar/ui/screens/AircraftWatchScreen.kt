@@ -5,9 +5,11 @@
 
 package com.ehrocha.pulsar.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,10 +24,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -84,9 +88,13 @@ import kotlin.math.roundToInt
  * place) and polls the configured [com.ehrocha.pulsar.transport.aircraft.AircraftFeed]
  * at its recommended cadence. Auto-starts on entry, stops on dispose.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun AircraftWatchScreen(vm: PulsarViewModel, onBack: () -> Unit) {
+fun AircraftWatchScreen(
+    vm: PulsarViewModel,
+    onBack: () -> Unit,
+    onSpottingLog: () -> Unit,
+) {
     val rawSightings by vm.aircraftSightings.collectAsState()
     val watching by vm.aircraftWatching.collectAsState()
     val error by vm.aircraftWatchError.collectAsState()
@@ -140,6 +148,12 @@ fun AircraftWatchScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                     }
                 },
                 actions = {
+                    IconButton(onClick = onSpottingLog) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ListAlt,
+                            contentDescription = stringResource(R.string.spotting_log_title),
+                        )
+                    }
                     IconButton(
                         onClick = { vm.refreshAircraftWatch() },
                         enabled = watching,
@@ -220,7 +234,12 @@ fun AircraftWatchScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         items(sightings, key = { it.icaoHex }) { s ->
-                            AircraftRow(s, radiusKm = radiusKm)
+                            AircraftRow(
+                                s = s,
+                                radiusKm = radiusKm,
+                                userLat = location.first,
+                                userLon = location.second,
+                            )
                         }
                     }
                 }
@@ -647,10 +666,18 @@ private fun proximityColor(distanceKm: Double, radiusKm: Int): androidx.compose.
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun AircraftRow(s: AircraftSighting, radiusKm: Int) {
+private fun AircraftRow(
+    s: AircraftSighting,
+    radiusKm: Int,
+    userLat: Double,
+    userLon: Double,
+) {
     var showDetails by remember { mutableStateOf(false) }
     val accent = proximityColor(s.distanceKm, radiusKm)
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val rowBadges = aircraftBadges(s)
     Surface(
         onClick = { showDetails = true },
         shape = RoundedCornerShape(12.dp),
@@ -686,6 +713,14 @@ private fun AircraftRow(s: AircraftSighting, radiusKm: Int) {
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (rowBadges.isNotEmpty()) {
+                    Spacer(Modifier.height(3.dp))
+                    androidx.compose.foundation.layout.FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        rowBadges.forEach { BadgeChip(it) }
+                    }
+                }
                 Spacer(Modifier.height(4.dp))
                 Text(
                     formatFlightLine(s),
@@ -709,20 +744,59 @@ private fun AircraftRow(s: AircraftSighting, radiusKm: Int) {
         }
     }
     if (showDetails) {
-        AircraftDetailDialog(s, onDismiss = { showDetails = false })
+        AircraftDetailDialog(
+            s = s,
+            onDismiss = { showDetails = false },
+            onLogSighting = {
+                SpottingLogStore.add(
+                    ctx,
+                    LoggedSighting(
+                        icaoHex = s.icaoHex,
+                        callsign = s.callsign,
+                        model = s.model,
+                        registration = s.registration,
+                        operator = s.operator,
+                        distanceKm = s.distanceKm,
+                        whenMs = System.currentTimeMillis(),
+                        userLat = userLat,
+                        userLon = userLon,
+                    ),
+                )
+                android.widget.Toast.makeText(
+                    ctx,
+                    ctx.getString(R.string.aircraft_log_added),
+                    android.widget.Toast.LENGTH_SHORT,
+                ).show()
+            },
+        )
     }
 }
 
 /** Full-info modal — shown on tap. Everything we know about the aircraft
  *  in one place; values fall back to "—" when the metadata cache hasn't
  *  resolved that field yet (rare after the first cycle). */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun AircraftDetailDialog(s: AircraftSighting, onDismiss: () -> Unit) {
+private fun AircraftDetailDialog(
+    s: AircraftSighting,
+    onDismiss: () -> Unit,
+    onLogSighting: () -> Unit,
+) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val badges = aircraftBadges(s)
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             androidx.compose.material3.TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.action_dismiss))
+            }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = {
+                onLogSighting()
+                onDismiss()
+            }) {
+                Text(stringResource(R.string.aircraft_log_this))
             }
         },
         title = {
@@ -733,6 +807,47 @@ private fun AircraftDetailDialog(s: AircraftSighting, onDismiss: () -> Unit) {
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                // Hero photo + credit. Tapping opens the source page in the
+                // browser — planespotters.net AUP requires the link to be
+                // surfaced, not just hidden in About.
+                if (s.photoUrl != null) {
+                    coil3.compose.AsyncImage(
+                        model = s.photoUrl,
+                        contentDescription = s.model ?: s.icaoHex,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(140.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                s.photoSourceUrl?.let { url ->
+                                    runCatching {
+                                        ctx.startActivity(
+                                            android.content.Intent(
+                                                android.content.Intent.ACTION_VIEW,
+                                                android.net.Uri.parse(url),
+                                            ),
+                                        )
+                                    }
+                                }
+                            },
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    )
+                    Text(
+                        stringResource(
+                            R.string.aircraft_photo_credit,
+                            s.photoCredit ?: "Planespotters.net",
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (badges.isNotEmpty()) {
+                    androidx.compose.foundation.layout.FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        badges.forEach { BadgeChip(it) }
+                    }
+                }
                 DetailRow(stringResource(R.string.aircraft_detail_registration), s.registration)
                 DetailRow(stringResource(R.string.aircraft_detail_model), s.model)
                 DetailRow(stringResource(R.string.aircraft_detail_manufacturer), s.manufacturer)
@@ -816,4 +931,147 @@ private fun bearingArrow(deg: Double): String {
 private fun formatTime(epochMs: Long): String {
     val t = Instant.ofEpochMilli(epochMs).atZone(ZoneId.systemDefault())
     return DateTimeFormatter.ofPattern("HH:mm:ss", Locale.getDefault()).format(t)
+}
+
+// ── Feature 3 — Rare / interesting badges ────────────────────────────────
+// Pure-derivation from existing AircraftSighting fields. Cheap to compute,
+// nothing to cache. Each badge has a short label + a tint colour; the row
+// shows zero-or-more chips.
+
+private enum class AircraftBadgeKind(
+    val labelRes: Int,
+    val color: androidx.compose.ui.graphics.Color,
+) {
+    EMERGENCY(R.string.aircraft_badge_emergency,
+        androidx.compose.ui.graphics.Color(0xFFD32F2F)),
+    VINTAGE(R.string.aircraft_badge_vintage,
+        androidx.compose.ui.graphics.Color(0xFF6D4C41)),
+    MILITARY(R.string.aircraft_badge_military,
+        androidx.compose.ui.graphics.Color(0xFF455A64)),
+    HEAVY(R.string.aircraft_badge_heavy,
+        androidx.compose.ui.graphics.Color(0xFF1565C0)),
+}
+
+private fun aircraftBadges(s: AircraftSighting): List<AircraftBadgeKind> {
+    val out = mutableListOf<AircraftBadgeKind>()
+    // Emergency squawks per ICAO: 7500 hijack, 7600 radio failure, 7700 general
+    if (s.squawk in setOf("7500", "7600", "7700")) out += AircraftBadgeKind.EMERGENCY
+    if (s.builtYear != null && s.builtYear < 1980) out += AircraftBadgeKind.VINTAGE
+    // Military: operator/owner string contains the obvious keywords; or the
+    // callsign starts with a known military prefix.
+    val opUpper = (s.operator ?: "").uppercase()
+    val csUpper = (s.callsign ?: "").uppercase()
+    val militaryWords = listOf("FORCE", "NAVY", "ARMY", "MARINE", "COAST GUARD", "MILITARY", "DEFENSE", "DEFENCE")
+    val militaryCallsignPrefixes = listOf("RCH", "REACH", "RAF", "NATO", "GRIZZLY", "DUKE", "BLUE")
+    if (militaryWords.any { it in opUpper } ||
+        militaryCallsignPrefixes.any { csUpper.startsWith(it) }) {
+        out += AircraftBadgeKind.MILITARY
+    }
+    if (com.ehrocha.pulsar.transport.aircraft.aircraftSizeFor(s.typeCode, s.model)
+        == com.ehrocha.pulsar.transport.aircraft.AircraftSize.HEAVY) {
+        out += AircraftBadgeKind.HEAVY
+    }
+    return out
+}
+
+@Composable
+private fun BadgeChip(badge: AircraftBadgeKind) {
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = badge.color.copy(alpha = 0.18f),
+    ) {
+        Text(
+            stringResource(badge.labelRes),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = badge.color,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+// ── Feature 1 — Spotting log persistence ─────────────────────────────────
+// Local JSON file under app filesDir. Records what the user tapped "Log
+// this" on. No remote sync — Pulsar is offline-first.
+
+internal data class LoggedSighting(
+    val icaoHex: String,
+    val callsign: String?,
+    val model: String?,
+    val registration: String?,
+    val operator: String?,
+    val distanceKm: Double,
+    val whenMs: Long,
+    val userLat: Double,
+    val userLon: Double,
+)
+
+internal object SpottingLogStore {
+    private const val FILE = "pulsar_spotting_log.json"
+    private const val LIMIT = 500  // cap so the log can't grow unbounded
+
+    fun load(ctx: android.content.Context): List<LoggedSighting> {
+        val f = java.io.File(ctx.filesDir, FILE)
+        if (!f.exists()) return emptyList()
+        return runCatching {
+            val arr = org.json.JSONArray(f.readText())
+            (0 until arr.length()).map { i ->
+                val j = arr.getJSONObject(i)
+                LoggedSighting(
+                    icaoHex = j.getString("icao"),
+                    callsign = j.optString("callsign").takeIf { it.isNotEmpty() },
+                    model = j.optString("model").takeIf { it.isNotEmpty() },
+                    registration = j.optString("reg").takeIf { it.isNotEmpty() },
+                    operator = j.optString("operator").takeIf { it.isNotEmpty() },
+                    distanceKm = j.optDouble("distKm", 0.0),
+                    whenMs = j.optLong("whenMs", 0L),
+                    userLat = j.optDouble("userLat", 0.0),
+                    userLon = j.optDouble("userLon", 0.0),
+                )
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    fun add(ctx: android.content.Context, s: LoggedSighting) {
+        val current = load(ctx).toMutableList()
+        // De-dup on (icao, day) so quickly tapping log twice doesn't double-
+        // record the same plane, but a different flight tomorrow does add.
+        val dayMs = 24L * 3600_000L
+        current.removeAll {
+            it.icaoHex == s.icaoHex && kotlin.math.abs(it.whenMs - s.whenMs) < dayMs
+        }
+        current += s
+        if (current.size > LIMIT) {
+            val drop = current.size - LIMIT
+            for (i in 0 until drop) current.removeAt(0)
+        }
+        save(ctx, current)
+    }
+
+    fun delete(ctx: android.content.Context, whenMs: Long, icao: String) {
+        val current = load(ctx).filterNot { it.whenMs == whenMs && it.icaoHex == icao }
+        save(ctx, current)
+    }
+
+    fun clear(ctx: android.content.Context) {
+        save(ctx, emptyList())
+    }
+
+    private fun save(ctx: android.content.Context, list: List<LoggedSighting>) {
+        val arr = org.json.JSONArray()
+        list.forEach { e ->
+            arr.put(org.json.JSONObject().apply {
+                put("icao", e.icaoHex)
+                e.callsign?.let { put("callsign", it) }
+                e.model?.let { put("model", it) }
+                e.registration?.let { put("reg", it) }
+                e.operator?.let { put("operator", it) }
+                put("distKm", e.distanceKm)
+                put("whenMs", e.whenMs)
+                put("userLat", e.userLat)
+                put("userLon", e.userLon)
+            })
+        }
+        java.io.File(ctx.filesDir, FILE).writeText(arr.toString())
+    }
 }

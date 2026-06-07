@@ -59,6 +59,7 @@ import com.ehrocha.pulsar.ui.components.LatencyIndicator
 import com.ehrocha.pulsar.ui.components.SignalStrengthIndicator
 import com.ehrocha.pulsar.ui.components.NightModeToggle
 import com.ehrocha.pulsar.ui.screens.AircraftWatchScreen
+import com.ehrocha.pulsar.ui.screens.SpottingLogScreen
 import com.ehrocha.pulsar.ui.screens.MainMenuScreen
 import com.ehrocha.pulsar.ui.screens.ManageDevicesScreen
 import com.ehrocha.pulsar.ui.screens.ModeScreen
@@ -652,7 +653,12 @@ fun PulsarNavHost(
                 AircraftWatchScreen(
                     vm = vm,
                     onBack = { currentScreen = AppScreen.Menu },
+                    onSpottingLog = { currentScreen = AppScreen.SpottingLog },
                 )
+            }
+            AppScreen.SpottingLog -> {
+                BackHandler { currentScreen = AppScreen.AircraftWatch }
+                SpottingLogScreen(onBack = { currentScreen = AppScreen.AircraftWatch })
             }
             AppScreen.Diagnostics -> {
                 BackHandler { currentScreen = AppScreen.Menu }
@@ -790,6 +796,7 @@ private sealed class AppScreen {
     data object StarFocus : AppScreen()
     data object TestCamera : AppScreen()
     data object AircraftWatch : AppScreen()
+    data object SpottingLog : AppScreen()
     data object Diagnostics : AppScreen()
     /** Manage Devices — reachable only from the Scan landing (pre-connect)
      *  so the user can't accidentally forget the body they're currently

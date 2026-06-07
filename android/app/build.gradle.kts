@@ -20,8 +20,8 @@ android {
         applicationId = "com.ehrocha.pulsar"
         minSdk = 26
         targetSdk = 35
-        versionCode = 392
-        versionName = "0.381.0"
+        versionCode = 393
+        versionName = "0.382.0"
     }
 
     signingConfigs {
@@ -97,6 +97,11 @@ dependencies {
 
     // MapLibre — map-based location picker
     implementation("org.maplibre.gl:android-sdk:11.8.0")
+
+    // Coil — async image loading for Compose. Used by Aircraft Watch's
+    // detail dialog to show planespotters.net thumbnails (cached on disk).
+    implementation("io.coil-kt.coil3:coil-compose:3.0.4")
+    implementation("io.coil-kt.coil3:coil-network-okhttp:3.0.4")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

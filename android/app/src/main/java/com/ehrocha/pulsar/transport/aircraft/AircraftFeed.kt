@@ -92,4 +92,13 @@ data class AircraftSighting(
     val typeCode: String? = null,
     /** Year the airframe was built, when known. */
     val builtYear: Int? = null,
+    /** Thumbnail-sized image URL of this airframe, from planespotters.net
+     *  (~280px wide). Cache lives forever per icao24. */
+    val photoUrl: String? = null,
+    /** Photographer credit string, e.g. "John Doe". Always shown next to
+     *  the photo per planespotters.net AUP. */
+    val photoCredit: String? = null,
+    /** Source page URL on planespotters.net — tap-through from the photo
+     *  takes the user to the photographer's full-size image. */
+    val photoSourceUrl: String? = null,
 )

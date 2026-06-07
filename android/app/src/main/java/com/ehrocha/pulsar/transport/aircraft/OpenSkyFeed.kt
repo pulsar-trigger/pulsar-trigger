@@ -50,6 +50,7 @@ class OpenSkyFeed : AircraftFeed {
     // network error) are cached as null entries to avoid hammering the
     // metadata endpoint for unknown tails.
     private val metadataCache = ConcurrentHashMap<String, Metadata?>()
+    private val photoCache = ConcurrentHashMap<String, PlanespottersClient.Photo?>()
 
     override suspend fun nearby(
         centreLat: Double,
@@ -96,24 +97,34 @@ class OpenSkyFeed : AircraftFeed {
         sightings: List<AircraftSighting>,
         limit: Int,
     ): List<AircraftSighting> = coroutineScope {
-        val toFetch = sightings.take(limit)
+        val toFetchMeta = sightings.take(limit)
             .filter { !metadataCache.containsKey(it.icaoHex) }
             .map { it.icaoHex }
-        // Kick off in parallel — each call is independent and the endpoint
-        // tolerates concurrent reads. awaitAll returns when every fetch
-        // either completes or fails; we cache the result either way.
-        toFetch.map { hex ->
+        val toFetchPhoto = sightings.take(limit)
+            .filter { !photoCache.containsKey(it.icaoHex) }
+            .map { it.icaoHex }
+        // Fan out metadata + photo fetches in parallel. Both endpoints are
+        // independent and idempotent — awaitAll waits for the whole set.
+        val metaJobs = toFetchMeta.map { hex ->
             async { metadataCache[hex] = fetchMetadata(hex) }
-        }.awaitAll()
+        }
+        val photoJobs = toFetchPhoto.map { hex ->
+            async { photoCache[hex] = PlanespottersClient.photoByIcao(hex) }
+        }
+        (metaJobs + photoJobs).awaitAll()
         sightings.map { s ->
-            val md = metadataCache[s.icaoHex] ?: return@map s
+            val md = metadataCache[s.icaoHex]
+            val ph = photoCache[s.icaoHex]
             s.copy(
-                registration = md.registration ?: s.registration,
-                model = md.model ?: s.model,
-                manufacturer = md.manufacturer ?: s.manufacturer,
-                operator = md.operator ?: s.operator,
-                typeCode = md.typeCode ?: s.typeCode,
-                builtYear = md.builtYear ?: s.builtYear,
+                registration = md?.registration ?: s.registration,
+                model = md?.model ?: s.model,
+                manufacturer = md?.manufacturer ?: s.manufacturer,
+                operator = md?.operator ?: s.operator,
+                typeCode = md?.typeCode ?: s.typeCode,
+                builtYear = md?.builtYear ?: s.builtYear,
+                photoUrl = ph?.thumbnailUrl ?: s.photoUrl,
+                photoCredit = ph?.photographer ?: s.photoCredit,
+                photoSourceUrl = ph?.sourceUrl ?: s.photoSourceUrl,
             )
         }
     }
