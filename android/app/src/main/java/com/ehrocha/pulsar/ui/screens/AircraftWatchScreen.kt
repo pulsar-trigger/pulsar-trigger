@@ -192,6 +192,7 @@ fun AircraftWatchScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                 centreLon = location.second,
                 radiusKm = radiusKm,
                 sightings = sightings,
+                liveMode = intervalSec == 0,
             )
 
             // List — takes the remaining vertical space. The bottom-sheet
@@ -239,6 +240,7 @@ private fun AircraftMap(
     centreLon: Double,
     radiusKm: Int,
     sightings: List<AircraftSighting>,
+    liveMode: Boolean = false,
 ) {
     val isDark = when (LocalNightMode.current.value) {
         ThemeMode.Dark, ThemeMode.RedLight -> true
@@ -300,14 +302,35 @@ private fun AircraftMap(
         )
     }
 
-    // Refresh marker layer on sighting updates. We rebuild rather than diff:
-    // ~20 markers max, trivial cost, dodges the bookkeeping of "did this
+    // When the user picks Live mode, retick the marker layout at 1Hz
+    // between real polls — dead-reckons each plane forward from its last
+    // known position using heading + ground speed. Snaps back to the real
+    // position on the next real poll. When NOT in Live mode, this tick
+    // just stays at 0 and markers are placed at the polled positions.
+    var liveTick by remember { mutableStateOf(0L) }
+    LaunchedEffect(liveMode, sightings) {
+        if (!liveMode) {
+            liveTick = 0L
+            return@LaunchedEffect
+        }
+        val anchor = System.currentTimeMillis()
+        while (true) {
+            liveTick = System.currentTimeMillis() - anchor
+            kotlinx.coroutines.delay(1_000L)
+        }
+    }
+
+    // Refresh marker layer on sighting updates (real polls) and on liveTick
+    // (between-poll dead reckoning). We rebuild rather than diff: ~20
+    // markers max, trivial cost, dodges the bookkeeping of "did this
     // ICAO move or leave."
-    LaunchedEffect(sightings, map) {
+    LaunchedEffect(sightings, map, liveTick) {
         val m = map ?: return@LaunchedEffect
         markers.forEach { m.removeMarker(it) }
         markers.clear()
         sightings.forEach { s ->
+            val (drawLat, drawLon) =
+                if (liveMode) deadReckon(s, liveTick) else s.lat to s.lon
             val title = (s.callsign ?: s.icaoHex.uppercase()) +
                 String.format(Locale.US, " · %.1f km", s.distanceKm)
             val bucket = (((s.headingDeg ?: 0.0) / 15.0).toInt().mod(24)) * 15
@@ -323,7 +346,7 @@ private fun AircraftMap(
             }
             markers += m.addMarker(
                 MarkerOptions()
-                    .position(LatLng(s.lat, s.lon))
+                    .position(LatLng(drawLat, drawLon))
                     .title(title)
                     .icon(icon),
             )
@@ -389,6 +412,25 @@ private fun AircraftMap(
 
 private const val STYLE_LIBERTY = "https://tiles.openfreemap.org/styles/liberty"
 private const val STYLE_POSITRON = "https://tiles.openfreemap.org/styles/positron"
+
+/** Dead-reckon a sighting forward from its last polled position by
+ *  [elapsedMs]. Uses heading + ground speed; returns the original position
+ *  when either is unknown (we can't extrapolate without both). The
+ *  flat-earth approximation is good enough for the ~10-second windows
+ *  this is used for — accumulated error stays under ~50 m at typical
+ *  cruise speeds. */
+private fun deadReckon(s: AircraftSighting, elapsedMs: Long): Pair<Double, Double> {
+    val hdg = s.headingDeg ?: return s.lat to s.lon
+    val gs = s.groundSpeedKt ?: return s.lat to s.lon
+    val elapsedSec = elapsedMs / 1000.0
+    if (elapsedSec <= 0.0) return s.lat to s.lon
+    val distanceM = gs * 0.514444 * elapsedSec  // knots → m/s × seconds
+    val hdgRad = hdg * kotlin.math.PI / 180.0
+    val latRad = s.lat * kotlin.math.PI / 180.0
+    val dLat = (distanceM / 111_111.0) * kotlin.math.cos(hdgRad)
+    val dLon = (distanceM / (111_111.0 * kotlin.math.cos(latRad))) * kotlin.math.sin(hdgRad)
+    return (s.lat + dLat) to (s.lon + dLon)
+}
 
 /** Subscribe to the device's rotation-vector sensor and return the current
  *  azimuth (compass heading, 0 = north) snapped to a 5° bucket. Snapping
@@ -506,12 +548,19 @@ private fun SettingsPanel(
             // altitudes and the slider feels jumpier.
             onChange = { onMaxAltChange((it / 1000f).roundToInt() * 1000) },
         )
+        // Interval slider: 0 is the "Live" sentinel (drag fully left), 5..60
+        // are real seconds. Snap the unreachable 1..4 zone up to 5 — the
+        // slider visually allows landing there but the value commits to 5.
         SliderRow(
-            label = stringResource(R.string.aircraft_watch_interval_label, intervalSec),
+            label = if (intervalSec == 0) stringResource(R.string.aircraft_watch_interval_live)
+                    else stringResource(R.string.aircraft_watch_interval_label, intervalSec),
             value = intervalSec.toFloat(),
-            range = 5f..60f,
-            steps = 54,  // 5 → 60 in 1-s steps = 56 stops; 54 between
-            onChange = { onIntervalChange(it.roundToInt()) },
+            range = 0f..60f,
+            steps = 60,
+            onChange = {
+                val r = it.roundToInt()
+                onIntervalChange(if (r in 1..4) 5 else r)
+            },
         )
     }
 }

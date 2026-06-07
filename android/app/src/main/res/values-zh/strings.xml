@@ -309,6 +309,7 @@
     <string name="aircraft_watch_radius_label">范围：%1$d km</string>
     <string name="aircraft_watch_max_alt_label">最大高度：%1$d ft</string>
     <string name="aircraft_watch_interval_label">自动刷新：%1$d 秒</string>
+    <string name="aircraft_watch_interval_live">自动刷新：实时（轮询间使用航迹推算）</string>
     <string name="aircraft_detail_registration">注册号</string>
     <string name="aircraft_detail_model">机型</string>
     <string name="aircraft_detail_manufacturer">制造商</string>

@@ -2963,11 +2963,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         MutableStateFlow(aircraftPrefs.getInt("max_alt_ft", 15_000).coerceIn(1_000, 50_000))
     val aircraftWatchMaxAltitudeFt: StateFlow<Int> = _aircraftWatchMaxAltitudeFt
 
-    /** Auto-refresh cadence in seconds. Lower bound is the OpenSky anonymous
-     *  rate-limit floor (~10 s) — finer than that risks 429s. We let users
-     *  go up to 60 s for low-traffic / battery-careful sessions. */
+    /** Auto-refresh cadence in seconds, OR the sentinel `0` meaning "Live"
+     *  (poll at the feed's documented floor, plus dead-reckoning marker
+     *  interpolation between polls — see [com.ehrocha.pulsar.ui.screens.AircraftWatchScreen]).
+     *  Numeric range above 0: 5..60 seconds. */
     private val _aircraftWatchIntervalSec =
-        MutableStateFlow(aircraftPrefs.getInt("interval_sec", 10).coerceIn(5, 60))
+        MutableStateFlow(aircraftPrefs.getInt("interval_sec", 10).let {
+            if (it == 0) 0 else it.coerceIn(5, 60)
+        })
     val aircraftWatchIntervalSec: StateFlow<Int> = _aircraftWatchIntervalSec
 
     private var aircraftJob: kotlinx.coroutines.Job? = null
@@ -2989,7 +2992,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setAircraftWatchIntervalSec(sec: Int) {
-        val clamped = sec.coerceIn(5, 60)
+        // 0 = Live sentinel; positive values clamp into the 5..60 s range.
+        val clamped = if (sec <= 0) 0 else sec.coerceIn(5, 60)
         _aircraftWatchIntervalSec.value = clamped
         aircraftPrefs.edit().putInt("interval_sec", clamped).apply()
     }
