@@ -62,12 +62,20 @@ import kotlin.math.roundToInt
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AircraftWatchScreen(vm: PulsarViewModel, onBack: () -> Unit) {
-    val sightings by vm.aircraftSightings.collectAsState()
+    val rawSightings by vm.aircraftSightings.collectAsState()
     val watching by vm.aircraftWatching.collectAsState()
     val error by vm.aircraftWatchError.collectAsState()
     val lastUpdateMs by vm.aircraftWatchLastUpdateMs.collectAsState()
     val radiusKm by vm.aircraftWatchRadiusKm.collectAsState()
+    val maxAltFt by vm.aircraftWatchMaxAltitudeFt.collectAsState()
     val location = vm.aircraftWatchLocation()
+    // Altitude filter is applied locally so the slider feels instant —
+    // changing it doesn't wait for the next poll. Aircraft with no altitude
+    // (typically ground traffic or transponders not reporting) pass through:
+    // they're the most interesting subjects for spotters anyway.
+    val sightings = androidx.compose.runtime.remember(rawSightings, maxAltFt) {
+        rawSightings.filter { it.altitudeFt == null || it.altitudeFt <= maxAltFt }
+    }
 
     // Auto-start on entry, stop on dispose. Mirrors how the Canon BLE setup
     // screen owns its scan lifecycle.
@@ -124,6 +132,8 @@ fun AircraftWatchScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                 lon = location.second,
                 radiusKm = radiusKm,
                 onRadiusChange = vm::setAircraftWatchRadiusKm,
+                maxAltFt = maxAltFt,
+                onMaxAltChange = vm::setAircraftWatchMaxAltitudeFt,
                 watching = watching,
                 lastUpdateMs = lastUpdateMs,
                 providerName = vm.aircraftFeedName,
@@ -164,6 +174,8 @@ private fun HeaderCard(
     lon: Double,
     radiusKm: Int,
     onRadiusChange: (Int) -> Unit,
+    maxAltFt: Int,
+    onMaxAltChange: (Int) -> Unit,
     watching: Boolean,
     lastUpdateMs: Long,
     providerName: String,
@@ -199,6 +211,21 @@ private fun HeaderCard(
                 onValueChange = { onRadiusChange(it.roundToInt()) },
                 valueRange = 5f..200f,
                 steps = 38,  // 5 → 200 in 5 km steps = 39 stops, 38 between
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                stringResource(R.string.aircraft_watch_max_alt_label, maxAltFt),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Slider(
+                value = maxAltFt.toFloat(),
+                // Snap to 1 000-ft increments — anything finer is noise at
+                // these altitudes and the slider feels jumpier.
+                onValueChange = { onMaxAltChange((it / 1000f).roundToInt() * 1000) },
+                valueRange = 1_000f..50_000f,
+                steps = 48,  // 1 000 → 50 000 in 1 000-ft steps = 50 stops
                 modifier = Modifier.fillMaxWidth(),
             )
             val statusText = when {

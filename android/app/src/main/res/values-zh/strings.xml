@@ -307,6 +307,7 @@
     <string name="widget_text_scale_label">文字大小: %1$d%%</string>
     <string name="aircraft_watch_title">附近飞机</string>
     <string name="aircraft_watch_radius_label">范围：%1$d km</string>
+    <string name="aircraft_watch_max_alt_label">最大高度：%1$d ft</string>
     <string name="aircraft_watch_updated_at">更新 %1$s · %2$s</string>
     <string name="aircraft_watch_fetching">获取附近飞机…</string>
     <string name="aircraft_watch_paused">已暂停。</string>

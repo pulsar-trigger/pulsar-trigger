@@ -305,6 +305,7 @@
     <string name="widget_text_scale_label">Tamaño del texto: %1$d%%</string>
     <string name="aircraft_watch_title">Aviones cerca</string>
     <string name="aircraft_watch_radius_label">Radio: %1$d km</string>
+    <string name="aircraft_watch_max_alt_label">Altitud máx.: %1$d ft</string>
     <string name="aircraft_watch_updated_at">Actualizado %1$s · %2$s</string>
     <string name="aircraft_watch_fetching">Buscando aviones cercanos…</string>
     <string name="aircraft_watch_paused">Pausado.</string>

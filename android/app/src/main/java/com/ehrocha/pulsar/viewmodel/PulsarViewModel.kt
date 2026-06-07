@@ -2956,6 +2956,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         MutableStateFlow(aircraftPrefs.getInt("radius_km", 30).coerceIn(5, 200))
     val aircraftWatchRadiusKm: StateFlow<Int> = _aircraftWatchRadiusKm
 
+    /** Hide aircraft above this altitude (feet). Spotters typically don't
+     *  care about cruising airliners at 30k+; default lets approach /
+     *  departure / helicopters through. */
+    private val _aircraftWatchMaxAltitudeFt =
+        MutableStateFlow(aircraftPrefs.getInt("max_alt_ft", 15_000).coerceIn(1_000, 50_000))
+    val aircraftWatchMaxAltitudeFt: StateFlow<Int> = _aircraftWatchMaxAltitudeFt
+
     private var aircraftJob: kotlinx.coroutines.Job? = null
 
     /** Provider display name surfaced in the Aircraft Watch screen footer
@@ -2968,12 +2975,28 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         aircraftPrefs.edit().putInt("radius_km", clamped).apply()
     }
 
-    /** Returns the shooting location for Aircraft Watch: pulled from the
-     *  Astro Dashboard (same lat/lon the planner uses). Null when the user
-     *  hasn't set one yet — the UI then nudges them to the Planner. */
+    fun setAircraftWatchMaxAltitudeFt(ft: Int) {
+        val clamped = ft.coerceIn(1_000, 50_000)
+        _aircraftWatchMaxAltitudeFt.value = clamped
+        aircraftPrefs.edit().putInt("max_alt_ft", clamped).apply()
+    }
+
+    /** Returns the shooting location for Aircraft Watch. Prefers the Astro
+     *  Dashboard's last known location (so the user only configures location
+     *  in one place); falls back to the OS last-known GPS / network fix so
+     *  the screen works out-of-the-box without opening Planner first. Null
+     *  only if both the dashboard is empty AND the OS has no recent fix. */
+    @SuppressLint("MissingPermission")
     fun aircraftWatchLocation(): Pair<Double, Double>? {
-        val loc = dashboardManager.state.value.location ?: return null
-        return loc.latitude to loc.longitude
+        dashboardManager.state.value.location?.let { return it.latitude to it.longitude }
+        return runCatching {
+            val app = getApplication<Application>()
+            val lm = app.getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
+            val loc = lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+                ?: lm.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
+                ?: return null
+            loc.latitude to loc.longitude
+        }.getOrNull()
     }
 
     fun startAircraftWatch() {
