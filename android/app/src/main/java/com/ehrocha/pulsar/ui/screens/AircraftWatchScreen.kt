@@ -54,6 +54,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.transport.aircraft.AircraftSighting
+import com.ehrocha.pulsar.transport.aircraft.AircraftSize
+import com.ehrocha.pulsar.transport.aircraft.aircraftSizeFor
 import com.ehrocha.pulsar.ui.theme.LocalNightMode
 import com.ehrocha.pulsar.ui.theme.ThemeMode
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
@@ -251,9 +253,10 @@ private fun AircraftMap(
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val iconFactory = remember(ctx) { IconFactory.getInstance(ctx) }
     // Rotated plane icons are expensive to build (drawable → bitmap → matrix
-    // rotate). Cache one per 15° bucket — visually indistinguishable from
-    // per-degree rotation, ~24 entries max, built lazily as headings appear.
-    val iconCache = remember { mutableMapOf<Int, Icon>() }
+    // rotate). Cache one per (heading-bucket, size-class) pair: 15° heading
+    // buckets × 4 size classes = up to 96 cache entries built lazily as
+    // they're needed. Visually indistinguishable from per-degree rotation.
+    val iconCache = remember { mutableMapOf<Pair<Int, AircraftSize>, Icon>() }
 
     // Device compass heading — used to draw a directional cone over the
     // user pin so the user can see "the plane east of me is to my right
@@ -267,7 +270,11 @@ private fun AircraftMap(
     LaunchedEffect(map, deviceAzimuth) {
         val m = map ?: return@LaunchedEffect
         headingMarker?.let { m.removeMarker(it) }
-        val bmp = rotatedAircraftBitmap(ctx, deviceAzimuth.toFloat(), R.drawable.ic_user_heading)
+        val bmp = rotatedAircraftBitmap(
+            ctx,
+            headingDeg = deviceAzimuth.toFloat(),
+            drawableRes = R.drawable.ic_user_heading,
+        )
         headingMarker = m.addMarker(
             MarkerOptions()
                 .position(LatLng(centreLat, centreLon))
@@ -286,8 +293,15 @@ private fun AircraftMap(
             val title = (s.callsign ?: s.icaoHex.uppercase()) +
                 String.format(Locale.US, " · %.1f km", s.distanceKm)
             val bucket = (((s.headingDeg ?: 0.0) / 15.0).toInt().mod(24)) * 15
-            val icon = iconCache.getOrPut(bucket) {
-                iconFactory.fromBitmap(rotatedAircraftBitmap(ctx, bucket.toFloat()))
+            val size = aircraftSizeFor(s.typeCode, s.model)
+            val icon = iconCache.getOrPut(bucket to size) {
+                iconFactory.fromBitmap(
+                    rotatedAircraftBitmap(
+                        ctx,
+                        headingDeg = bucket.toFloat(),
+                        sizeScale = size.scale,
+                    ),
+                )
             }
             markers += m.addMarker(
                 MarkerOptions()
@@ -336,7 +350,11 @@ private fun AircraftMap(
                         // separately so we can re-orient it without
                         // rebuilding this one.
                         val userIcon = iconFactory.fromBitmap(
-                            rotatedAircraftBitmap(ctx, 0f, R.drawable.ic_user_marker),
+                            rotatedAircraftBitmap(
+                                ctx,
+                                headingDeg = 0f,
+                                drawableRes = R.drawable.ic_user_marker,
+                            ),
                         )
                         ml.addMarker(
                             MarkerOptions()
@@ -388,28 +406,35 @@ private fun rememberDeviceAzimuth(): Int {
     return azimuthBucket
 }
 
-/** Render the given drawable to a bitmap rotated by [headingDeg]. Source
+/** Render the given drawable to a bitmap rotated by [headingDeg] and
+ *  scaled by [sizeScale] (1.0 = baseline, see [AircraftSize]). Source
  *  vectors point north (heading 0); we rotate around the bitmap centre so
- *  the plane nose points at the real heading on the map. The user marker
- *  passes headingDeg=0 — no rotation, just the rasterise path. */
+ *  the plane nose points at the real heading on the map. The drawable is
+ *  rasterised onto a transparent canvas of fixed size so all marker
+ *  bitmaps share dimensions — MapLibre anchors at the centre, so a
+ *  smaller plane just has more transparent padding around it rather than
+ *  shifting position. */
 private fun rotatedAircraftBitmap(
     ctx: android.content.Context,
     headingDeg: Float,
+    sizeScale: Float = 1f,
     @androidx.annotation.DrawableRes drawableRes: Int = R.drawable.ic_aircraft_marker,
 ): android.graphics.Bitmap {
     val drawable = androidx.core.content.ContextCompat.getDrawable(ctx, drawableRes)
         ?: error("drawable $drawableRes missing")
-    val size = 96  // pixels — keep markers readable at the default zoom levels
-    val base = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+    val canvasSize = 144  // pixels — large enough for HEAVY at scale 1.35
+    val drawnSize = (96 * sizeScale).toInt().coerceAtLeast(24)
+    val offset = (canvasSize - drawnSize) / 2
+    val base = android.graphics.Bitmap.createBitmap(canvasSize, canvasSize, android.graphics.Bitmap.Config.ARGB_8888)
     android.graphics.Canvas(base).also { c ->
-        drawable.setBounds(0, 0, size, size)
+        drawable.setBounds(offset, offset, offset + drawnSize, offset + drawnSize)
         drawable.draw(c)
     }
     if (headingDeg == 0f) return base
     val matrix = android.graphics.Matrix().apply {
-        postRotate(headingDeg, size / 2f, size / 2f)
+        postRotate(headingDeg, canvasSize / 2f, canvasSize / 2f)
     }
-    return android.graphics.Bitmap.createBitmap(base, 0, 0, size, size, matrix, true)
+    return android.graphics.Bitmap.createBitmap(base, 0, 0, canvasSize, canvasSize, matrix, true)
 }
 
 @Composable
