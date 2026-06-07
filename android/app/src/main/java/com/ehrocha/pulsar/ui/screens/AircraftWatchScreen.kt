@@ -24,16 +24,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -106,7 +110,19 @@ fun AircraftWatchScreen(vm: PulsarViewModel, onBack: () -> Unit) {
         onDispose { vm.stopAircraftWatch() }
     }
 
-    Scaffold(
+    // BottomSheet — collapsed (peek): just the status row sits above the
+    // map+list. Drag up or tap the handle to reveal the three sliders.
+    // Frees ~280dp of vertical space in the collapsed state.
+    val sheetState = rememberStandardBottomSheetState(
+        initialValue = SheetValue.PartiallyExpanded,
+        skipHiddenState = true,
+    )
+    val scaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = sheetState)
+
+    BottomSheetScaffold(
+        scaffoldState = scaffoldState,
+        // Peek shows roughly: drag handle + status row + small bottom padding.
+        sheetPeekHeight = 76.dp,
         topBar = {
             TopAppBar(
                 title = {
@@ -136,6 +152,23 @@ fun AircraftWatchScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                 },
             )
         },
+        sheetContent = {
+            if (location != null) {
+                SettingsPanel(
+                    lat = location.first,
+                    lon = location.second,
+                    radiusKm = radiusKm,
+                    onRadiusChange = vm::setAircraftWatchRadiusKm,
+                    maxAltFt = maxAltFt,
+                    onMaxAltChange = vm::setAircraftWatchMaxAltitudeFt,
+                    intervalSec = intervalSec,
+                    onIntervalChange = vm::setAircraftWatchIntervalSec,
+                    watching = watching,
+                    lastUpdateMs = lastUpdateMs,
+                    providerName = vm.aircraftFeedName,
+                )
+            }
+        },
     ) { pad ->
         Column(
             modifier = Modifier
@@ -146,13 +179,14 @@ fun AircraftWatchScreen(vm: PulsarViewModel, onBack: () -> Unit) {
         ) {
             if (location == null) {
                 NoLocationCard()
-                return@Scaffold
+                return@BottomSheetScaffold
             }
 
             error?.let { ErrorBanner(it) }
 
-            // Map (top) — fixed height so the list still gets meaningful space
-            // on phone-sized devices.
+            // Map — fixed height so the list still gets meaningful space
+            // on phone-sized devices. Lives above the (now-collapsible)
+            // settings sheet.
             AircraftMap(
                 centreLat = location.first,
                 centreLon = location.second,
@@ -160,9 +194,9 @@ fun AircraftWatchScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                 sightings = sightings,
             )
 
-            // List (middle) — takes the remaining vertical space; settings
-            // panel below stays anchored. Compose's weight inside a Column
-            // is how we split "scrollable area" from "pinned footer".
+            // List — takes the remaining vertical space. The bottom-sheet
+            // peek height (76dp) is subtracted from the scaffold body
+            // automatically via `pad`, so we don't have to reserve room.
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 if (sightings.isEmpty() && watching && error == null) {
                     Box(
@@ -190,22 +224,6 @@ fun AircraftWatchScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                     }
                 }
             }
-
-            // Settings + status (bottom) — sliders sit out of the way of the
-            // primary content but stay one swipe away.
-            SettingsPanel(
-                lat = location.first,
-                lon = location.second,
-                radiusKm = radiusKm,
-                onRadiusChange = vm::setAircraftWatchRadiusKm,
-                maxAltFt = maxAltFt,
-                onMaxAltChange = vm::setAircraftWatchMaxAltitudeFt,
-                intervalSec = intervalSec,
-                onIntervalChange = vm::setAircraftWatchIntervalSec,
-                watching = watching,
-                lastUpdateMs = lastUpdateMs,
-                providerName = vm.aircraftFeedName,
-            )
         }
     }
 }
@@ -451,53 +469,50 @@ private fun SettingsPanel(
     lastUpdateMs: Long,
     providerName: String,
 ) {
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-            // Three short label-on-top sliders. Bottom-of-screen placement
-            // means the thumb reaches them naturally; vertical stacking keeps
-            // each touch target a comfortable full-row width.
-            SliderRow(
-                label = stringResource(R.string.aircraft_watch_radius_label, radiusKm),
-                value = radiusKm.toFloat(),
-                range = 5f..200f,
-                steps = 38,
-                onChange = { onRadiusChange(it.roundToInt()) },
-            )
-            SliderRow(
-                label = stringResource(R.string.aircraft_watch_max_alt_label, maxAltFt),
-                value = maxAltFt.toFloat(),
-                range = 1_000f..50_000f,
-                steps = 48,
-                // Snap to 1 000-ft increments — finer is noise at these
-                // altitudes and the slider feels jumpier.
-                onChange = { onMaxAltChange((it / 1000f).roundToInt() * 1000) },
-            )
-            SliderRow(
-                label = stringResource(R.string.aircraft_watch_interval_label, intervalSec),
-                value = intervalSec.toFloat(),
-                range = 5f..60f,
-                steps = 54,  // 5 → 60 in 1-s steps = 56 stops; 54 between
-                onChange = { onIntervalChange(it.roundToInt()) },
-            )
-            val statusText = when {
-                !watching -> stringResource(R.string.aircraft_watch_paused)
-                lastUpdateMs == 0L -> stringResource(R.string.aircraft_watch_fetching)
-                else -> stringResource(
-                    R.string.aircraft_watch_updated_at,
-                    formatTime(lastUpdateMs),
-                    providerName,
-                )
-            }
-            Text(
-                statusText + "  ·  " + String.format(Locale.US, "%.4f°, %.4f°", lat, lon),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+    // No outer Surface — the BottomSheetScaffold provides one. Status text
+    // is FIRST so it's the line visible in the peek (collapsed) state; the
+    // sliders are below the fold and revealed when the user drags up.
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+        val statusText = when {
+            !watching -> stringResource(R.string.aircraft_watch_paused)
+            lastUpdateMs == 0L -> stringResource(R.string.aircraft_watch_fetching)
+            else -> stringResource(
+                R.string.aircraft_watch_updated_at,
+                formatTime(lastUpdateMs),
+                providerName,
             )
         }
+        Text(
+            statusText + "  ·  " + String.format(Locale.US, "%.4f°, %.4f°", lat, lon),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 6.dp),
+        )
+        // Sliders — only visible when the sheet is expanded. Stacked
+        // vertically with full-row widths for thumb-friendly hit targets.
+        SliderRow(
+            label = stringResource(R.string.aircraft_watch_radius_label, radiusKm),
+            value = radiusKm.toFloat(),
+            range = 5f..200f,
+            steps = 38,
+            onChange = { onRadiusChange(it.roundToInt()) },
+        )
+        SliderRow(
+            label = stringResource(R.string.aircraft_watch_max_alt_label, maxAltFt),
+            value = maxAltFt.toFloat(),
+            range = 1_000f..50_000f,
+            steps = 48,
+            // Snap to 1 000-ft increments — finer is noise at these
+            // altitudes and the slider feels jumpier.
+            onChange = { onMaxAltChange((it / 1000f).roundToInt() * 1000) },
+        )
+        SliderRow(
+            label = stringResource(R.string.aircraft_watch_interval_label, intervalSec),
+            value = intervalSec.toFloat(),
+            range = 5f..60f,
+            steps = 54,  // 5 → 60 in 1-s steps = 56 stops; 54 between
+            onChange = { onIntervalChange(it.roundToInt()) },
+        )
     }
 }
 
