@@ -7,10 +7,14 @@ package com.ehrocha.pulsar.transport.aircraft
 
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -33,8 +37,19 @@ import kotlin.math.sqrt
  * Indices below match that table.
  */
 class OpenSkyFeed : AircraftFeed {
-    override val minPollIntervalMs: Long = 15_000L
+    // OpenSky's anonymous endpoint is rate-limited to ~1 request per 10 s —
+    // matching that here means a user picking the 10 s default in the
+    // Aircraft Watch slider actually polls every 10 s. Going below earns
+    // 429s; the viewmodel coerces user pref ≥ this floor.
+    override val minPollIntervalMs: Long = 10_000L
     override val providerName: String = "OpenSky Network"
+
+    // Per-aircraft metadata is keyed on the 24-bit ICAO transponder
+    // address, which is fixed for the lifetime of the airframe — so a
+    // process-lifetime cache is correct and never goes stale. Misses (404,
+    // network error) are cached as null entries to avoid hammering the
+    // metadata endpoint for unknown tails.
+    private val metadataCache = ConcurrentHashMap<String, Metadata?>()
 
     override suspend fun nearby(
         centreLat: Double,
@@ -65,11 +80,82 @@ class OpenSkyFeed : AircraftFeed {
             }
             val body = conn.inputStream.bufferedReader().use { it.readText() }
             val parsed = parseStates(body, centreLat, centreLon)
-            parsed
                 .filter { it.distanceKm <= radiusKm }
                 .sortedBy { it.distanceKm }
+
+            // Enrich the closest N aircraft with model / registration /
+            // operator from OpenSky's metadata endpoint. Limit cap keeps the
+            // per-cycle HTTP fan-out bounded; the cache picks up the rest on
+            // subsequent polls.
+            val enriched = enrichTopN(parsed, limit = METADATA_FETCH_LIMIT)
+            enriched
         }
     }
+
+    private suspend fun enrichTopN(
+        sightings: List<AircraftSighting>,
+        limit: Int,
+    ): List<AircraftSighting> = coroutineScope {
+        val toFetch = sightings.take(limit)
+            .filter { !metadataCache.containsKey(it.icaoHex) }
+            .map { it.icaoHex }
+        // Kick off in parallel — each call is independent and the endpoint
+        // tolerates concurrent reads. awaitAll returns when every fetch
+        // either completes or fails; we cache the result either way.
+        toFetch.map { hex ->
+            async { metadataCache[hex] = fetchMetadata(hex) }
+        }.awaitAll()
+        sightings.map { s ->
+            val md = metadataCache[s.icaoHex] ?: return@map s
+            s.copy(
+                registration = md.registration ?: s.registration,
+                model = md.model ?: s.model,
+                manufacturer = md.manufacturer ?: s.manufacturer,
+                operator = md.operator ?: s.operator,
+                typeCode = md.typeCode ?: s.typeCode,
+                builtYear = md.builtYear ?: s.builtYear,
+            )
+        }
+    }
+
+    /** GET /api/metadata/aircraft/icao/{hex}. Returns null on 404 / parse
+     *  error / network error — callers should cache that null so we don't
+     *  re-fetch unknown tails every cycle. */
+    private fun fetchMetadata(icaoHex: String): Metadata? {
+        return runCatching {
+            val url = URL("https://opensky-network.org/api/metadata/aircraft/icao/$icaoHex")
+            val conn = (url.openConnection() as HttpURLConnection).apply {
+                connectTimeout = 5_000
+                readTimeout = 8_000
+                requestMethod = "GET"
+                setRequestProperty("Accept", "application/json")
+                setRequestProperty("User-Agent", "Pulsar-Trigger/1 (open source)")
+            }
+            val code = conn.responseCode
+            if (code !in 200..299) return@runCatching null
+            val body = conn.inputStream.bufferedReader().use { it.readText() }
+            val j = JSONObject(body)
+            Metadata(
+                registration = j.optString("registration").trim().takeIf { it.isNotEmpty() },
+                model = j.optString("model").trim().takeIf { it.isNotEmpty() },
+                manufacturer = j.optString("manufacturerName").trim().takeIf { it.isNotEmpty() }
+                    ?: j.optString("manufacturerIcao").trim().takeIf { it.isNotEmpty() },
+                operator = j.optString("operator").trim().takeIf { it.isNotEmpty() }
+                    ?: j.optString("owner").trim().takeIf { it.isNotEmpty() },
+                typeCode = j.optString("typecode").trim().takeIf { it.isNotEmpty() },
+                builtYear = j.optString("built").take(4).toIntOrNull(),
+            )
+        }.getOrNull()
+    }
+
+    private data class Metadata(
+        val registration: String?,
+        val model: String?,
+        val manufacturer: String?,
+        val operator: String?,
+        val typeCode: String?,
+        val builtYear: Int?,
+    )
 
     private fun parseStates(
         body: String,
@@ -102,6 +188,8 @@ class OpenSkyFeed : AircraftFeed {
             val callsign = callsignRaw.trim().takeIf { it.isNotEmpty() }
             val originCountry = row.optString(2).takeIf { it.isNotBlank() }
             val lastContact = row.optLongOrNull(4)
+            val squawk = if (row.isNull(14)) null
+                         else row.optString(14).trim().takeIf { it.isNotEmpty() }
             out += AircraftSighting(
                 icaoHex = icao.lowercase(),
                 callsign = callsign,
@@ -116,6 +204,7 @@ class OpenSkyFeed : AircraftFeed {
                 distanceKm = haversineKm(centreLat, centreLon, lat, lon),
                 bearingDeg = bearingDeg(centreLat, centreLon, lat, lon),
                 lastContactUnixSec = lastContact,
+                squawk = squawk,
             )
         }
         return out
@@ -136,6 +225,12 @@ class OpenSkyFeed : AircraftFeed {
 
     companion object {
         private const val TAG = "OpenSkyFeed"
+
+        /** Per-cycle cap on metadata HTTP calls. 8 covers the typical
+         *  "nearest aircraft I care about" set without saturating OpenSky's
+         *  endpoint. Aircraft beyond N pick up metadata on subsequent cycles
+         *  as they bubble up the distance-sorted list. */
+        private const val METADATA_FETCH_LIMIT = 8
 
         /** Bounding box covering a circle of [radiusKm] around (lat, lon).
          *  Approximate — uses a flat-earth padding which is fine for the

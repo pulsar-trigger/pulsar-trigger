@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Plane silhouette pointing UP (heading 0° / north). Used by Aircraft Watch
+  for map markers; AircraftWatchScreen.kt rotates a copy per marker so each
+  plane shows its real heading. Drawn at 64x64; MapLibre scales as needed.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#1976D2"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.6"
+        android:pathData="M12,2 L13,9 L21,13 L21,15 L13,13 L13,18 L15,19.5 L15,21 L12,20 L9,21 L9,19.5 L11,18 L11,13 L3,15 L3,13 L11,9 Z" />
+</vector>

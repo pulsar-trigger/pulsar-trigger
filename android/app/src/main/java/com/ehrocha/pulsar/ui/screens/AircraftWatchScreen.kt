@@ -58,6 +58,8 @@ import com.ehrocha.pulsar.ui.theme.LocalNightMode
 import com.ehrocha.pulsar.ui.theme.ThemeMode
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import org.maplibre.android.MapLibre
+import org.maplibre.android.annotations.IconFactory
+import org.maplibre.android.annotations.Icon
 import org.maplibre.android.annotations.Marker
 import org.maplibre.android.annotations.MarkerOptions
 import org.maplibre.android.camera.CameraPosition
@@ -85,6 +87,7 @@ fun AircraftWatchScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     val lastUpdateMs by vm.aircraftWatchLastUpdateMs.collectAsState()
     val radiusKm by vm.aircraftWatchRadiusKm.collectAsState()
     val maxAltFt by vm.aircraftWatchMaxAltitudeFt.collectAsState()
+    val intervalSec by vm.aircraftWatchIntervalSec.collectAsState()
     val location = vm.aircraftWatchLocation()
     // Altitude filter is applied locally so the slider feels instant —
     // changing it doesn't wait for the next poll. Aircraft with no altitude
@@ -136,28 +139,18 @@ fun AircraftWatchScreen(vm: PulsarViewModel, onBack: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(pad)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (location == null) {
                 NoLocationCard()
                 return@Scaffold
             }
 
-            HeaderCard(
-                lat = location.first,
-                lon = location.second,
-                radiusKm = radiusKm,
-                onRadiusChange = vm::setAircraftWatchRadiusKm,
-                maxAltFt = maxAltFt,
-                onMaxAltChange = vm::setAircraftWatchMaxAltitudeFt,
-                watching = watching,
-                lastUpdateMs = lastUpdateMs,
-                providerName = vm.aircraftFeedName,
-            )
-
             error?.let { ErrorBanner(it) }
 
+            // Map (top) — fixed height so the list still gets meaningful space
+            // on phone-sized devices.
             AircraftMap(
                 centreLat = location.first,
                 centreLon = location.second,
@@ -165,31 +158,52 @@ fun AircraftWatchScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                 sightings = sightings,
             )
 
-            if (sightings.isEmpty() && watching && error == null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (lastUpdateMs == 0L) {
-                        CircularProgressIndicator(strokeWidth = 2.dp)
-                    } else {
-                        Text(
-                            stringResource(R.string.aircraft_watch_no_aircraft),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+            // List (middle) — takes the remaining vertical space; settings
+            // panel below stays anchored. Compose's weight inside a Column
+            // is how we split "scrollable area" from "pinned footer".
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                if (sightings.isEmpty() && watching && error == null) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (lastUpdateMs == 0L) {
+                            CircularProgressIndicator(strokeWidth = 2.dp)
+                        } else {
+                            Text(
+                                stringResource(R.string.aircraft_watch_no_aircraft),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(vertical = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(sightings, key = { it.icaoHex }) { s ->
+                            AircraftRow(s, radiusKm = radiusKm)
+                        }
                     }
                 }
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(vertical = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    items(sightings, key = { it.icaoHex }) { s -> AircraftRow(s) }
-                }
             }
+
+            // Settings + status (bottom) — sliders sit out of the way of the
+            // primary content but stay one swipe away.
+            SettingsPanel(
+                lat = location.first,
+                lon = location.second,
+                radiusKm = radiusKm,
+                onRadiusChange = vm::setAircraftWatchRadiusKm,
+                maxAltFt = maxAltFt,
+                onMaxAltChange = vm::setAircraftWatchMaxAltitudeFt,
+                intervalSec = intervalSec,
+                onIntervalChange = vm::setAircraftWatchIntervalSec,
+                watching = watching,
+                lastUpdateMs = lastUpdateMs,
+                providerName = vm.aircraftFeedName,
+            )
         }
     }
 }
@@ -234,6 +248,33 @@ private fun AircraftMap(
         }
     }
 
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val iconFactory = remember(ctx) { IconFactory.getInstance(ctx) }
+    // Rotated plane icons are expensive to build (drawable → bitmap → matrix
+    // rotate). Cache one per 15° bucket — visually indistinguishable from
+    // per-degree rotation, ~24 entries max, built lazily as headings appear.
+    val iconCache = remember { mutableMapOf<Int, Icon>() }
+
+    // Device compass heading — used to draw a directional cone over the
+    // user pin so the user can see "the plane east of me is to my right
+    // RIGHT NOW." Snapped to 5° to avoid burning the map redrawing every
+    // sensor tick.
+    val deviceAzimuth = rememberDeviceAzimuth()
+
+    // Directional cone over the user pin — re-created when the device
+    // azimuth bucket changes (snapped to 5° to keep the map redraws cheap).
+    var headingMarker by remember { mutableStateOf<Marker?>(null) }
+    LaunchedEffect(map, deviceAzimuth) {
+        val m = map ?: return@LaunchedEffect
+        headingMarker?.let { m.removeMarker(it) }
+        val bmp = rotatedAircraftBitmap(ctx, deviceAzimuth.toFloat(), R.drawable.ic_user_heading)
+        headingMarker = m.addMarker(
+            MarkerOptions()
+                .position(LatLng(centreLat, centreLon))
+                .icon(iconFactory.fromBitmap(bmp)),
+        )
+    }
+
     // Refresh marker layer on sighting updates. We rebuild rather than diff:
     // ~20 markers max, trivial cost, dodges the bookkeeping of "did this
     // ICAO move or leave."
@@ -244,7 +285,16 @@ private fun AircraftMap(
         sightings.forEach { s ->
             val title = (s.callsign ?: s.icaoHex.uppercase()) +
                 String.format(Locale.US, " · %.1f km", s.distanceKm)
-            markers += m.addMarker(MarkerOptions().position(LatLng(s.lat, s.lon)).title(title))
+            val bucket = (((s.headingDeg ?: 0.0) / 15.0).toInt().mod(24)) * 15
+            val icon = iconCache.getOrPut(bucket) {
+                iconFactory.fromBitmap(rotatedAircraftBitmap(ctx, bucket.toFloat()))
+            }
+            markers += m.addMarker(
+                MarkerOptions()
+                    .position(LatLng(s.lat, s.lon))
+                    .title(title)
+                    .icon(icon),
+            )
         }
     }
 
@@ -279,13 +329,20 @@ private fun AircraftMap(
                             .zoom(zoom)
                             .build()
 
-                        // "Me" marker so the user can see where they are
-                        // relative to the planes. Different from the aircraft
-                        // markers — uses MapLibre's default icon (red pin).
+                        // "Me" marker — person-pin so it's distinct from the
+                        // plane markers above. Added once at map setup; the
+                        // user location doesn't move during a session. The
+                        // direction-cone marker stacked on top is managed
+                        // separately so we can re-orient it without
+                        // rebuilding this one.
+                        val userIcon = iconFactory.fromBitmap(
+                            rotatedAircraftBitmap(ctx, 0f, R.drawable.ic_user_marker),
+                        )
                         ml.addMarker(
                             MarkerOptions()
                                 .position(LatLng(centreLat, centreLon))
-                                .title("You"),
+                                .title("You")
+                                .icon(userIcon),
                         )
                     }
                 }
@@ -297,14 +354,74 @@ private fun AircraftMap(
 private const val STYLE_LIBERTY = "https://tiles.openfreemap.org/styles/liberty"
 private const val STYLE_POSITRON = "https://tiles.openfreemap.org/styles/positron"
 
+/** Subscribe to the device's rotation-vector sensor and return the current
+ *  azimuth (compass heading, 0 = north) snapped to a 5° bucket. Snapping
+ *  caps the recomposition rate to a sane number — the map rebuilds the
+ *  user direction-cone marker on every change, and 5° is well below human
+ *  perception of map-icon-pointing-the-wrong-way. */
 @Composable
-private fun HeaderCard(
+private fun rememberDeviceAzimuth(): Int {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var azimuthBucket by remember { mutableStateOf(0) }
+    DisposableEffect(ctx) {
+        val sm = ctx.getSystemService(android.content.Context.SENSOR_SERVICE)
+            as? android.hardware.SensorManager
+        val sensor = sm?.getDefaultSensor(android.hardware.Sensor.TYPE_ROTATION_VECTOR)
+        val listener = object : android.hardware.SensorEventListener {
+            private val rotMat = FloatArray(9)
+            private val orient = FloatArray(3)
+            override fun onSensorChanged(event: android.hardware.SensorEvent) {
+                android.hardware.SensorManager.getRotationMatrixFromVector(rotMat, event.values)
+                android.hardware.SensorManager.getOrientation(rotMat, orient)
+                val deg = Math.toDegrees(orient[0].toDouble())
+                val normalized = ((deg + 360.0) % 360.0).toInt()
+                val bucket = (normalized / 5) * 5
+                if (bucket != azimuthBucket) azimuthBucket = bucket
+            }
+            override fun onAccuracyChanged(sensor: android.hardware.Sensor?, accuracy: Int) {}
+        }
+        if (sensor != null) {
+            sm.registerListener(listener, sensor, android.hardware.SensorManager.SENSOR_DELAY_UI)
+        }
+        onDispose { sm?.unregisterListener(listener) }
+    }
+    return azimuthBucket
+}
+
+/** Render the given drawable to a bitmap rotated by [headingDeg]. Source
+ *  vectors point north (heading 0); we rotate around the bitmap centre so
+ *  the plane nose points at the real heading on the map. The user marker
+ *  passes headingDeg=0 — no rotation, just the rasterise path. */
+private fun rotatedAircraftBitmap(
+    ctx: android.content.Context,
+    headingDeg: Float,
+    @androidx.annotation.DrawableRes drawableRes: Int = R.drawable.ic_aircraft_marker,
+): android.graphics.Bitmap {
+    val drawable = androidx.core.content.ContextCompat.getDrawable(ctx, drawableRes)
+        ?: error("drawable $drawableRes missing")
+    val size = 96  // pixels — keep markers readable at the default zoom levels
+    val base = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+    android.graphics.Canvas(base).also { c ->
+        drawable.setBounds(0, 0, size, size)
+        drawable.draw(c)
+    }
+    if (headingDeg == 0f) return base
+    val matrix = android.graphics.Matrix().apply {
+        postRotate(headingDeg, size / 2f, size / 2f)
+    }
+    return android.graphics.Bitmap.createBitmap(base, 0, 0, size, size, matrix, true)
+}
+
+@Composable
+private fun SettingsPanel(
     lat: Double,
     lon: Double,
     radiusKm: Int,
     onRadiusChange: (Int) -> Unit,
     maxAltFt: Int,
     onMaxAltChange: (Int) -> Unit,
+    intervalSec: Int,
+    onIntervalChange: (Int) -> Unit,
     watching: Boolean,
     lastUpdateMs: Long,
     providerName: String,
@@ -314,48 +431,32 @@ private fun HeaderCard(
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.FlightTakeoff,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp),
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    String.format(Locale.US, "%.4f°, %.4f°", lat, lon),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                stringResource(R.string.aircraft_watch_radius_label, radiusKm),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Slider(
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            // Three short label-on-top sliders. Bottom-of-screen placement
+            // means the thumb reaches them naturally; vertical stacking keeps
+            // each touch target a comfortable full-row width.
+            SliderRow(
+                label = stringResource(R.string.aircraft_watch_radius_label, radiusKm),
                 value = radiusKm.toFloat(),
-                onValueChange = { onRadiusChange(it.roundToInt()) },
-                valueRange = 5f..200f,
-                steps = 38,  // 5 → 200 in 5 km steps = 39 stops, 38 between
-                modifier = Modifier.fillMaxWidth(),
+                range = 5f..200f,
+                steps = 38,
+                onChange = { onRadiusChange(it.roundToInt()) },
             )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                stringResource(R.string.aircraft_watch_max_alt_label, maxAltFt),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Slider(
+            SliderRow(
+                label = stringResource(R.string.aircraft_watch_max_alt_label, maxAltFt),
                 value = maxAltFt.toFloat(),
-                // Snap to 1 000-ft increments — anything finer is noise at
-                // these altitudes and the slider feels jumpier.
-                onValueChange = { onMaxAltChange((it / 1000f).roundToInt() * 1000) },
-                valueRange = 1_000f..50_000f,
-                steps = 48,  // 1 000 → 50 000 in 1 000-ft steps = 50 stops
-                modifier = Modifier.fillMaxWidth(),
+                range = 1_000f..50_000f,
+                steps = 48,
+                // Snap to 1 000-ft increments — finer is noise at these
+                // altitudes and the slider feels jumpier.
+                onChange = { onMaxAltChange((it / 1000f).roundToInt() * 1000) },
+            )
+            SliderRow(
+                label = stringResource(R.string.aircraft_watch_interval_label, intervalSec),
+                value = intervalSec.toFloat(),
+                range = 5f..60f,
+                steps = 54,  // 5 → 60 in 1-s steps = 56 stops; 54 between
+                onChange = { onIntervalChange(it.roundToInt()) },
             )
             val statusText = when {
                 !watching -> stringResource(R.string.aircraft_watch_paused)
@@ -367,12 +468,34 @@ private fun HeaderCard(
                 )
             }
             Text(
-                statusText,
+                statusText + "  ·  " + String.format(Locale.US, "%.4f°, %.4f°", lat, lon),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
+}
+
+@Composable
+private fun SliderRow(
+    label: String,
+    value: Float,
+    range: ClosedFloatingPointRange<Float>,
+    steps: Int,
+    onChange: (Float) -> Unit,
+) {
+    Text(
+        label,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Slider(
+        value = value,
+        onValueChange = onChange,
+        valueRange = range,
+        steps = steps,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 @Composable
@@ -419,11 +542,33 @@ private fun ErrorBanner(error: String) {
     }
 }
 
+private val PROXIMITY_NEAR = androidx.compose.ui.graphics.Color(0xFF2E7D32)
+private val PROXIMITY_MID = androidx.compose.ui.graphics.Color(0xFFF9A825)
+private val PROXIMITY_FAR = androidx.compose.ui.graphics.Color(0xFFE65100)
+
+/** Map distance / radius ratio onto the green / yellow / red palette.
+ *  Thresholds at 1/3 and 2/3 so each band feels like a meaningful chunk
+ *  of the user's chosen search radius. */
+private fun proximityColor(distanceKm: Double, radiusKm: Int): androidx.compose.ui.graphics.Color {
+    val ratio = if (radiusKm <= 0) 1.0 else distanceKm / radiusKm.toDouble()
+    return when {
+        ratio < 1.0 / 3.0 -> PROXIMITY_NEAR
+        ratio < 2.0 / 3.0 -> PROXIMITY_MID
+        else -> PROXIMITY_FAR
+    }
+}
+
 @Composable
-private fun AircraftRow(s: AircraftSighting) {
+private fun AircraftRow(s: AircraftSighting, radiusKm: Int) {
+    var showDetails by remember { mutableStateOf(false) }
+    val accent = proximityColor(s.distanceKm, radiusKm)
     Surface(
+        onClick = { showDetails = true },
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        // Tinted background lets the proximity band read at a glance without
+        // shouting — the colour saturation stays around the existing
+        // dashboard-card palette levels.
+        color = accent.copy(alpha = 0.13f),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
@@ -436,11 +581,21 @@ private fun AircraftRow(s: AircraftSighting) {
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                 )
+                // Subline: model + operator if known, otherwise fall back
+                // to ICAO hex + country. The progressive enhancement means
+                // the row reads usefully on the first poll and gets richer
+                // as the metadata cache fills.
+                val sub = listOfNotNull(
+                    s.model,
+                    s.operator?.takeIf { it != s.model },
+                    s.registration,
+                ).joinToString(" · ").ifEmpty {
+                    "${s.icaoHex.uppercase()}${s.originCountry?.let { " · $it" } ?: ""}"
+                }
                 Text(
-                    "${s.icaoHex.uppercase()}${s.originCountry?.let { " · $it" } ?: ""}",
+                    sub,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontFamily = FontFamily.Monospace,
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
@@ -454,7 +609,7 @@ private fun AircraftRow(s: AircraftSighting) {
                     String.format(Locale.US, "%.1f km", s.distanceKm),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = accent,
                 )
                 Text(
                     "${bearingArrow(s.bearingDeg)} ${s.bearingDeg.roundToInt()}°",
@@ -463,6 +618,83 @@ private fun AircraftRow(s: AircraftSighting) {
                 )
             }
         }
+    }
+    if (showDetails) {
+        AircraftDetailDialog(s, onDismiss = { showDetails = false })
+    }
+}
+
+/** Full-info modal — shown on tap. Everything we know about the aircraft
+ *  in one place; values fall back to "—" when the metadata cache hasn't
+ *  resolved that field yet (rare after the first cycle). */
+@Composable
+private fun AircraftDetailDialog(s: AircraftSighting, onDismiss: () -> Unit) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_dismiss))
+            }
+        },
+        title = {
+            Text(
+                s.callsign ?: s.icaoHex.uppercase(),
+                fontWeight = FontWeight.Bold,
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                DetailRow(stringResource(R.string.aircraft_detail_registration), s.registration)
+                DetailRow(stringResource(R.string.aircraft_detail_model), s.model)
+                DetailRow(stringResource(R.string.aircraft_detail_manufacturer), s.manufacturer)
+                DetailRow(stringResource(R.string.aircraft_detail_operator), s.operator)
+                DetailRow(stringResource(R.string.aircraft_detail_type_code), s.typeCode)
+                DetailRow(stringResource(R.string.aircraft_detail_built), s.builtYear?.toString())
+                DetailRow(stringResource(R.string.aircraft_detail_icao), s.icaoHex.uppercase())
+                DetailRow(stringResource(R.string.aircraft_detail_origin), s.originCountry)
+                DetailRow(stringResource(R.string.aircraft_detail_squawk), s.squawk)
+                Spacer(Modifier.height(4.dp))
+                DetailRow(
+                    stringResource(R.string.aircraft_detail_distance),
+                    String.format(Locale.US, "%.2f km", s.distanceKm),
+                )
+                DetailRow(
+                    stringResource(R.string.aircraft_detail_bearing),
+                    String.format(Locale.US, "%d° %s", s.bearingDeg.roundToInt(), bearingArrow(s.bearingDeg)),
+                )
+                DetailRow(stringResource(R.string.aircraft_detail_altitude),
+                    s.altitudeFt?.let { "${it.roundToInt()} ft" })
+                DetailRow(stringResource(R.string.aircraft_detail_speed),
+                    s.groundSpeedKt?.let { "${it.roundToInt()} kt" })
+                DetailRow(stringResource(R.string.aircraft_detail_heading),
+                    s.headingDeg?.let { "${it.roundToInt()}° ${bearingArrow(it)}" })
+                DetailRow(stringResource(R.string.aircraft_detail_vertical),
+                    s.verticalRateFpm?.let {
+                        val sign = if (it >= 0) "↑" else "↓"
+                        "$sign ${kotlin.math.abs(it).roundToInt()} fpm"
+                    })
+                DetailRow(stringResource(R.string.aircraft_detail_position),
+                    String.format(Locale.US, "%.4f°, %.4f°", s.lat, s.lon))
+            }
+        },
+    )
+}
+
+@Composable
+private fun DetailRow(label: String, value: String?) {
+    if (value.isNullOrBlank()) return
+    Row(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            label,
+            modifier = Modifier.width(120.dp),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 

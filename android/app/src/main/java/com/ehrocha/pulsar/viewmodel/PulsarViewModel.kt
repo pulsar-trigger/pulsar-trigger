@@ -2963,6 +2963,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         MutableStateFlow(aircraftPrefs.getInt("max_alt_ft", 15_000).coerceIn(1_000, 50_000))
     val aircraftWatchMaxAltitudeFt: StateFlow<Int> = _aircraftWatchMaxAltitudeFt
 
+    /** Auto-refresh cadence in seconds. Lower bound is the OpenSky anonymous
+     *  rate-limit floor (~10 s) — finer than that risks 429s. We let users
+     *  go up to 60 s for low-traffic / battery-careful sessions. */
+    private val _aircraftWatchIntervalSec =
+        MutableStateFlow(aircraftPrefs.getInt("interval_sec", 10).coerceIn(5, 60))
+    val aircraftWatchIntervalSec: StateFlow<Int> = _aircraftWatchIntervalSec
+
     private var aircraftJob: kotlinx.coroutines.Job? = null
 
     /** Provider display name surfaced in the Aircraft Watch screen footer
@@ -2979,6 +2986,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         val clamped = ft.coerceIn(1_000, 50_000)
         _aircraftWatchMaxAltitudeFt.value = clamped
         aircraftPrefs.edit().putInt("max_alt_ft", clamped).apply()
+    }
+
+    fun setAircraftWatchIntervalSec(sec: Int) {
+        val clamped = sec.coerceIn(5, 60)
+        _aircraftWatchIntervalSec.value = clamped
+        aircraftPrefs.edit().putInt("interval_sec", clamped).apply()
     }
 
     /** Returns the shooting location for Aircraft Watch. Prefers the Astro
@@ -3023,7 +3036,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         _aircraftWatchError.value = "fetch_failed"
                     },
                 )
-                delay(aircraftFeed.minPollIntervalMs)
+                // User-chosen cadence, but never below the feed's documented
+                // floor — going under OpenSky's 10 s anonymous limit just
+                // earns 429s and stale data.
+                val userMs = _aircraftWatchIntervalSec.value * 1_000L
+                delay(userMs.coerceAtLeast(aircraftFeed.minPollIntervalMs))
             }
         }
     }

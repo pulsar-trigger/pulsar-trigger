@@ -72,4 +72,24 @@ data class AircraftSighting(
      *  (Unix epoch seconds), or null if unknown. Lets the UI grey-out
      *  stale traces. */
     val lastContactUnixSec: Long?,
+    /** Transponder squawk code (4-digit octal as string), or null when the
+     *  body of the transponder didn't send one this poll. Emergency codes:
+     *  7500 hijack, 7600 radio failure, 7700 general distress. */
+    val squawk: String? = null,
+    // ── Per-aircraft metadata (icao24 is fixed for the lifetime of the
+    // airframe; these only need fetching once and cache forever). Populated
+    // when the feed has had time to enrich; null on the first sighting of
+    // a new tail.
+    /** Tail registration, e.g. "D-AIXM", "N12345". */
+    val registration: String? = null,
+    /** Human-readable aircraft model, e.g. "Boeing 737-800". */
+    val model: String? = null,
+    /** Manufacturer, e.g. "BOEING", "AIRBUS". */
+    val manufacturer: String? = null,
+    /** Operator / airline, e.g. "Lufthansa", "Delta Air Lines". */
+    val operator: String? = null,
+    /** ICAO type code, e.g. "B738", "A359". */
+    val typeCode: String? = null,
+    /** Year the airframe was built, when known. */
+    val builtYear: Int? = null,
 )
