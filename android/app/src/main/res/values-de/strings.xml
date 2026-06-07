@@ -303,6 +303,16 @@
     <string name="widget_appearance_title">Widget-Aussehen</string>
     <string name="widget_bg_opacity_label">Hintergrund-Deckkraft: %1$d%%</string>
     <string name="widget_text_scale_label">Schriftgröße: %1$d%%</string>
+    <string name="aircraft_watch_title">Flugzeug-Beobachtung</string>
+    <string name="aircraft_watch_radius_label">Radius: %1$d km</string>
+    <string name="aircraft_watch_updated_at">Aktualisiert %1$s · %2$s</string>
+    <string name="aircraft_watch_fetching">Lade Flugzeuge in der Nähe…</string>
+    <string name="aircraft_watch_paused">Pausiert.</string>
+    <string name="aircraft_watch_no_aircraft">Aktuell keine Flugzeuge in Reichweite.</string>
+    <string name="aircraft_watch_refresh">Aktualisieren</string>
+    <string name="aircraft_watch_fetch_failed">Flugdaten konnten nicht abgerufen werden. Wiederversuch beim nächsten Zyklus.</string>
+    <string name="aircraft_watch_no_location_title">Kein Standort gesetzt</string>
+    <string name="aircraft_watch_no_location_body">Öffne zuerst den Planner und setze deinen Aufnahmeort — Flugzeug-Beobachtung nutzt dieselben Koordinaten.</string>
     <string name="label_firmware">Firmware</string>
     <string name="label_current_version">Aktuell: v%1$s</string>
     <string name="btn_check_firmware">Nach Firmware-Update suchen</string>

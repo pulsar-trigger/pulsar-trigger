@@ -303,6 +303,16 @@
     <string name="widget_appearance_title">ウィジェットの外観</string>
     <string name="widget_bg_opacity_label">背景の不透明度: %1$d%%</string>
     <string name="widget_text_scale_label">文字サイズ: %1$d%%</string>
+    <string name="aircraft_watch_title">航空機ウォッチ</string>
+    <string name="aircraft_watch_radius_label">半径: %1$d km</string>
+    <string name="aircraft_watch_updated_at">更新 %1$s · %2$s</string>
+    <string name="aircraft_watch_fetching">近くの航空機を取得中…</string>
+    <string name="aircraft_watch_paused">一時停止中。</string>
+    <string name="aircraft_watch_no_aircraft">現在範囲内に航空機はありません。</string>
+    <string name="aircraft_watch_refresh">更新</string>
+    <string name="aircraft_watch_fetch_failed">航空データに接続できませんでした。次のサイクルで再試行します。</string>
+    <string name="aircraft_watch_no_location_title">場所が未設定</string>
+    <string name="aircraft_watch_no_location_body">まず Planner で撮影場所を設定してください — 航空機ウォッチは同じ座標を使います。</string>
     <string name="label_firmware">ファームウェア</string>
     <string name="label_current_version">現在: v%1$s</string>
     <string name="btn_check_firmware">ファームウェアの更新を確認</string>

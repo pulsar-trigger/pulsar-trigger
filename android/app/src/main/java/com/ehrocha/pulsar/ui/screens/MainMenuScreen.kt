@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material.icons.filled.LensBlur
 import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.automirrored.filled.ListAlt
@@ -75,6 +76,7 @@ fun MainMenuScreen(
     onWhatsUpSelected: () -> Unit = {},
     onStarFocusSelected: () -> Unit = {},
     onTestCameraSelected: () -> Unit = {},
+    onAircraftWatchSelected: () -> Unit = {},
     onDiagnosticsSelected: () -> Unit = {},
     onUserModeRun: (com.ehrocha.pulsar.model.UserMode) -> Unit = {},
     onIntervalometer2Selected: () -> Unit = {},
@@ -188,6 +190,7 @@ fun MainMenuScreen(
             onWhatsUpSelected = onWhatsUpSelected,
             onStarFocusSelected = onStarFocusSelected,
             onTestCameraSelected = onTestCameraSelected,
+            onAircraftWatchSelected = onAircraftWatchSelected,
             onDiagnosticsSelected = onDiagnosticsSelected,
             onUserModeRun = onUserModeRun,
             onIntervalometer2Selected = onIntervalometer2Selected,
@@ -295,6 +298,7 @@ private fun MenuPageContent(
     onWhatsUpSelected: () -> Unit,
     onStarFocusSelected: () -> Unit,
     onTestCameraSelected: () -> Unit,
+    onAircraftWatchSelected: () -> Unit,
     onDiagnosticsSelected: () -> Unit,
     onUserModeRun: (com.ehrocha.pulsar.model.UserMode) -> Unit,
     onIntervalometer2Selected: () -> Unit,
@@ -487,6 +491,14 @@ private fun MenuPageContent(
                             Icons.Default.Star,
                             enabled = starFocusEnabled,
                         ) { onStarFocusSelected() },
+                        // No transport dependency — Aircraft Watch only needs
+                        // the planner location + network. Useful pre-connect
+                        // (decide whether to wait for the next pass) and
+                        // during long bulb runs (trail interference).
+                        launcherItem(
+                            R.string.aircraft_watch_title,
+                            Icons.Default.FlightTakeoff,
+                        ) { onAircraftWatchSelected() },
                     )
                     Box(
                         modifier = Modifier

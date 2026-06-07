@@ -497,6 +497,16 @@
     <string name="widget_configure_title">Widget settings</string>
     <string name="widget_bg_opacity_label">Background opacity: %1$d%%</string>
     <string name="widget_text_scale_label">Text size: %1$d%%</string>
+    <string name="aircraft_watch_title">Aircraft Watch</string>
+    <string name="aircraft_watch_radius_label">Radius: %1$d km</string>
+    <string name="aircraft_watch_updated_at">Updated %1$s · %2$s</string>
+    <string name="aircraft_watch_fetching">Fetching nearby aircraft…</string>
+    <string name="aircraft_watch_paused">Paused.</string>
+    <string name="aircraft_watch_no_aircraft">No aircraft in range right now.</string>
+    <string name="aircraft_watch_refresh">Refresh</string>
+    <string name="aircraft_watch_fetch_failed">Couldn\'t reach the aircraft data feed. Will retry on the next cycle.</string>
+    <string name="aircraft_watch_no_location_title">No location set</string>
+    <string name="aircraft_watch_no_location_body">Open Planner and set your shooting location first — Aircraft Watch uses the same lat/lon.</string>
     <string name="label_firmware">Firmware</string>
     <string name="label_current_version">Current: v%1$s</string>
     <string name="btn_check_firmware">Check for Firmware Update</string>

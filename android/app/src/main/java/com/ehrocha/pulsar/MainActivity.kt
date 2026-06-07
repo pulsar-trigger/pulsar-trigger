@@ -58,6 +58,7 @@ import com.ehrocha.pulsar.ui.components.BatteryIndicator
 import com.ehrocha.pulsar.ui.components.LatencyIndicator
 import com.ehrocha.pulsar.ui.components.SignalStrengthIndicator
 import com.ehrocha.pulsar.ui.components.NightModeToggle
+import com.ehrocha.pulsar.ui.screens.AircraftWatchScreen
 import com.ehrocha.pulsar.ui.screens.MainMenuScreen
 import com.ehrocha.pulsar.ui.screens.ManageDevicesScreen
 import com.ehrocha.pulsar.ui.screens.ModeScreen
@@ -528,6 +529,7 @@ fun PulsarNavHost(
                     onWhatsUpSelected = { currentScreen = AppScreen.WhatsUp },
                     onStarFocusSelected = { currentScreen = AppScreen.StarFocus },
                     onTestCameraSelected = { currentScreen = AppScreen.TestCamera },
+                    onAircraftWatchSelected = { currentScreen = AppScreen.AircraftWatch },
                     onDiagnosticsSelected = { currentScreen = AppScreen.Diagnostics },
                     // Top-bar Settings icon lands on the menu (no
                     // pre-selected section). The update banner has its own
@@ -641,6 +643,13 @@ fun PulsarNavHost(
             AppScreen.TestCamera -> {
                 BackHandler { currentScreen = AppScreen.Menu }
                 com.ehrocha.pulsar.ui.screens.TestCameraScreen(
+                    vm = vm,
+                    onBack = { currentScreen = AppScreen.Menu },
+                )
+            }
+            AppScreen.AircraftWatch -> {
+                BackHandler { currentScreen = AppScreen.Menu }
+                AircraftWatchScreen(
                     vm = vm,
                     onBack = { currentScreen = AppScreen.Menu },
                 )
@@ -780,6 +789,7 @@ private sealed class AppScreen {
     data object ShotLog : AppScreen()
     data object StarFocus : AppScreen()
     data object TestCamera : AppScreen()
+    data object AircraftWatch : AppScreen()
     data object Diagnostics : AppScreen()
     /** Manage Devices — reachable only from the Scan landing (pre-connect)
      *  so the user can't accidentally forget the body they're currently

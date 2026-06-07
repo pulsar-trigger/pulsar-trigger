@@ -305,6 +305,16 @@
     <string name="widget_appearance_title">小部件外观</string>
     <string name="widget_bg_opacity_label">背景不透明度: %1$d%%</string>
     <string name="widget_text_scale_label">文字大小: %1$d%%</string>
+    <string name="aircraft_watch_title">附近飞机</string>
+    <string name="aircraft_watch_radius_label">范围：%1$d km</string>
+    <string name="aircraft_watch_updated_at">更新 %1$s · %2$s</string>
+    <string name="aircraft_watch_fetching">获取附近飞机…</string>
+    <string name="aircraft_watch_paused">已暂停。</string>
+    <string name="aircraft_watch_no_aircraft">当前范围内无飞机。</string>
+    <string name="aircraft_watch_refresh">刷新</string>
+    <string name="aircraft_watch_fetch_failed">无法连接到航空数据服务，将在下一周期重试。</string>
+    <string name="aircraft_watch_no_location_title">未设置位置</string>
+    <string name="aircraft_watch_no_location_body">请先在"规划器"中设置拍摄位置——附近飞机使用相同坐标。</string>
     <string name="label_firmware">固件</string>
     <string name="label_current_version">当前版本：v%1$s</string>
     <string name="btn_check_firmware">检查固件更新</string>

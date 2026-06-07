@@ -303,6 +303,16 @@
     <string name="widget_appearance_title">Aparência do widget</string>
     <string name="widget_bg_opacity_label">Opacidade do fundo: %1$d%%</string>
     <string name="widget_text_scale_label">Tamanho do texto: %1$d%%</string>
+    <string name="aircraft_watch_title">Aviões por perto</string>
+    <string name="aircraft_watch_radius_label">Raio: %1$d km</string>
+    <string name="aircraft_watch_updated_at">Atualizado %1$s · %2$s</string>
+    <string name="aircraft_watch_fetching">Buscando aviões próximos…</string>
+    <string name="aircraft_watch_paused">Pausado.</string>
+    <string name="aircraft_watch_no_aircraft">Nenhum avião no raio agora.</string>
+    <string name="aircraft_watch_refresh">Atualizar</string>
+    <string name="aircraft_watch_fetch_failed">Não foi possível alcançar o serviço de aviões. Tentaremos no próximo ciclo.</string>
+    <string name="aircraft_watch_no_location_title">Sem localização</string>
+    <string name="aircraft_watch_no_location_body">Abra o Planejador e defina sua localização de captura primeiro — Aviões por perto usa as mesmas coordenadas.</string>
     <string name="label_firmware">Firmware</string>
     <string name="label_current_version">Atual: v%1$s</string>
     <string name="btn_check_firmware">Verificar Atualização de Firmware</string>

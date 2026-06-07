@@ -2924,10 +2924,107 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         wl.acquire(5_000L)  // auto-release after 5 seconds
     }
 
+    // ── Aircraft Watch (Tools) ───────────────────────────────────────────
+    // List of aircraft currently within a configurable radius of the user's
+    // shooting location. Wraps the [AircraftFeed] interface so the data
+    // source (OpenSky today, ADSBx tomorrow) can swap by changing one line.
+
+    private val aircraftFeed: com.ehrocha.pulsar.transport.aircraft.AircraftFeed =
+        com.ehrocha.pulsar.transport.aircraft.OpenSkyFeed()
+
+    private val aircraftPrefs by lazy {
+        getApplication<Application>().getSharedPreferences(
+            "pulsar_aircraft_watch", Context.MODE_PRIVATE,
+        )
+    }
+
+    private val _aircraftSightings =
+        MutableStateFlow<List<com.ehrocha.pulsar.transport.aircraft.AircraftSighting>>(emptyList())
+    val aircraftSightings: StateFlow<List<com.ehrocha.pulsar.transport.aircraft.AircraftSighting>> =
+        _aircraftSightings
+
+    private val _aircraftWatching = MutableStateFlow(false)
+    val aircraftWatching: StateFlow<Boolean> = _aircraftWatching
+
+    private val _aircraftWatchError = MutableStateFlow<String?>(null)
+    val aircraftWatchError: StateFlow<String?> = _aircraftWatchError
+
+    private val _aircraftWatchLastUpdateMs = MutableStateFlow(0L)
+    val aircraftWatchLastUpdateMs: StateFlow<Long> = _aircraftWatchLastUpdateMs
+
+    private val _aircraftWatchRadiusKm =
+        MutableStateFlow(aircraftPrefs.getInt("radius_km", 30).coerceIn(5, 200))
+    val aircraftWatchRadiusKm: StateFlow<Int> = _aircraftWatchRadiusKm
+
+    private var aircraftJob: kotlinx.coroutines.Job? = null
+
+    /** Provider display name surfaced in the Aircraft Watch screen footer
+     *  so users can tell at a glance which feed they're seeing. */
+    val aircraftFeedName: String get() = aircraftFeed.providerName
+
+    fun setAircraftWatchRadiusKm(km: Int) {
+        val clamped = km.coerceIn(5, 200)
+        _aircraftWatchRadiusKm.value = clamped
+        aircraftPrefs.edit().putInt("radius_km", clamped).apply()
+    }
+
+    /** Returns the shooting location for Aircraft Watch: pulled from the
+     *  Astro Dashboard (same lat/lon the planner uses). Null when the user
+     *  hasn't set one yet — the UI then nudges them to the Planner. */
+    fun aircraftWatchLocation(): Pair<Double, Double>? {
+        val loc = dashboardManager.state.value.location ?: return null
+        return loc.latitude to loc.longitude
+    }
+
+    fun startAircraftWatch() {
+        if (_aircraftWatching.value) return
+        val (lat, lon) = aircraftWatchLocation() ?: run {
+            _aircraftWatchError.value = "no_location"
+            return
+        }
+        _aircraftWatching.value = true
+        _aircraftWatchError.value = null
+        aircraftJob = viewModelScope.launch {
+            while (true) {
+                ensureActive()
+                val radius = _aircraftWatchRadiusKm.value.toDouble()
+                val result = aircraftFeed.nearby(lat, lon, radius)
+                result.fold(
+                    onSuccess = {
+                        _aircraftSightings.value = it
+                        _aircraftWatchLastUpdateMs.value = System.currentTimeMillis()
+                        _aircraftWatchError.value = null
+                    },
+                    onFailure = { t ->
+                        Log.w(TAG, "aircraft feed error: ${t.message}")
+                        _aircraftWatchError.value = "fetch_failed"
+                    },
+                )
+                delay(aircraftFeed.minPollIntervalMs)
+            }
+        }
+    }
+
+    fun stopAircraftWatch() {
+        aircraftJob?.cancel()
+        aircraftJob = null
+        _aircraftWatching.value = false
+    }
+
+    fun refreshAircraftWatch() {
+        if (!_aircraftWatching.value) return
+        // Cancel current poll and restart so the next fetch fires now
+        // instead of after the remaining sleep window.
+        aircraftJob?.cancel()
+        _aircraftWatching.value = false
+        startAircraftWatch()
+    }
+
     override fun onCleared() {
         super.onCleared()
         stopScan()
         simulatorJob?.cancel()
+        aircraftJob?.cancel()
         // Send stop before tearing down so firmware doesn't keep firing
         if (flowJob != null || _status.value?.state.let {
                 it == DeviceState.RUNNING || it == DeviceState.WAITING
