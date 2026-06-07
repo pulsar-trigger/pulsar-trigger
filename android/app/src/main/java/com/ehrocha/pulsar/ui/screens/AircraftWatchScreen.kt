@@ -36,17 +36,34 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.transport.aircraft.AircraftSighting
+import com.ehrocha.pulsar.ui.theme.LocalNightMode
+import com.ehrocha.pulsar.ui.theme.ThemeMode
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
+import org.maplibre.android.MapLibre
+import org.maplibre.android.annotations.Marker
+import org.maplibre.android.annotations.MarkerOptions
+import org.maplibre.android.camera.CameraPosition
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.maps.MapLibreMap
+import org.maplibre.android.maps.MapView
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -141,9 +158,18 @@ fun AircraftWatchScreen(vm: PulsarViewModel, onBack: () -> Unit) {
 
             error?.let { ErrorBanner(it) }
 
+            AircraftMap(
+                centreLat = location.first,
+                centreLon = location.second,
+                radiusKm = radiusKm,
+                sightings = sightings,
+            )
+
             if (sightings.isEmpty() && watching && error == null) {
                 Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     if (lastUpdateMs == 0L) {
@@ -167,6 +193,109 @@ fun AircraftWatchScreen(vm: PulsarViewModel, onBack: () -> Unit) {
         }
     }
 }
+
+/** Embedded MapLibre map showing the user's centre plus a marker per
+ *  aircraft. Refreshes its marker layer every time [sightings] changes.
+ *  Camera centres once on the user location and respects user pan/zoom
+ *  thereafter — we don't reset the camera on each poll because that
+ *  would fight the user's manual exploration. */
+@Composable
+private fun AircraftMap(
+    centreLat: Double,
+    centreLon: Double,
+    radiusKm: Int,
+    sightings: List<AircraftSighting>,
+) {
+    val isDark = when (LocalNightMode.current.value) {
+        ThemeMode.Dark, ThemeMode.RedLight -> true
+        ThemeMode.Light, ThemeMode.Outdoor -> false
+    }
+    val mapViewRef = remember { mutableStateOf<MapView?>(null) }
+    var map by remember { mutableStateOf<MapLibreMap?>(null) }
+    val markers = remember { mutableListOf<Marker>() }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            val mv = mapViewRef.value ?: return@LifecycleEventObserver
+            when (event) {
+                Lifecycle.Event.ON_START -> mv.onStart()
+                Lifecycle.Event.ON_RESUME -> mv.onResume()
+                Lifecycle.Event.ON_PAUSE -> mv.onPause()
+                Lifecycle.Event.ON_STOP -> mv.onStop()
+                Lifecycle.Event.ON_DESTROY -> mv.onDestroy()
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            mapViewRef.value?.onDestroy()
+        }
+    }
+
+    // Refresh marker layer on sighting updates. We rebuild rather than diff:
+    // ~20 markers max, trivial cost, dodges the bookkeeping of "did this
+    // ICAO move or leave."
+    LaunchedEffect(sightings, map) {
+        val m = map ?: return@LaunchedEffect
+        markers.forEach { m.removeMarker(it) }
+        markers.clear()
+        sightings.forEach { s ->
+            val title = (s.callsign ?: s.icaoHex.uppercase()) +
+                String.format(Locale.US, " · %.1f km", s.distanceKm)
+            markers += m.addMarker(MarkerOptions().position(LatLng(s.lat, s.lon)).title(title))
+        }
+    }
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth().height(240.dp),
+    ) {
+        AndroidView(
+            factory = { ctx ->
+                MapLibre.getInstance(ctx)
+                MapView(ctx).apply {
+                    mapViewRef.value = this
+                    onCreate(null)
+                    getMapAsync { ml ->
+                        map = ml
+                        ml.setStyle(if (isDark) STYLE_POSITRON else STYLE_LIBERTY)
+                        ml.uiSettings.isAttributionEnabled = true
+                        ml.uiSettings.isLogoEnabled = false
+
+                        // Zoom approximate so the configured radius roughly
+                        // fills the viewport at startup. radius → zoom is
+                        // empirical (zoom 10 ≈ 50 km half-width at lat 45).
+                        val zoom = when {
+                            radiusKm <= 10 -> 11.5
+                            radiusKm <= 30 -> 10.0
+                            radiusKm <= 60 -> 9.0
+                            radiusKm <= 120 -> 8.0
+                            else -> 7.0
+                        }
+                        ml.cameraPosition = CameraPosition.Builder()
+                            .target(LatLng(centreLat, centreLon))
+                            .zoom(zoom)
+                            .build()
+
+                        // "Me" marker so the user can see where they are
+                        // relative to the planes. Different from the aircraft
+                        // markers — uses MapLibre's default icon (red pin).
+                        ml.addMarker(
+                            MarkerOptions()
+                                .position(LatLng(centreLat, centreLon))
+                                .title("You"),
+                        )
+                    }
+                }
+            },
+        )
+    }
+}
+
+private const val STYLE_LIBERTY = "https://tiles.openfreemap.org/styles/liberty"
+private const val STYLE_POSITRON = "https://tiles.openfreemap.org/styles/positron"
 
 @Composable
 private fun HeaderCard(
