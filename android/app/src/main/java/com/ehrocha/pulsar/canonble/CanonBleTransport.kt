@@ -269,7 +269,18 @@ class CanonBleTransport private constructor(
 
     /** Open the shutter for a bulb exposure. With AF: do a quick AF
      *  half-press first so the body has focus locked before we hold the
-     *  release. Caller must pair with [stopBulb] before the next op. */
+     *  release. Caller must pair with [stopBulb] before the next op.
+     *
+     *  We flip [bulbOpen] BEFORE the BLE write. The press write goes through
+     *  `writeNoResponse` which has a `deferred.await()` suspension point;
+     *  if the coroutine is cancelled there, the write may already have
+     *  been queued and reached the camera (camera enters DOWN state) but
+     *  the post-write `bulbOpen = true` would never run — and the finally
+     *  block's `stopBulb()` would early-return on the false flag, leaving
+     *  the body holding the shutter forever. Verified on R6 v0.372
+     *  ("every-other-shot" diagnostic). Setting the flag conservatively
+     *  means the finally always tries the release, which is harmless on
+     *  an already-released camera. */
     override suspend fun startBulb(af: Boolean) {
         if (!_connected.value) return
         if (af && !isSmart) {
@@ -277,15 +288,20 @@ class CanonBleTransport private constructor(
             delay(AF_HOLD_MS)
             client.writeControl(SHUTTER_RELEASE)
         }
-        pressShutter()
         bulbOpen = true
+        pressShutter()
     }
 
-    /** Close the shutter — idempotent. */
+    /** Close the shutter. Always attempts the release — the
+     *  previously-defensive `if (!bulbOpen) return` gate was masking a
+     *  bug where startBulb's cancellation left the flag false while the
+     *  camera was still in DOWN state. An extra `[00,02]` to an already-up
+     *  camera is a no-op on every body tested. */
     override suspend fun stopBulb() {
-        if (!bulbOpen) return
-        releaseShutter()
+        val wasOpen = bulbOpen
         bulbOpen = false
+        releaseShutter()
+        if (!wasOpen) CanonBleLog.d(TAG, "stopBulb: defensive release (bulbOpen was already false)")
     }
 
     /** Abort whatever's in flight. Used by viewmodel.stopFlow(). */
