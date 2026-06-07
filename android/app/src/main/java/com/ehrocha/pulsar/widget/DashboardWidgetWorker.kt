@@ -30,7 +30,27 @@ class DashboardWidgetWorker(
     override suspend fun doWork(): Result {
         return try {
             val manager = AstroDashboardManager(applicationContext)
-            manager.refresh(LocalDate.now())
+            val today = LocalDate.now()
+
+            // Prefer the location baked into the previous snapshot. Background
+            // workers on Android 10+ can't reach `getLastKnownLocation` without
+            // ACCESS_BACKGROUND_LOCATION, so the GPS-based refresh path bails
+            // silently and the widget's own refresh button never lands a new
+            // snapshot. The user has been in the app once already (or no
+            // snapshot would exist), so the cached lat/lon is fine.
+            val cached = DashboardSnapshotStore.load(applicationContext)
+            val cachedLoc = cached?.json
+                ?.let { if (manager.restoreState(it)) manager.state.value.location else null }
+            if (cachedLoc != null) {
+                manager.refreshForLocation(
+                    lat = cachedLoc.latitude,
+                    lon = cachedLoc.longitude,
+                    cityName = cachedLoc.cityName,
+                    date = today,
+                )
+            } else {
+                manager.refresh(today)
+            }
             val s = manager.state.value
             if (s.location != null && (s.moon != null || s.sun != null)) {
                 DashboardSnapshotStore.save(applicationContext, manager.serializeState())
