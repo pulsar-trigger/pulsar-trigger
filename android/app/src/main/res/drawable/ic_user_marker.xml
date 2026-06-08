@@ -1,25 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Simple person silhouette inside a pin shape. Used on the Aircraft Watch
-  map for the "you are here" marker.
+  User marker — small person silhouette on a blue disc. No pin teardrop:
+  the lat/lon is the marker's centre (MapLibre anchors at bitmap centre),
+  and the disc + person reads as "you are here" without dominating the
+  map the way the old pin shape did. Matches Google Maps' "blue dot"
+  convention while keeping the person glyph for at-a-glance recognition.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="64dp"
     android:height="64dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <!-- Pin teardrop -->
+    <!-- Outer disc -->
     <path
-        android:fillColor="#D32F2F"
+        android:fillColor="#1A73E8"
         android:strokeColor="#FFFFFF"
-        android:strokeWidth="0.6"
-        android:pathData="M12,2 C8.13,2 5,5.13 5,9 C5,14.25 12,22 12,22 C12,22 19,14.25 19,9 C19,5.13 15.87,2 12,2 Z" />
+        android:strokeWidth="1.0"
+        android:pathData="M12,12 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
     <!-- Head -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M12,6 m-1.6,0 a1.6,1.6 0 1,0 3.2,0 a1.6,1.6 0 1,0 -3.2,0" />
+        android:pathData="M12,9 m-1.7,0 a1.7,1.7 0 1,0 3.4,0 a1.7,1.7 0 1,0 -3.4,0" />
     <!-- Shoulders / body -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M9.2,11.2 C9.2,9.7 10.45,8.8 12,8.8 C13.55,8.8 14.8,9.7 14.8,11.2 L14.8,12.4 L9.2,12.4 Z" />
+        android:pathData="M9,15.4 C9,13.8 10.3,12.7 12,12.7 C13.7,12.7 15,13.8 15,15.4 L15,16.2 L9,16.2 Z" />
 </vector>

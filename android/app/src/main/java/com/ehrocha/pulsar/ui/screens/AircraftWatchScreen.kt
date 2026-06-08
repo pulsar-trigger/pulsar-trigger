@@ -6,6 +6,7 @@
 package com.ehrocha.pulsar.ui.screens
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ListAlt
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
@@ -99,6 +101,7 @@ fun AircraftWatchScreen(
     onSpottingLog: () -> Unit,
 ) {
     var selectedIcao by remember { mutableStateOf<String?>(null) }
+    var showPhotoTips by remember { mutableStateOf(false) }
     val rawSightings by vm.aircraftSightings.collectAsState()
     val showSunMoon by vm.aircraftWatchShowSunMoon.collectAsState()
     val watching by vm.aircraftWatching.collectAsState()
@@ -161,6 +164,12 @@ fun AircraftWatchScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showPhotoTips = true }) {
+                        Icon(
+                            Icons.Default.CameraAlt,
+                            contentDescription = stringResource(R.string.aircraft_photo_tips_title),
+                        )
+                    }
                     IconButton(onClick = onSpottingLog) {
                         Icon(
                             Icons.AutoMirrored.Filled.ListAlt,
@@ -224,6 +233,9 @@ fun AircraftWatchScreen(
                 liveMode = intervalSec == 0,
                 selectedIcao = selectedIcao,
                 showSunMoon = showSunMoon,
+                onMarkerSelect = { icao ->
+                    selectedIcao = if (selectedIcao == icao) null else icao
+                },
             )
 
             // List — takes the remaining vertical space. The bottom-sheet
@@ -271,6 +283,40 @@ fun AircraftWatchScreen(
             }
         }
     }
+    if (showPhotoTips) {
+        PhotoTipsDialog(onDismiss = { showPhotoTips = false })
+    }
+}
+
+/** Aviation-photography cheat sheet. Lives in one long localised string
+ *  per locale (`aircraft_photo_tips_body`) — keeps localisation manageable
+ *  and lets the writer arrange the prose to read naturally per language. */
+@Composable
+private fun PhotoTipsDialog(onDismiss: () -> Unit) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_dismiss))
+            }
+        },
+        title = {
+            Text(
+                stringResource(R.string.aircraft_photo_tips_title),
+                fontWeight = FontWeight.Bold,
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()),
+            ) {
+                Text(
+                    stringResource(R.string.aircraft_photo_tips_body),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        },
+    )
 }
 
 /** Embedded MapLibre map showing the user's centre plus a marker per
@@ -287,6 +333,7 @@ private fun AircraftMap(
     liveMode: Boolean = false,
     selectedIcao: String? = null,
     showSunMoon: Boolean = false,
+    onMarkerSelect: (String) -> Unit = {},
 ) {
     val isDark = when (LocalNightMode.current.value) {
         ThemeMode.Dark, ThemeMode.RedLight -> true
@@ -319,10 +366,10 @@ private fun AircraftMap(
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val iconFactory = remember(ctx) { IconFactory.getInstance(ctx) }
     // Rotated plane icons are expensive to build (drawable → bitmap → matrix
-    // rotate). Cache one per (heading-bucket, size-class) pair: 15° heading
-    // buckets × 4 size classes = up to 96 cache entries built lazily as
-    // they're needed. Visually indistinguishable from per-degree rotation.
-    val iconCache = remember { mutableMapOf<Pair<Int, AircraftSize>, Icon>() }
+    // rotate). Cache key = (heading-bucket, size-class, proximity-band):
+    // 15° heading buckets × 4 sizes × 3 proximity colours = up to 288
+    // cache entries, built lazily as they're seen.
+    val iconCache = remember { mutableMapOf<Triple<Int, AircraftSize, Int>, Icon>() }
 
     // Device compass heading — used to draw a directional cone over the
     // user pin so the user can see "the plane east of me is to my right
@@ -351,10 +398,13 @@ private fun AircraftMap(
                 .position(LatLng(centreLat, centreLon))
                 .icon(iconFactory.fromBitmap(coneBmp)),
         )
-        // 2) user pin on top → always visible regardless of fan direction
+        // 2) user pin on top → always visible regardless of fan direction.
+        // sizeScale 0.65 keeps it visibly smaller than aircraft markers so
+        // it doesn't dominate the map.
         val userBmp = rotatedAircraftBitmap(
             ctx,
             headingDeg = 0f,
+            sizeScale = 0.65f,
             drawableRes = R.drawable.ic_user_marker,
         )
         userMarker = m.addMarker(
@@ -401,6 +451,12 @@ private fun AircraftMap(
     // Past + future trail polylines for the selected aircraft.
     val trailHistory = remember { mutableMapOf<String, MutableList<LatLng>>() }
     val trailPolylines = remember { mutableListOf<Polyline>() }
+
+    // Track previous selection so we can pan back to the user pin when the
+    // user deselects (selected → null transition). Don't re-centre on
+    // every refresh — only on the transition, otherwise we'd fight the
+    // user's manual pan when nothing's selected.
+    var prevSelected by remember { mutableStateOf<String?>(null) }
 
     // Sun + moon markers. Computed once per minute (their positions don't
     // move fast at map zoom levels — daily motion is ~0.25°/min).
@@ -461,15 +517,17 @@ private fun AircraftMap(
             if (last == null ||
                 last.latitude != sel.lat || last.longitude != sel.lon) {
                 history += LatLng(sel.lat, sel.lon)
-                // Cap at 24 entries (~4 minutes of polls at 10s default) so
-                // the past trail stays meaningful but doesn't sprawl.
-                while (history.size > 24) history.removeAt(0)
+                // Cap at 60 entries (~10 minutes of polls at 10s default).
+                // Long enough for the past trail to be visible at zoomed-out
+                // levels, short enough to keep memory + render cost trivial.
+                while (history.size > 60) history.removeAt(0)
             }
 
-            // Past trail (solid yellow polyline). Append the current
+            // Past trail (solid cyan polyline). Append the current
             // dead-reckoned position as the line's *head* so the user sees
             // a trail immediately on selection — not after the second
-            // poll. Need at least 2 distinct points to draw a line.
+            // poll. Cyan reads better than yellow against both light
+            // and dark map tiles.
             val pastPoints = history.toMutableList()
             val nowPt = LatLng(selLat, selLon)
             if (pastPoints.lastOrNull()?.let {
@@ -481,15 +539,16 @@ private fun AircraftMap(
                 trailPolylines += m.addPolyline(
                     PolylineOptions()
                         .addAll(pastPoints)
-                        .color(android.graphics.Color.argb(220, 0xFF, 0xEB, 0x3B))
-                        .width(3.0f),
+                        .color(android.graphics.Color.argb(240, 0x00, 0xE5, 0xFF))
+                        .width(5.0f),
                 )
             }
 
-            // Future trail — 3 visible 10s segments with 10s gaps between,
-            // approximating a dashed line out to 50s ahead. If the
-            // transponder didn't report heading, derive one from the past
-            // trail's last two points so we can still extrapolate.
+            // Future trail — 6 visible 20s segments with 10s gaps between,
+            // projecting roughly 3 minutes ahead so the line stays visible
+            // when zoomed out. Falls back to a heading derived from the
+            // past trail's last two points if the transponder didn't
+            // report `true_track`.
             val effectiveHeading = sel.headingDeg ?: derivedHeading(history)
             val futureSegs = futureTrailSegments(sel, selLat, selLon, effectiveHeading)
             futureSegs.forEach { seg ->
@@ -497,8 +556,8 @@ private fun AircraftMap(
                     PolylineOptions()
                         .add(seg.first)
                         .add(seg.second)
-                        .color(android.graphics.Color.argb(180, 0xFF, 0xEB, 0x3B))
-                        .width(2.0f),
+                        .color(android.graphics.Color.argb(220, 0x00, 0xE5, 0xFF))
+                        .width(4.0f),
                 )
             }
 
@@ -518,7 +577,20 @@ private fun AircraftMap(
         } else {
             // Nothing selected → drop accumulated trail state to free memory.
             trailHistory.clear()
+            // Pan back to the user pin on the selected→null transition so
+            // the camera doesn't stay aimed at where the deselected
+            // aircraft was. `prevSelected` tracks the previous LaunchedEffect
+            // invocation's selection.
+            if (prevSelected != null) {
+                m.animateCamera(
+                    org.maplibre.android.camera.CameraUpdateFactory.newLatLng(
+                        LatLng(centreLat, centreLon),
+                    ),
+                    400,
+                )
+            }
         }
+        prevSelected = selectedIcao
 
         // Sun + moon markers, drawn under aircraft markers but above
         // highlight. Positioned at radiusKm × 0.85 from the user pin along
@@ -550,12 +622,24 @@ private fun AircraftMap(
                 String.format(Locale.US, " · %.1f km", s.distanceKm)
             val bucket = (((s.headingDeg ?: 0.0) / 15.0).toInt().mod(24)) * 15
             val size = aircraftSizeFor(s.typeCode, s.model)
-            val icon = iconCache.getOrPut(bucket to size) {
+            // Marker fill colour matches the row's proximity band so a
+            // plane that reads as "red" on the list also reads as red on
+            // the map. Compose Color → Android Color int via toArgb().
+            val tint = proximityColor(s.distanceKm, radiusKm).let {
+                android.graphics.Color.argb(
+                    (it.alpha * 255).toInt(),
+                    (it.red * 255).toInt(),
+                    (it.green * 255).toInt(),
+                    (it.blue * 255).toInt(),
+                )
+            }
+            val icon = iconCache.getOrPut(Triple(bucket, size, tint)) {
                 iconFactory.fromBitmap(
                     rotatedAircraftBitmap(
                         ctx,
                         headingDeg = bucket.toFloat(),
                         sizeScale = size.scale,
+                        tintColor = tint,
                     ),
                 )
             }
@@ -563,6 +647,7 @@ private fun AircraftMap(
                 MarkerOptions()
                     .position(LatLng(drawLat, drawLon))
                     .title(title)
+                    .snippet(s.icaoHex)  // used by onMarkerClickListener to identify which plane was tapped
                     .icon(icon),
             )
         }
@@ -599,6 +684,21 @@ private fun AircraftMap(
                             .zoom(zoom)
                             .build()
 
+                        // Tapping a plane marker selects the same way as
+                        // tapping its row in the list. Aircraft markers
+                        // carry their ICAO hex in `snippet`; the user pin
+                        // + heading cone + sun + moon have no snippet, so
+                        // we early-return for those.
+                        ml.setOnMarkerClickListener { marker ->
+                            val icao = marker.snippet
+                            if (!icao.isNullOrBlank()) {
+                                onMarkerSelect(icao)
+                                true   // consume — no info-window popup
+                            } else {
+                                false
+                            }
+                        }
+
                         // User pin + heading cone are added by the
                         // LaunchedEffect(map, deviceAzimuth) above — they
                         // need to re-stack on every azimuth change so the
@@ -626,19 +726,21 @@ private fun projectAlong(
     return LatLng(lat + dLat, lon + dLon)
 }
 
-/** Three visible 10s segments separated by 10s gaps = a dashed-looking
- *  60s predicted track. Skipped only if the body is essentially
- *  stationary; falls back to a heading derived from the past trail when
- *  the transponder didn't report `headingDeg` directly. */
+/** Six visible 20s segments separated by 10s gaps = a dashed-looking
+ *  ~3-minute predicted track. Projects far enough that the line stays
+ *  visible across the map even at zoomed-out levels. Skipped only if the
+ *  body is essentially stationary; falls back to a heading derived from
+ *  the past trail when the transponder didn't report `headingDeg`. */
 private fun futureTrailSegments(
     s: AircraftSighting, startLat: Double, startLon: Double, heading: Double?,
 ): List<Pair<LatLng, LatLng>> {
     val hdg = heading ?: return emptyList()
     val gs = s.groundSpeedKt ?: return emptyList()
     if (gs <= 0.5) return emptyList()  // stationary / data noise
-    // Build 3 visible segments at t = 0..10, 20..30, 40..50 seconds.
+    // 6 visible 20s segments at t = 0, 30, 60, 90, 120, 150 s; each runs
+    // for 20s, then a 10s gap before the next.
     val msPerSec = 1000.0
-    val visibleStarts = doubleArrayOf(0.0, 20.0, 40.0)
+    val visibleStarts = doubleArrayOf(0.0, 30.0, 60.0, 90.0, 120.0, 150.0)
     return visibleStarts.map { tStart ->
         val a = deadReckon(
             s.copy(lat = startLat, lon = startLon, headingDeg = hdg),
@@ -646,7 +748,7 @@ private fun futureTrailSegments(
         )
         val b = deadReckon(
             s.copy(lat = startLat, lon = startLon, headingDeg = hdg),
-            ((tStart + 10.0) * msPerSec).toLong(),
+            ((tStart + 20.0) * msPerSec).toLong(),
         )
         LatLng(a.first, a.second) to LatLng(b.first, b.second)
     }
@@ -776,22 +878,34 @@ private fun rememberDeviceAzimuth(): Int {
  *  rasterised onto a transparent canvas of fixed size so all marker
  *  bitmaps share dimensions — MapLibre anchors at the centre, so a
  *  smaller plane just has more transparent padding around it rather than
- *  shifting position. */
+ *  shifting position.
+ *
+ *  Optional [tintColor] applies a `SRC_IN` tint to the drawable before
+ *  rasterising — used to colour aircraft markers by proximity. */
 private fun rotatedAircraftBitmap(
     ctx: android.content.Context,
     headingDeg: Float,
     sizeScale: Float = 1f,
     @androidx.annotation.DrawableRes drawableRes: Int = R.drawable.ic_aircraft_marker,
+    tintColor: Int? = null,
 ): android.graphics.Bitmap {
     val drawable = androidx.core.content.ContextCompat.getDrawable(ctx, drawableRes)
         ?: error("drawable $drawableRes missing")
+    val workingDrawable = if (tintColor != null) {
+        val mutated = drawable.mutate()
+        androidx.core.graphics.drawable.DrawableCompat.setTint(mutated, tintColor)
+        androidx.core.graphics.drawable.DrawableCompat.setTintMode(
+            mutated, android.graphics.PorterDuff.Mode.SRC_IN,
+        )
+        mutated
+    } else drawable
     val canvasSize = 144  // pixels — large enough for HEAVY at scale 1.35
     val drawnSize = (96 * sizeScale).toInt().coerceAtLeast(24)
     val offset = (canvasSize - drawnSize) / 2
     val base = android.graphics.Bitmap.createBitmap(canvasSize, canvasSize, android.graphics.Bitmap.Config.ARGB_8888)
     android.graphics.Canvas(base).also { c ->
-        drawable.setBounds(offset, offset, offset + drawnSize, offset + drawnSize)
-        drawable.draw(c)
+        workingDrawable.setBounds(offset, offset, offset + drawnSize, offset + drawnSize)
+        workingDrawable.draw(c)
     }
     if (headingDeg == 0f) return base
     val matrix = android.graphics.Matrix().apply {
