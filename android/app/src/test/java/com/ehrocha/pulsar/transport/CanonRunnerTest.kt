@@ -44,11 +44,14 @@ class CanonRunnerTest {
             transport = t, shots = 3, exposureMs = 2_000L, intervalMs = 1_000L,
             startDelayMs = 0L, af = false, status = s,
         )
-        // setShutterMode(bulb=true), then 3× (startBulb, stopBulb),
-        // then one extra stopBulb from the finally block.
+        // setShutterMode(bulb=true), defensive stopBulb (v0.385 safety
+        // reset to clear any stuck-DOWN state from a prior session),
+        // then 3× (startBulb, stopBulb), then one extra stopBulb from
+        // the finally block.
         assertEquals(
             listOf(
                 "setShutterMode",
+                "stopBulb",
                 "startBulb", "stopBulb",
                 "startBulb", "stopBulb",
                 "startBulb", "stopBulb",
@@ -195,9 +198,10 @@ class CanonRunnerTest {
         )
         // Linear interp across 5 steps: 1000, 2000, 3000, 4000, 5000 = 15_000 ms total exposure.
         assertEquals(15_000L, testScheduler.currentTime - start)
-        // 5 startBulb + 5 stopBulb + 1 finally stopBulb = 11 bulb calls + 1 setShutterMode.
+        // 1 defensive stopBulb (v0.385 safety reset) + 5 startBulb
+        // + 5 stopBulb + 1 finally stopBulb = 7 stopBulb total, 5 startBulb.
         assertEquals(5, t.calls.count { it.tag == "startBulb" })
-        assertEquals(6, t.stopBulbCount)
+        assertEquals(7, t.stopBulbCount)
     }
 
     @Test

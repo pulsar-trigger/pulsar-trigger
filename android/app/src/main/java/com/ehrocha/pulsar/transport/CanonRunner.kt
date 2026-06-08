@@ -110,6 +110,14 @@ internal suspend fun runCanonBulb(
                        else startDelayMs + shots * (exposureMs + intervalMs) - intervalMs
 
     transport.setShutterMode(bulb = true)
+    // Defensive release before we start pressing. Belt and braces against a
+    // prior session leaving the body stuck DOWN — every transport's
+    // stopBulb() is idempotent (the wire-level [00,02] / SHUTTER_RELEASE is
+    // a no-op on an already-released camera), so this costs one write at
+    // session start and removes a whole class of "every-other-shot"
+    // surprise. Canon BLE additionally settles per [canonBleSettleIfNeeded].
+    runCatching { transport.stopBulb() }
+    canonBleSettleIfNeeded(transport)
     try {
         if (startDelayMs > 0) {
             status.value = status.value?.copy(
@@ -188,6 +196,9 @@ internal suspend fun runCanonRamp(
         throw IllegalStateException("Transport ${transport.kind} lacks bulb support")
     }
     transport.setShutterMode(bulb = true)
+    // Defensive release — see runCanonBulb for the same pattern.
+    runCatching { transport.stopBulb() }
+    canonBleSettleIfNeeded(transport)
     try {
         // Start delay before the first shot — used by the Camera Test
         // wizard to enforce a multi-second gap between diagnostic steps
