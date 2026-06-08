@@ -407,10 +407,10 @@ private fun AircraftMap(
     var sunMarker by remember { mutableStateOf<Marker?>(null) }
     var moonMarker by remember { mutableStateOf<Marker?>(null) }
     val sunIcon = remember(ctx) {
-        iconFactory.fromBitmap(rotatedAircraftBitmap(ctx, 0f, 1.2f, R.drawable.ic_sun_marker))
+        iconFactory.fromBitmap(rotatedAircraftBitmap(ctx, 0f, 1.6f, R.drawable.ic_sun_marker))
     }
     val moonIcon = remember(ctx) {
-        iconFactory.fromBitmap(rotatedAircraftBitmap(ctx, 0f, 1.2f, R.drawable.ic_moon_marker))
+        iconFactory.fromBitmap(rotatedAircraftBitmap(ctx, 0f, 1.6f, R.drawable.ic_moon_marker))
     }
     var sunMoonTick by remember { mutableStateOf(0L) }
     LaunchedEffect(showSunMoon) {
@@ -466,20 +466,32 @@ private fun AircraftMap(
                 while (history.size > 24) history.removeAt(0)
             }
 
-            // Past trail (solid yellow polyline through the history points).
-            if (history.size >= 2) {
+            // Past trail (solid yellow polyline). Append the current
+            // dead-reckoned position as the line's *head* so the user sees
+            // a trail immediately on selection — not after the second
+            // poll. Need at least 2 distinct points to draw a line.
+            val pastPoints = history.toMutableList()
+            val nowPt = LatLng(selLat, selLon)
+            if (pastPoints.lastOrNull()?.let {
+                    it.latitude != nowPt.latitude || it.longitude != nowPt.longitude
+                } != false) {
+                pastPoints += nowPt
+            }
+            if (pastPoints.size >= 2) {
                 trailPolylines += m.addPolyline(
                     PolylineOptions()
-                        .addAll(history.toList())
+                        .addAll(pastPoints)
                         .color(android.graphics.Color.argb(220, 0xFF, 0xEB, 0x3B))
                         .width(3.0f),
                 )
             }
 
             // Future trail — 3 visible 10s segments with 10s gaps between,
-            // approximating a dashed line out to 50s ahead. Skipped if the
-            // aircraft has no heading or ground speed (can't extrapolate).
-            val futureSegs = futureTrailSegments(sel, selLat, selLon)
+            // approximating a dashed line out to 50s ahead. If the
+            // transponder didn't report heading, derive one from the past
+            // trail's last two points so we can still extrapolate.
+            val effectiveHeading = sel.headingDeg ?: derivedHeading(history)
+            val futureSegs = futureTrailSegments(sel, selLat, selLon, effectiveHeading)
             futureSegs.forEach { seg ->
                 trailPolylines += m.addPolyline(
                     PolylineOptions()
@@ -514,6 +526,11 @@ private fun AircraftMap(
         // edge. Hidden when the body is below the horizon.
         if (showSunMoon) {
             val sm = computeSunMoonOnMap(centreLat, centreLon, radiusKm)
+            android.util.Log.i(
+                "AircraftWatch",
+                "sun/moon overlay: sun=${sm.sun?.let { "%.4f,%.4f".format(it.latitude, it.longitude) } ?: "BELOW HORIZON"} " +
+                    "moon=${sm.moon?.let { "%.4f,%.4f".format(it.latitude, it.longitude) } ?: "BELOW HORIZON"}",
+            )
             sm.sun?.let { latlng ->
                 sunMarker = m.addMarker(
                     MarkerOptions().position(latlng).icon(sunIcon).title("Sun"),
@@ -610,28 +627,44 @@ private fun projectAlong(
 }
 
 /** Three visible 10s segments separated by 10s gaps = a dashed-looking
- *  60s predicted track. Returns empty when heading or speed are missing
- *  (can't extrapolate without both). */
+ *  60s predicted track. Skipped only if the body is essentially
+ *  stationary; falls back to a heading derived from the past trail when
+ *  the transponder didn't report `headingDeg` directly. */
 private fun futureTrailSegments(
-    s: AircraftSighting, startLat: Double, startLon: Double,
+    s: AircraftSighting, startLat: Double, startLon: Double, heading: Double?,
 ): List<Pair<LatLng, LatLng>> {
-    val hdg = s.headingDeg ?: return emptyList()
+    val hdg = heading ?: return emptyList()
     val gs = s.groundSpeedKt ?: return emptyList()
-    if (gs <= 1.0) return emptyList()  // stationary / data noise
+    if (gs <= 0.5) return emptyList()  // stationary / data noise
     // Build 3 visible segments at t = 0..10, 20..30, 40..50 seconds.
     val msPerSec = 1000.0
     val visibleStarts = doubleArrayOf(0.0, 20.0, 40.0)
     return visibleStarts.map { tStart ->
         val a = deadReckon(
-            s.copy(lat = startLat, lon = startLon),
+            s.copy(lat = startLat, lon = startLon, headingDeg = hdg),
             (tStart * msPerSec).toLong(),
         )
         val b = deadReckon(
-            s.copy(lat = startLat, lon = startLon),
+            s.copy(lat = startLat, lon = startLon, headingDeg = hdg),
             ((tStart + 10.0) * msPerSec).toLong(),
         )
         LatLng(a.first, a.second) to LatLng(b.first, b.second)
     }
+}
+
+/** Approximate heading (degrees, 0=N) from the last two trail points.
+ *  Used as a fallback when the OpenSky sighting's `headingDeg` is null
+ *  (some transponders only report mode-S without an ADS-B track). */
+private fun derivedHeading(history: List<LatLng>): Double? {
+    if (history.size < 2) return null
+    val a = history[history.size - 2]
+    val b = history[history.size - 1]
+    val latRad = a.latitude * kotlin.math.PI / 180.0
+    val dLat = b.latitude - a.latitude
+    val dLon = (b.longitude - a.longitude) * kotlin.math.cos(latRad)
+    if (dLat == 0.0 && dLon == 0.0) return null
+    val deg = Math.toDegrees(kotlin.math.atan2(dLon, dLat))
+    return (deg + 360.0) % 360.0
 }
 
 /** Sun + moon positions projected onto the map around the user pin.

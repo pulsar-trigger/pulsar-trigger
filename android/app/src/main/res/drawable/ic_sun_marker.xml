@@ -1,23 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Sun marker for the Aircraft Watch map. Yellow disc with short rays so it
-  reads as "sun" at small marker sizes. Drawn at 96dp on a 24-unit viewbox.
+  Sun marker for the Aircraft Watch map. Each ray is a separate <path>
+  so we don't rely on multi-subpath M commands rendering correctly on
+  every Android vector-drawable parser. Bright yellow disc with a thick
+  outline so it reads on both light and dark map tiles.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="96dp"
     android:height="96dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <!-- Outer rays -->
-    <path
-        android:strokeColor="#FFC107"
-        android:strokeWidth="1.6"
-        android:fillColor="#00000000"
-        android:pathData="M12,2 L12,5 M12,19 L12,22 M2,12 L5,12 M19,12 L22,12 M5,5 L7,7 M17,17 L19,19 M5,19 L7,17 M17,7 L19,5" />
+    <!-- 8 rays around the disc -->
+    <path android:strokeColor="#FFC107" android:strokeWidth="1.6" android:fillColor="#00000000"
+        android:pathData="M12,1 L12,4" />
+    <path android:strokeColor="#FFC107" android:strokeWidth="1.6" android:fillColor="#00000000"
+        android:pathData="M12,20 L12,23" />
+    <path android:strokeColor="#FFC107" android:strokeWidth="1.6" android:fillColor="#00000000"
+        android:pathData="M1,12 L4,12" />
+    <path android:strokeColor="#FFC107" android:strokeWidth="1.6" android:fillColor="#00000000"
+        android:pathData="M20,12 L23,12" />
+    <path android:strokeColor="#FFC107" android:strokeWidth="1.6" android:fillColor="#00000000"
+        android:pathData="M4,4 L6,6" />
+    <path android:strokeColor="#FFC107" android:strokeWidth="1.6" android:fillColor="#00000000"
+        android:pathData="M18,18 L20,20" />
+    <path android:strokeColor="#FFC107" android:strokeWidth="1.6" android:fillColor="#00000000"
+        android:pathData="M4,20 L6,18" />
+    <path android:strokeColor="#FFC107" android:strokeWidth="1.6" android:fillColor="#00000000"
+        android:pathData="M18,6 L20,4" />
     <!-- Disc -->
     <path
-        android:fillColor="#FFC107"
-        android:strokeColor="#FF8F00"
-        android:strokeWidth="0.6"
-        android:pathData="M12,12 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+        android:fillColor="#FFD600"
+        android:strokeColor="#E65100"
+        android:strokeWidth="1.0"
+        android:pathData="M12,12 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" />
 </vector>
