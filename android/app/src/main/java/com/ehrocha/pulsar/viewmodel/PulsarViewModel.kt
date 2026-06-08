@@ -1848,6 +1848,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         _flowRunning.value = false
         _flowPaused.value = false
         _flowCurrentStep.value = -1
+        // Belt-and-braces release. The runner's NonCancellable finally
+        // already calls stopBulb — but for paths that bypass it (e.g.,
+        // the job was cancelled before it entered the run loop, or
+        // some future code stops the flow without going through the
+        // runner), this guarantees the camera doesn't sit holding the
+        // shutter. Idempotent on every transport.
+        runCatching { activeCameraTransport()?.stopBulb() }
     }
 
     fun disconnect() {
@@ -2384,6 +2391,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             _canonBleTransport.value?.stop()
             flowJob?.cancelAndJoin()
             flowJob = null
+            // Belt-and-braces release after cancellation. The runner's
+            // finally already fires stopBulb on cancel; this catches the
+            // edge case where the job was cancelled before it entered
+            // the runner (or transport.stop() saw bulbOpen=false and
+            // skipped the wire write). Idempotent on every transport.
+            runCatching { activeCameraTransport()?.stopBulb() }
             _status.update { it?.copy(state = DeviceState.IDLE, timeRemainingMs = 0L) }
         }
     }
