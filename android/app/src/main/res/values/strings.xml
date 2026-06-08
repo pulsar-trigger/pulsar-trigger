@@ -520,6 +520,8 @@
     <string name="aircraft_detail_position">Position</string>
     <string name="aircraft_info_button">More info</string>
     <string name="aircraft_show_sun_moon">Show sun &amp; moon on map</string>
+    <string name="aircraft_detail_suggested_lens">Suggested lens</string>
+    <string name="aircraft_detail_suggested_lens_value">~%1$d mm (full-frame)</string>
     <string name="aircraft_log_this">Log sighting</string>
     <string name="aircraft_log_added">Logged.</string>
     <string name="aircraft_photo_credit">Photo © %1$s / Planespotters.net (tap to open)</string>

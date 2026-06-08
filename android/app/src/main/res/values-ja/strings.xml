@@ -326,6 +326,8 @@
     <string name="aircraft_detail_position">位置</string>
     <string name="aircraft_info_button">詳細</string>
     <string name="aircraft_show_sun_moon">地図に太陽と月を表示</string>
+    <string name="aircraft_detail_suggested_lens">推奨レンズ</string>
+    <string name="aircraft_detail_suggested_lens_value">~%1$d mm（フルフレーム）</string>
     <string name="aircraft_log_this">記録する</string>
     <string name="aircraft_log_added">記録しました。</string>
     <string name="aircraft_photo_credit">写真 © %1$s / Planespotters.net（タップで開く）</string>

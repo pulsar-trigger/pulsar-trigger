@@ -326,6 +326,8 @@
     <string name="aircraft_detail_position">Posição</string>
     <string name="aircraft_info_button">Mais info</string>
     <string name="aircraft_show_sun_moon">Mostrar sol e lua no mapa</string>
+    <string name="aircraft_detail_suggested_lens">Lente sugerida</string>
+    <string name="aircraft_detail_suggested_lens_value">~%1$d mm (full-frame)</string>
     <string name="aircraft_log_this">Registrar avistamento</string>
     <string name="aircraft_log_added">Registrado.</string>
     <string name="aircraft_photo_credit">Foto © %1$s / Planespotters.net (toque para abrir)</string>

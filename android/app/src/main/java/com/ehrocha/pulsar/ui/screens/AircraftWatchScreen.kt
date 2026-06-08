@@ -652,6 +652,30 @@ private fun futureTrailSegments(
     }
 }
 
+/** Rough full-frame focal-length recommendation for the aircraft to occupy
+ *  ~30 % of the frame's horizontal width. Wingspan is keyed off the
+ *  AircraftSize class (typical span per category, not per-model — would
+ *  need a per-typecode table for that). Result is snapped to common lens
+ *  steps so it reads as a hint, not a precision calculation. APS-C users
+ *  divide by 1.5, MFT by 2. */
+internal fun recommendedFocalLengthMm(s: AircraftSighting): Int {
+    val wingspanM = when (com.ehrocha.pulsar.transport.aircraft.aircraftSizeFor(s.typeCode, s.model)) {
+        com.ehrocha.pulsar.transport.aircraft.AircraftSize.LIGHT  -> 10.0   // Cessna 172 ≈ 11 m, R44 ≈ 10 m
+        com.ehrocha.pulsar.transport.aircraft.AircraftSize.MEDIUM -> 35.0   // B737/A320 family
+        com.ehrocha.pulsar.transport.aircraft.AircraftSize.LARGE  -> 60.0   // B767/777, A330/350
+        com.ehrocha.pulsar.transport.aircraft.AircraftSize.HEAVY  -> 75.0   // B747-8 ≈ 68 m, A380 ≈ 80 m
+    }
+    val distM = s.distanceKm * 1000.0
+    val altM = (s.altitudeFt ?: 0.0) * 0.3048
+    val slantM = kotlin.math.sqrt(distM * distM + altM * altM)
+    if (slantM < 1.0) return 24
+    // 10.8 = (full-frame sensor width 36 mm) × (target fill 0.30). Small-angle
+    // approximation — fine because plane angles at spotter distances are <5°.
+    val raw = (10.8 * slantM / wingspanM).toInt()
+    val steps = intArrayOf(24, 35, 50, 85, 135, 200, 300, 400, 500, 600, 800, 1000, 1200, 1500, 2000)
+    return steps.firstOrNull { it >= raw } ?: steps.last()
+}
+
 /** Approximate heading (degrees, 0=N) from the last two trail points.
  *  Used as a fallback when the OpenSky sighting's `headingDeg` is null
  *  (some transponders only report mode-S without an ADS-B track). */
@@ -1181,6 +1205,15 @@ private fun AircraftDetailDialog(
                     })
                 DetailRow(stringResource(R.string.aircraft_detail_position),
                     String.format(Locale.US, "%.4f°, %.4f°", s.lat, s.lon))
+                Spacer(Modifier.height(4.dp))
+                // Suggested lens — derived from slant range + wingspan class.
+                // Hint, not a precision figure; the FF caveat helps users
+                // with crop-sensor bodies translate (÷1.5 APS-C, ÷2 MFT).
+                DetailRow(
+                    stringResource(R.string.aircraft_detail_suggested_lens),
+                    stringResource(R.string.aircraft_detail_suggested_lens_value,
+                        recommendedFocalLengthMm(s)),
+                )
             }
         },
     )
