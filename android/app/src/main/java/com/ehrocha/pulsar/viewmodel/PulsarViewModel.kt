@@ -3039,6 +3039,76 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }.getOrNull()
     }
 
+    /** Quality metadata for the Aircraft Watch fix. Lets the screen warn
+     *  the user when the underlying location is stale or imprecise — the
+     *  dashboard-cached path has no time/accuracy info (returns null for
+     *  both), so we read from the OS GPS provider directly. */
+    data class AircraftWatchLocationQuality(
+        val accuracyM: Float?,
+        val ageMs: Long?,
+    )
+
+    @SuppressLint("MissingPermission")
+    fun aircraftWatchLocationQuality(): AircraftWatchLocationQuality {
+        return runCatching {
+            val app = getApplication<Application>()
+            val lm = app.getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
+            val loc = lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+                ?: lm.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
+                ?: return AircraftWatchLocationQuality(null, null)
+            val age = System.currentTimeMillis() - loc.time
+            AircraftWatchLocationQuality(
+                accuracyM = if (loc.hasAccuracy()) loc.accuracy else null,
+                ageMs = age.coerceAtLeast(0L),
+            )
+        }.getOrDefault(AircraftWatchLocationQuality(null, null))
+    }
+
+    /** Trigger a fresh single-shot GPS read (Android-12+ uses
+     *  `getCurrentLocation`, older falls back to `requestSingleUpdate`).
+     *  When the new fix lands, push it through the dashboard so the
+     *  Aircraft Watch + Astro Dashboard share the same source of truth. */
+    @SuppressLint("MissingPermission")
+    fun refreshAircraftWatchGps(onDone: () -> Unit = {}) {
+        runCatching {
+            val app = getApplication<Application>()
+            val lm = app.getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
+            val provider = if (lm.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER))
+                android.location.LocationManager.GPS_PROVIDER
+            else android.location.LocationManager.NETWORK_PROVIDER
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                lm.getCurrentLocation(
+                    provider,
+                    /* cancellationSignal = */ null,
+                    /* executor = */ app.mainExecutor,
+                ) { loc ->
+                    if (loc != null) {
+                        viewModelScope.launch {
+                            dashboardManager.refreshForLocation(
+                                lat = loc.latitude, lon = loc.longitude,
+                                cityName = null,
+                                date = java.time.LocalDate.now(),
+                            )
+                            onDone()
+                        }
+                    } else onDone()
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                lm.requestSingleUpdate(provider, { loc ->
+                    viewModelScope.launch {
+                        dashboardManager.refreshForLocation(
+                            lat = loc.latitude, lon = loc.longitude,
+                            cityName = null,
+                            date = java.time.LocalDate.now(),
+                        )
+                        onDone()
+                    }
+                }, null)
+            }
+        }.onFailure { onDone() }
+    }
+
     fun startAircraftWatch() {
         if (_aircraftWatching.value) return
         val (lat, lon) = aircraftWatchLocation() ?: run {

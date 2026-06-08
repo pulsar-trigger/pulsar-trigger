@@ -104,9 +104,7 @@ fun AircraftWatchScreen(
 ) {
     var selectedIcao by remember { mutableStateOf<String?>(null) }
     var showPhotoTips by remember { mutableStateOf(false) }
-    // Lifted to screen level so the calibration banner above the map can
-    // observe accuracy. AircraftMap reads the azimuth via its own param.
-    val deviceCompass = rememberDeviceCompass()
+    var showCalibrationDialog by remember { mutableStateOf(false) }
     val rawSightings by vm.aircraftSightings.collectAsState()
     val showSunMoon by vm.aircraftWatchShowSunMoon.collectAsState()
     val watching by vm.aircraftWatching.collectAsState()
@@ -116,6 +114,11 @@ fun AircraftWatchScreen(
     val maxAltFt by vm.aircraftWatchMaxAltitudeFt.collectAsState()
     val intervalSec by vm.aircraftWatchIntervalSec.collectAsState()
     val location = vm.aircraftWatchLocation()
+    // Compass — must know user lat/lon to apply true-vs-magnetic declination.
+    val deviceCompass = rememberDeviceCompass(
+        userLat = location?.first,
+        userLon = location?.second,
+    )
     // Altitude filter is applied locally so the slider feels instant —
     // changing it doesn't wait for the next poll. Aircraft with no altitude
     // (typically ground traffic or transponders not reporting) pass through:
@@ -206,6 +209,8 @@ fun AircraftWatchScreen(
                     onIntervalChange = vm::setAircraftWatchIntervalSec,
                     showSunMoon = showSunMoon,
                     onShowSunMoonChange = vm::setAircraftWatchShowSunMoon,
+                    compassAccuracy = deviceCompass.accuracy,
+                    onShowCalibrate = { showCalibrationDialog = true },
                     watching = watching,
                     lastUpdateMs = lastUpdateMs,
                     providerName = vm.aircraftFeedName,
@@ -237,6 +242,34 @@ fun AircraftWatchScreen(
                 android.hardware.SensorManager.SENSOR_STATUS_UNRELIABLE
             if (needsCalibration && !calibrationDismissed) {
                 CompassCalibrationBanner(onDismiss = { calibrationDismissed = true })
+            }
+
+            // GPS-accuracy nudge — surfaces when the OS fix is older than
+            // 15 min OR less accurate than 200 m. Both are common signs
+            // of stale/cached location (indoors, on a long-running session,
+            // bad satellite lock). Refresh button forces a fresh GPS read.
+            var gpsBannerDismissed by remember { mutableStateOf(false) }
+            var gpsRefreshing by remember { mutableStateOf(false) }
+            val gpsQuality = remember(lastUpdateMs) { vm.aircraftWatchLocationQuality() }
+            val gpsBad = (gpsQuality.accuracyM ?: 0f) > 200f ||
+                (gpsQuality.ageMs ?: 0L) > 15 * 60_000L
+            if (gpsBad && !gpsBannerDismissed) {
+                GpsAccuracyBanner(
+                    accuracyM = gpsQuality.accuracyM,
+                    ageMs = gpsQuality.ageMs,
+                    refreshing = gpsRefreshing,
+                    onRefresh = {
+                        gpsRefreshing = true
+                        vm.refreshAircraftWatchGps {
+                            gpsRefreshing = false
+                            // Force a recompute by bumping a dependency-
+                            // adjacent key; the LaunchedEffect on lastUpdateMs
+                            // is sufficient because the dashboard refresh
+                            // also pokes other observers.
+                        }
+                    },
+                    onDismiss = { gpsBannerDismissed = true },
+                )
             }
 
             // Map — fixed height so the list still gets meaningful space
@@ -304,6 +337,46 @@ fun AircraftWatchScreen(
     if (showPhotoTips) {
         PhotoTipsDialog(onDismiss = { showPhotoTips = false })
     }
+    if (showCalibrationDialog) {
+        CompassCalibrationDialog(onDismiss = { showCalibrationDialog = false })
+    }
+}
+
+@Composable
+private fun compassAccuracyLabel(acc: Int): String = when (acc) {
+    android.hardware.SensorManager.SENSOR_STATUS_ACCURACY_HIGH ->
+        stringResource(R.string.aircraft_compass_acc_high)
+    android.hardware.SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM ->
+        stringResource(R.string.aircraft_compass_acc_medium)
+    android.hardware.SensorManager.SENSOR_STATUS_ACCURACY_LOW ->
+        stringResource(R.string.aircraft_compass_acc_low)
+    android.hardware.SensorManager.SENSOR_STATUS_UNRELIABLE ->
+        stringResource(R.string.aircraft_compass_acc_unreliable)
+    else -> stringResource(R.string.aircraft_compass_acc_unknown)
+}
+
+@Composable
+private fun CompassCalibrationDialog(onDismiss: () -> Unit) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_dismiss))
+            }
+        },
+        title = {
+            Text(
+                stringResource(R.string.aircraft_compass_calibrate),
+                fontWeight = FontWeight.Bold,
+            )
+        },
+        text = {
+            Text(
+                stringResource(R.string.aircraft_compass_calibrate_body),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        },
+    )
 }
 
 /** Aviation-photography cheat sheet. Lives in one long localised string
@@ -408,6 +481,7 @@ private fun AircraftMap(
         val coneBmp = rotatedAircraftBitmap(
             ctx,
             headingDeg = deviceAzimuth.toFloat(),
+            sizeScale = 1.5f,  // user asked for a bigger cone — easier to see
             drawableRes = R.drawable.ic_user_heading,
         )
         headingMarker = m.addMarker(
@@ -930,12 +1004,31 @@ private fun deadReckon(s: AircraftSighting, elapsedMs: Long): Pair<Double, Doubl
  *  figure-8 calibration dance. */
 private data class DeviceCompass(val azimuth: Int, val accuracy: Int)
 
+/** [userLat] / [userLon] enable magnetic-to-true declination correction.
+ *  The rotation-vector sensor reports azimuth relative to MAGNETIC north;
+ *  map tiles + every astro/photo app render against TRUE north. Without
+ *  the correction the heading cone points at the wrong city by exactly
+ *  the local magnetic declination — up to ~20° in some parts of the
+ *  world (Brazil, eastern Canada, southern Australia). */
 @Composable
-private fun rememberDeviceCompass(): DeviceCompass {
+private fun rememberDeviceCompass(userLat: Double?, userLon: Double?): DeviceCompass {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     var azimuthBucket by remember { mutableStateOf(0) }
     var accuracy by remember { mutableStateOf(android.hardware.SensorManager.SENSOR_STATUS_NO_CONTACT) }
-    DisposableEffect(ctx) {
+    // Recompute declination only when the user location changes meaningfully.
+    // The world-magnetic-model field varies smoothly — recomputing on every
+    // sensor tick would burn cycles for no visible accuracy gain.
+    val declination: Float = remember(userLat, userLon) {
+        if (userLat != null && userLon != null) {
+            runCatching {
+                android.hardware.GeomagneticField(
+                    userLat.toFloat(), userLon.toFloat(), 0f,
+                    System.currentTimeMillis(),
+                ).declination
+            }.getOrDefault(0f)
+        } else 0f
+    }
+    DisposableEffect(ctx, declination) {
         val sm = ctx.getSystemService(android.content.Context.SENSOR_SERVICE)
             as? android.hardware.SensorManager
         val sensor = sm?.getDefaultSensor(android.hardware.Sensor.TYPE_ROTATION_VECTOR)
@@ -945,11 +1038,12 @@ private fun rememberDeviceCompass(): DeviceCompass {
             override fun onSensorChanged(event: android.hardware.SensorEvent) {
                 android.hardware.SensorManager.getRotationMatrixFromVector(rotMat, event.values)
                 android.hardware.SensorManager.getOrientation(rotMat, orient)
-                val deg = Math.toDegrees(orient[0].toDouble())
-                val normalized = ((deg + 360.0) % 360.0).toInt()
-                val bucket = (normalized / 5) * 5
+                val magneticDeg = Math.toDegrees(orient[0].toDouble())
+                // Magnetic → true: add declination. Same convention every
+                // astronomy app uses. Wrap to [0, 360).
+                val trueDeg = ((magneticDeg + declination + 360.0) % 360.0).toInt()
+                val bucket = (trueDeg / 5) * 5
                 if (bucket != azimuthBucket) azimuthBucket = bucket
-                // event.accuracy is also reported here on some devices.
                 if (event.accuracy != accuracy) accuracy = event.accuracy
             }
             override fun onAccuracyChanged(sensor: android.hardware.Sensor?, acc: Int) {
@@ -1019,6 +1113,8 @@ private fun SettingsPanel(
     onIntervalChange: (Int) -> Unit,
     showSunMoon: Boolean,
     onShowSunMoonChange: (Boolean) -> Unit,
+    compassAccuracy: Int,
+    onShowCalibrate: () -> Unit,
     watching: Boolean,
     lastUpdateMs: Long,
     providerName: String,
@@ -1060,6 +1156,12 @@ private fun SettingsPanel(
             // altitudes and the slider feels jumpier.
             onChange = { onMaxAltChange((it / 1000f).roundToInt() * 1000) },
         )
+        Text(
+            stringResource(R.string.aircraft_watch_alt_hints),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 4.dp, top = 0.dp, bottom = 4.dp),
+        )
         // Interval slider: 0 is the "Live" sentinel (drag fully left), 5..60
         // are real seconds. Snap the unreachable 1..4 zone up to 5 — the
         // slider visually allows landing there but the value commits to 5.
@@ -1091,6 +1193,29 @@ private fun SettingsPanel(
                 checked = showSunMoon,
                 onCheckedChange = onShowSunMoonChange,
             )
+        }
+        // Compass status + manual calibrate. Always visible: the sensor
+        // accuracy banner above the map only fires when Android self-
+        // reports low confidence, but the compass can read consistently
+        // wrong (near metal / electronics) while the sensor still says
+        // "HIGH". Manual calibrate gives the user an escape hatch.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringResource(
+                    R.string.aircraft_compass_status,
+                    compassAccuracyLabel(compassAccuracy),
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            androidx.compose.material3.TextButton(onClick = onShowCalibrate) {
+                Text(stringResource(R.string.aircraft_compass_calibrate))
+            }
         }
     }
 }
@@ -1172,6 +1297,80 @@ private fun CompassCalibrationBanner(onDismiss: () -> Unit) {
                     Icons.Default.Close,
                     contentDescription = stringResource(R.string.dismiss),
                     tint = androidx.compose.ui.graphics.Color(0xFF7C5D00),
+                )
+            }
+        }
+    }
+}
+
+/** Orange banner shown when the OS GPS fix is stale (age > 15 min) or
+ *  imprecise (accuracy worse than 200 m). Lets the user trigger a fresh
+ *  single-shot GPS read. */
+@Composable
+private fun GpsAccuracyBanner(
+    accuracyM: Float?,
+    ageMs: Long?,
+    refreshing: Boolean,
+    onRefresh: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val detail = buildString {
+        accuracyM?.let { append("±", it.toInt(), " m") }
+        ageMs?.let {
+            if (isNotEmpty()) append(" · ")
+            val mins = (it / 60_000L).toInt()
+            append(if (mins < 60) "${mins}m" else "${mins / 60}h${mins % 60}m", " old")
+        }
+    }.ifBlank { "—" }
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = androidx.compose.ui.graphics.Color(0xFFFFCC80),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Default.FlightTakeoff,
+                contentDescription = null,
+                tint = androidx.compose.ui.graphics.Color(0xFF7C3E00),
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.aircraft_gps_warning),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = androidx.compose.ui.graphics.Color(0xFF5D2A00),
+                )
+                Text(
+                    detail,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = androidx.compose.ui.graphics.Color(0xFF7C3E00),
+                )
+            }
+            if (refreshing) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = androidx.compose.ui.graphics.Color(0xFF7C3E00),
+                )
+            } else {
+                androidx.compose.material3.TextButton(
+                    onClick = onRefresh,
+                ) {
+                    Text(
+                        stringResource(R.string.aircraft_gps_refresh),
+                        color = androidx.compose.ui.graphics.Color(0xFF5D2A00),
+                    )
+                }
+            }
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = stringResource(R.string.dismiss),
+                    tint = androidx.compose.ui.graphics.Color(0xFF7C3E00),
                 )
             }
         }

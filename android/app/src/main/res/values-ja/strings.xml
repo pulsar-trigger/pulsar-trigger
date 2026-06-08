@@ -329,6 +329,17 @@
     <string name="aircraft_detail_suggested_lens">推奨レンズ</string>
     <string name="aircraft_detail_suggested_lens_value">~%1$d mm（フルフレーム）</string>
     <string name="aircraft_compass_calibration">コンパスが未較正です — 端末を数回 8 の字に振って再較正してください。</string>
+    <string name="aircraft_gps_warning">GPS が古い、または精度が低い可能性があります。</string>
+    <string name="aircraft_gps_refresh">更新</string>
+    <string name="aircraft_watch_alt_hints">場周経路 ~1k · ヘリ &lt;3k · GA 3–10k · 進入 10–15k · 巡航 30–40k ft</string>
+    <string name="aircraft_compass_status">コンパス: %1$s</string>
+    <string name="aircraft_compass_acc_high">高</string>
+    <string name="aircraft_compass_acc_medium">中</string>
+    <string name="aircraft_compass_acc_low">低</string>
+    <string name="aircraft_compass_acc_unreliable">不安定</string>
+    <string name="aircraft_compass_acc_unknown">不明</string>
+    <string name="aircraft_compass_calibrate">較正</string>
+    <string name="aircraft_compass_calibrate_body">コーンが誤った方向を指している場合、コンパスを再較正してください：\n\n• 端末を水平に持つ。\n• 空中で大きな 8 の字を数回描き、端末を回転させる。\n• 3〜5 回繰り返す。\n\n金属、スピーカー、磁石、ACアダプタから離れる — 磁力計を歪めます。Pulsar は現在地に対する磁北→真北補正（偏角）をすでに適用しています。</string>
     <string name="aircraft_photo_tips_title">撮影のコツ</string>
     <string name="aircraft_photo_tips_body">基本設定\n• 絞り f/5.6–f/8\n• ISOはできるだけ低く — 明るい時は100–400、夕暮れは800–1600\n• AF-C（コンティニュアス）\n• 連写H\n• RAW形式\n• レンズIS / 流し撮りモードON\n\nエアショー（軍用機・アクロバット）\n• レンズ: 100–400 mm\n• シャッター: 1/1000–1/2000で止める\n• AF: トラッキング、フルエリア\n• コツ: 飛行ラインを予想して先にAFを置き、追う。\n\nエアショー（プロペラ機 - ワーバード等）\n• レンズ: 70–200 / 100–400 mm\n• シャッター: 1/200–1/500 — プロペラはブレるべき。速すぎると円盤が止まって死んだ感じになる。\n• 絞り: f/5.6–f/8\n• コツ: 機体を追って流し撮り。\n\n民間機（巡航高度）\n• レンズ: 400–800 mm（Pulsarの推奨レンズを活用）\n• シャッター: 1/500–1/1000\n• 絞り: f/6.3–f/8\n• コツ: 斜距離10 km以上は陽炎で甘くなる。朝・夕方が良い。\n\n空港スポッティング（着陸・離陸・タキシング）\n• レンズ: フェンス際 70–300 mm、滑走路端 400–600 mm\n• シャッター: 着陸・離陸 1/500–1/1000、タキシング 1/250\n• AF: 機首にシングルポイント、コンティニュアス\n• コツ: 太陽を背にして撮る — 順光の機体と青空が王道。</string>
     <string name="aircraft_log_this">記録する</string>

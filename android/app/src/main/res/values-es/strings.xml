@@ -329,6 +329,17 @@
     <string name="aircraft_detail_suggested_lens">Objetivo sugerido</string>
     <string name="aircraft_detail_suggested_lens_value">~%1$d mm (full-frame)</string>
     <string name="aircraft_compass_calibration">Brújula sin calibrar — mueve el móvil en forma de 8 varias veces para recalibrar.</string>
+    <string name="aircraft_gps_warning">El GPS puede estar desactualizado o impreciso.</string>
+    <string name="aircraft_gps_refresh">Actualizar</string>
+    <string name="aircraft_watch_alt_hints">Circuito ~1k · helicópteros &lt;3k · GA 3–10k · aproximación 10–15k · crucero 30–40k ft</string>
+    <string name="aircraft_compass_status">Brújula: %1$s</string>
+    <string name="aircraft_compass_acc_high">Alta</string>
+    <string name="aircraft_compass_acc_medium">Media</string>
+    <string name="aircraft_compass_acc_low">Baja</string>
+    <string name="aircraft_compass_acc_unreliable">No fiable</string>
+    <string name="aircraft_compass_acc_unknown">Desconocida</string>
+    <string name="aircraft_compass_calibrate">Calibrar</string>
+    <string name="aircraft_compass_calibrate_body">Si el cono apunta en la dirección equivocada, recalibra la brújula:\n\n• Sostén el móvil plano frente a ti.\n• Dibuja un 8 grande en el aire varias veces, girando el móvil.\n• Repite 3–5 veces.\n\nAléjate de metal, altavoces, imanes y cargadores — distorsionan el magnetómetro. Pulsar ya aplica la corrección de declinación magnética para tu ubicación.</string>
     <string name="aircraft_photo_tips_title">Consejos de fotografía</string>
     <string name="aircraft_photo_tips_body">Puntos de partida universales\n• Apertura f/5.6–f/8\n• ISO lo más bajo posible — 100–400 con buena luz, 800–1600 al anochecer\n• AF continuo (AF-C / AI Servo)\n• Disparo en ráfaga alta\n• Formato RAW\n• IS del objetivo / modo barrido activado\n\nJets de exhibición (militares / acrobáticos)\n• Objetivo: 100–400 mm\n• Velocidad: 1/1000–1/2000 para congelar\n• AF: tracking, área completa\n• Consejo: anticipa la línea de vuelo, preenfoca y sigue el avión.\n\nAviones de hélice (warbirds, T-6, P-51)\n• Objetivo: 70–200 o 100–400 mm\n• Velocidad: 1/200–1/500 — la hélice debe verse borrosa. Más rápido = disco congelado = aspecto muerto.\n• Apertura: f/5.6–f/8\n• Consejo: haz panning siguiendo el avión.\n\nVuelos comerciales (altitud de crucero)\n• Objetivo: 400–800 mm (el sugerido de Pulsar ayuda)\n• Velocidad: 1/500–1/1000\n• Apertura: f/6.3–f/8\n• Consejo: la calina térmica arruina las tomas a más de ~10 km en diagonal. Mejor por la mañana o tarde.\n\nSpotting en aeropuerto (aterrizaje / despegue / rodaje)\n• Objetivo: 70–300 mm cerca de la valla, 400–600 mm para los extremos de pista\n• Velocidad: 1/500–1/1000 aterrizaje/despegue, 1/250 rodaje\n• AF: punto único en la nariz, continuo\n• Consejo: dispara con el sol a tu espalda — avión iluminado de frente contra cielo azul es el estándar oro.</string>
     <string name="aircraft_log_this">Registrar avistamiento</string>

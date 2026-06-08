@@ -329,6 +329,17 @@
     <string name="aircraft_detail_suggested_lens">Empfohlenes Objektiv</string>
     <string name="aircraft_detail_suggested_lens_value">~%1$d mm (Vollformat)</string>
     <string name="aircraft_compass_calibration">Kompass unkalibriert — das Telefon einige Male in einer 8er-Bewegung schwenken, um neu zu kalibrieren.</string>
+    <string name="aircraft_gps_warning">GPS möglicherweise veraltet oder ungenau.</string>
+    <string name="aircraft_gps_refresh">Aktualisieren</string>
+    <string name="aircraft_watch_alt_hints">Platzrunde ~1k · Hubschrauber &lt;3k · GA 3–10k · Anflug 10–15k · Reiseflug 30–40k ft</string>
+    <string name="aircraft_compass_status">Kompass: %1$s</string>
+    <string name="aircraft_compass_acc_high">Hoch</string>
+    <string name="aircraft_compass_acc_medium">Mittel</string>
+    <string name="aircraft_compass_acc_low">Niedrig</string>
+    <string name="aircraft_compass_acc_unreliable">Unzuverlässig</string>
+    <string name="aircraft_compass_acc_unknown">Unbekannt</string>
+    <string name="aircraft_compass_calibrate">Kalibrieren</string>
+    <string name="aircraft_compass_calibrate_body">Wenn der Richtungskegel in die falsche Richtung zeigt, kalibriere den Kompass neu:\n\n• Telefon flach vor dir halten.\n• Eine große 8 in die Luft zeichnen, dabei das Telefon drehen.\n• 3–5 Mal wiederholen.\n\nAbstand zu Metall, Lautsprechern, Magneten und Netzteilen halten — sie verzerren den Magnetometer. Pulsar wendet bereits die magnetisch-zu-geographisch-Nord-Korrektur (Deklination) für deinen Standort an.</string>
     <string name="aircraft_photo_tips_title">Fototipps</string>
     <string name="aircraft_photo_tips_body">Allgemeine Ausgangswerte\n• Blende f/5.6–f/8 (auf den meisten Teles am schärfsten)\n• ISO so niedrig wie möglich — 100–400 bei gutem Licht, 800–1600 in der Dämmerung\n• Kontinuierlicher AF (AF-C / AI Servo)\n• Serienbild hoch\n• RAW-Format\n• Lens IS / Schwenk-Modus an\n\nAirshow-Jets (Militär / Kunstflug)\n• Objektiv: 100–400 mm\n• Belichtungszeit: 1/1000–1/2000 zum Einfrieren\n• AF: Tracking, Vollbild\n• Tipp: Flugbahn antizipieren, vorfokussieren und mitziehen.\n\nAirshow-Propellermaschinen (Warbirds, T-6, P-51)\n• Objektiv: 70–200 oder 100–400 mm\n• Belichtungszeit: 1/200–1/500 — Propeller muss verwischen. Schneller = starre Scheibe = leblose Wirkung.\n• Blende: f/5.6–f/8\n• Tipp: Mit der Flugbahn mitziehen; Rumpf bleibt scharf, Propeller verwischt.\n\nVerkehrsflugzeuge (Reiseflughöhe)\n• Objektiv: 400–800 mm (Pulsars Objektivempfehlung hilft)\n• Belichtungszeit: 1/500–1/1000 (Winkelgeschwindigkeit ist gering)\n• Blende: f/6.3–f/8\n• Tipp: Hitzeflimmern killt Aufnahmen jenseits ~10 km Schrägdistanz. Morgens / spätnachmittags ist die Luft ruhiger.\n\nFlughafen-Spotting (Landung / Start / Rollen)\n• Objektiv: 70–300 mm am Zaun, 400–600 mm für die Pistenenden\n• Belichtungszeit: 1/500–1/1000 für Landung/Start, 1/250 fürs Rollen\n• AF: Einzelfeld auf die Nase, kontinuierlich\n• Tipp: Sonne im Rücken — frontal beleuchtete Flugzeuge vor blauem Himmel sind der Goldstandard.</string>
     <string name="aircraft_log_this">Sichtung loggen</string>
