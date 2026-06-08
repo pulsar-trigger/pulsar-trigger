@@ -324,6 +324,7 @@
     <string name="aircraft_detail_heading">Rumo</string>
     <string name="aircraft_detail_vertical">Taxa vertical</string>
     <string name="aircraft_detail_position">Posição</string>
+    <string name="aircraft_info_button">Mais info</string>
     <string name="aircraft_log_this">Registrar avistamento</string>
     <string name="aircraft_log_added">Registrado.</string>
     <string name="aircraft_photo_credit">Foto © %1$s / Planespotters.net (toque para abrir)</string>

@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.FlightTakeoff
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.CircularProgressIndicator
@@ -95,6 +96,7 @@ fun AircraftWatchScreen(
     onBack: () -> Unit,
     onSpottingLog: () -> Unit,
 ) {
+    var selectedIcao by remember { mutableStateOf<String?>(null) }
     val rawSightings by vm.aircraftSightings.collectAsState()
     val watching by vm.aircraftWatching.collectAsState()
     val error by vm.aircraftWatchError.collectAsState()
@@ -207,6 +209,7 @@ fun AircraftWatchScreen(
                 radiusKm = radiusKm,
                 sightings = sightings,
                 liveMode = intervalSec == 0,
+                selectedIcao = selectedIcao,
             )
 
             // List — takes the remaining vertical space. The bottom-sheet
@@ -239,6 +242,14 @@ fun AircraftWatchScreen(
                                 radiusKm = radiusKm,
                                 userLat = location.first,
                                 userLon = location.second,
+                                selected = selectedIcao == s.icaoHex,
+                                onSelectOnMap = {
+                                    // Toggle: tapping the already-selected
+                                    // row deselects (gets the ring off the
+                                    // map without an extra control).
+                                    selectedIcao = if (selectedIcao == s.icaoHex) null
+                                                   else s.icaoHex
+                                },
                             )
                         }
                     }
@@ -260,6 +271,7 @@ private fun AircraftMap(
     radiusKm: Int,
     sightings: List<AircraftSighting>,
     liveMode: Boolean = false,
+    selectedIcao: String? = null,
 ) {
     val isDark = when (LocalNightMode.current.value) {
         ThemeMode.Dark, ThemeMode.RedLight -> true
@@ -356,14 +368,52 @@ private fun AircraftMap(
         }
     }
 
+    // Highlight ring around the user-selected aircraft. Separate marker
+    // tracked alongside the regular plane markers; rebuilt whenever the
+    // selection changes OR the underlying sighting moves (live tick).
+    var highlightMarker by remember { mutableStateOf<Marker?>(null) }
+    val highlightIcon = remember(ctx) {
+        iconFactory.fromBitmap(
+            rotatedAircraftBitmap(
+                ctx,
+                headingDeg = 0f,
+                sizeScale = 1.5f,
+                drawableRes = R.drawable.ic_aircraft_highlight,
+            ),
+        )
+    }
+
     // Refresh marker layer on sighting updates (real polls) and on liveTick
     // (between-poll dead reckoning). We rebuild rather than diff: ~20
     // markers max, trivial cost, dodges the bookkeeping of "did this
     // ICAO move or leave."
-    LaunchedEffect(sightings, map, liveTick) {
+    LaunchedEffect(sightings, map, liveTick, selectedIcao) {
         val m = map ?: return@LaunchedEffect
         markers.forEach { m.removeMarker(it) }
         markers.clear()
+        highlightMarker?.let { m.removeMarker(it) }
+        highlightMarker = null
+
+        // Highlight goes on FIRST so the plane marker draws on top of it.
+        val sel = selectedIcao?.let { hex -> sightings.firstOrNull { it.icaoHex == hex } }
+        if (sel != null) {
+            val (selLat, selLon) =
+                if (liveMode) deadReckon(sel, liveTick) else sel.lat to sel.lon
+            highlightMarker = m.addMarker(
+                MarkerOptions()
+                    .position(LatLng(selLat, selLon))
+                    .icon(highlightIcon),
+            )
+            // Pan to keep the selection in view, but don't zoom (annoying
+            // when the user is exploring a wider area).
+            m.animateCamera(
+                org.maplibre.android.camera.CameraUpdateFactory.newLatLng(
+                    LatLng(selLat, selLon),
+                ),
+                400,
+            )
+        }
+
         sightings.forEach { s ->
             val (drawLat, drawLon) =
                 if (liveMode) deadReckon(s, liveTick) else s.lat to s.lon
@@ -675,18 +725,28 @@ private fun AircraftRow(
     radiusKm: Int,
     userLat: Double,
     userLon: Double,
+    selected: Boolean,
+    onSelectOnMap: () -> Unit,
 ) {
     var showDetails by remember { mutableStateOf(false) }
     val accent = proximityColor(s.distanceKm, radiusKm)
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val rowBadges = aircraftBadges(s)
+    // Selected rows get a stronger background + a leading accent so the
+    // tap-to-highlight feedback is obvious without a separate selection
+    // chip. The colour matches the map's highlight ring.
+    val bgAlpha = if (selected) 0.28f else 0.13f
     Surface(
-        onClick = { showDetails = true },
+        onClick = onSelectOnMap,
         shape = RoundedCornerShape(12.dp),
         // Tinted background lets the proximity band read at a glance without
         // shouting — the colour saturation stays around the existing
         // dashboard-card palette levels.
-        color = accent.copy(alpha = 0.13f),
+        color = accent.copy(alpha = bgAlpha),
+        border = if (selected) androidx.compose.foundation.BorderStroke(
+            2.dp,
+            androidx.compose.ui.graphics.Color(0xFFFFEB3B),
+        ) else null,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
@@ -741,6 +801,18 @@ private fun AircraftRow(
                     "${bearingArrow(s.bearingDeg)} ${s.bearingDeg.roundToInt()}°",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            // Info button — the secondary action, since the row body now
+            // selects-on-map. Tap opens the full detail dialog.
+            IconButton(
+                onClick = { showDetails = true },
+                modifier = Modifier.padding(start = 4.dp),
+            ) {
+                Icon(
+                    Icons.Default.Info,
+                    contentDescription = stringResource(R.string.aircraft_info_button),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

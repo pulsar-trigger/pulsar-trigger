@@ -324,6 +324,7 @@
     <string name="aircraft_detail_heading">Kurs</string>
     <string name="aircraft_detail_vertical">Steigrate</string>
     <string name="aircraft_detail_position">Position</string>
+    <string name="aircraft_info_button">Mehr Info</string>
     <string name="aircraft_log_this">Sichtung loggen</string>
     <string name="aircraft_log_added">Eingetragen.</string>
     <string name="aircraft_photo_credit">Foto © %1$s / Planespotters.net (tippen zum Öffnen)</string>
