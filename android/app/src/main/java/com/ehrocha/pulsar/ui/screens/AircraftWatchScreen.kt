@@ -73,6 +73,8 @@ import org.maplibre.android.annotations.IconFactory
 import org.maplibre.android.annotations.Icon
 import org.maplibre.android.annotations.Marker
 import org.maplibre.android.annotations.MarkerOptions
+import org.maplibre.android.annotations.Polyline
+import org.maplibre.android.annotations.PolylineOptions
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
@@ -98,6 +100,7 @@ fun AircraftWatchScreen(
 ) {
     var selectedIcao by remember { mutableStateOf<String?>(null) }
     val rawSightings by vm.aircraftSightings.collectAsState()
+    val showSunMoon by vm.aircraftWatchShowSunMoon.collectAsState()
     val watching by vm.aircraftWatching.collectAsState()
     val error by vm.aircraftWatchError.collectAsState()
     val lastUpdateMs by vm.aircraftWatchLastUpdateMs.collectAsState()
@@ -111,6 +114,14 @@ fun AircraftWatchScreen(
     // they're the most interesting subjects for spotters anyway.
     val sightings = androidx.compose.runtime.remember(rawSightings, maxAltFt) {
         rawSightings.filter { it.altitudeFt == null || it.altitudeFt <= maxAltFt }
+    }
+
+    // Auto-deselect when the selected aircraft drops out of range — keeps
+    // a stale highlight ring + trails from sticking around pointing at
+    // nothing on the map.
+    LaunchedEffect(sightings, selectedIcao) {
+        val sel = selectedIcao ?: return@LaunchedEffect
+        if (sightings.none { it.icaoHex == sel }) selectedIcao = null
     }
 
     // Auto-start on entry, stop on dispose. Mirrors how the Canon BLE setup
@@ -179,6 +190,8 @@ fun AircraftWatchScreen(
                     onMaxAltChange = vm::setAircraftWatchMaxAltitudeFt,
                     intervalSec = intervalSec,
                     onIntervalChange = vm::setAircraftWatchIntervalSec,
+                    showSunMoon = showSunMoon,
+                    onShowSunMoonChange = vm::setAircraftWatchShowSunMoon,
                     watching = watching,
                     lastUpdateMs = lastUpdateMs,
                     providerName = vm.aircraftFeedName,
@@ -210,6 +223,7 @@ fun AircraftWatchScreen(
                 sightings = sightings,
                 liveMode = intervalSec == 0,
                 selectedIcao = selectedIcao,
+                showSunMoon = showSunMoon,
             )
 
             // List — takes the remaining vertical space. The bottom-sheet
@@ -272,6 +286,7 @@ private fun AircraftMap(
     sightings: List<AircraftSighting>,
     liveMode: Boolean = false,
     selectedIcao: String? = null,
+    showSunMoon: Boolean = false,
 ) {
     val isDark = when (LocalNightMode.current.value) {
         ThemeMode.Dark, ThemeMode.RedLight -> true
@@ -383,22 +398,98 @@ private fun AircraftMap(
         )
     }
 
+    // Past + future trail polylines for the selected aircraft.
+    val trailHistory = remember { mutableMapOf<String, MutableList<LatLng>>() }
+    val trailPolylines = remember { mutableListOf<Polyline>() }
+
+    // Sun + moon markers. Computed once per minute (their positions don't
+    // move fast at map zoom levels — daily motion is ~0.25°/min).
+    var sunMarker by remember { mutableStateOf<Marker?>(null) }
+    var moonMarker by remember { mutableStateOf<Marker?>(null) }
+    val sunIcon = remember(ctx) {
+        iconFactory.fromBitmap(rotatedAircraftBitmap(ctx, 0f, 1.2f, R.drawable.ic_sun_marker))
+    }
+    val moonIcon = remember(ctx) {
+        iconFactory.fromBitmap(rotatedAircraftBitmap(ctx, 0f, 1.2f, R.drawable.ic_moon_marker))
+    }
+    var sunMoonTick by remember { mutableStateOf(0L) }
+    LaunchedEffect(showSunMoon) {
+        if (!showSunMoon) {
+            sunMoonTick = 0L
+            return@LaunchedEffect
+        }
+        while (true) {
+            sunMoonTick = System.currentTimeMillis()
+            kotlinx.coroutines.delay(60_000L)
+        }
+    }
+
     // Refresh marker layer on sighting updates (real polls) and on liveTick
     // (between-poll dead reckoning). We rebuild rather than diff: ~20
     // markers max, trivial cost, dodges the bookkeeping of "did this
     // ICAO move or leave."
-    LaunchedEffect(sightings, map, liveTick, selectedIcao) {
+    LaunchedEffect(sightings, map, liveTick, selectedIcao, sunMoonTick, showSunMoon) {
         val m = map ?: return@LaunchedEffect
         markers.forEach { m.removeMarker(it) }
         markers.clear()
         highlightMarker?.let { m.removeMarker(it) }
         highlightMarker = null
+        trailPolylines.forEach { m.removePolyline(it) }
+        trailPolylines.clear()
+        sunMarker?.let { m.removeMarker(it) }
+        sunMarker = null
+        moonMarker?.let { m.removeMarker(it) }
+        moonMarker = null
 
-        // Highlight goes on FIRST so the plane marker draws on top of it.
+        // Selection bookkeeping: clear trail history for ICAOs that aren't
+        // selected any more, so memory doesn't grow forever as the user
+        // taps through different aircraft.
+        trailHistory.keys.filter { it != selectedIcao }.forEach { trailHistory.remove(it) }
+
+        // Highlight + trails go on FIRST so the plane marker draws on top.
         val sel = selectedIcao?.let { hex -> sightings.firstOrNull { it.icaoHex == hex } }
         if (sel != null) {
             val (selLat, selLon) =
                 if (liveMode) deadReckon(sel, liveTick) else sel.lat to sel.lon
+
+            // Append current REAL position (not dead-reckoned) to the past
+            // trail when we're on a fresh poll. liveTick changes more often
+            // than the actual sighting list, so only append when the
+            // sighting reference itself moves.
+            val history = trailHistory.getOrPut(sel.icaoHex) { mutableListOf() }
+            val last = history.lastOrNull()
+            if (last == null ||
+                last.latitude != sel.lat || last.longitude != sel.lon) {
+                history += LatLng(sel.lat, sel.lon)
+                // Cap at 24 entries (~4 minutes of polls at 10s default) so
+                // the past trail stays meaningful but doesn't sprawl.
+                while (history.size > 24) history.removeAt(0)
+            }
+
+            // Past trail (solid yellow polyline through the history points).
+            if (history.size >= 2) {
+                trailPolylines += m.addPolyline(
+                    PolylineOptions()
+                        .addAll(history.toList())
+                        .color(android.graphics.Color.argb(220, 0xFF, 0xEB, 0x3B))
+                        .width(3.0f),
+                )
+            }
+
+            // Future trail — 3 visible 10s segments with 10s gaps between,
+            // approximating a dashed line out to 50s ahead. Skipped if the
+            // aircraft has no heading or ground speed (can't extrapolate).
+            val futureSegs = futureTrailSegments(sel, selLat, selLon)
+            futureSegs.forEach { seg ->
+                trailPolylines += m.addPolyline(
+                    PolylineOptions()
+                        .add(seg.first)
+                        .add(seg.second)
+                        .color(android.graphics.Color.argb(180, 0xFF, 0xEB, 0x3B))
+                        .width(2.0f),
+                )
+            }
+
             highlightMarker = m.addMarker(
                 MarkerOptions()
                     .position(LatLng(selLat, selLon))
@@ -412,6 +503,27 @@ private fun AircraftMap(
                 ),
                 400,
             )
+        } else {
+            // Nothing selected → drop accumulated trail state to free memory.
+            trailHistory.clear()
+        }
+
+        // Sun + moon markers, drawn under aircraft markers but above
+        // highlight. Positioned at radiusKm × 0.85 from the user pin along
+        // each body's azimuth so they sit visibly inside the search circle
+        // edge. Hidden when the body is below the horizon.
+        if (showSunMoon) {
+            val sm = computeSunMoonOnMap(centreLat, centreLon, radiusKm)
+            sm.sun?.let { latlng ->
+                sunMarker = m.addMarker(
+                    MarkerOptions().position(latlng).icon(sunIcon).title("Sun"),
+                )
+            }
+            sm.moon?.let { latlng ->
+                moonMarker = m.addMarker(
+                    MarkerOptions().position(latlng).icon(moonIcon).title("Moon"),
+                )
+            }
         }
 
         sightings.forEach { s ->
@@ -483,6 +595,69 @@ private fun AircraftMap(
 
 private const val STYLE_LIBERTY = "https://tiles.openfreemap.org/styles/liberty"
 private const val STYLE_POSITRON = "https://tiles.openfreemap.org/styles/positron"
+
+/** Project a position [distanceM] along a great-circle bearing of
+ *  [bearingDeg] from (lat, lon). Flat-earth approximation — fine for
+ *  the kilometre-scale projections we use on the Aircraft Watch map. */
+private fun projectAlong(
+    lat: Double, lon: Double, bearingDeg: Double, distanceM: Double,
+): LatLng {
+    val brgRad = bearingDeg * kotlin.math.PI / 180.0
+    val latRad = lat * kotlin.math.PI / 180.0
+    val dLat = (distanceM / 111_111.0) * kotlin.math.cos(brgRad)
+    val dLon = (distanceM / (111_111.0 * kotlin.math.cos(latRad))) * kotlin.math.sin(brgRad)
+    return LatLng(lat + dLat, lon + dLon)
+}
+
+/** Three visible 10s segments separated by 10s gaps = a dashed-looking
+ *  60s predicted track. Returns empty when heading or speed are missing
+ *  (can't extrapolate without both). */
+private fun futureTrailSegments(
+    s: AircraftSighting, startLat: Double, startLon: Double,
+): List<Pair<LatLng, LatLng>> {
+    val hdg = s.headingDeg ?: return emptyList()
+    val gs = s.groundSpeedKt ?: return emptyList()
+    if (gs <= 1.0) return emptyList()  // stationary / data noise
+    // Build 3 visible segments at t = 0..10, 20..30, 40..50 seconds.
+    val msPerSec = 1000.0
+    val visibleStarts = doubleArrayOf(0.0, 20.0, 40.0)
+    return visibleStarts.map { tStart ->
+        val a = deadReckon(
+            s.copy(lat = startLat, lon = startLon),
+            (tStart * msPerSec).toLong(),
+        )
+        val b = deadReckon(
+            s.copy(lat = startLat, lon = startLon),
+            ((tStart + 10.0) * msPerSec).toLong(),
+        )
+        LatLng(a.first, a.second) to LatLng(b.first, b.second)
+    }
+}
+
+/** Sun + moon positions projected onto the map around the user pin.
+ *  Distance is `radiusKm × 0.85` so the markers sit just inside the
+ *  search circle edge. Returns null for whichever body is below the
+ *  horizon at the user's location right now. */
+private data class SunMoonOnMap(val sun: LatLng?, val moon: LatLng?)
+
+private fun computeSunMoonOnMap(
+    centreLat: Double, centreLon: Double, radiusKm: Int,
+): SunMoonOnMap {
+    val now = java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC)
+    val date = now.toLocalDate()
+    val utcHour = now.hour + now.minute / 60.0 + now.second / 3600.0
+    val lst = com.ehrocha.pulsar.astro.AstroCalculator.lst(date, utcHour, centreLon)
+    val (sunRa, sunDec) = com.ehrocha.pulsar.astro.AstroCalculator.sunPosition(date)
+    val sunAlt = com.ehrocha.pulsar.astro.AstroCalculator.altitude(centreLat, sunDec, lst - sunRa)
+    val sunAz = com.ehrocha.pulsar.astro.AstroCalculator.azimuth(centreLat, sunDec, lst - sunRa)
+    val (moonRa, moonDec) = com.ehrocha.pulsar.astro.AstroCalculator.moonPosition(date, utcHour)
+    val moonAlt = com.ehrocha.pulsar.astro.AstroCalculator.altitude(centreLat, moonDec, lst - moonRa)
+    val moonAz = com.ehrocha.pulsar.astro.AstroCalculator.azimuth(centreLat, moonDec, lst - moonRa)
+    val distM = radiusKm * 1000.0 * 0.85
+    val sun = if (sunAlt > 0) projectAlong(centreLat, centreLon, sunAz, distM) else null
+    val moon = if (moonAlt > 0) projectAlong(centreLat, centreLon, moonAz, distM) else null
+    return SunMoonOnMap(sun, moon)
+}
 
 /** Dead-reckon a sighting forward from its last polled position by
  *  [elapsedMs]. Uses heading + ground speed; returns the original position
@@ -578,6 +753,8 @@ private fun SettingsPanel(
     onMaxAltChange: (Int) -> Unit,
     intervalSec: Int,
     onIntervalChange: (Int) -> Unit,
+    showSunMoon: Boolean,
+    onShowSunMoonChange: (Boolean) -> Unit,
     watching: Boolean,
     lastUpdateMs: Long,
     providerName: String,
@@ -633,6 +810,24 @@ private fun SettingsPanel(
                 onIntervalChange(if (r in 1..4) 5 else r)
             },
         )
+        // Sun / moon overlay toggle. Below the sliders so it doesn't push
+        // the more-commonly-used controls down.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringResource(R.string.aircraft_show_sun_moon),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            androidx.compose.material3.Switch(
+                checked = showSunMoon,
+                onCheckedChange = onShowSunMoonChange,
+            )
+        }
     }
 }
 

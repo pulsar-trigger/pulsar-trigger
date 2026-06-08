@@ -286,6 +286,20 @@ object AstroCalculator {
         return Math.toDegrees(asin(sin(lat) * sin(dec) + cos(lat) * cos(dec) * cos(ha)))
     }
 
+    /** Azimuth of a celestial object (degrees, 0 = north, 90 = east).
+     *  Used by Aircraft Watch to project the sun/moon onto the map as
+     *  directional markers around the user pin. */
+    fun azimuth(latDeg: Double, decDeg: Double, haDeg: Double): Double {
+        val lat = Math.toRadians(latDeg)
+        val dec = Math.toRadians(decDeg)
+        val ha = Math.toRadians(haDeg)
+        val sinAlt = sin(lat) * sin(dec) + cos(lat) * cos(dec) * cos(ha)
+        val alt = asin(sinAlt)
+        val sinA = -sin(ha) * cos(dec) / cos(alt)
+        val cosA = (sin(dec) - sinAlt * sin(lat)) / (cos(alt) * cos(lat))
+        return ((Math.toDegrees(atan2(sinA, cosA)) + 360.0) % 360.0)
+    }
+
     /** Local Sidereal Time in degrees. */
     fun lst(date: LocalDate, utcHours: Double, lonDeg: Double): Double {
         val d = daysSinceJ2000(date) + utcHours / 24.0

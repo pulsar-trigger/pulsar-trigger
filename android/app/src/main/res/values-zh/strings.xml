@@ -327,6 +327,7 @@
     <string name="aircraft_detail_vertical">垂直速率</string>
     <string name="aircraft_detail_position">位置</string>
     <string name="aircraft_info_button">更多信息</string>
+    <string name="aircraft_show_sun_moon">在地图上显示太阳和月亮</string>
     <string name="aircraft_log_this">记录此次观察</string>
     <string name="aircraft_log_added">已记录。</string>
     <string name="aircraft_photo_credit">照片 © %1$s / Planespotters.net（点击打开）</string>

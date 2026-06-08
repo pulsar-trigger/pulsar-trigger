@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Sun marker for the Aircraft Watch map. Yellow disc with short rays so it
+  reads as "sun" at small marker sizes. Drawn at 96dp on a 24-unit viewbox.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Outer rays -->
+    <path
+        android:strokeColor="#FFC107"
+        android:strokeWidth="1.6"
+        android:fillColor="#00000000"
+        android:pathData="M12,2 L12,5 M12,19 L12,22 M2,12 L5,12 M19,12 L22,12 M5,5 L7,7 M17,17 L19,19 M5,19 L7,17 M17,7 L19,5" />
+    <!-- Disc -->
+    <path
+        android:fillColor="#FFC107"
+        android:strokeColor="#FF8F00"
+        android:strokeWidth="0.6"
+        android:pathData="M12,12 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+</vector>

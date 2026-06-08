@@ -325,6 +325,7 @@
     <string name="aircraft_detail_vertical">Taux vertical</string>
     <string name="aircraft_detail_position">Position</string>
     <string name="aircraft_info_button">Plus d\'infos</string>
+    <string name="aircraft_show_sun_moon">Afficher soleil &amp; lune sur la carte</string>
     <string name="aircraft_log_this">Enregistrer l\'observation</string>
     <string name="aircraft_log_added">Enregistré.</string>
     <string name="aircraft_photo_credit">Photo © %1$s / Planespotters.net (toucher pour ouvrir)</string>

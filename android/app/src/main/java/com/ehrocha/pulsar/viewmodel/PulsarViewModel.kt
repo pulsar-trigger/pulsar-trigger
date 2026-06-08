@@ -2976,6 +2976,16 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         MutableStateFlow(aircraftPrefs.getInt("max_alt_ft", 15_000).coerceIn(1_000, 50_000))
     val aircraftWatchMaxAltitudeFt: StateFlow<Int> = _aircraftWatchMaxAltitudeFt
 
+    /** Show sun + moon overlay on the Aircraft Watch map. */
+    private val _aircraftWatchShowSunMoon =
+        MutableStateFlow(aircraftPrefs.getBoolean("show_sun_moon", false))
+    val aircraftWatchShowSunMoon: StateFlow<Boolean> = _aircraftWatchShowSunMoon
+
+    fun setAircraftWatchShowSunMoon(value: Boolean) {
+        _aircraftWatchShowSunMoon.value = value
+        aircraftPrefs.edit().putBoolean("show_sun_moon", value).apply()
+    }
+
     /** Auto-refresh cadence in seconds, OR the sentinel `0` meaning "Live"
      *  (poll at the feed's documented floor, plus dead-reckoning marker
      *  interpolation between polls — see [com.ehrocha.pulsar.ui.screens.AircraftWatchScreen]).
