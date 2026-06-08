@@ -602,23 +602,22 @@ private fun AircraftMap(
         // each body's azimuth so they sit visibly inside the search circle
         // edge. Hidden when the body is below the horizon.
         if (showSunMoon) {
-            // Anchor the markers at the current map camera centre with
-            // an offset of ~70% of the visible-area half-width — keeps
-            // them near the visible edge regardless of pan / zoom. Falls
-            // back to the user's lat/lon + 0.85×search-radius before the
-            // first camera-idle event fires.
+            // Sun/moon position encodes the real altitude angle: a body
+            // on the horizon appears near the visible edge; one at the
+            // zenith sits at the centre; linear in between. The visible-
+            // area radius is the "edge" reference so the encoding stays
+            // legible at any zoom.
             val anchorCenter = mapCenter ?: LatLng(centreLat, centreLon)
-            val anchorDistanceKm = if (visibleRadiusKm > 0) visibleRadiusKm * 0.7
-                                   else radiusKm * 0.85
+            val areaRadiusKm = if (visibleRadiusKm > 0) visibleRadiusKm else radiusKm.toDouble()
             val sm = computeSunMoonOnMap(
                 userLat = centreLat, userLon = centreLon,
                 anchorLat = anchorCenter.latitude, anchorLon = anchorCenter.longitude,
-                offsetKm = anchorDistanceKm,
+                areaRadiusKm = areaRadiusKm,
             )
             android.util.Log.i(
                 "AircraftWatch",
                 "sun/moon: anchor=(${"%.4f,%.4f".format(anchorCenter.latitude, anchorCenter.longitude)}) " +
-                    "offset=${"%.1f".format(anchorDistanceKm)}km " +
+                    "areaR=${"%.1f".format(areaRadiusKm)}km " +
                     "sun=${sm.sun?.let { "%.4f,%.4f".format(it.latitude, it.longitude) } ?: "BELOW HORIZON"} " +
                     "moon=${sm.moon?.let { "%.4f,%.4f".format(it.latitude, it.longitude) } ?: "BELOW HORIZON"}",
             )
@@ -836,7 +835,7 @@ private data class SunMoonOnMap(val sun: LatLng?, val moon: LatLng?)
 private fun computeSunMoonOnMap(
     userLat: Double, userLon: Double,
     anchorLat: Double, anchorLon: Double,
-    offsetKm: Double,
+    areaRadiusKm: Double,
 ): SunMoonOnMap {
     val now = java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC)
     val date = now.toLocalDate()
@@ -848,10 +847,30 @@ private fun computeSunMoonOnMap(
     val (moonRa, moonDec) = com.ehrocha.pulsar.astro.AstroCalculator.moonPosition(date, utcHour)
     val moonAlt = com.ehrocha.pulsar.astro.AstroCalculator.altitude(userLat, moonDec, lst - moonRa)
     val moonAz = com.ehrocha.pulsar.astro.AstroCalculator.azimuth(userLat, moonDec, lst - moonRa)
-    val distM = offsetKm * 1000.0
-    val sun = if (sunAlt > 0) projectAlong(anchorLat, anchorLon, sunAz, distM) else null
-    val moon = if (moonAlt > 0) projectAlong(anchorLat, anchorLon, moonAz, distM) else null
+    val sun = projectCelestial(sunAlt, sunAz, anchorLat, anchorLon, areaRadiusKm)
+    val moon = projectCelestial(moonAlt, moonAz, anchorLat, anchorLon, areaRadiusKm)
     return SunMoonOnMap(sun, moon)
+}
+
+/** Project a celestial body onto the map. Radial offset from the map
+ *  centre encodes the body's altitude:
+ *   - Below horizon (alt ≤ 0) → null (don't draw).
+ *   - On the horizon (alt = 0+) → near the visible-area edge (90% of
+ *     the area radius, so it doesn't clip off-screen).
+ *   - At the zenith (alt = 90°) → at the anchor centre. The azimuth
+ *     formula divides by cos(alt) and goes numerically unstable as
+ *     alt → 90°, so above 85° we snap to centre regardless.
+ *   - In between → linear in altitude. */
+private fun projectCelestial(
+    altDeg: Double, azDeg: Double,
+    anchorLat: Double, anchorLon: Double, areaRadiusKm: Double,
+): LatLng? = when {
+    altDeg <= 0 -> null
+    altDeg > 85 -> LatLng(anchorLat, anchorLon)
+    else -> {
+        val fraction = ((90.0 - altDeg) / 90.0).coerceIn(0.0, 0.9)
+        projectAlong(anchorLat, anchorLon, azDeg, areaRadiusKm * 1000.0 * fraction)
+    }
 }
 
 /** Great-circle distance between two lat/lon points in kilometres. Used
