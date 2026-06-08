@@ -469,6 +469,11 @@ private fun AircraftMap(
         iconFactory.fromBitmap(rotatedAircraftBitmap(ctx, 0f, 1.6f, R.drawable.ic_moon_marker))
     }
     var sunMoonTick by remember { mutableStateOf(0L) }
+    // Tracks the map's current camera centre so we can place sun/moon
+    // markers near the *visible* area as the user pans, rather than
+    // anchored to the user's lat/lon (would scroll off-screen).
+    var mapCenter by remember { mutableStateOf<LatLng?>(null) }
+    var visibleRadiusKm by remember { mutableStateOf(0.0) }
     LaunchedEffect(showSunMoon) {
         if (!showSunMoon) {
             sunMoonTick = 0L
@@ -484,7 +489,7 @@ private fun AircraftMap(
     // (between-poll dead reckoning). We rebuild rather than diff: ~20
     // markers max, trivial cost, dodges the bookkeeping of "did this
     // ICAO move or leave."
-    LaunchedEffect(sightings, map, liveTick, selectedIcao, sunMoonTick, showSunMoon) {
+    LaunchedEffect(sightings, map, liveTick, selectedIcao, sunMoonTick, showSunMoon, mapCenter, visibleRadiusKm) {
         val m = map ?: return@LaunchedEffect
         markers.forEach { m.removeMarker(it) }
         markers.clear()
@@ -597,10 +602,24 @@ private fun AircraftMap(
         // each body's azimuth so they sit visibly inside the search circle
         // edge. Hidden when the body is below the horizon.
         if (showSunMoon) {
-            val sm = computeSunMoonOnMap(centreLat, centreLon, radiusKm)
+            // Anchor the markers at the current map camera centre with
+            // an offset of ~70% of the visible-area half-width — keeps
+            // them near the visible edge regardless of pan / zoom. Falls
+            // back to the user's lat/lon + 0.85×search-radius before the
+            // first camera-idle event fires.
+            val anchorCenter = mapCenter ?: LatLng(centreLat, centreLon)
+            val anchorDistanceKm = if (visibleRadiusKm > 0) visibleRadiusKm * 0.7
+                                   else radiusKm * 0.85
+            val sm = computeSunMoonOnMap(
+                userLat = centreLat, userLon = centreLon,
+                anchorLat = anchorCenter.latitude, anchorLon = anchorCenter.longitude,
+                offsetKm = anchorDistanceKm,
+            )
             android.util.Log.i(
                 "AircraftWatch",
-                "sun/moon overlay: sun=${sm.sun?.let { "%.4f,%.4f".format(it.latitude, it.longitude) } ?: "BELOW HORIZON"} " +
+                "sun/moon: anchor=(${"%.4f,%.4f".format(anchorCenter.latitude, anchorCenter.longitude)}) " +
+                    "offset=${"%.1f".format(anchorDistanceKm)}km " +
+                    "sun=${sm.sun?.let { "%.4f,%.4f".format(it.latitude, it.longitude) } ?: "BELOW HORIZON"} " +
                     "moon=${sm.moon?.let { "%.4f,%.4f".format(it.latitude, it.longitude) } ?: "BELOW HORIZON"}",
             )
             sm.sun?.let { latlng ->
@@ -699,6 +718,20 @@ private fun AircraftMap(
                             }
                         }
 
+                        // Track the visible region so the sun/moon overlay
+                        // can follow as the user pans or zooms. Camera-idle
+                        // fires after both gestures + after programmatic
+                        // animations — covers everything.
+                        ml.addOnCameraIdleListener {
+                            val target = ml.cameraPosition.target ?: return@addOnCameraIdleListener
+                            mapCenter = target
+                            val ne = ml.projection.visibleRegion.latLngBounds.northEast
+                            visibleRadiusKm = haversineKm(
+                                target.latitude, target.longitude,
+                                ne.latitude, ne.longitude,
+                            )
+                        }
+
                         // User pin + heading cone are added by the
                         // LaunchedEffect(map, deviceAzimuth) above — they
                         // need to re-stack on every azimuth change so the
@@ -793,29 +826,47 @@ private fun derivedHeading(history: List<LatLng>): Double? {
     return (deg + 360.0) % 360.0
 }
 
-/** Sun + moon positions projected onto the map around the user pin.
- *  Distance is `radiusKm × 0.85` so the markers sit just inside the
- *  search circle edge. Returns null for whichever body is below the
- *  horizon at the user's location right now. */
+/** Sun + moon positions projected onto the map. Azimuth is computed from
+ *  the user's lat/lon (astronomically correct), but the marker placement
+ *  is anchored to the current map-camera centre + a distance offset so
+ *  the markers stay visible as the user pans or zooms. Returns null for
+ *  whichever body is below the horizon at the user's location. */
 private data class SunMoonOnMap(val sun: LatLng?, val moon: LatLng?)
 
 private fun computeSunMoonOnMap(
-    centreLat: Double, centreLon: Double, radiusKm: Int,
+    userLat: Double, userLon: Double,
+    anchorLat: Double, anchorLon: Double,
+    offsetKm: Double,
 ): SunMoonOnMap {
     val now = java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC)
     val date = now.toLocalDate()
     val utcHour = now.hour + now.minute / 60.0 + now.second / 3600.0
-    val lst = com.ehrocha.pulsar.astro.AstroCalculator.lst(date, utcHour, centreLon)
+    val lst = com.ehrocha.pulsar.astro.AstroCalculator.lst(date, utcHour, userLon)
     val (sunRa, sunDec) = com.ehrocha.pulsar.astro.AstroCalculator.sunPosition(date)
-    val sunAlt = com.ehrocha.pulsar.astro.AstroCalculator.altitude(centreLat, sunDec, lst - sunRa)
-    val sunAz = com.ehrocha.pulsar.astro.AstroCalculator.azimuth(centreLat, sunDec, lst - sunRa)
+    val sunAlt = com.ehrocha.pulsar.astro.AstroCalculator.altitude(userLat, sunDec, lst - sunRa)
+    val sunAz = com.ehrocha.pulsar.astro.AstroCalculator.azimuth(userLat, sunDec, lst - sunRa)
     val (moonRa, moonDec) = com.ehrocha.pulsar.astro.AstroCalculator.moonPosition(date, utcHour)
-    val moonAlt = com.ehrocha.pulsar.astro.AstroCalculator.altitude(centreLat, moonDec, lst - moonRa)
-    val moonAz = com.ehrocha.pulsar.astro.AstroCalculator.azimuth(centreLat, moonDec, lst - moonRa)
-    val distM = radiusKm * 1000.0 * 0.85
-    val sun = if (sunAlt > 0) projectAlong(centreLat, centreLon, sunAz, distM) else null
-    val moon = if (moonAlt > 0) projectAlong(centreLat, centreLon, moonAz, distM) else null
+    val moonAlt = com.ehrocha.pulsar.astro.AstroCalculator.altitude(userLat, moonDec, lst - moonRa)
+    val moonAz = com.ehrocha.pulsar.astro.AstroCalculator.azimuth(userLat, moonDec, lst - moonRa)
+    val distM = offsetKm * 1000.0
+    val sun = if (sunAlt > 0) projectAlong(anchorLat, anchorLon, sunAz, distM) else null
+    val moon = if (moonAlt > 0) projectAlong(anchorLat, anchorLon, moonAz, distM) else null
     return SunMoonOnMap(sun, moon)
+}
+
+/** Great-circle distance between two lat/lon points in kilometres. Used
+ *  by the sun/moon overlay to compute the visible-area radius. */
+private fun haversineKm(
+    lat1: Double, lon1: Double, lat2: Double, lon2: Double,
+): Double {
+    val r = 6371.0
+    val dLat = (lat2 - lat1) * kotlin.math.PI / 180.0
+    val dLon = (lon2 - lon1) * kotlin.math.PI / 180.0
+    val a = kotlin.math.sin(dLat / 2).let { it * it } +
+        kotlin.math.cos(lat1 * kotlin.math.PI / 180.0) *
+        kotlin.math.cos(lat2 * kotlin.math.PI / 180.0) *
+        kotlin.math.sin(dLon / 2).let { it * it }
+    return 2 * r * kotlin.math.atan2(kotlin.math.sqrt(a), kotlin.math.sqrt(1 - a))
 }
 
 /** Dead-reckon a sighting forward from its last polled position by
