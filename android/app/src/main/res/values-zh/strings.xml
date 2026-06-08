@@ -330,6 +330,7 @@
     <string name="aircraft_show_sun_moon">在地图上显示太阳和月亮</string>
     <string name="aircraft_detail_suggested_lens">建议镜头</string>
     <string name="aircraft_detail_suggested_lens_value">~%1$d mm（全画幅）</string>
+    <string name="aircraft_compass_calibration">指南针未校准 — 请以 8 字形挥动手机几次以重新校准。</string>
     <string name="aircraft_photo_tips_title">摄影建议</string>
     <string name="aircraft_photo_tips_body">通用起点\n• 光圈 f/5.6–f/8\n• ISO 越低越好 — 光线好时 100–400，黄昏 800–1600\n• 连续 AF（AF-C / AI Servo）\n• 高速连拍\n• RAW 格式\n• 镜头 IS / 平移模式开启\n\n航展喷气机（军机 / 特技）\n• 镜头：100–400 mm\n• 快门：1/1000–1/2000 冻结画面\n• AF：跟踪，全区域\n• 提示：预判飞行线路，预先对焦并追踪。\n\n航展螺旋桨机（战机、T-6、P-51）\n• 镜头：70–200 或 100–400 mm\n• 快门：1/200–1/500 — 螺旋桨要保持模糊。太快 = 静态圆盘 = 死板。\n• 光圈：f/5.6–f/8\n• 提示：沿飞行轨迹做摇摄。\n\n民航客机（巡航高度）\n• 镜头：400–800 mm（Pulsar 的推荐镜头有帮助）\n• 快门：1/500–1/1000\n• 光圈：f/6.3–f/8\n• 提示：斜距超过 ~10 km 时热扰动会毁掉画质。清晨或傍晚更好。\n\n机场观察（着陆 / 起飞 / 滑行）\n• 镜头：围栏边 70–300 mm，跑道端 400–600 mm\n• 快门：着陆/起飞 1/500–1/1000，滑行 1/250\n• AF：单点对准机头，连续模式\n• 提示：背对太阳拍摄 — 顺光飞机配蓝天是黄金标准。</string>
     <string name="aircraft_log_this">记录此次观察</string>

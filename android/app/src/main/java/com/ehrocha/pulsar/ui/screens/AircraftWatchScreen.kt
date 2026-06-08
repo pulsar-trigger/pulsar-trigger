@@ -27,6 +27,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
@@ -102,6 +104,9 @@ fun AircraftWatchScreen(
 ) {
     var selectedIcao by remember { mutableStateOf<String?>(null) }
     var showPhotoTips by remember { mutableStateOf(false) }
+    // Lifted to screen level so the calibration banner above the map can
+    // observe accuracy. AircraftMap reads the azimuth via its own param.
+    val deviceCompass = rememberDeviceCompass()
     val rawSightings by vm.aircraftSightings.collectAsState()
     val showSunMoon by vm.aircraftWatchShowSunMoon.collectAsState()
     val watching by vm.aircraftWatching.collectAsState()
@@ -222,6 +227,18 @@ fun AircraftWatchScreen(
 
             error?.let { ErrorBanner(it) }
 
+            // Compass calibration nudge — visible only when the rotation-
+            // vector sensor reports LOW or UNRELIABLE accuracy. Dismissible
+            // for this session; reappears on a fresh entry if still bad.
+            var calibrationDismissed by remember { mutableStateOf(false) }
+            val needsCalibration = deviceCompass.accuracy ==
+                android.hardware.SensorManager.SENSOR_STATUS_ACCURACY_LOW ||
+                deviceCompass.accuracy ==
+                android.hardware.SensorManager.SENSOR_STATUS_UNRELIABLE
+            if (needsCalibration && !calibrationDismissed) {
+                CompassCalibrationBanner(onDismiss = { calibrationDismissed = true })
+            }
+
             // Map — fixed height so the list still gets meaningful space
             // on phone-sized devices. Lives above the (now-collapsible)
             // settings sheet.
@@ -233,6 +250,7 @@ fun AircraftWatchScreen(
                 liveMode = intervalSec == 0,
                 selectedIcao = selectedIcao,
                 showSunMoon = showSunMoon,
+                deviceAzimuth = deviceCompass.azimuth,
                 onMarkerSelect = { icao ->
                     selectedIcao = if (selectedIcao == icao) null else icao
                 },
@@ -333,6 +351,7 @@ private fun AircraftMap(
     liveMode: Boolean = false,
     selectedIcao: String? = null,
     showSunMoon: Boolean = false,
+    deviceAzimuth: Int = 0,
     onMarkerSelect: (String) -> Unit = {},
 ) {
     val isDark = when (LocalNightMode.current.value) {
@@ -371,11 +390,9 @@ private fun AircraftMap(
     // cache entries, built lazily as they're seen.
     val iconCache = remember { mutableMapOf<Triple<Int, AircraftSize, Int>, Icon>() }
 
-    // Device compass heading — used to draw a directional cone over the
-    // user pin so the user can see "the plane east of me is to my right
-    // RIGHT NOW." Snapped to 5° to avoid burning the map redrawing every
-    // sensor tick.
-    val deviceAzimuth = rememberDeviceAzimuth()
+    // deviceAzimuth comes in as a parameter from the screen so the
+    // calibration banner above the map can read accuracy from the same
+    // sensor subscription. Single source, no duplicate listener.
 
     // Directional cone + user pin — Google-Maps-style stack: cone goes on
     // first, pin on top so the cone fans out from BEHIND the pin rather
@@ -502,70 +519,74 @@ private fun AircraftMap(
         moonMarker?.let { m.removeMarker(it) }
         moonMarker = null
 
-        // Selection bookkeeping: clear trail history for ICAOs that aren't
-        // selected any more, so memory doesn't grow forever as the user
-        // taps through different aircraft.
-        trailHistory.keys.filter { it != selectedIcao }.forEach { trailHistory.remove(it) }
-
-        // Highlight + trails go on FIRST so the plane marker draws on top.
-        val sel = selectedIcao?.let { hex -> sightings.firstOrNull { it.icaoHex == hex } }
-        if (sel != null) {
-            val (selLat, selLon) =
-                if (liveMode) deadReckon(sel, liveTick) else sel.lat to sel.lon
-
-            // Append current REAL position (not dead-reckoned) to the past
-            // trail when we're on a fresh poll. liveTick changes more often
-            // than the actual sighting list, so only append when the
-            // sighting reference itself moves.
-            val history = trailHistory.getOrPut(sel.icaoHex) { mutableListOf() }
-            val last = history.lastOrNull()
-            if (last == null ||
-                last.latitude != sel.lat || last.longitude != sel.lon) {
-                history += LatLng(sel.lat, sel.lon)
-                // Cap at 60 entries (~10 minutes of polls at 10s default).
-                // Long enough for the past trail to be visible at zoomed-out
-                // levels, short enough to keep memory + render cost trivial.
-                while (history.size > 60) history.removeAt(0)
+        // Trail history bookkeeping — track every active sighting, drop
+        // entries for aircraft that left the search radius.
+        val activeIcaos = sightings.map { it.icaoHex }.toSet()
+        trailHistory.keys.filterNot { it in activeIcaos }.forEach { trailHistory.remove(it) }
+        sightings.forEach { s ->
+            val h = trailHistory.getOrPut(s.icaoHex) { mutableListOf() }
+            val last = h.lastOrNull()
+            if (last == null || last.latitude != s.lat || last.longitude != s.lon) {
+                h += LatLng(s.lat, s.lon)
+                // Cap at 60 entries (~10 min at 10s polls).
+                while (h.size > 60) h.removeAt(0)
             }
+        }
 
-            // Past trail (solid cyan polyline). Append the current
-            // dead-reckoned position as the line's *head* so the user sees
-            // a trail immediately on selection — not after the second
-            // poll. Cyan reads better than yellow against both light
-            // and dark map tiles.
+        // Render trails for ALL aircraft so the user can see who's heading
+        // where at a glance. Non-selected planes get a thin, faint trail;
+        // the selected one gets the bright cyan treatment so it stays
+        // visually distinct.
+        sightings.forEach { s ->
+            val isSelected = s.icaoHex == selectedIcao
+            val (sLat, sLon) =
+                if (liveMode) deadReckon(s, liveTick) else s.lat to s.lon
+            val history = trailHistory[s.icaoHex] ?: emptyList()
             val pastPoints = history.toMutableList()
-            val nowPt = LatLng(selLat, selLon)
+            val nowPt = LatLng(sLat, sLon)
             if (pastPoints.lastOrNull()?.let {
                     it.latitude != nowPt.latitude || it.longitude != nowPt.longitude
                 } != false) {
                 pastPoints += nowPt
             }
+            // Selected: bright cyan, thick. Others: dim cyan, thin — same
+            // colour family so the eye can still link them, just toned down.
+            val pastColor = if (isSelected)
+                android.graphics.Color.argb(240, 0x00, 0xE5, 0xFF)
+            else
+                android.graphics.Color.argb(100, 0x00, 0xBC, 0xD4)
+            val pastWidth = if (isSelected) 5.0f else 1.5f
             if (pastPoints.size >= 2) {
                 trailPolylines += m.addPolyline(
                     PolylineOptions()
-                        .addAll(pastPoints)
-                        .color(android.graphics.Color.argb(240, 0x00, 0xE5, 0xFF))
-                        .width(5.0f),
+                        .addAll(pastPoints).color(pastColor).width(pastWidth),
                 )
             }
-
-            // Future trail — 6 visible 20s segments with 10s gaps between,
-            // projecting roughly 3 minutes ahead so the line stays visible
-            // when zoomed out. Falls back to a heading derived from the
-            // past trail's last two points if the transponder didn't
-            // report `true_track`.
-            val effectiveHeading = sel.headingDeg ?: derivedHeading(history)
-            val futureSegs = futureTrailSegments(sel, selLat, selLon, effectiveHeading)
+            // Future: selected gets the 3-minute dashed projection; other
+            // aircraft get a short ~30s prediction (first 2 segments only)
+            // so the map doesn't drown in lines.
+            val effectiveHeading = s.headingDeg ?: derivedHeading(history)
+            val futureSegs = futureTrailSegments(s, sLat, sLon, effectiveHeading)
+                .let { if (isSelected) it else it.take(2) }
+            val futureColor = if (isSelected)
+                android.graphics.Color.argb(220, 0x00, 0xE5, 0xFF)
+            else
+                android.graphics.Color.argb(90, 0x00, 0xBC, 0xD4)
+            val futureWidth = if (isSelected) 4.0f else 1.5f
             futureSegs.forEach { seg ->
                 trailPolylines += m.addPolyline(
                     PolylineOptions()
-                        .add(seg.first)
-                        .add(seg.second)
-                        .color(android.graphics.Color.argb(220, 0x00, 0xE5, 0xFF))
-                        .width(4.0f),
+                        .add(seg.first).add(seg.second)
+                        .color(futureColor).width(futureWidth),
                 )
             }
+        }
 
+        // Highlight ring + camera follow for the selected aircraft.
+        val sel = selectedIcao?.let { hex -> sightings.firstOrNull { it.icaoHex == hex } }
+        if (sel != null) {
+            val (selLat, selLon) =
+                if (liveMode) deadReckon(sel, liveTick) else sel.lat to sel.lon
             highlightMarker = m.addMarker(
                 MarkerOptions()
                     .position(LatLng(selLat, selLon))
@@ -579,21 +600,15 @@ private fun AircraftMap(
                 ),
                 400,
             )
-        } else {
-            // Nothing selected → drop accumulated trail state to free memory.
-            trailHistory.clear()
-            // Pan back to the user pin on the selected→null transition so
-            // the camera doesn't stay aimed at where the deselected
-            // aircraft was. `prevSelected` tracks the previous LaunchedEffect
-            // invocation's selection.
-            if (prevSelected != null) {
-                m.animateCamera(
-                    org.maplibre.android.camera.CameraUpdateFactory.newLatLng(
-                        LatLng(centreLat, centreLon),
-                    ),
-                    400,
-                )
-            }
+        } else if (prevSelected != null) {
+            // selected → null transition: pan back to the user pin so the
+            // camera doesn't stay aimed at where the deselected aircraft was.
+            m.animateCamera(
+                org.maplibre.android.camera.CameraUpdateFactory.newLatLng(
+                    LatLng(centreLat, centreLon),
+                ),
+                400,
+            )
         }
         prevSelected = selectedIcao
 
@@ -907,15 +922,19 @@ private fun deadReckon(s: AircraftSighting, elapsedMs: Long): Pair<Double, Doubl
     return (s.lat + dLat) to (s.lon + dLon)
 }
 
-/** Subscribe to the device's rotation-vector sensor and return the current
- *  azimuth (compass heading, 0 = north) snapped to a 5° bucket. Snapping
- *  caps the recomposition rate to a sane number — the map rebuilds the
- *  user direction-cone marker on every change, and 5° is well below human
- *  perception of map-icon-pointing-the-wrong-way. */
+/** Device compass state — azimuth (compass heading, 0 = N, snapped to a
+ *  5° bucket) plus accuracy. Accuracy comes from
+ *  [SensorEvent.accuracy] / [SensorEventListener.onAccuracyChanged] which
+ *  for the rotation-vector sensor reflects the magnetometer's calibration
+ *  state. Low / unreliable → the UI should prompt the user to do the
+ *  figure-8 calibration dance. */
+private data class DeviceCompass(val azimuth: Int, val accuracy: Int)
+
 @Composable
-private fun rememberDeviceAzimuth(): Int {
+private fun rememberDeviceCompass(): DeviceCompass {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     var azimuthBucket by remember { mutableStateOf(0) }
+    var accuracy by remember { mutableStateOf(android.hardware.SensorManager.SENSOR_STATUS_NO_CONTACT) }
     DisposableEffect(ctx) {
         val sm = ctx.getSystemService(android.content.Context.SENSOR_SERVICE)
             as? android.hardware.SensorManager
@@ -930,15 +949,19 @@ private fun rememberDeviceAzimuth(): Int {
                 val normalized = ((deg + 360.0) % 360.0).toInt()
                 val bucket = (normalized / 5) * 5
                 if (bucket != azimuthBucket) azimuthBucket = bucket
+                // event.accuracy is also reported here on some devices.
+                if (event.accuracy != accuracy) accuracy = event.accuracy
             }
-            override fun onAccuracyChanged(sensor: android.hardware.Sensor?, accuracy: Int) {}
+            override fun onAccuracyChanged(sensor: android.hardware.Sensor?, acc: Int) {
+                if (acc != accuracy) accuracy = acc
+            }
         }
         if (sensor != null) {
             sm.registerListener(listener, sensor, android.hardware.SensorManager.SENSOR_DELAY_UI)
         }
         onDispose { sm?.unregisterListener(listener) }
     }
-    return azimuthBucket
+    return DeviceCompass(azimuthBucket, accuracy)
 }
 
 /** Render the given drawable to a bitmap rotated by [headingDeg] and
@@ -1113,6 +1136,44 @@ private fun NoLocationCard() {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+/** Yellow banner shown when the rotation-vector sensor reports low /
+ *  unreliable accuracy. The figure-8 motion remagnetises Android's
+ *  magnetometer model and is the standard fix recommended by Google. */
+@Composable
+private fun CompassCalibrationBanner(onDismiss: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = androidx.compose.ui.graphics.Color(0xFFFFF59D),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Default.Explore,
+                contentDescription = null,
+                tint = androidx.compose.ui.graphics.Color(0xFF7C5D00),
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(Modifier.width(10.dp))
+            Text(
+                stringResource(R.string.aircraft_compass_calibration),
+                style = MaterialTheme.typography.bodySmall,
+                color = androidx.compose.ui.graphics.Color(0xFF5D4500),
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = stringResource(R.string.dismiss),
+                    tint = androidx.compose.ui.graphics.Color(0xFF7C5D00),
+                )
+            }
         }
     }
 }
