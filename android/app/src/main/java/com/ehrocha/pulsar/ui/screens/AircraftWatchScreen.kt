@@ -303,13 +303,18 @@ private fun AircraftMap(
     // sensor tick.
     val deviceAzimuth = rememberDeviceAzimuth()
 
-    // Directional cone over the user pin — re-created when the device
-    // azimuth bucket changes (snapped to 5° to keep the map redraws cheap).
+    // Directional cone + user pin — Google-Maps-style stack: cone goes on
+    // first, pin on top so the cone fans out from BEHIND the pin rather
+    // than covering it. Both are re-added on every azimuth change because
+    // MapLibre draws markers in insertion order (no z-index API).
     var headingMarker by remember { mutableStateOf<Marker?>(null) }
+    var userMarker by remember { mutableStateOf<Marker?>(null) }
     LaunchedEffect(map, deviceAzimuth) {
         val m = map ?: return@LaunchedEffect
         headingMarker?.let { m.removeMarker(it) }
-        val bmp = rotatedAircraftBitmap(
+        userMarker?.let { m.removeMarker(it) }
+        // 1) heading cone first → renders below
+        val coneBmp = rotatedAircraftBitmap(
             ctx,
             headingDeg = deviceAzimuth.toFloat(),
             drawableRes = R.drawable.ic_user_heading,
@@ -317,7 +322,19 @@ private fun AircraftMap(
         headingMarker = m.addMarker(
             MarkerOptions()
                 .position(LatLng(centreLat, centreLon))
-                .icon(iconFactory.fromBitmap(bmp)),
+                .icon(iconFactory.fromBitmap(coneBmp)),
+        )
+        // 2) user pin on top → always visible regardless of fan direction
+        val userBmp = rotatedAircraftBitmap(
+            ctx,
+            headingDeg = 0f,
+            drawableRes = R.drawable.ic_user_marker,
+        )
+        userMarker = m.addMarker(
+            MarkerOptions()
+                .position(LatLng(centreLat, centreLon))
+                .title("You")
+                .icon(iconFactory.fromBitmap(userBmp)),
         )
     }
 
@@ -403,25 +420,10 @@ private fun AircraftMap(
                             .zoom(zoom)
                             .build()
 
-                        // "Me" marker — person-pin so it's distinct from the
-                        // plane markers above. Added once at map setup; the
-                        // user location doesn't move during a session. The
-                        // direction-cone marker stacked on top is managed
-                        // separately so we can re-orient it without
-                        // rebuilding this one.
-                        val userIcon = iconFactory.fromBitmap(
-                            rotatedAircraftBitmap(
-                                ctx,
-                                headingDeg = 0f,
-                                drawableRes = R.drawable.ic_user_marker,
-                            ),
-                        )
-                        ml.addMarker(
-                            MarkerOptions()
-                                .position(LatLng(centreLat, centreLon))
-                                .title("You")
-                                .icon(userIcon),
-                        )
+                        // User pin + heading cone are added by the
+                        // LaunchedEffect(map, deviceAzimuth) above — they
+                        // need to re-stack on every azimuth change so the
+                        // pin stays on top of the cone.
                     }
                 }
             },

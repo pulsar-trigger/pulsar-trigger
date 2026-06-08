@@ -1,17 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Translucent directional cone pointing UP (azimuth 0° / north). Stacked on
-  top of the user pin in Aircraft Watch and rotated to the device's
-  compass heading — gives the user a "you are looking THIS way" cue.
+  Heading cone — Google-Maps-style "you are looking THIS way" fan that
+  sits over the user pin in Aircraft Watch and rotates with the device's
+  compass heading. Apex sits at the bitmap centre (the marker anchor =
+  the user lat/lon); the fan opens outward from there. Default colour is
+  Google's blue (#4285F4) at 50% opacity so the underlying pin still
+  reads through, with a darker outline so the cone is visible on light
+  map tiles as well as dark ones.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="64dp"
-    android:height="64dp"
+    android:width="96dp"
+    android:height="96dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="#80FFFFFF"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="0.4"
-        android:pathData="M12,2 L17,11 L12,9 L7,11 Z" />
+        android:fillColor="#804285F4"
+        android:strokeColor="#1A73E8"
+        android:strokeWidth="0.5"
+        android:pathData="M12,11 L3,0 L21,0 Z" />
 </vector>
