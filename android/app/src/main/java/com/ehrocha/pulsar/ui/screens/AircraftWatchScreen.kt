@@ -115,6 +115,7 @@ fun AircraftWatchScreen(
     val maxAltFt by vm.aircraftWatchMaxAltitudeFt.collectAsState()
     val intervalSec by vm.aircraftWatchIntervalSec.collectAsState()
     val alertNotable by vm.aircraftWatchAlertNotable.collectAsState()
+    val keepScreenOn by vm.aircraftWatchKeepScreenOn.collectAsState()
     val location = vm.aircraftWatchLocation()
     // Sun direction for the lighting hint. Recomputed each poll (and on
     // location change) — cheap trig, no network.
@@ -167,6 +168,30 @@ fun AircraftWatchScreen(
     DisposableEffect(Unit) {
         if (location != null) vm.startAircraftWatch()
         onDispose { vm.stopAircraftWatch() }
+    }
+
+    // Keep-screen-on: set the window flag while the toggle is on and this
+    // screen is composed; always cleared on dispose so we never leak the
+    // flag back to the rest of the app. The activity is found by unwrapping
+    // the ContextWrapper chain (Compose's LocalContext may be a wrapper).
+    DisposableEffect(keepScreenOn) {
+        val activity = run {
+            var c: android.content.Context? = ctx
+            while (c is android.content.ContextWrapper) {
+                if (c is android.app.Activity) return@run c
+                c = c.baseContext
+            }
+            null
+        }
+        val window = activity?.window
+        if (keepScreenOn) {
+            window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        onDispose {
+            window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
     }
 
     // BottomSheet — collapsed (peek): just the status row sits above the
@@ -240,6 +265,8 @@ fun AircraftWatchScreen(
                     onMapHeadingLockChange = vm::setAircraftWatchMapHeadingLock,
                     alertNotable = alertNotable,
                     onAlertNotableChange = vm::setAircraftWatchAlertNotable,
+                    keepScreenOn = keepScreenOn,
+                    onKeepScreenOnChange = vm::setAircraftWatchKeepScreenOn,
                     compassAccuracy = deviceCompass.accuracy,
                     onShowCalibrate = { showCalibrationDialog = true },
                     watching = watching,
@@ -1356,6 +1383,8 @@ private fun SettingsPanel(
     onMapHeadingLockChange: (Boolean) -> Unit,
     alertNotable: Boolean,
     onAlertNotableChange: (Boolean) -> Unit,
+    keepScreenOn: Boolean,
+    onKeepScreenOnChange: (Boolean) -> Unit,
     compassAccuracy: Int,
     onShowCalibrate: () -> Unit,
     watching: Boolean,
@@ -1469,6 +1498,23 @@ private fun SettingsPanel(
             androidx.compose.material3.Switch(
                 checked = alertNotable,
                 onCheckedChange = onAlertNotableChange,
+            )
+        }
+        // Keep-screen-on toggle.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringResource(R.string.aircraft_keep_screen_on),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            androidx.compose.material3.Switch(
+                checked = keepScreenOn,
+                onCheckedChange = onKeepScreenOnChange,
             )
         }
         // Compass status + manual calibrate. Always visible: the sensor

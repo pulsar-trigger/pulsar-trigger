@@ -3009,6 +3009,18 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         aircraftPrefs.edit().putBoolean("alert_notable", value).apply()
     }
 
+    /** Keep the screen on while the Aircraft Watch tool is open — handy when
+     *  the phone is propped up watching the sky and you don't want it to
+     *  dim/lock mid-session. Off by default (battery). */
+    private val _aircraftWatchKeepScreenOn =
+        MutableStateFlow(aircraftPrefs.getBoolean("keep_screen_on", false))
+    val aircraftWatchKeepScreenOn: StateFlow<Boolean> = _aircraftWatchKeepScreenOn
+
+    fun setAircraftWatchKeepScreenOn(value: Boolean) {
+        _aircraftWatchKeepScreenOn.value = value
+        aircraftPrefs.edit().putBoolean("keep_screen_on", value).apply()
+    }
+
     /** Auto-refresh cadence in seconds, OR the sentinel `0` meaning "Live"
      *  (poll at the feed's documented floor, plus dead-reckoning marker
      *  interpolation between polls — see [com.ehrocha.pulsar.ui.screens.AircraftWatchScreen]).

@@ -328,6 +328,7 @@
     <string name="aircraft_show_sun_moon">Sonne &amp; Mond auf Karte zeigen</string>
     <string name="aircraft_map_heading_lock">Karte mit Telefonrichtung drehen</string>
     <string name="aircraft_alert_notable">Bei besonderen Flugzeugen warnen</string>
+    <string name="aircraft_keep_screen_on">Bildschirm anlassen</string>
     <string name="aircraft_detail_elevation">Höhenwinkel</string>
     <string name="aircraft_detail_lighting">Licht</string>
     <string name="aircraft_detail_closest">Nächste Annäherung</string>

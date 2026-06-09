@@ -522,6 +522,7 @@
     <string name="aircraft_show_sun_moon">Show sun &amp; moon on map</string>
     <string name="aircraft_map_heading_lock">Rotate map with phone direction</string>
     <string name="aircraft_alert_notable">Alert on notable aircraft</string>
+    <string name="aircraft_keep_screen_on">Keep screen on</string>
     <string name="aircraft_detail_elevation">Elevation</string>
     <string name="aircraft_detail_lighting">Lighting</string>
     <string name="aircraft_detail_closest">Closest approach</string>
