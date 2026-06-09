@@ -517,10 +517,21 @@ private fun AircraftMap(
         val m = map ?: return@LaunchedEffect
         headingMarker?.let { m.removeMarker(it) }
         userMarker?.let { m.removeMarker(it) }
-        // 1) heading cone first → renders below
+        // 1) heading cone first → renders below.
+        // Compensate for the current map bearing: marker bitmaps are
+        // screen-aligned in MapLibre's legacy API, so we have to subtract
+        // the map's rotation to keep the cone pointing in the world
+        // direction the device is facing. When heading-lock is on, map
+        // bearing == device azimuth → cone rotation = 0 → cone is always
+        // upright on screen. When off, map bearing = 0 → cone rotation =
+        // device azimuth (the old behaviour). Without this subtraction,
+        // both the map AND the cone visibly rotated with the user, which
+        // read as "the map rotates twice" during a spin.
+        val mapBearing = m.cameraPosition.bearing.toFloat()
+        val coneRotation = ((deviceAzimuth.toFloat() - mapBearing) + 360f) % 360f
         val coneBmp = rotatedAircraftBitmap(
             ctx,
-            headingDeg = deviceAzimuth.toFloat(),
+            headingDeg = coneRotation,
             sizeScale = 1.5f,  // user asked for a bigger cone — easier to see
             drawableRes = R.drawable.ic_user_heading,
         )
@@ -767,7 +778,14 @@ private fun AircraftMap(
                 if (liveMode) deadReckon(s, liveTick) else s.lat to s.lon
             val title = (s.callsign ?: s.icaoHex.uppercase()) +
                 String.format(Locale.US, " · %.1f km", s.distanceKm)
-            val bucket = (((s.headingDeg ?: 0.0) / 15.0).toInt().mod(24)) * 15
+            // Subtract current map bearing so the icon always shows the
+            // aircraft's WORLD direction even when the map is rotated.
+            // Without this, planes appear rotated by their heading +
+            // map bearing — visibly wrong on a heading-locked map and the
+            // second contributor to the "everything rotates twice" report.
+            val currentMapBearing = m.cameraPosition.bearing
+            val rawHeading = (s.headingDeg ?: 0.0) - currentMapBearing
+            val bucket = ((rawHeading / 15.0).toInt().mod(24)) * 15
             val size = aircraftSizeFor(s.typeCode, s.model)
             // Marker fill colour matches the row's proximity band so a
             // plane that reads as "red" on the list also reads as red on
