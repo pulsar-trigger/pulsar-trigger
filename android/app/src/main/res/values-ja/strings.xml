@@ -327,6 +327,9 @@
     <string name="aircraft_info_button">詳細</string>
     <string name="aircraft_show_sun_moon">地図に太陽と月を表示</string>
     <string name="aircraft_map_heading_lock">端末の向きに合わせて地図を回転</string>
+    <string name="aircraft_map_hybrid">衛星マップ</string>
+    <string name="aircraft_detail_aim">照準</string>
+    <string name="aircraft_detail_flight">飛行</string>
     <string name="aircraft_alert_notable">注目機をアラート</string>
     <string name="aircraft_keep_screen_on">画面を点灯したままにする</string>
     <string name="aircraft_detail_elevation">仰角</string>

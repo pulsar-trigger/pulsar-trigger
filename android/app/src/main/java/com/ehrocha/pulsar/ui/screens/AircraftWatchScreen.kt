@@ -116,6 +116,7 @@ fun AircraftWatchScreen(
     val intervalSec by vm.aircraftWatchIntervalSec.collectAsState()
     val alertNotable by vm.aircraftWatchAlertNotable.collectAsState()
     val keepScreenOn by vm.aircraftWatchKeepScreenOn.collectAsState()
+    val mapHybrid by vm.aircraftWatchMapHybrid.collectAsState()
     val location = vm.aircraftWatchLocation()
     // Sun direction for the lighting hint. Recomputed each poll (and on
     // location change) — cheap trig, no network.
@@ -263,6 +264,8 @@ fun AircraftWatchScreen(
                     onShowSunMoonChange = vm::setAircraftWatchShowSunMoon,
                     mapHeadingLock = mapHeadingLock,
                     onMapHeadingLockChange = vm::setAircraftWatchMapHeadingLock,
+                    mapHybrid = mapHybrid,
+                    onMapHybridChange = vm::setAircraftWatchMapHybrid,
                     alertNotable = alertNotable,
                     onAlertNotableChange = vm::setAircraftWatchAlertNotable,
                     keepScreenOn = keepScreenOn,
@@ -343,6 +346,7 @@ fun AircraftWatchScreen(
                 showSunMoon = showSunMoon,
                 deviceAzimuth = deviceCompass.azimuth,
                 mapHeadingLock = mapHeadingLock,
+                mapHybrid = mapHybrid,
                 onMarkerSelect = { icao ->
                     selectedIcao = if (selectedIcao == icao) null else icao
                 },
@@ -496,6 +500,7 @@ private fun AircraftMap(
     showSunMoon: Boolean = false,
     deviceAzimuth: Int = 0,
     mapHeadingLock: Boolean = false,
+    mapHybrid: Boolean = false,
     onMarkerSelect: (String) -> Unit = {},
 ) {
     val isDark = when (LocalNightMode.current.value) {
@@ -505,6 +510,10 @@ private fun AircraftMap(
     val mapViewRef = remember { mutableStateOf<MapView?>(null) }
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
     val markers = remember { mutableListOf<Marker>() }
+    // Bumped each time a new style finishes loading. Changing the style
+    // clears all annotations (markers/polylines belong to the style layer),
+    // so every effect that adds markers keys on this to re-add them.
+    var styleEpoch by remember { mutableStateOf(0) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -579,7 +588,7 @@ private fun AircraftMap(
     // MapLibre draws markers in insertion order (no z-index API).
     var headingMarker by remember { mutableStateOf<Marker?>(null) }
     var userMarker by remember { mutableStateOf<Marker?>(null) }
-    LaunchedEffect(map, deviceAzimuth) {
+    LaunchedEffect(map, deviceAzimuth, styleEpoch) {
         val m = map ?: return@LaunchedEffect
         headingMarker?.let { m.removeMarker(it) }
         userMarker?.let { m.removeMarker(it) }
@@ -697,7 +706,7 @@ private fun AircraftMap(
     // (between-poll dead reckoning). We rebuild rather than diff: ~20
     // markers max, trivial cost, dodges the bookkeeping of "did this
     // ICAO move or leave."
-    LaunchedEffect(sightings, map, liveTick, selectedIcao, sunMoonTick, showSunMoon, mapCenter, visibleRadiusKm) {
+    LaunchedEffect(sightings, map, liveTick, selectedIcao, sunMoonTick, showSunMoon, mapCenter, visibleRadiusKm, styleEpoch) {
         val m = map ?: return@LaunchedEffect
         markers.forEach { m.removeMarker(it) }
         markers.clear()
@@ -896,6 +905,15 @@ private fun AircraftMap(
         }
     }
 
+    // Apply (and re-apply on toggle) the map style. street = vector
+    // OpenFreeMap (light/dark); hybrid = Esri satellite imagery + place
+    // labels. On load, bump styleEpoch so the marker effects re-add their
+    // annotations (a style swap clears them).
+    LaunchedEffect(map, mapHybrid, isDark) {
+        val m = map ?: return@LaunchedEffect
+        applyMapStyle(m, mapHybrid, isDark) { styleEpoch++ }
+    }
+
     Surface(
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth().height(240.dp),
@@ -908,7 +926,9 @@ private fun AircraftMap(
                     onCreate(null)
                     getMapAsync { ml ->
                         map = ml
-                        ml.setStyle(if (isDark) STYLE_POSITRON else STYLE_LIBERTY)
+                        // Style is applied by the LaunchedEffect below (so it
+                        // can switch street ↔ hybrid at runtime). Listeners +
+                        // camera are set here; they survive a style change.
                         ml.uiSettings.isAttributionEnabled = true
                         ml.uiSettings.isLogoEnabled = false
 
@@ -969,6 +989,51 @@ private fun AircraftMap(
 
 private const val STYLE_LIBERTY = "https://tiles.openfreemap.org/styles/liberty"
 private const val STYLE_POSITRON = "https://tiles.openfreemap.org/styles/positron"
+
+/** Hybrid satellite style — Esri World Imagery raster with the
+ *  World_Boundaries_and_Places reference layer stacked on top for place
+ *  names + admin boundaries. Esri's services are XYZ Web-Mercator with the
+ *  ArcGIS `/{z}/{y}/{x}` tile path. Free to use with attribution; the
+ *  attribution string is surfaced via the map's attribution control. */
+private const val HYBRID_STYLE_JSON = """
+{
+  "version": 8,
+  "sources": {
+    "esri-imagery": {
+      "type": "raster",
+      "tiles": ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+      "tileSize": 256,
+      "maxzoom": 19,
+      "attribution": "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community"
+    },
+    "esri-reference": {
+      "type": "raster",
+      "tiles": ["https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"],
+      "tileSize": 256,
+      "maxzoom": 19
+    }
+  },
+  "layers": [
+    { "id": "esri-imagery", "type": "raster", "source": "esri-imagery" },
+    { "id": "esri-reference", "type": "raster", "source": "esri-reference" }
+  ]
+}
+"""
+
+/** Apply the street (vector) or hybrid (satellite raster) style and fire
+ *  [onLoaded] once it's ready. */
+private fun applyMapStyle(
+    ml: MapLibreMap,
+    hybrid: Boolean,
+    isDark: Boolean,
+    onLoaded: () -> Unit,
+) {
+    if (hybrid) {
+        ml.setStyle(org.maplibre.android.maps.Style.Builder().fromJson(HYBRID_STYLE_JSON)) { onLoaded() }
+    } else {
+        ml.setStyle(if (isDark) STYLE_POSITRON else STYLE_LIBERTY) { onLoaded() }
+    }
+}
 
 /** Project a position [distanceM] along a great-circle bearing of
  *  [bearingDeg] from (lat, lon). Flat-earth approximation — fine for
@@ -1403,6 +1468,8 @@ private fun SettingsPanel(
     onShowSunMoonChange: (Boolean) -> Unit,
     mapHeadingLock: Boolean,
     onMapHeadingLockChange: (Boolean) -> Unit,
+    mapHybrid: Boolean,
+    onMapHybridChange: (Boolean) -> Unit,
     alertNotable: Boolean,
     onAlertNotableChange: (Boolean) -> Unit,
     keepScreenOn: Boolean,
@@ -1503,6 +1570,23 @@ private fun SettingsPanel(
             androidx.compose.material3.Switch(
                 checked = mapHeadingLock,
                 onCheckedChange = onMapHeadingLockChange,
+            )
+        }
+        // Satellite (hybrid) basemap toggle.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringResource(R.string.aircraft_map_hybrid),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            androidx.compose.material3.Switch(
+                checked = mapHybrid,
+                onCheckedChange = onMapHybridChange,
             )
         }
         // Notable-aircraft alert toggle (military / emergency / vintage).
@@ -1951,10 +2035,17 @@ private fun AircraftDetailDialog(
             }
         },
         title = {
-            Text(
-                s.callsign ?: s.icaoHex.uppercase(),
-                fontWeight = FontWeight.Bold,
-            )
+            // Callsign + lighting condition side by side — the lighting is
+            // the at-a-glance "is it worth shooting right now" cue, so it
+            // lives at the top next to the flight number.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    s.callsign ?: s.icaoHex.uppercase(),
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                )
+                LightingChip(lighting)
+            }
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1999,46 +2090,46 @@ private fun AircraftDetailDialog(
                         badges.forEach { BadgeChip(it) }
                     }
                 }
-                DetailRow(stringResource(R.string.aircraft_detail_registration), s.registration)
-                DetailRow(stringResource(R.string.aircraft_detail_model), s.model)
-                DetailRow(stringResource(R.string.aircraft_detail_manufacturer), s.manufacturer)
+                // ── Identity (condensed: multi-value lines) ──────────────
+                DetailRow(
+                    stringResource(R.string.aircraft_detail_model),
+                    listOfNotNull(s.model, s.manufacturer?.takeIf { it != s.model })
+                        .joinToString(" · ").ifBlank { null },
+                )
                 DetailRow(stringResource(R.string.aircraft_detail_operator), s.operator)
-                DetailRow(stringResource(R.string.aircraft_detail_type_code), s.typeCode)
-                DetailRow(stringResource(R.string.aircraft_detail_built), s.builtYear?.toString())
-                DetailRow(stringResource(R.string.aircraft_detail_icao), s.icaoHex.uppercase())
-                DetailRow(stringResource(R.string.aircraft_detail_origin), s.originCountry)
+                DetailRow(
+                    stringResource(R.string.aircraft_detail_registration),
+                    listOfNotNull(s.registration, s.typeCode, s.builtYear?.toString())
+                        .joinToString(" · ").ifBlank { null },
+                )
+                DetailRow(
+                    stringResource(R.string.aircraft_detail_icao),
+                    s.icaoHex.uppercase() + (s.originCountry?.let { " · $it" } ?: ""),
+                )
                 DetailRow(stringResource(R.string.aircraft_detail_squawk), s.squawk)
                 Spacer(Modifier.height(4.dp))
-                DetailRow(
-                    stringResource(R.string.aircraft_detail_distance),
-                    String.format(Locale.US, "%.2f km", s.distanceKm),
-                )
-                DetailRow(
-                    stringResource(R.string.aircraft_detail_bearing),
-                    String.format(Locale.US, "%d° %s", s.bearingDeg.roundToInt(), bearingArrow(s.bearingDeg)),
-                )
-                DetailRow(stringResource(R.string.aircraft_detail_altitude),
-                    s.altitudeFt?.let { "${it.roundToInt()} ft" })
-                DetailRow(stringResource(R.string.aircraft_detail_speed),
-                    s.groundSpeedKt?.let { "${it.roundToInt()} kt" })
-                DetailRow(stringResource(R.string.aircraft_detail_heading),
-                    s.headingDeg?.let { "${it.roundToInt()}° ${bearingArrow(it)}" })
-                DetailRow(stringResource(R.string.aircraft_detail_vertical),
-                    s.verticalRateFpm?.let {
-                        val sign = if (it >= 0) "↑" else "↓"
-                        "$sign ${kotlin.math.abs(it).roundToInt()} fpm"
-                    })
-                DetailRow(stringResource(R.string.aircraft_detail_position),
-                    String.format(Locale.US, "%.4f°, %.4f°", s.lat, s.lon))
-                Spacer(Modifier.height(4.dp))
                 // ── Photographer's section: where / when / how to shoot ──
+                // Aim = where to point (distance · compass bearing · tilt up).
                 DetailRow(
-                    stringResource(R.string.aircraft_detail_elevation),
-                    elevation?.let { "${it.roundToInt()}° ↑" },
+                    stringResource(R.string.aircraft_detail_aim),
+                    listOfNotNull(
+                        String.format(Locale.US, "%.1f km", s.distanceKm),
+                        "${s.bearingDeg.roundToInt()}° ${bearingArrow(s.bearingDeg)}",
+                        elevation?.let { "∡ ${it.roundToInt()}°" },
+                    ).joinToString(" · "),
                 )
+                // Flight = the kinematics (altitude · speed · heading · climb).
                 DetailRow(
-                    stringResource(R.string.aircraft_detail_lighting),
-                    stringResource(lighting.labelRes),
+                    stringResource(R.string.aircraft_detail_flight),
+                    listOfNotNull(
+                        s.altitudeFt?.let { "${it.roundToInt()} ft" },
+                        s.groundSpeedKt?.let { "${it.roundToInt()} kt" },
+                        s.headingDeg?.let { "${it.roundToInt()}°" },
+                        s.verticalRateFpm?.let {
+                            val sign = if (it >= 0) "↑" else "↓"
+                            "$sign${kotlin.math.abs(it).roundToInt()} fpm"
+                        },
+                    ).joinToString(" · ").ifBlank { null },
                 )
                 closest?.let { ca ->
                     DetailRow(

@@ -521,6 +521,9 @@
     <string name="aircraft_info_button">More info</string>
     <string name="aircraft_show_sun_moon">Show sun &amp; moon on map</string>
     <string name="aircraft_map_heading_lock">Rotate map with phone direction</string>
+    <string name="aircraft_map_hybrid">Satellite map</string>
+    <string name="aircraft_detail_aim">Aim</string>
+    <string name="aircraft_detail_flight">Flight</string>
     <string name="aircraft_alert_notable">Alert on notable aircraft</string>
     <string name="aircraft_keep_screen_on">Keep screen on</string>
     <string name="aircraft_detail_elevation">Elevation</string>

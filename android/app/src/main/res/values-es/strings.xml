@@ -327,6 +327,9 @@
     <string name="aircraft_info_button">Más info</string>
     <string name="aircraft_show_sun_moon">Mostrar sol y luna en el mapa</string>
     <string name="aircraft_map_heading_lock">Girar mapa con la dirección del móvil</string>
+    <string name="aircraft_map_hybrid">Mapa satélite</string>
+    <string name="aircraft_detail_aim">Apuntar</string>
+    <string name="aircraft_detail_flight">Vuelo</string>
     <string name="aircraft_alert_notable">Avisar de aviones destacados</string>
     <string name="aircraft_keep_screen_on">Mantener pantalla encendida</string>
     <string name="aircraft_detail_elevation">Elevación</string>

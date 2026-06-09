@@ -329,6 +329,9 @@
     <string name="aircraft_info_button">更多信息</string>
     <string name="aircraft_show_sun_moon">在地图上显示太阳和月亮</string>
     <string name="aircraft_map_heading_lock">地图随手机方向旋转</string>
+    <string name="aircraft_map_hybrid">卫星地图</string>
+    <string name="aircraft_detail_aim">瞄准</string>
+    <string name="aircraft_detail_flight">飞行</string>
     <string name="aircraft_alert_notable">特殊机型提醒</string>
     <string name="aircraft_keep_screen_on">保持屏幕常亮</string>
     <string name="aircraft_detail_elevation">仰角</string>

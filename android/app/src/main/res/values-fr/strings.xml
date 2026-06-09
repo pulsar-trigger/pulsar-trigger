@@ -327,6 +327,9 @@
     <string name="aircraft_info_button">Plus d\'infos</string>
     <string name="aircraft_show_sun_moon">Afficher soleil &amp; lune sur la carte</string>
     <string name="aircraft_map_heading_lock">Tourner la carte avec l\'orientation du téléphone</string>
+    <string name="aircraft_map_hybrid">Carte satellite</string>
+    <string name="aircraft_detail_aim">Visée</string>
+    <string name="aircraft_detail_flight">Vol</string>
     <string name="aircraft_alert_notable">Alerter sur les appareils notables</string>
     <string name="aircraft_keep_screen_on">Garder l\'écran allumé</string>
     <string name="aircraft_detail_elevation">Élévation</string>

@@ -3021,6 +3021,18 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         aircraftPrefs.edit().putBoolean("keep_screen_on", value).apply()
     }
 
+    /** Use a hybrid satellite basemap (Esri imagery + place labels) instead
+     *  of the default vector street style. Off by default — satellite tiles
+     *  are heavier on data. */
+    private val _aircraftWatchMapHybrid =
+        MutableStateFlow(aircraftPrefs.getBoolean("map_hybrid", false))
+    val aircraftWatchMapHybrid: StateFlow<Boolean> = _aircraftWatchMapHybrid
+
+    fun setAircraftWatchMapHybrid(value: Boolean) {
+        _aircraftWatchMapHybrid.value = value
+        aircraftPrefs.edit().putBoolean("map_hybrid", value).apply()
+    }
+
     /** Auto-refresh cadence in seconds, OR the sentinel `0` meaning "Live"
      *  (poll at the feed's documented floor, plus dead-reckoning marker
      *  interpolation between polls — see [com.ehrocha.pulsar.ui.screens.AircraftWatchScreen]).
