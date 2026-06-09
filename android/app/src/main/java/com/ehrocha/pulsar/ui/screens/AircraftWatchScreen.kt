@@ -481,12 +481,20 @@ private fun AircraftMap(
         val m = map ?: return@LaunchedEffect
         if (mapHeadingLock) {
             val targetBearing = deviceAzimuth.toDouble()
-            m.moveCamera(
-                org.maplibre.android.camera.CameraUpdateFactory.bearingTo(targetBearing),
-            )
+            val before = m.cameraPosition.bearing
+            // Set bearing directly on the CameraPosition rather than via
+            // CameraUpdateFactory.bearingTo — explicit, no factory side
+            // effects, no chance of an animation queue. Builder seeded
+            // from current cameraPosition so target / zoom / tilt stay.
+            m.cameraPosition = org.maplibre.android.camera.CameraPosition.Builder(m.cameraPosition)
+                .bearing(targetBearing)
+                .build()
+            val after = m.cameraPosition.bearing
             android.util.Log.d(
                 "AircraftWatch",
-                "heading-lock: device azimuth=${deviceAzimuth}° → map bearing=${targetBearing}°",
+                "heading-lock: device=${deviceAzimuth}° " +
+                    "before=${"%.1f".format(before)}° → target=${"%.1f".format(targetBearing)}° " +
+                    "after=${"%.1f".format(after)}°",
             )
         } else if (m.cameraPosition.bearing != 0.0) {
             m.animateCamera(
@@ -1076,7 +1084,16 @@ private fun rememberDeviceCompass(userLat: Double?, userLon: Double?): DeviceCom
                 // astronomy app uses. Wrap to [0, 360).
                 val trueDeg = ((magneticDeg + declination + 360.0) % 360.0).toInt()
                 val bucket = (trueDeg / 5) * 5
-                if (bucket != azimuthBucket) azimuthBucket = bucket
+                if (bucket != azimuthBucket) {
+                    android.util.Log.d(
+                        "AircraftWatch",
+                        "sensor: rad=${"%.3f".format(orient[0])} " +
+                            "magDeg=${"%.1f".format(magneticDeg)} " +
+                            "decl=${"%.1f".format(declination)} " +
+                            "trueDeg=$trueDeg bucket=$bucket",
+                    )
+                    azimuthBucket = bucket
+                }
                 if (event.accuracy != accuracy) accuracy = event.accuracy
             }
             override fun onAccuracyChanged(sensor: android.hardware.Sensor?, acc: Int) {
