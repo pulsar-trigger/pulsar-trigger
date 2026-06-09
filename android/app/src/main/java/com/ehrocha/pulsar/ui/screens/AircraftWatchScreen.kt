@@ -857,10 +857,14 @@ private fun AircraftMap(
                 .aircraftCategoryFor(s.typeCode, s.model)
             // Marker fill colour matches the row's proximity band so a
             // plane that reads as "red" on the list also reads as red on
-            // the map. Compose Color → Android Color int via toArgb().
+            // the map. Opacity encodes ALTITUDE: low aircraft (the
+            // shootable subjects) are solid, high cruisers fade back into
+            // the sky. Hue = near/far, alpha = low/high — two orthogonal
+            // channels. Compose Color → Android Color int.
+            val op = altitudeOpacity(s.altitudeFt)
             val tint = proximityColor(s.distanceKm, radiusKm).let {
                 android.graphics.Color.argb(
-                    (it.alpha * 255).toInt(),
+                    (it.alpha * op * 255).toInt().coerceIn(0, 255),
                     (it.red * 255).toInt(),
                     (it.green * 255).toInt(),
                     (it.blue * 255).toInt(),
@@ -1753,6 +1757,18 @@ private fun proximityColor(distanceKm: Double, radiusKm: Int): androidx.compose.
         ratio < 2.0 / 3.0 -> PROXIMITY_MID
         else -> PROXIMITY_FAR
     }
+}
+
+/** Marker opacity encoding altitude: low aircraft (≤3 000 ft — the
+ *  shootable subjects: pattern, approach, helicopters, GA) are solid;
+ *  high cruisers (≥38 000 ft) fade to 50 %. Quantised to 5 levels so the
+ *  icon cache stays bounded (continuous opacity would create a new bitmap
+ *  per foot). Unknown altitude → solid (don't hide it). */
+private fun altitudeOpacity(altFt: Double?): Float {
+    val alt = altFt ?: return 1f
+    val t = ((alt - 3000.0) / (38000.0 - 3000.0)).coerceIn(0.0, 1.0)
+    val raw = 1f - t.toFloat() * 0.5f          // 1.0 (low) .. 0.5 (high)
+    return (Math.round(raw / 0.125f) * 0.125f) // 1.0, 0.875, 0.75, 0.625, 0.5
 }
 
 @OptIn(ExperimentalLayoutApi::class)
