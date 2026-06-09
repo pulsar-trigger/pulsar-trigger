@@ -490,12 +490,11 @@ private fun AircraftMap(
                 .bearing(targetBearing)
                 .build()
             val after = m.cameraPosition.bearing
-            android.util.Log.d(
-                "AircraftWatch",
-                "heading-lock: device=${deviceAzimuth}° " +
-                    "before=${"%.1f".format(before)}° → target=${"%.1f".format(targetBearing)}° " +
-                    "after=${"%.1f".format(after)}°",
-            )
+            val line = "heading-lock: device=${deviceAzimuth}° " +
+                "before=${"%.1f".format(before)}° → target=${"%.1f".format(targetBearing)}° " +
+                "after=${"%.1f".format(after)}°"
+            android.util.Log.d("AircraftWatch", line)
+            com.ehrocha.pulsar.canonble.CanonBleLog.d("AircraftWatch", line)
         } else if (m.cameraPosition.bearing != 0.0) {
             m.animateCamera(
                 org.maplibre.android.camera.CameraUpdateFactory.bearingTo(0.0),
@@ -1085,13 +1084,15 @@ private fun rememberDeviceCompass(userLat: Double?, userLon: Double?): DeviceCom
                 val trueDeg = ((magneticDeg + declination + 360.0) % 360.0).toInt()
                 val bucket = (trueDeg / 5) * 5
                 if (bucket != azimuthBucket) {
-                    android.util.Log.d(
-                        "AircraftWatch",
-                        "sensor: rad=${"%.3f".format(orient[0])} " +
-                            "magDeg=${"%.1f".format(magneticDeg)} " +
-                            "decl=${"%.1f".format(declination)} " +
-                            "trueDeg=$trueDeg bucket=$bucket",
-                    )
+                    val line = "sensor: rad=${"%.3f".format(orient[0])} " +
+                        "magDeg=${"%.1f".format(magneticDeg)} " +
+                        "decl=${"%.1f".format(declination)} " +
+                        "trueDeg=$trueDeg bucket=$bucket"
+                    android.util.Log.d("AircraftWatch", line)
+                    // Mirror into the same ring buffer the Tools → "Collect
+                    // diagnostics" share intent reads, so the user can dump
+                    // the trace without needing adb.
+                    com.ehrocha.pulsar.canonble.CanonBleLog.d("AircraftWatch", line)
                     azimuthBucket = bucket
                 }
                 if (event.accuracy != accuracy) accuracy = event.accuracy
