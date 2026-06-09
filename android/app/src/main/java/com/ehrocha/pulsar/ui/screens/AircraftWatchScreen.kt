@@ -107,6 +107,7 @@ fun AircraftWatchScreen(
     var showCalibrationDialog by remember { mutableStateOf(false) }
     val rawSightings by vm.aircraftSightings.collectAsState()
     val showSunMoon by vm.aircraftWatchShowSunMoon.collectAsState()
+    val mapHeadingLock by vm.aircraftWatchMapHeadingLock.collectAsState()
     val watching by vm.aircraftWatching.collectAsState()
     val error by vm.aircraftWatchError.collectAsState()
     val lastUpdateMs by vm.aircraftWatchLastUpdateMs.collectAsState()
@@ -209,6 +210,8 @@ fun AircraftWatchScreen(
                     onIntervalChange = vm::setAircraftWatchIntervalSec,
                     showSunMoon = showSunMoon,
                     onShowSunMoonChange = vm::setAircraftWatchShowSunMoon,
+                    mapHeadingLock = mapHeadingLock,
+                    onMapHeadingLockChange = vm::setAircraftWatchMapHeadingLock,
                     compassAccuracy = deviceCompass.accuracy,
                     onShowCalibrate = { showCalibrationDialog = true },
                     watching = watching,
@@ -284,6 +287,7 @@ fun AircraftWatchScreen(
                 selectedIcao = selectedIcao,
                 showSunMoon = showSunMoon,
                 deviceAzimuth = deviceCompass.azimuth,
+                mapHeadingLock = mapHeadingLock,
                 onMarkerSelect = { icao ->
                     selectedIcao = if (selectedIcao == icao) null else icao
                 },
@@ -425,6 +429,7 @@ private fun AircraftMap(
     selectedIcao: String? = null,
     showSunMoon: Boolean = false,
     deviceAzimuth: Int = 0,
+    mapHeadingLock: Boolean = false,
     onMarkerSelect: (String) -> Unit = {},
 ) {
     val isDark = when (LocalNightMode.current.value) {
@@ -466,6 +471,23 @@ private fun AircraftMap(
     // deviceAzimuth comes in as a parameter from the screen so the
     // calibration banner above the map can read accuracy from the same
     // sensor subscription. Single source, no duplicate listener.
+
+    // Heading-lock: rotate the map so the device-pointing direction is
+    // always "up". Snap to 5° buckets (deviceAzimuth already is) so the
+    // map doesn't redraw on every sensor tick. When the toggle goes off
+    // we animate the map back to north-up.
+    LaunchedEffect(map, mapHeadingLock, deviceAzimuth) {
+        val m = map ?: return@LaunchedEffect
+        val targetBearing = if (mapHeadingLock) deviceAzimuth.toDouble() else 0.0
+        m.animateCamera(
+            org.maplibre.android.camera.CameraUpdateFactory.bearingTo(targetBearing),
+            150,
+        )
+        // While the map's auto-following heading, swallowing user-driven
+        // rotate gestures avoids fight-the-compass behaviour. Pan and
+        // zoom stay on.
+        m.uiSettings.isRotateGesturesEnabled = !mapHeadingLock
+    }
 
     // Directional cone + user pin — Google-Maps-style stack: cone goes on
     // first, pin on top so the cone fans out from BEHIND the pin rather
@@ -1113,6 +1135,8 @@ private fun SettingsPanel(
     onIntervalChange: (Int) -> Unit,
     showSunMoon: Boolean,
     onShowSunMoonChange: (Boolean) -> Unit,
+    mapHeadingLock: Boolean,
+    onMapHeadingLockChange: (Boolean) -> Unit,
     compassAccuracy: Int,
     onShowCalibrate: () -> Unit,
     watching: Boolean,
@@ -1192,6 +1216,23 @@ private fun SettingsPanel(
             androidx.compose.material3.Switch(
                 checked = showSunMoon,
                 onCheckedChange = onShowSunMoonChange,
+            )
+        }
+        // Map-rotates-with-phone toggle.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringResource(R.string.aircraft_map_heading_lock),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            androidx.compose.material3.Switch(
+                checked = mapHeadingLock,
+                onCheckedChange = onMapHeadingLockChange,
             )
         }
         // Compass status + manual calibrate. Always visible: the sensor

@@ -2986,6 +2986,17 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         aircraftPrefs.edit().putBoolean("show_sun_moon", value).apply()
     }
 
+    /** Rotate the Aircraft Watch map so the device-pointing direction is
+     *  always "up" on screen. When off, the map stays north-up. */
+    private val _aircraftWatchMapHeadingLock =
+        MutableStateFlow(aircraftPrefs.getBoolean("map_heading_lock", false))
+    val aircraftWatchMapHeadingLock: StateFlow<Boolean> = _aircraftWatchMapHeadingLock
+
+    fun setAircraftWatchMapHeadingLock(value: Boolean) {
+        _aircraftWatchMapHeadingLock.value = value
+        aircraftPrefs.edit().putBoolean("map_heading_lock", value).apply()
+    }
+
     /** Auto-refresh cadence in seconds, OR the sentinel `0` meaning "Live"
      *  (poll at the feed's documented floor, plus dead-reckoning marker
      *  interpolation between polls — see [com.ehrocha.pulsar.ui.screens.AircraftWatchScreen]).

@@ -520,6 +520,7 @@
     <string name="aircraft_detail_position">Position</string>
     <string name="aircraft_info_button">More info</string>
     <string name="aircraft_show_sun_moon">Show sun &amp; moon on map</string>
+    <string name="aircraft_map_heading_lock">Rotate map with phone direction</string>
     <string name="aircraft_detail_suggested_lens">Suggested lens</string>
     <string name="aircraft_detail_suggested_lens_value">~%1$d mm (full-frame)</string>
     <string name="aircraft_compass_calibration">Compass uncalibrated — wave the phone in a figure-8 motion a few times to recalibrate.</string>

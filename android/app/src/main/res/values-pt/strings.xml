@@ -326,6 +326,7 @@
     <string name="aircraft_detail_position">Posição</string>
     <string name="aircraft_info_button">Mais info</string>
     <string name="aircraft_show_sun_moon">Mostrar sol e lua no mapa</string>
+    <string name="aircraft_map_heading_lock">Girar mapa com a direção do celular</string>
     <string name="aircraft_detail_suggested_lens">Lente sugerida</string>
     <string name="aircraft_detail_suggested_lens_value">~%1$d mm (full-frame)</string>
     <string name="aircraft_compass_calibration">Bússola não calibrada — mova o celular em formato de 8 algumas vezes para recalibrar.</string>

@@ -326,6 +326,7 @@
     <string name="aircraft_detail_position">Posición</string>
     <string name="aircraft_info_button">Más info</string>
     <string name="aircraft_show_sun_moon">Mostrar sol y luna en el mapa</string>
+    <string name="aircraft_map_heading_lock">Girar mapa con la dirección del móvil</string>
     <string name="aircraft_detail_suggested_lens">Objetivo sugerido</string>
     <string name="aircraft_detail_suggested_lens_value">~%1$d mm (full-frame)</string>
     <string name="aircraft_compass_calibration">Brújula sin calibrar — mueve el móvil en forma de 8 varias veces para recalibrar.</string>

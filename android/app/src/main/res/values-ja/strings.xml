@@ -326,6 +326,7 @@
     <string name="aircraft_detail_position">位置</string>
     <string name="aircraft_info_button">詳細</string>
     <string name="aircraft_show_sun_moon">地図に太陽と月を表示</string>
+    <string name="aircraft_map_heading_lock">端末の向きに合わせて地図を回転</string>
     <string name="aircraft_detail_suggested_lens">推奨レンズ</string>
     <string name="aircraft_detail_suggested_lens_value">~%1$d mm（フルフレーム）</string>
     <string name="aircraft_compass_calibration">コンパスが未較正です — 端末を数回 8 の字に振って再較正してください。</string>

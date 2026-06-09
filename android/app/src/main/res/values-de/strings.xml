@@ -326,6 +326,7 @@
     <string name="aircraft_detail_position">Position</string>
     <string name="aircraft_info_button">Mehr Info</string>
     <string name="aircraft_show_sun_moon">Sonne &amp; Mond auf Karte zeigen</string>
+    <string name="aircraft_map_heading_lock">Karte mit Telefonrichtung drehen</string>
     <string name="aircraft_detail_suggested_lens">Empfohlenes Objektiv</string>
     <string name="aircraft_detail_suggested_lens_value">~%1$d mm (Vollformat)</string>
     <string name="aircraft_compass_calibration">Kompass unkalibriert — das Telefon einige Male in einer 8er-Bewegung schwenken, um neu zu kalibrieren.</string>

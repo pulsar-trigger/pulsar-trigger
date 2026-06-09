@@ -326,6 +326,7 @@
     <string name="aircraft_detail_position">Position</string>
     <string name="aircraft_info_button">Plus d\'infos</string>
     <string name="aircraft_show_sun_moon">Afficher soleil &amp; lune sur la carte</string>
+    <string name="aircraft_map_heading_lock">Tourner la carte avec l\'orientation du téléphone</string>
     <string name="aircraft_detail_suggested_lens">Objectif suggéré</string>
     <string name="aircraft_detail_suggested_lens_value">~%1$d mm (plein format)</string>
     <string name="aircraft_compass_calibration">Boussole non calibrée — bougez le téléphone en forme de 8 plusieurs fois pour recalibrer.</string>
