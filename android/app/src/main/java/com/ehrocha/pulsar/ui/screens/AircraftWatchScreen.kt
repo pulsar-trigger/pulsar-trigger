@@ -473,16 +473,27 @@ private fun AircraftMap(
     // sensor subscription. Single source, no duplicate listener.
 
     // Heading-lock: rotate the map so the device-pointing direction is
-    // always "up". Snap to 5° buckets (deviceAzimuth already is) so the
-    // map doesn't redraw on every sensor tick. When the toggle goes off
-    // we animate the map back to north-up.
+    // always "up". moveCamera is instant (no interpolation) — back-to-
+    // back azimuth updates can't stack incomplete animations and produce
+    // the over-rotation reported in the wild. When the toggle goes off
+    // we animate the map back to north-up in one smooth motion.
     LaunchedEffect(map, mapHeadingLock, deviceAzimuth) {
         val m = map ?: return@LaunchedEffect
-        val targetBearing = if (mapHeadingLock) deviceAzimuth.toDouble() else 0.0
-        m.animateCamera(
-            org.maplibre.android.camera.CameraUpdateFactory.bearingTo(targetBearing),
-            150,
-        )
+        if (mapHeadingLock) {
+            val targetBearing = deviceAzimuth.toDouble()
+            m.moveCamera(
+                org.maplibre.android.camera.CameraUpdateFactory.bearingTo(targetBearing),
+            )
+            android.util.Log.d(
+                "AircraftWatch",
+                "heading-lock: device azimuth=${deviceAzimuth}° → map bearing=${targetBearing}°",
+            )
+        } else if (m.cameraPosition.bearing != 0.0) {
+            m.animateCamera(
+                org.maplibre.android.camera.CameraUpdateFactory.bearingTo(0.0),
+                400,
+            )
+        }
         // While the map's auto-following heading, swallowing user-driven
         // rotate gestures avoids fight-the-compass behaviour. Pan and
         // zoom stay on.
