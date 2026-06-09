@@ -114,7 +114,13 @@ fun AircraftWatchScreen(
     val radiusKm by vm.aircraftWatchRadiusKm.collectAsState()
     val maxAltFt by vm.aircraftWatchMaxAltitudeFt.collectAsState()
     val intervalSec by vm.aircraftWatchIntervalSec.collectAsState()
+    val alertNotable by vm.aircraftWatchAlertNotable.collectAsState()
     val location = vm.aircraftWatchLocation()
+    // Sun direction for the lighting hint. Recomputed each poll (and on
+    // location change) — cheap trig, no network.
+    val sunDir = androidx.compose.runtime.remember(location, lastUpdateMs) {
+        location?.let { currentSunDir(it.first, it.second) }
+    }
     // Compass — must know user lat/lon to apply true-vs-magnetic declination.
     val deviceCompass = rememberDeviceCompass(
         userLat = location?.first,
@@ -134,6 +140,26 @@ fun AircraftWatchScreen(
     LaunchedEffect(sightings, selectedIcao) {
         val sel = selectedIcao ?: return@LaunchedEffect
         if (sightings.none { it.icaoHex == sel }) selectedIcao = null
+    }
+
+    // Notable-aircraft alert. Beep + vibrate when a military / emergency /
+    // vintage aircraft FIRST appears. `alerted` tracks already-announced
+    // ICAOs so we don't re-beep every poll; pruned to in-range so a body
+    // that leaves and returns later re-alerts.
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val alerted = androidx.compose.runtime.remember { mutableSetOf<String>() }
+    LaunchedEffect(sightings, alertNotable) {
+        if (!alertNotable) {
+            alerted.clear()
+            return@LaunchedEffect
+        }
+        val inRange = sightings.map { it.icaoHex }.toSet()
+        alerted.retainAll(inRange)
+        val fresh = sightings.filter { isAlertWorthy(it) && it.icaoHex !in alerted }
+        if (fresh.isNotEmpty()) {
+            fresh.forEach { alerted += it.icaoHex }
+            playNotableAlert(ctx)
+        }
     }
 
     // Auto-start on entry, stop on dispose. Mirrors how the Canon BLE setup
@@ -212,6 +238,8 @@ fun AircraftWatchScreen(
                     onShowSunMoonChange = vm::setAircraftWatchShowSunMoon,
                     mapHeadingLock = mapHeadingLock,
                     onMapHeadingLockChange = vm::setAircraftWatchMapHeadingLock,
+                    alertNotable = alertNotable,
+                    onAlertNotableChange = vm::setAircraftWatchAlertNotable,
                     compassAccuracy = deviceCompass.accuracy,
                     onShowCalibrate = { showCalibrationDialog = true },
                     watching = watching,
@@ -323,6 +351,7 @@ fun AircraftWatchScreen(
                                 radiusKm = radiusKm,
                                 userLat = location.first,
                                 userLon = location.second,
+                                sunDir = sunDir,
                                 selected = selectedIcao == s.icaoHex,
                                 onSelectOnMap = {
                                     // Toggle: tapping the already-selected
@@ -957,6 +986,147 @@ internal fun recommendedFocalLengthMm(s: AircraftSighting): Int {
     return steps.firstOrNull { it >= raw } ?: steps.last()
 }
 
+// ── Feature: photographer's derived metrics ───────────────────────────────
+// All three (elevation angle, lighting direction, closest-approach timing)
+// are pure functions of data we already hold — no extra network. They turn
+// the raw position/sun data into "where to point / when / will it be lit".
+
+/** Current sun azimuth + altitude at the user location, or null on error.
+ *  Reuses the same AstroCalculator path the map overlay uses. */
+internal data class SunDir(val azimuthDeg: Double, val altitudeDeg: Double)
+
+internal fun currentSunDir(userLat: Double, userLon: Double): SunDir? = runCatching {
+    val now = java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC)
+    val date = now.toLocalDate()
+    val utcHour = now.hour + now.minute / 60.0 + now.second / 3600.0
+    val lst = com.ehrocha.pulsar.astro.AstroCalculator.lst(date, utcHour, userLon)
+    val (ra, dec) = com.ehrocha.pulsar.astro.AstroCalculator.sunPosition(date)
+    SunDir(
+        azimuthDeg = com.ehrocha.pulsar.astro.AstroCalculator.azimuth(userLat, dec, lst - ra),
+        altitudeDeg = com.ehrocha.pulsar.astro.AstroCalculator.altitude(userLat, dec, lst - ra),
+    )
+}.getOrNull()
+
+/** Elevation angle (degrees above the horizon) to point the camera up at.
+ *  `distanceKm` is great-circle GROUND distance; combined with altitude it
+ *  gives the tilt. Null if the aircraft has no altitude reading. */
+internal fun elevationDeg(s: AircraftSighting): Double? {
+    val altM = s.altitudeFt?.let { it * 0.3048 } ?: return null
+    val groundM = s.distanceKm * 1000.0
+    if (groundM < 1.0) return 90.0
+    return Math.toDegrees(kotlin.math.atan2(altM, groundM))
+}
+
+internal enum class LightingKind(
+    val labelRes: Int,
+    val color: androidx.compose.ui.graphics.Color,
+) {
+    GOLDEN(R.string.aircraft_lighting_golden, androidx.compose.ui.graphics.Color(0xFFFF8F00)),
+    FRONT_LIT(R.string.aircraft_lighting_front, androidx.compose.ui.graphics.Color(0xFF2E7D32)),
+    SIDE_LIT(R.string.aircraft_lighting_side, androidx.compose.ui.graphics.Color(0xFF5C6BC0)),
+    BACK_LIT(R.string.aircraft_lighting_back, androidx.compose.ui.graphics.Color(0xFFD84315)),
+    NIGHT(R.string.aircraft_lighting_night, androidx.compose.ui.graphics.Color(0xFF607D8B)),
+}
+
+/** Smallest unsigned angular difference between two bearings, 0..180. */
+private fun angularDiff(a: Double, b: Double): Double {
+    val d = ((a - b + 180.0) % 360.0 + 360.0) % 360.0 - 180.0
+    return kotlin.math.abs(d)
+}
+
+/** Photographic lighting on the aircraft, given where the photographer is
+ *  pointing (toward the aircraft, [aircraftBearingDeg]) and where the sun
+ *  is. Front-lit = sun behind the photographer (best); back-lit = sun
+ *  behind the subject (silhouette); golden = front-lit with a low sun. */
+internal fun lightingFor(aircraftBearingDeg: Double, sun: SunDir?): LightingKind {
+    if (sun == null || sun.altitudeDeg <= 0.0) return LightingKind.NIGHT
+    val diff = angularDiff(sun.azimuthDeg, aircraftBearingDeg)
+    val frontish = diff > 120.0
+    return when {
+        frontish && sun.altitudeDeg <= 8.0 -> LightingKind.GOLDEN
+        frontish -> LightingKind.FRONT_LIT
+        diff < 60.0 -> LightingKind.BACK_LIT
+        else -> LightingKind.SIDE_LIT
+    }
+}
+
+/** Time + distance of closest approach for a moving aircraft relative to
+ *  the user. Closed-form closest-point-on-line in local ENU metres.
+ *  Null when heading/speed are missing or the aircraft is ~stationary. */
+internal data class ClosestApproach(
+    val secondsUntil: Double,
+    val minDistanceKm: Double,
+    val receding: Boolean,
+)
+
+internal fun closestApproach(s: AircraftSighting, userLat: Double, userLon: Double): ClosestApproach? {
+    val hdg = s.headingDeg ?: return null
+    val gs = s.groundSpeedKt ?: return null
+    if (gs <= 1.0) return null
+    val speedMs = gs * 0.514444
+    val latRad = Math.toRadians(userLat)
+    // Aircraft position relative to user, local ENU metres.
+    val eastM = (s.lon - userLon) * 111_111.0 * kotlin.math.cos(latRad)
+    val northM = (s.lat - userLat) * 111_111.0
+    val hdgRad = Math.toRadians(hdg)
+    val vE = speedMs * kotlin.math.sin(hdgRad)
+    val vN = speedMs * kotlin.math.cos(hdgRad)
+    val vDotV = vE * vE + vN * vN
+    if (vDotV < 1e-6) return null
+    val tStar = -(eastM * vE + northM * vN) / vDotV   // seconds to closest
+    val tClamped = tStar.coerceAtLeast(0.0)
+    val eAt = eastM + vE * tClamped
+    val nAt = northM + vN * tClamped
+    val groundMin = kotlin.math.sqrt(eAt * eAt + nAt * nAt)
+    val altM = (s.altitudeFt ?: 0.0) * 0.3048
+    val slantMin = kotlin.math.sqrt(groundMin * groundMin + altM * altM)
+    return ClosestApproach(
+        secondsUntil = tClamped,
+        minDistanceKm = slantMin / 1000.0,
+        receding = tStar <= 0.0,
+    )
+}
+
+/** True for the rare/notable aircraft worth a beep — military, emergency
+ *  squawk, or vintage airframe. Deliberately excludes HEAVY: near an
+ *  airport every widebody would trigger it, which would be noise. */
+internal fun isAlertWorthy(s: AircraftSighting): Boolean =
+    aircraftBadges(s).any {
+        it == AircraftBadgeKind.MILITARY ||
+            it == AircraftBadgeKind.EMERGENCY ||
+            it == AircraftBadgeKind.VINTAGE
+    }
+
+/** Short beep + vibrate for a notable-aircraft alert. Best-effort; both
+ *  the tone and vibration are independently wrapped so a missing
+ *  vibrator (tablets) or audio-focus denial doesn't crash the other. */
+internal fun playNotableAlert(ctx: android.content.Context) {
+    runCatching {
+        val vib = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            (ctx.getSystemService(android.content.Context.VIBRATOR_MANAGER_SERVICE)
+                as android.os.VibratorManager).defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            ctx.getSystemService(android.content.Context.VIBRATOR_SERVICE) as android.os.Vibrator
+        }
+        vib.vibrate(
+            android.os.VibrationEffect.createOneShot(
+                250, android.os.VibrationEffect.DEFAULT_AMPLITUDE,
+            ),
+        )
+    }
+    runCatching {
+        val tg = android.media.ToneGenerator(
+            android.media.AudioManager.STREAM_NOTIFICATION, 90,
+        )
+        tg.startTone(android.media.ToneGenerator.TONE_PROP_BEEP2, 300)
+        // Release after the tone finishes so we don't leak the generator.
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            runCatching { tg.release() }
+        }, 600)
+    }
+}
+
 /** Approximate heading (degrees, 0=N) from the last two trail points.
  *  Used as a fallback when the OpenSky sighting's `headingDeg` is null
  *  (some transponders only report mode-S without an ADS-B track). */
@@ -1184,6 +1354,8 @@ private fun SettingsPanel(
     onShowSunMoonChange: (Boolean) -> Unit,
     mapHeadingLock: Boolean,
     onMapHeadingLockChange: (Boolean) -> Unit,
+    alertNotable: Boolean,
+    onAlertNotableChange: (Boolean) -> Unit,
     compassAccuracy: Int,
     onShowCalibrate: () -> Unit,
     watching: Boolean,
@@ -1280,6 +1452,23 @@ private fun SettingsPanel(
             androidx.compose.material3.Switch(
                 checked = mapHeadingLock,
                 onCheckedChange = onMapHeadingLockChange,
+            )
+        }
+        // Notable-aircraft alert toggle (military / emergency / vintage).
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringResource(R.string.aircraft_alert_notable),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            androidx.compose.material3.Switch(
+                checked = alertNotable,
+                onCheckedChange = onAlertNotableChange,
             )
         }
         // Compass status + manual calibrate. Always visible: the sensor
@@ -1509,6 +1698,7 @@ private fun AircraftRow(
     radiusKm: Int,
     userLat: Double,
     userLon: Double,
+    sunDir: SunDir?,
     selected: Boolean,
     onSelectOnMap: () -> Unit,
 ) {
@@ -1516,6 +1706,8 @@ private fun AircraftRow(
     val accent = proximityColor(s.distanceKm, radiusKm)
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val rowBadges = aircraftBadges(s)
+    val lighting = lightingFor(s.bearingDeg, sunDir)
+    val elevation = elevationDeg(s)
     // Selected rows get a stronger background + a leading accent so the
     // tap-to-highlight feedback is obvious without a separate selection
     // chip. The colour matches the map's highlight ring.
@@ -1559,13 +1751,16 @@ private fun AircraftRow(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (rowBadges.isNotEmpty()) {
-                    Spacer(Modifier.height(3.dp))
-                    androidx.compose.foundation.layout.FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        rowBadges.forEach { BadgeChip(it) }
-                    }
+                // Lighting chip + rare-aircraft badges share one wrap row.
+                // Lighting is the most photographically glanceable, so it
+                // leads.
+                Spacer(Modifier.height(3.dp))
+                androidx.compose.foundation.layout.FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    LightingChip(lighting)
+                    rowBadges.forEach { BadgeChip(it) }
                 }
                 Spacer(Modifier.height(4.dp))
                 Text(
@@ -1581,11 +1776,20 @@ private fun AircraftRow(
                     fontWeight = FontWeight.SemiBold,
                     color = accent,
                 )
+                // Bearing = where to aim horizontally; elevation = how far
+                // to tilt up. Together they're a complete "point here".
                 Text(
                     "${bearingArrow(s.bearingDeg)} ${s.bearingDeg.roundToInt()}°",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (elevation != null) {
+                    Text(
+                        "∡ ${elevation.roundToInt()}°",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
             // Info button — the secondary action, since the row body now
             // selects-on-map. Tap opens the full detail dialog.
@@ -1604,6 +1808,9 @@ private fun AircraftRow(
     if (showDetails) {
         AircraftDetailDialog(
             s = s,
+            userLat = userLat,
+            userLon = userLon,
+            sunDir = sunDir,
             onDismiss = { showDetails = false },
             onLogSighting = {
                 SpottingLogStore.add(
@@ -1637,11 +1844,17 @@ private fun AircraftRow(
 @Composable
 private fun AircraftDetailDialog(
     s: AircraftSighting,
+    userLat: Double,
+    userLon: Double,
+    sunDir: SunDir?,
     onDismiss: () -> Unit,
     onLogSighting: () -> Unit,
 ) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val badges = aircraftBadges(s)
+    val lighting = lightingFor(s.bearingDeg, sunDir)
+    val elevation = elevationDeg(s)
+    val closest = closestApproach(s, userLat, userLon)
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
@@ -1738,6 +1951,27 @@ private fun AircraftDetailDialog(
                 DetailRow(stringResource(R.string.aircraft_detail_position),
                     String.format(Locale.US, "%.4f°, %.4f°", s.lat, s.lon))
                 Spacer(Modifier.height(4.dp))
+                // ── Photographer's section: where / when / how to shoot ──
+                DetailRow(
+                    stringResource(R.string.aircraft_detail_elevation),
+                    elevation?.let { "${it.roundToInt()}° ↑" },
+                )
+                DetailRow(
+                    stringResource(R.string.aircraft_detail_lighting),
+                    stringResource(lighting.labelRes),
+                )
+                closest?.let { ca ->
+                    DetailRow(
+                        stringResource(R.string.aircraft_detail_closest),
+                        if (ca.receding)
+                            stringResource(R.string.aircraft_closest_receding,
+                                String.format(Locale.US, "%.1f", ca.minDistanceKm))
+                        else
+                            stringResource(R.string.aircraft_closest_in,
+                                ca.secondsUntil.roundToInt(),
+                                String.format(Locale.US, "%.1f", ca.minDistanceKm)),
+                    )
+                }
                 // Suggested lens — derived from slant range + wingspan class.
                 // Hint, not a precision figure; the FF caveat helps users
                 // with crop-sensor bodies translate (÷1.5 APS-C, ÷2 MFT).
@@ -1749,6 +1983,22 @@ private fun AircraftDetailDialog(
             }
         },
     )
+}
+
+@Composable
+private fun LightingChip(lighting: LightingKind) {
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = lighting.color.copy(alpha = 0.18f),
+    ) {
+        Text(
+            "☀ " + stringResource(lighting.labelRes),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = lighting.color,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
 }
 
 @Composable

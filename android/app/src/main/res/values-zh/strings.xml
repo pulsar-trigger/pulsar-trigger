@@ -329,6 +329,17 @@
     <string name="aircraft_info_button">更多信息</string>
     <string name="aircraft_show_sun_moon">在地图上显示太阳和月亮</string>
     <string name="aircraft_map_heading_lock">地图随手机方向旋转</string>
+    <string name="aircraft_alert_notable">特殊机型提醒</string>
+    <string name="aircraft_detail_elevation">仰角</string>
+    <string name="aircraft_detail_lighting">光线</string>
+    <string name="aircraft_detail_closest">最近接近</string>
+    <string name="aircraft_closest_in">%1$d 秒后（~%2$s km）</string>
+    <string name="aircraft_closest_receding">现在 / 正在远离（~%1$s km）</string>
+    <string name="aircraft_lighting_golden">黄金光</string>
+    <string name="aircraft_lighting_front">顺光</string>
+    <string name="aircraft_lighting_side">侧光</string>
+    <string name="aircraft_lighting_back">逆光</string>
+    <string name="aircraft_lighting_night">夜间</string>
     <string name="aircraft_detail_suggested_lens">建议镜头</string>
     <string name="aircraft_detail_suggested_lens_value">~%1$d mm（全画幅）</string>
     <string name="aircraft_compass_calibration">指南针未校准 — 请以 8 字形挥动手机几次以重新校准。</string>

@@ -327,6 +327,17 @@
     <string name="aircraft_info_button">Más info</string>
     <string name="aircraft_show_sun_moon">Mostrar sol y luna en el mapa</string>
     <string name="aircraft_map_heading_lock">Girar mapa con la dirección del móvil</string>
+    <string name="aircraft_alert_notable">Avisar de aviones destacados</string>
+    <string name="aircraft_detail_elevation">Elevación</string>
+    <string name="aircraft_detail_lighting">Luz</string>
+    <string name="aircraft_detail_closest">Acercamiento máximo</string>
+    <string name="aircraft_closest_in">en %1$d s (~%2$s km)</string>
+    <string name="aircraft_closest_receding">ahora / alejándose (~%1$s km)</string>
+    <string name="aircraft_lighting_golden">Dorada</string>
+    <string name="aircraft_lighting_front">Frontal</string>
+    <string name="aircraft_lighting_side">Lateral</string>
+    <string name="aircraft_lighting_back">Contraluz</string>
+    <string name="aircraft_lighting_night">Noche</string>
     <string name="aircraft_detail_suggested_lens">Objetivo sugerido</string>
     <string name="aircraft_detail_suggested_lens_value">~%1$d mm (full-frame)</string>
     <string name="aircraft_compass_calibration">Brújula sin calibrar — mueve el móvil en forma de 8 varias veces para recalibrar.</string>

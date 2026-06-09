@@ -2997,6 +2997,18 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         aircraftPrefs.edit().putBoolean("map_heading_lock", value).apply()
     }
 
+    /** Beep + vibrate when a notable aircraft (military / emergency squawk /
+     *  vintage airframe) first enters the search radius. Off by default —
+     *  opt-in so it doesn't surprise users with sound. */
+    private val _aircraftWatchAlertNotable =
+        MutableStateFlow(aircraftPrefs.getBoolean("alert_notable", false))
+    val aircraftWatchAlertNotable: StateFlow<Boolean> = _aircraftWatchAlertNotable
+
+    fun setAircraftWatchAlertNotable(value: Boolean) {
+        _aircraftWatchAlertNotable.value = value
+        aircraftPrefs.edit().putBoolean("alert_notable", value).apply()
+    }
+
     /** Auto-refresh cadence in seconds, OR the sentinel `0` meaning "Live"
      *  (poll at the feed's documented floor, plus dead-reckoning marker
      *  interpolation between polls — see [com.ehrocha.pulsar.ui.screens.AircraftWatchScreen]).

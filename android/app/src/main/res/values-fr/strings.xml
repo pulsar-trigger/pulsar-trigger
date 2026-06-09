@@ -327,6 +327,17 @@
     <string name="aircraft_info_button">Plus d\'infos</string>
     <string name="aircraft_show_sun_moon">Afficher soleil &amp; lune sur la carte</string>
     <string name="aircraft_map_heading_lock">Tourner la carte avec l\'orientation du téléphone</string>
+    <string name="aircraft_alert_notable">Alerter sur les appareils notables</string>
+    <string name="aircraft_detail_elevation">Élévation</string>
+    <string name="aircraft_detail_lighting">Lumière</string>
+    <string name="aircraft_detail_closest">Approche la plus proche</string>
+    <string name="aircraft_closest_in">dans %1$d s (~%2$s km)</string>
+    <string name="aircraft_closest_receding">maintenant / s\'éloigne (~%1$s km)</string>
+    <string name="aircraft_lighting_golden">Dorée</string>
+    <string name="aircraft_lighting_front">De face</string>
+    <string name="aircraft_lighting_side">Latérale</string>
+    <string name="aircraft_lighting_back">À contre-jour</string>
+    <string name="aircraft_lighting_night">Nuit</string>
     <string name="aircraft_detail_suggested_lens">Objectif suggéré</string>
     <string name="aircraft_detail_suggested_lens_value">~%1$d mm (plein format)</string>
     <string name="aircraft_compass_calibration">Boussole non calibrée — bougez le téléphone en forme de 8 plusieurs fois pour recalibrer.</string>

@@ -327,6 +327,17 @@
     <string name="aircraft_info_button">詳細</string>
     <string name="aircraft_show_sun_moon">地図に太陽と月を表示</string>
     <string name="aircraft_map_heading_lock">端末の向きに合わせて地図を回転</string>
+    <string name="aircraft_alert_notable">注目機をアラート</string>
+    <string name="aircraft_detail_elevation">仰角</string>
+    <string name="aircraft_detail_lighting">光</string>
+    <string name="aircraft_detail_closest">最接近</string>
+    <string name="aircraft_closest_in">%1$d 秒後（~%2$s km）</string>
+    <string name="aircraft_closest_receding">現在 / 遠ざかり中（~%1$s km）</string>
+    <string name="aircraft_lighting_golden">ゴールデン</string>
+    <string name="aircraft_lighting_front">順光</string>
+    <string name="aircraft_lighting_side">サイド光</string>
+    <string name="aircraft_lighting_back">逆光</string>
+    <string name="aircraft_lighting_night">夜間</string>
     <string name="aircraft_detail_suggested_lens">推奨レンズ</string>
     <string name="aircraft_detail_suggested_lens_value">~%1$d mm（フルフレーム）</string>
     <string name="aircraft_compass_calibration">コンパスが未較正です — 端末を数回 8 の字に振って再較正してください。</string>

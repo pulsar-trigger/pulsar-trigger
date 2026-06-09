@@ -327,6 +327,17 @@
     <string name="aircraft_info_button">Mehr Info</string>
     <string name="aircraft_show_sun_moon">Sonne &amp; Mond auf Karte zeigen</string>
     <string name="aircraft_map_heading_lock">Karte mit Telefonrichtung drehen</string>
+    <string name="aircraft_alert_notable">Bei besonderen Flugzeugen warnen</string>
+    <string name="aircraft_detail_elevation">Höhenwinkel</string>
+    <string name="aircraft_detail_lighting">Licht</string>
+    <string name="aircraft_detail_closest">Nächste Annäherung</string>
+    <string name="aircraft_closest_in">in %1$d s (~%2$s km)</string>
+    <string name="aircraft_closest_receding">jetzt / entfernt sich (~%1$s km)</string>
+    <string name="aircraft_lighting_golden">Golden</string>
+    <string name="aircraft_lighting_front">Vorderlicht</string>
+    <string name="aircraft_lighting_side">Seitenlicht</string>
+    <string name="aircraft_lighting_back">Gegenlicht</string>
+    <string name="aircraft_lighting_night">Nacht</string>
     <string name="aircraft_detail_suggested_lens">Empfohlenes Objektiv</string>
     <string name="aircraft_detail_suggested_lens_value">~%1$d mm (Vollformat)</string>
     <string name="aircraft_compass_calibration">Kompass unkalibriert — das Telefon einige Male in einer 8er-Bewegung schwenken, um neu zu kalibrieren.</string>
