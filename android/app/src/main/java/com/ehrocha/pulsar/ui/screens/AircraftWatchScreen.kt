@@ -470,6 +470,16 @@ private fun PhotoTipsDialog(onDismiss: () -> Unit) {
     )
 }
 
+/** Cache key for a rasterised marker bitmap. One entry per distinct
+ *  combination of heading bucket, size class, proximity tint, and airframe
+ *  category (which selects the plane vs helicopter shape). */
+private data class MarkerKey(
+    val bucket: Int,
+    val size: AircraftSize,
+    val tint: Int,
+    val category: com.ehrocha.pulsar.transport.aircraft.AircraftCategory,
+)
+
 /** Embedded MapLibre map showing the user's centre plus a marker per
  *  aircraft. Refreshes its marker layer every time [sightings] changes.
  *  Camera centres once on the user location and respects user pan/zoom
@@ -518,11 +528,11 @@ private fun AircraftMap(
 
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val iconFactory = remember(ctx) { IconFactory.getInstance(ctx) }
-    // Rotated plane icons are expensive to build (drawable → bitmap → matrix
-    // rotate). Cache key = (heading-bucket, size-class, proximity-band):
-    // 15° heading buckets × 4 sizes × 3 proximity colours = up to 288
-    // cache entries, built lazily as they're seen.
-    val iconCache = remember { mutableMapOf<Triple<Int, AircraftSize, Int>, Icon>() }
+    // Rotated marker icons are expensive to build (drawable → bitmap →
+    // matrix rotate). Cache key = (heading-bucket, size-class,
+    // proximity-band, category) so each distinct combination is rasterised
+    // once. ~15° buckets × 4 sizes × 3 colours × 2 shapes is the upper bound.
+    val iconCache = remember { mutableMapOf<MarkerKey, Icon>() }
 
     // deviceAzimuth comes in as a parameter from the screen so the
     // calibration banner above the map can read accuracy from the same
@@ -843,6 +853,8 @@ private fun AircraftMap(
             val rawHeading = (s.headingDeg ?: 0.0) - currentMapBearing
             val bucket = ((rawHeading / 15.0).toInt().mod(24)) * 15
             val size = aircraftSizeFor(s.typeCode, s.model)
+            val category = com.ehrocha.pulsar.transport.aircraft
+                .aircraftCategoryFor(s.typeCode, s.model)
             // Marker fill colour matches the row's proximity band so a
             // plane that reads as "red" on the list also reads as red on
             // the map. Compose Color → Android Color int via toArgb().
@@ -854,13 +866,19 @@ private fun AircraftMap(
                     (it.blue * 255).toInt(),
                 )
             }
-            val icon = iconCache.getOrPut(Triple(bucket, size, tint)) {
+            val markerDrawable = when (category) {
+                com.ehrocha.pulsar.transport.aircraft.AircraftCategory.HELICOPTER ->
+                    R.drawable.ic_helicopter_marker
+                else -> R.drawable.ic_aircraft_marker
+            }
+            val icon = iconCache.getOrPut(MarkerKey(bucket, size, tint, category)) {
                 iconFactory.fromBitmap(
                     rotatedAircraftBitmap(
                         ctx,
                         headingDeg = bucket.toFloat(),
                         sizeScale = size.scale,
                         tintColor = tint,
+                        drawableRes = markerDrawable,
                     ),
                 )
             }

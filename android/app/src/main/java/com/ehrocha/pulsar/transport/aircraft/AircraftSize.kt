@@ -67,3 +67,39 @@ fun aircraftSizeFor(typeCode: String?, model: String?): AircraftSize {
         else -> AircraftSize.MEDIUM
     }
 }
+
+/**
+ * Broad airframe category for picking a marker SHAPE (not size) on the
+ * Aircraft Watch map. Only the helicopter / fixed-wing split is meaningful
+ * for spotting at a glance — finer type-by-type icons would be noise.
+ */
+enum class AircraftCategory { FIXED_WING, HELICOPTER }
+
+/** Helicopter ICAO type codes are scattered across manufacturers, so this
+ *  is a best-effort prefix/keyword match. Common civil + military rotorcraft
+ *  are covered; anything unmatched harmlessly stays FIXED_WING. */
+fun aircraftCategoryFor(typeCode: String?, model: String?): AircraftCategory {
+    val code = typeCode?.uppercase()
+    val m = model?.uppercase().orEmpty()
+    if (code != null) {
+        // ICAO helicopter designators: Robinson (R22/R44/R66), Airbus/
+        // Eurocopter (EC**, AS**, H1**/H125/H135/H145/H160/H175), Bell
+        // (B06/B47/B212/B407/B412/B429), Sikorsky (S61/S76/S92/H60),
+        // Leonardo/Agusta (A109/A119/A139/A169/A189/AW**), MD (MD50/MD60/
+        // EXPL), Kamov (KA**), Mil (MI**), Boeing (CH47/H47), Enstrom (EN**).
+        val heliPrefixes = listOf(
+            "R22", "R44", "R66", "EC", "AS3", "AS5", "AS6", "H12", "H13",
+            "H14", "H16", "H17", "B06", "B47", "B21", "B40", "B41", "B42",
+            "S61", "S76", "S92", "H60", "A109", "A119", "A139", "A169",
+            "A189", "AW", "EXPL", "MD50", "MD60", "MD90H", "KA", "MI", "CH47",
+            "H47", "EN28", "EN48", "GAZL", "LYNX", "PUMA", "SH", "UH",
+        )
+        if (heliPrefixes.any { code.startsWith(it) }) return AircraftCategory.HELICOPTER
+    }
+    if ("HELICOPTER" in m || "ROBINSON" in m || "EUROCOPTER" in m ||
+        "SIKORSKY" in m || " HELI" in m || "ROTORCRAFT" in m
+    ) {
+        return AircraftCategory.HELICOPTER
+    }
+    return AircraftCategory.FIXED_WING
+}
