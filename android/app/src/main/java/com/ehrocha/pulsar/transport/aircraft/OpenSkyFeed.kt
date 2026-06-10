@@ -94,6 +94,11 @@ class OpenSkyFeed : AircraftFeed {
             // subsequent polls.
             val enriched = enrichTopN(parsed, limit = METADATA_FETCH_LIMIT)
             enriched
+        }.onFailure {
+            // runCatching would otherwise swallow cancellation and report it
+            // as a fetch failure — the polling loop must see the real
+            // CancellationException so it dies promptly when stopped.
+            if (it is kotlinx.coroutines.CancellationException) throw it
         }
     }
 
@@ -162,6 +167,8 @@ class OpenSkyFeed : AircraftFeed {
                 typeCode = j.optString("typecode").trim().takeIf { it.isNotEmpty() },
                 builtYear = j.optString("built").take(4).toIntOrNull(),
             )
+        }.onFailure {
+            if (it is kotlinx.coroutines.CancellationException) throw it
         }.getOrNull()
     }
 
@@ -218,8 +225,8 @@ class OpenSkyFeed : AircraftFeed {
                 headingDeg = trueTrack,
                 verticalRateFpm = vertRateMs?.let { it * 196.8504 },
                 onGround = onGround,
-                distanceKm = haversineKm(centreLat, centreLon, lat, lon),
-                bearingDeg = bearingDeg(centreLat, centreLon, lat, lon),
+                distanceKm = GeoMath.haversineKm(centreLat, centreLon, lat, lon),
+                bearingDeg = GeoMath.bearingDeg(centreLat, centreLon, lat, lon),
                 lastContactUnixSec = lastContact,
                 squawk = squawk,
             )
@@ -266,31 +273,8 @@ class OpenSkyFeed : AircraftFeed {
             )
         }
 
-        internal fun haversineKm(
-            lat1: Double, lon1: Double, lat2: Double, lon2: Double,
-        ): Double {
-            val r = 6371.0
-            val dLat = (lat2 - lat1) * PI / 180.0
-            val dLon = (lon2 - lon1) * PI / 180.0
-            val a = sin(dLat / 2).let { it * it } +
-                cos(lat1 * PI / 180.0) * cos(lat2 * PI / 180.0) *
-                sin(dLon / 2).let { it * it }
-            return 2 * r * atan2(sqrt(a), sqrt(1 - a))
-        }
-
-        /** Initial bearing from point 1 to point 2 (great-circle), degrees,
-         *  normalised to [0, 360). */
-        internal fun bearingDeg(
-            lat1: Double, lon1: Double, lat2: Double, lon2: Double,
-        ): Double {
-            val phi1 = lat1 * PI / 180.0
-            val phi2 = lat2 * PI / 180.0
-            val dLon = (lon2 - lon1) * PI / 180.0
-            val y = sin(dLon) * cos(phi2)
-            val x = cos(phi1) * sin(phi2) - sin(phi1) * cos(phi2) * cos(dLon)
-            val deg = atan2(y, x) * 180.0 / PI
-            return (deg + 360.0) % 360.0
-        }
+        // Distance + bearing maths live in [GeoMath] — shared with the
+        // Aircraft Watch UI so the trig can't drift between copies.
     }
 
     internal data class BBox(

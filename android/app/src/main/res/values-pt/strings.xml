@@ -310,20 +310,9 @@
     <string name="aircraft_watch_interval_live">Auto-atualizar: Ao vivo (estima posição entre consultas)</string>
     <string name="aircraft_detail_registration">Matrícula</string>
     <string name="aircraft_detail_model">Modelo</string>
-    <string name="aircraft_detail_manufacturer">Fabricante</string>
     <string name="aircraft_detail_operator">Operadora</string>
-    <string name="aircraft_detail_type_code">Código de tipo</string>
-    <string name="aircraft_detail_built">Ano</string>
     <string name="aircraft_detail_icao">ICAO hex</string>
-    <string name="aircraft_detail_origin">País de origem</string>
     <string name="aircraft_detail_squawk">Squawk</string>
-    <string name="aircraft_detail_distance">Distância</string>
-    <string name="aircraft_detail_bearing">Direção</string>
-    <string name="aircraft_detail_altitude">Altitude</string>
-    <string name="aircraft_detail_speed">Velocidade</string>
-    <string name="aircraft_detail_heading">Rumo</string>
-    <string name="aircraft_detail_vertical">Taxa vertical</string>
-    <string name="aircraft_detail_position">Posição</string>
     <string name="aircraft_info_button">Mais info</string>
     <string name="aircraft_show_sun_moon">Mostrar sol e lua no mapa</string>
     <string name="aircraft_map_heading_lock">Girar mapa com a direção do celular</string>
@@ -333,7 +322,6 @@
     <string name="aircraft_alert_notable">Alertar sobre aviões notáveis</string>
     <string name="aircraft_keep_screen_on">Manter tela ligada</string>
     <string name="aircraft_detail_elevation">Elevação</string>
-    <string name="aircraft_detail_lighting">Luz</string>
     <string name="aircraft_detail_closest">Aproximação máxima</string>
     <string name="aircraft_closest_in">em %1$d s (~%2$s km)</string>
     <string name="aircraft_closest_receding">agora / se afastando (~%1$s km)</string>
@@ -594,6 +582,7 @@
     <string name="star_trails_gap">Intervalo entre quadros: %1$d s</string>
     <string name="star_trails_hint">Coloque Bulb + Manual no seletor. Rastros empilhados: muitos quadros com intervalo mínimo, combinados depois (StarStaX, Sequator…). Mantenha o intervalo curto para os rastros não saírem tracejados. Faça alguns darks depois.</string>
     <string name="star_trails_not_connected">Conecte uma câmera para iniciar.</string>
+    <string name="star_trails_ble_gap_note">Canon BLE: intervalo mínimo de 4 s — a câmera perde ciclos mais rápidos.</string>
     <string name="nd_calc_title">Filtro ND</string>
     <string name="nd_calc_result_label">Tempo de longa exposição</string>
     <string name="nd_calc_base">Velocidade base: %1$s</string>

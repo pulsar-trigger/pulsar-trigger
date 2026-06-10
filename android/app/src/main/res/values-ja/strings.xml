@@ -310,20 +310,9 @@
     <string name="aircraft_watch_interval_live">自動更新: ライブ（取得間は推測位置で表示）</string>
     <string name="aircraft_detail_registration">登録記号</string>
     <string name="aircraft_detail_model">機種</string>
-    <string name="aircraft_detail_manufacturer">メーカー</string>
     <string name="aircraft_detail_operator">運航者</string>
-    <string name="aircraft_detail_type_code">型式コード</string>
-    <string name="aircraft_detail_built">製造年</string>
     <string name="aircraft_detail_icao">ICAO hex</string>
-    <string name="aircraft_detail_origin">登録国</string>
     <string name="aircraft_detail_squawk">スコーク</string>
-    <string name="aircraft_detail_distance">距離</string>
-    <string name="aircraft_detail_bearing">方位</string>
-    <string name="aircraft_detail_altitude">高度</string>
-    <string name="aircraft_detail_speed">速度</string>
-    <string name="aircraft_detail_heading">進路</string>
-    <string name="aircraft_detail_vertical">昇降率</string>
-    <string name="aircraft_detail_position">位置</string>
     <string name="aircraft_info_button">詳細</string>
     <string name="aircraft_show_sun_moon">地図に太陽と月を表示</string>
     <string name="aircraft_map_heading_lock">端末の向きに合わせて地図を回転</string>
@@ -333,7 +322,6 @@
     <string name="aircraft_alert_notable">注目機をアラート</string>
     <string name="aircraft_keep_screen_on">画面を点灯したままにする</string>
     <string name="aircraft_detail_elevation">仰角</string>
-    <string name="aircraft_detail_lighting">光</string>
     <string name="aircraft_detail_closest">最接近</string>
     <string name="aircraft_closest_in">%1$d 秒後（~%2$s km）</string>
     <string name="aircraft_closest_receding">現在 / 遠ざかり中（~%1$s km）</string>
@@ -594,6 +582,7 @@
     <string name="star_trails_gap">フレーム間隔: %1$d 秒</string>
     <string name="star_trails_hint">ダイヤルをバルブ＋マニュアルに。比較明合成（StarStaX、Sequator など）用に、わずかな間隔で多数のサブ露光を撮影します。間隔を短く保つと軌跡が途切れません。終了後にダークフレームを数枚撮影してください。</string>
     <string name="star_trails_not_connected">開始するにはカメラを接続してください。</string>
+    <string name="star_trails_ble_gap_note">Canon BLE: 最小間隔は 4 秒 — それより速い解放/押下サイクルをカメラが取りこぼします。</string>
     <string name="nd_calc_title">NDフィルター</string>
     <string name="nd_calc_result_label">長秒露光時間</string>
     <string name="nd_calc_base">基準シャッター: %1$s</string>

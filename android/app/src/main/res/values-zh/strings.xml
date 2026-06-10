@@ -312,20 +312,9 @@
     <string name="aircraft_watch_interval_live">自动刷新：实时（轮询间使用航迹推算）</string>
     <string name="aircraft_detail_registration">注册号</string>
     <string name="aircraft_detail_model">机型</string>
-    <string name="aircraft_detail_manufacturer">制造商</string>
     <string name="aircraft_detail_operator">运营商</string>
-    <string name="aircraft_detail_type_code">类型代码</string>
-    <string name="aircraft_detail_built">建造年份</string>
     <string name="aircraft_detail_icao">ICAO hex</string>
-    <string name="aircraft_detail_origin">注册国</string>
     <string name="aircraft_detail_squawk">应答机代码</string>
-    <string name="aircraft_detail_distance">距离</string>
-    <string name="aircraft_detail_bearing">方位</string>
-    <string name="aircraft_detail_altitude">高度</string>
-    <string name="aircraft_detail_speed">速度</string>
-    <string name="aircraft_detail_heading">航向</string>
-    <string name="aircraft_detail_vertical">垂直速率</string>
-    <string name="aircraft_detail_position">位置</string>
     <string name="aircraft_info_button">更多信息</string>
     <string name="aircraft_show_sun_moon">在地图上显示太阳和月亮</string>
     <string name="aircraft_map_heading_lock">地图随手机方向旋转</string>
@@ -335,7 +324,6 @@
     <string name="aircraft_alert_notable">特殊机型提醒</string>
     <string name="aircraft_keep_screen_on">保持屏幕常亮</string>
     <string name="aircraft_detail_elevation">仰角</string>
-    <string name="aircraft_detail_lighting">光线</string>
     <string name="aircraft_detail_closest">最近接近</string>
     <string name="aircraft_closest_in">%1$d 秒后（~%2$s km）</string>
     <string name="aircraft_closest_receding">现在 / 正在远离（~%1$s km）</string>
@@ -594,6 +582,7 @@
     <string name="star_trails_gap">帧间间隔：%1$d 秒</string>
     <string name="star_trails_hint">将拨盘设为 B 门 + 手动。堆栈星轨：以极小间隔拍摄多张子曝光，之后合成（StarStaX、Sequator 等）。间隔要小，星轨才不会断裂。结束后拍几张暗场。</string>
     <string name="star_trails_not_connected">连接相机后开始。</string>
+    <string name="star_trails_ble_gap_note">Canon BLE：最小间隔为 4 秒——更快的释放/按下循环相机会漏掉。</string>
     <string name="nd_calc_title">ND 滤镜</string>
     <string name="nd_calc_result_label">长曝光时间</string>
     <string name="nd_calc_base">基准快门：%1$s</string>

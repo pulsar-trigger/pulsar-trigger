@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.R
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -54,6 +55,7 @@ import java.util.Locale
 @Composable
 fun SpottingLogScreen(onBack: () -> Unit) {
     val ctx = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     var entries by remember { mutableStateOf<List<LoggedSighting>>(emptyList()) }
     var refresh by remember { mutableStateOf(0) }
     LaunchedEffect(refresh) {
@@ -125,8 +127,10 @@ fun SpottingLogScreen(onBack: () -> Unit) {
                     LogRow(
                         entry = e,
                         onDelete = {
-                            SpottingLogStore.delete(ctx, e.whenMs, e.icaoHex)
-                            refresh += 1
+                            scope.launch {
+                                SpottingLogStore.delete(ctx, e.whenMs, e.icaoHex)
+                                refresh += 1
+                            }
                         },
                     )
                 }
@@ -141,9 +145,11 @@ fun SpottingLogScreen(onBack: () -> Unit) {
             text = { Text(stringResource(R.string.spotting_log_clear_confirm_body)) },
             confirmButton = {
                 TextButton(onClick = {
-                    SpottingLogStore.clear(ctx)
                     pendingClear = false
-                    refresh += 1
+                    scope.launch {
+                        SpottingLogStore.clear(ctx)
+                        refresh += 1
+                    }
                 }) {
                     Text(stringResource(R.string.spotting_log_clear))
                 }

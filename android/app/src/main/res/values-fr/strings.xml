@@ -310,20 +310,9 @@
     <string name="aircraft_watch_interval_live">Actualisation auto : Live (extrapolation entre les requêtes)</string>
     <string name="aircraft_detail_registration">Immatriculation</string>
     <string name="aircraft_detail_model">Modèle</string>
-    <string name="aircraft_detail_manufacturer">Constructeur</string>
     <string name="aircraft_detail_operator">Exploitant</string>
-    <string name="aircraft_detail_type_code">Code type</string>
-    <string name="aircraft_detail_built">Construit en</string>
     <string name="aircraft_detail_icao">ICAO hex</string>
-    <string name="aircraft_detail_origin">Pays d\'origine</string>
     <string name="aircraft_detail_squawk">Squawk</string>
-    <string name="aircraft_detail_distance">Distance</string>
-    <string name="aircraft_detail_bearing">Relèvement</string>
-    <string name="aircraft_detail_altitude">Altitude</string>
-    <string name="aircraft_detail_speed">Vitesse</string>
-    <string name="aircraft_detail_heading">Cap</string>
-    <string name="aircraft_detail_vertical">Taux vertical</string>
-    <string name="aircraft_detail_position">Position</string>
     <string name="aircraft_info_button">Plus d\'infos</string>
     <string name="aircraft_show_sun_moon">Afficher soleil &amp; lune sur la carte</string>
     <string name="aircraft_map_heading_lock">Tourner la carte avec l\'orientation du téléphone</string>
@@ -333,7 +322,6 @@
     <string name="aircraft_alert_notable">Alerter sur les appareils notables</string>
     <string name="aircraft_keep_screen_on">Garder l\'écran allumé</string>
     <string name="aircraft_detail_elevation">Élévation</string>
-    <string name="aircraft_detail_lighting">Lumière</string>
     <string name="aircraft_detail_closest">Approche la plus proche</string>
     <string name="aircraft_closest_in">dans %1$d s (~%2$s km)</string>
     <string name="aircraft_closest_receding">maintenant / s\'éloigne (~%1$s km)</string>
@@ -594,6 +582,7 @@
     <string name="star_trails_gap">Intervalle entre images : %1$d s</string>
     <string name="star_trails_hint">Réglez Bulb + Manuel sur la molette. Filés empilés : nombreuses poses avec un intervalle minime, fusionnées ensuite (StarStaX, Sequator…). Gardez l\'intervalle court pour éviter les filés en pointillés. Faites quelques darks après.</string>
     <string name="star_trails_not_connected">Connectez un appareil pour démarrer.</string>
+    <string name="star_trails_ble_gap_note">Canon BLE : intervalle minimum de 4 s — l\'appareil rate les cycles plus rapides.</string>
     <string name="nd_calc_title">Filtre ND</string>
     <string name="nd_calc_result_label">Temps de pose longue</string>
     <string name="nd_calc_base">Vitesse de base : %1$s</string>

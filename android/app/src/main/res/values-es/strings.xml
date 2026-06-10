@@ -310,20 +310,9 @@
     <string name="aircraft_watch_interval_live">Auto-actualizar: En vivo (estima la posición entre consultas)</string>
     <string name="aircraft_detail_registration">Matrícula</string>
     <string name="aircraft_detail_model">Modelo</string>
-    <string name="aircraft_detail_manufacturer">Fabricante</string>
     <string name="aircraft_detail_operator">Operador</string>
-    <string name="aircraft_detail_type_code">Código de tipo</string>
-    <string name="aircraft_detail_built">Año</string>
     <string name="aircraft_detail_icao">ICAO hex</string>
-    <string name="aircraft_detail_origin">País de origen</string>
     <string name="aircraft_detail_squawk">Squawk</string>
-    <string name="aircraft_detail_distance">Distancia</string>
-    <string name="aircraft_detail_bearing">Rumbo</string>
-    <string name="aircraft_detail_altitude">Altitud</string>
-    <string name="aircraft_detail_speed">Velocidad</string>
-    <string name="aircraft_detail_heading">Curso</string>
-    <string name="aircraft_detail_vertical">Tasa vertical</string>
-    <string name="aircraft_detail_position">Posición</string>
     <string name="aircraft_info_button">Más info</string>
     <string name="aircraft_show_sun_moon">Mostrar sol y luna en el mapa</string>
     <string name="aircraft_map_heading_lock">Girar mapa con la dirección del móvil</string>
@@ -333,7 +322,6 @@
     <string name="aircraft_alert_notable">Avisar de aviones destacados</string>
     <string name="aircraft_keep_screen_on">Mantener pantalla encendida</string>
     <string name="aircraft_detail_elevation">Elevación</string>
-    <string name="aircraft_detail_lighting">Luz</string>
     <string name="aircraft_detail_closest">Acercamiento máximo</string>
     <string name="aircraft_closest_in">en %1$d s (~%2$s km)</string>
     <string name="aircraft_closest_receding">ahora / alejándose (~%1$s km)</string>
@@ -592,6 +580,7 @@
     <string name="star_trails_gap">Intervalo entre tomas: %1$d s</string>
     <string name="star_trails_hint">Pon Bulb + Manual en el dial. Estelas apiladas: muchas tomas con un intervalo mínimo, combinadas después (StarStaX, Sequator…). Mantén el intervalo corto para que las estelas no salgan discontinuas. Haz unos darks después.</string>
     <string name="star_trails_not_connected">Conecta una cámara para empezar.</string>
+    <string name="star_trails_ble_gap_note">Canon BLE: intervalo mínimo de 4 s — la cámara pierde ciclos más rápidos.</string>
     <string name="nd_calc_title">Filtro ND</string>
     <string name="nd_calc_result_label">Tiempo de larga exposición</string>
     <string name="nd_calc_base">Velocidad base: %1$s</string>

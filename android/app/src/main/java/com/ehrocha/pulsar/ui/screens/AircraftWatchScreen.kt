@@ -72,6 +72,7 @@ import com.ehrocha.pulsar.transport.aircraft.aircraftSizeFor
 import com.ehrocha.pulsar.ui.theme.LocalNightMode
 import com.ehrocha.pulsar.ui.theme.ThemeMode
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
+import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 import org.maplibre.android.annotations.IconFactory
 import org.maplibre.android.annotations.Icon
@@ -117,7 +118,11 @@ fun AircraftWatchScreen(
     val alertNotable by vm.aircraftWatchAlertNotable.collectAsState()
     val keepScreenOn by vm.aircraftWatchKeepScreenOn.collectAsState()
     val mapHybrid by vm.aircraftWatchMapHybrid.collectAsState()
-    val location = vm.aircraftWatchLocation()
+    // Resolved ONCE at entry (LocationManager lookup is a binder IPC —
+    // calling it in the composable body ran it on every recomposition:
+    // each poll, each live tick, each 5° compass bucket). Refreshed
+    // explicitly by the GPS banner's refresh action.
+    var location by remember { mutableStateOf(vm.aircraftWatchLocation()) }
     // Sun direction for the lighting hint. Recomputed each poll (and on
     // location change) — cheap trig, no network.
     val sunDir = androidx.compose.runtime.remember(location, lastUpdateMs) {
@@ -250,10 +255,11 @@ fun AircraftWatchScreen(
             )
         },
         sheetContent = {
-            if (location != null) {
+            val loc = location
+            if (loc != null) {
                 SettingsPanel(
-                    lat = location.first,
-                    lon = location.second,
+                    lat = loc.first,
+                    lon = loc.second,
                     radiusKm = radiusKm,
                     onRadiusChange = vm::setAircraftWatchRadiusKm,
                     maxAltFt = maxAltFt,
@@ -286,7 +292,8 @@ fun AircraftWatchScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            if (location == null) {
+            val loc = location
+            if (loc == null) {
                 NoLocationCard()
                 return@BottomSheetScaffold
             }
@@ -323,10 +330,11 @@ fun AircraftWatchScreen(
                         gpsRefreshing = true
                         vm.refreshAircraftWatchGps {
                             gpsRefreshing = false
-                            // Force a recompute by bumping a dependency-
-                            // adjacent key; the LaunchedEffect on lastUpdateMs
-                            // is sufficient because the dashboard refresh
-                            // also pokes other observers.
+                            // Pull the fresh fix into the screen's cached
+                            // location so the map / compass / sun re-anchor.
+                            // The polling loop re-reads location on its own
+                            // each cycle.
+                            location = vm.aircraftWatchLocation()
                         }
                     },
                     onDismiss = { gpsBannerDismissed = true },
@@ -337,8 +345,8 @@ fun AircraftWatchScreen(
             // on phone-sized devices. Lives above the (now-collapsible)
             // settings sheet.
             AircraftMap(
-                centreLat = location.first,
-                centreLon = location.second,
+                centreLat = loc.first,
+                centreLon = loc.second,
                 radiusKm = radiusKm,
                 sightings = sightings,
                 liveMode = intervalSec == 0,
@@ -380,8 +388,8 @@ fun AircraftWatchScreen(
                             AircraftRow(
                                 s = s,
                                 radiusKm = radiusKm,
-                                userLat = location.first,
-                                userLon = location.second,
+                                userLat = loc.first,
+                                userLon = loc.second,
                                 sunDir = sunDir,
                                 selected = selectedIcao == s.icaoHex,
                                 onSelectOnMap = {
@@ -538,10 +546,17 @@ private fun AircraftMap(
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val iconFactory = remember(ctx) { IconFactory.getInstance(ctx) }
     // Rotated marker icons are expensive to build (drawable → bitmap →
-    // matrix rotate). Cache key = (heading-bucket, size-class,
-    // proximity-band, category) so each distinct combination is rasterised
-    // once. ~15° buckets × 4 sizes × 3 colours × 2 shapes is the upper bound.
-    val iconCache = remember { mutableMapOf<MarkerKey, Icon>() }
+    // matrix rotate). Cache key = (heading-bucket, size-class, tint,
+    // category). The theoretical key space is large (24 buckets × 4 sizes ×
+    // 15 tint/alpha variants × 2 shapes ≈ 2 900 bitmaps @ ~80 KB each), so
+    // cap it as an access-ordered LRU — a busy session realistically uses a
+    // few dozen, and 256 × 80 KB ≈ 20 MB worst case.
+    val iconCache = remember {
+        object : LinkedHashMap<MarkerKey, Icon>(32, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<MarkerKey, Icon>) =
+                size > 256
+        }
+    }
 
     // deviceAzimuth comes in as a parameter from the screen so the
     // calibration banner above the map can read accuracy from the same
@@ -565,11 +580,15 @@ private fun AircraftMap(
                 .bearing(targetBearing)
                 .build()
             val after = m.cameraPosition.bearing
-            val line = "heading-lock: device=${deviceAzimuth}° " +
-                "before=${"%.1f".format(before)}° → target=${"%.1f".format(targetBearing)}° " +
-                "after=${"%.1f".format(after)}°"
-            android.util.Log.d("AircraftWatch", line)
-            com.ehrocha.pulsar.canonble.CanonBleLog.d("AircraftWatch", line)
+            // logcat-only — mirroring into CanonBleLog (the v0.400 chair-spin
+            // diagnostic) flooded the shared 1000-line transport ring buffer
+            // and evicted the Canon wire history. Rotation bug is fixed.
+            android.util.Log.d(
+                "AircraftWatch",
+                "heading-lock: device=${deviceAzimuth}° " +
+                    "before=${"%.1f".format(before)}° → target=${"%.1f".format(targetBearing)}° " +
+                    "after=${"%.1f".format(after)}°",
+            )
         } else if (m.cameraPosition.bearing != 0.0) {
             m.animateCamera(
                 org.maplibre.android.camera.CameraUpdateFactory.bearingTo(0.0),
@@ -970,7 +989,7 @@ private fun AircraftMap(
                             val target = ml.cameraPosition.target ?: return@addOnCameraIdleListener
                             mapCenter = target
                             val ne = ml.projection.visibleRegion.latLngBounds.northEast
-                            visibleRadiusKm = haversineKm(
+                            visibleRadiusKm = com.ehrocha.pulsar.transport.aircraft.GeoMath.haversineKm(
                                 target.latitude, target.longitude,
                                 ne.latitude, ne.longitude,
                             )
@@ -1035,17 +1054,14 @@ private fun applyMapStyle(
     }
 }
 
-/** Project a position [distanceM] along a great-circle bearing of
- *  [bearingDeg] from (lat, lon). Flat-earth approximation — fine for
- *  the kilometre-scale projections we use on the Aircraft Watch map. */
+/** Project a position [distanceM] along [bearingDeg] from (lat, lon),
+ *  wrapped to MapLibre's LatLng. Maths lives in [GeoMath]. */
 private fun projectAlong(
     lat: Double, lon: Double, bearingDeg: Double, distanceM: Double,
 ): LatLng {
-    val brgRad = bearingDeg * kotlin.math.PI / 180.0
-    val latRad = lat * kotlin.math.PI / 180.0
-    val dLat = (distanceM / 111_111.0) * kotlin.math.cos(brgRad)
-    val dLon = (distanceM / (111_111.0 * kotlin.math.cos(latRad))) * kotlin.math.sin(brgRad)
-    return LatLng(lat + dLat, lon + dLon)
+    val (pLat, pLon) = com.ehrocha.pulsar.transport.aircraft.GeoMath
+        .projectMeters(lat, lon, bearingDeg, distanceM)
+    return LatLng(pLat, pLon)
 }
 
 /** Six visible 20s segments separated by 10s gaps = a dashed-looking
@@ -1304,20 +1320,7 @@ private fun projectCelestial(
     }
 }
 
-/** Great-circle distance between two lat/lon points in kilometres. Used
- *  by the sun/moon overlay to compute the visible-area radius. */
-private fun haversineKm(
-    lat1: Double, lon1: Double, lat2: Double, lon2: Double,
-): Double {
-    val r = 6371.0
-    val dLat = (lat2 - lat1) * kotlin.math.PI / 180.0
-    val dLon = (lon2 - lon1) * kotlin.math.PI / 180.0
-    val a = kotlin.math.sin(dLat / 2).let { it * it } +
-        kotlin.math.cos(lat1 * kotlin.math.PI / 180.0) *
-        kotlin.math.cos(lat2 * kotlin.math.PI / 180.0) *
-        kotlin.math.sin(dLon / 2).let { it * it }
-    return 2 * r * kotlin.math.atan2(kotlin.math.sqrt(a), kotlin.math.sqrt(1 - a))
-}
+// haversineKm moved to [com.ehrocha.pulsar.transport.aircraft.GeoMath].
 
 /** Dead-reckon a sighting forward from its last polled position by
  *  [elapsedMs]. Uses heading + ground speed; returns the original position
@@ -1385,18 +1388,7 @@ private fun rememberDeviceCompass(userLat: Double?, userLon: Double?): DeviceCom
                 // astronomy app uses. Wrap to [0, 360).
                 val trueDeg = ((magneticDeg + declination + 360.0) % 360.0).toInt()
                 val bucket = (trueDeg / 5) * 5
-                if (bucket != azimuthBucket) {
-                    val line = "sensor: rad=${"%.3f".format(orient[0])} " +
-                        "magDeg=${"%.1f".format(magneticDeg)} " +
-                        "decl=${"%.1f".format(declination)} " +
-                        "trueDeg=$trueDeg bucket=$bucket"
-                    android.util.Log.d("AircraftWatch", line)
-                    // Mirror into the same ring buffer the Tools → "Collect
-                    // diagnostics" share intent reads, so the user can dump
-                    // the trace without needing adb.
-                    com.ehrocha.pulsar.canonble.CanonBleLog.d("AircraftWatch", line)
-                    azimuthBucket = bucket
-                }
+                if (bucket != azimuthBucket) azimuthBucket = bucket
                 if (event.accuracy != accuracy) accuracy = event.accuracy
             }
             override fun onAccuracyChanged(sensor: android.hardware.Sensor?, acc: Int) {
@@ -1537,92 +1529,13 @@ private fun SettingsPanel(
                 onIntervalChange(if (r in 1..4) 5 else r)
             },
         )
-        // Sun / moon overlay toggle. Below the sliders so it doesn't push
-        // the more-commonly-used controls down.
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                stringResource(R.string.aircraft_show_sun_moon),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f),
-            )
-            androidx.compose.material3.Switch(
-                checked = showSunMoon,
-                onCheckedChange = onShowSunMoonChange,
-            )
-        }
-        // Map-rotates-with-phone toggle.
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                stringResource(R.string.aircraft_map_heading_lock),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f),
-            )
-            androidx.compose.material3.Switch(
-                checked = mapHeadingLock,
-                onCheckedChange = onMapHeadingLockChange,
-            )
-        }
-        // Satellite (hybrid) basemap toggle.
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                stringResource(R.string.aircraft_map_hybrid),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f),
-            )
-            androidx.compose.material3.Switch(
-                checked = mapHybrid,
-                onCheckedChange = onMapHybridChange,
-            )
-        }
-        // Notable-aircraft alert toggle (military / emergency / vintage).
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                stringResource(R.string.aircraft_alert_notable),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f),
-            )
-            androidx.compose.material3.Switch(
-                checked = alertNotable,
-                onCheckedChange = onAlertNotableChange,
-            )
-        }
-        // Keep-screen-on toggle.
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                stringResource(R.string.aircraft_keep_screen_on),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f),
-            )
-            androidx.compose.material3.Switch(
-                checked = keepScreenOn,
-                onCheckedChange = onKeepScreenOnChange,
-            )
-        }
+        // Toggles, below the sliders so the more-commonly-used controls
+        // stay at the top of the sheet.
+        ToggleRow(R.string.aircraft_show_sun_moon, showSunMoon, onShowSunMoonChange)
+        ToggleRow(R.string.aircraft_map_heading_lock, mapHeadingLock, onMapHeadingLockChange)
+        ToggleRow(R.string.aircraft_map_hybrid, mapHybrid, onMapHybridChange)
+        ToggleRow(R.string.aircraft_alert_notable, alertNotable, onAlertNotableChange)
+        ToggleRow(R.string.aircraft_keep_screen_on, keepScreenOn, onKeepScreenOnChange)
         // Compass status + manual calibrate. Always visible: the sensor
         // accuracy banner above the map only fires when Android self-
         // reports low confidence, but the compass can read consistently
@@ -1646,6 +1559,30 @@ private fun SettingsPanel(
                 Text(stringResource(R.string.aircraft_compass_calibrate))
             }
         }
+    }
+}
+
+@Composable
+private fun ToggleRow(
+    @androidx.annotation.StringRes labelRes: Int,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            stringResource(labelRes),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        androidx.compose.material3.Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+        )
     }
 }
 
@@ -1872,6 +1809,7 @@ private fun AircraftRow(
     val rowBadges = aircraftBadges(s)
     val lighting = lightingFor(s.bearingDeg, sunDir)
     val elevation = elevationDeg(s)
+    val logScope = androidx.compose.runtime.rememberCoroutineScope()
     // Selected rows get a stronger background + a leading accent so the
     // tap-to-highlight feedback is obvious without a separate selection
     // chip. The colour matches the map's highlight ring.
@@ -1977,25 +1915,29 @@ private fun AircraftRow(
             sunDir = sunDir,
             onDismiss = { showDetails = false },
             onLogSighting = {
-                SpottingLogStore.add(
-                    ctx,
-                    LoggedSighting(
-                        icaoHex = s.icaoHex,
-                        callsign = s.callsign,
-                        model = s.model,
-                        registration = s.registration,
-                        operator = s.operator,
-                        distanceKm = s.distanceKm,
-                        whenMs = System.currentTimeMillis(),
-                        userLat = userLat,
-                        userLon = userLon,
-                    ),
-                )
-                android.widget.Toast.makeText(
-                    ctx,
-                    ctx.getString(R.string.aircraft_log_added),
-                    android.widget.Toast.LENGTH_SHORT,
-                ).show()
+                // Store I/O is suspend (Dispatchers.IO) — launch off the
+                // click handler; toast once the write actually landed.
+                logScope.launch {
+                    SpottingLogStore.add(
+                        ctx,
+                        LoggedSighting(
+                            icaoHex = s.icaoHex,
+                            callsign = s.callsign,
+                            model = s.model,
+                            registration = s.registration,
+                            operator = s.operator,
+                            distanceKm = s.distanceKm,
+                            whenMs = System.currentTimeMillis(),
+                            userLat = userLat,
+                            userLon = userLon,
+                        ),
+                    )
+                    android.widget.Toast.makeText(
+                        ctx,
+                        ctx.getString(R.string.aircraft_log_added),
+                        android.widget.Toast.LENGTH_SHORT,
+                    ).show()
+                }
             },
         )
     }
@@ -2061,16 +2003,21 @@ private fun AircraftDetailDialog(
                             .height(140.dp)
                             .clip(RoundedCornerShape(8.dp))
                             .clickable {
-                                s.photoSourceUrl?.let { url ->
-                                    runCatching {
-                                        ctx.startActivity(
-                                            android.content.Intent(
-                                                android.content.Intent.ACTION_VIEW,
-                                                android.net.Uri.parse(url),
-                                            ),
-                                        )
+                                // https-only: the URL comes from a remote API
+                                // response — never hand an arbitrary scheme
+                                // (intent://, tel:, …) to ACTION_VIEW.
+                                s.photoSourceUrl
+                                    ?.takeIf { it.startsWith("https://") }
+                                    ?.let { url ->
+                                        runCatching {
+                                            ctx.startActivity(
+                                                android.content.Intent(
+                                                    android.content.Intent.ACTION_VIEW,
+                                                    android.net.Uri.parse(url),
+                                                ),
+                                            )
+                                        }
                                     }
-                                }
                             },
                         contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                     )
@@ -2298,7 +2245,11 @@ internal object SpottingLogStore {
     private const val FILE = "pulsar_spotting_log.json"
     private const val LIMIT = 500  // cap so the log can't grow unbounded
 
-    fun load(ctx: android.content.Context): List<LoggedSighting> {
+    suspend fun load(ctx: android.content.Context): List<LoggedSighting> =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { loadSync(ctx) }
+
+    /** Synchronous core — only call from a background dispatcher. */
+    private fun loadSync(ctx: android.content.Context): List<LoggedSighting> {
         val f = java.io.File(ctx.filesDir, FILE)
         if (!f.exists()) return emptyList()
         return runCatching {
@@ -2320,8 +2271,9 @@ internal object SpottingLogStore {
         }.getOrDefault(emptyList())
     }
 
-    fun add(ctx: android.content.Context, s: LoggedSighting) {
-        val current = load(ctx).toMutableList()
+    suspend fun add(ctx: android.content.Context, s: LoggedSighting) =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val current = loadSync(ctx).toMutableList()
         // De-dup on (icao, day) so quickly tapping log twice doesn't double-
         // record the same plane, but a different flight tomorrow does add.
         val dayMs = 24L * 3600_000L
@@ -2336,12 +2288,14 @@ internal object SpottingLogStore {
         save(ctx, current)
     }
 
-    fun delete(ctx: android.content.Context, whenMs: Long, icao: String) {
-        val current = load(ctx).filterNot { it.whenMs == whenMs && it.icaoHex == icao }
+    suspend fun delete(ctx: android.content.Context, whenMs: Long, icao: String) =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val current = loadSync(ctx).filterNot { it.whenMs == whenMs && it.icaoHex == icao }
         save(ctx, current)
     }
 
-    fun clear(ctx: android.content.Context) {
+    suspend fun clear(ctx: android.content.Context) =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         save(ctx, emptyList())
     }
 

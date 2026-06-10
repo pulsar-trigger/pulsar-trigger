@@ -3158,7 +3158,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun startAircraftWatch() {
         if (_aircraftWatching.value) return
-        val (lat, lon) = aircraftWatchLocation() ?: run {
+        if (aircraftWatchLocation() == null) {
             _aircraftWatchError.value = "no_location"
             return
         }
@@ -3167,19 +3167,28 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         aircraftJob = viewModelScope.launch {
             while (true) {
                 ensureActive()
-                val radius = _aircraftWatchRadiusKm.value.toDouble()
-                val result = aircraftFeed.nearby(lat, lon, radius)
-                result.fold(
-                    onSuccess = {
-                        _aircraftSightings.value = it
-                        _aircraftWatchLastUpdateMs.value = System.currentTimeMillis()
-                        _aircraftWatchError.value = null
-                    },
-                    onFailure = { t ->
-                        Log.w(TAG, "aircraft feed error: ${t.message}")
-                        _aircraftWatchError.value = "fetch_failed"
-                    },
-                )
+                // Re-read the location EVERY cycle, not once at start — the
+                // GPS-refresh action and dashboard updates change it while
+                // the loop is running, and a frozen capture made the
+                // "Refresh GPS" button a no-op for the live poll.
+                val loc = aircraftWatchLocation()
+                if (loc == null) {
+                    _aircraftWatchError.value = "no_location"
+                } else {
+                    val radius = _aircraftWatchRadiusKm.value.toDouble()
+                    val result = aircraftFeed.nearby(loc.first, loc.second, radius)
+                    result.fold(
+                        onSuccess = {
+                            _aircraftSightings.value = it
+                            _aircraftWatchLastUpdateMs.value = System.currentTimeMillis()
+                            _aircraftWatchError.value = null
+                        },
+                        onFailure = { t ->
+                            Log.w(TAG, "aircraft feed error: ${t.message}")
+                            _aircraftWatchError.value = "fetch_failed"
+                        },
+                    )
+                }
                 // User-chosen cadence, but never below the feed's documented
                 // floor — going under OpenSky's 10 s anonymous limit just
                 // earns 429s and stale data.
@@ -3197,11 +3206,15 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun refreshAircraftWatch() {
         if (!_aircraftWatching.value) return
-        // Cancel current poll and restart so the next fetch fires now
-        // instead of after the remaining sleep window.
-        aircraftJob?.cancel()
-        _aircraftWatching.value = false
-        startAircraftWatch()
+        // Cancel-and-JOIN before restarting: a fire-and-forget cancel left
+        // a window where an in-flight fetch from the old loop could write
+        // one last sightings update racing the new loop's first.
+        viewModelScope.launch {
+            aircraftJob?.cancelAndJoin()
+            aircraftJob = null
+            _aircraftWatching.value = false
+            startAircraftWatch()
+        }
     }
 
     override fun onCleared() {

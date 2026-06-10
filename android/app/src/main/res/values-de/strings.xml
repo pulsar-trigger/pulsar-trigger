@@ -310,20 +310,9 @@
     <string name="aircraft_watch_interval_live">Auto-Aktualisierung: Live (Koppelnavigation zwischen Abfragen)</string>
     <string name="aircraft_detail_registration">Kennzeichen</string>
     <string name="aircraft_detail_model">Modell</string>
-    <string name="aircraft_detail_manufacturer">Hersteller</string>
     <string name="aircraft_detail_operator">Betreiber</string>
-    <string name="aircraft_detail_type_code">Typcode</string>
-    <string name="aircraft_detail_built">Baujahr</string>
     <string name="aircraft_detail_icao">ICAO-Hex</string>
-    <string name="aircraft_detail_origin">Herkunftsland</string>
     <string name="aircraft_detail_squawk">Squawk</string>
-    <string name="aircraft_detail_distance">Entfernung</string>
-    <string name="aircraft_detail_bearing">Peilung</string>
-    <string name="aircraft_detail_altitude">Höhe</string>
-    <string name="aircraft_detail_speed">Geschw.</string>
-    <string name="aircraft_detail_heading">Kurs</string>
-    <string name="aircraft_detail_vertical">Steigrate</string>
-    <string name="aircraft_detail_position">Position</string>
     <string name="aircraft_info_button">Mehr Info</string>
     <string name="aircraft_show_sun_moon">Sonne &amp; Mond auf Karte zeigen</string>
     <string name="aircraft_map_heading_lock">Karte mit Telefonrichtung drehen</string>
@@ -333,7 +322,6 @@
     <string name="aircraft_alert_notable">Bei besonderen Flugzeugen warnen</string>
     <string name="aircraft_keep_screen_on">Bildschirm anlassen</string>
     <string name="aircraft_detail_elevation">Höhenwinkel</string>
-    <string name="aircraft_detail_lighting">Licht</string>
     <string name="aircraft_detail_closest">Nächste Annäherung</string>
     <string name="aircraft_closest_in">in %1$d s (~%2$s km)</string>
     <string name="aircraft_closest_receding">jetzt / entfernt sich (~%1$s km)</string>
@@ -594,6 +582,7 @@
     <string name="star_trails_gap">Pause zwischen Bildern: %1$d s</string>
     <string name="star_trails_hint">Stelle Bulb + Manuell am Kamerarad ein. Gestapelte Spuren: viele Teilbilder mit winziger Pause, später verrechnet (StarStaX, Sequator…). Halte die Pause klein, damit die Spuren nicht gestrichelt werden. Mach danach ein paar Dunkelbilder.</string>
     <string name="star_trails_not_connected">Kamera verbinden, um zu starten.</string>
+    <string name="star_trails_ble_gap_note">Canon BLE: Mindestpause 4 s — die Kamera verpasst schnellere Loslassen/Drücken-Zyklen.</string>
     <string name="nd_calc_title">ND-Filter</string>
     <string name="nd_calc_result_label">Langzeitbelichtung</string>
     <string name="nd_calc_base">Basiszeit: %1$s</string>

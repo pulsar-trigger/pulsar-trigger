@@ -22,9 +22,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -67,6 +67,17 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     val running = runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
     val canControlAf = vm.activeTransportSupportsAf.collectAsState().value
+
+    // Canon BLE's shutter state machine misses rapid release→press cycles
+    // (the R6 "every-other-shot" bug, v0.357–v0.385). Hundreds of frames at
+    // a 1–2 s gap is exactly that regime, so floor the gap at 4 s on that
+    // transport. Other transports ACK the release synchronously and are
+    // fine down to 1 s.
+    val onCanonBle = vm.canonBleTransport.collectAsState().value != null
+    val minGapSec = if (onCanonBle) 4 else 1
+    LaunchedEffect(minGapSec) {
+        if (gapSec < minGapSec) gapSec = minGapSec
+    }
 
     val cycleSec = subSec + gapSec
     val frames = ((totalMin * 60) / cycleSec).coerceAtLeast(1)
@@ -143,11 +154,18 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
             )
             Slider(
                 value = gapSec.toFloat(),
-                onValueChange = { gapSec = it.roundToInt() },
-                valueRange = 1f..8f,
-                steps = 6,
+                onValueChange = { gapSec = it.roundToInt().coerceAtLeast(minGapSec) },
+                valueRange = minGapSec.toFloat()..8f,
+                steps = (8 - minGapSec - 1).coerceAtLeast(0),
                 modifier = Modifier.fillMaxWidth(),
             )
+            if (onCanonBle) {
+                Text(
+                    stringResource(R.string.star_trails_ble_gap_note),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             if (canControlAf) {
                 com.ehrocha.pulsar.ui.components.AutofocusToggle(

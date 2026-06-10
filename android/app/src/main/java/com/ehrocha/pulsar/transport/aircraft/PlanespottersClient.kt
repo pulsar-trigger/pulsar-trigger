@@ -64,7 +64,9 @@ object PlanespottersClient {
                 photographer = first.optString("photographer").trim()
                     .takeIf { it.isNotEmpty() } ?: "Planespotters.net",
             )
-        }.onFailure { Log.w(TAG, "photo fetch failed for $icaoHex: ${it.message}") }
-            .getOrNull()
+        }.onFailure {
+            if (it is kotlinx.coroutines.CancellationException) throw it
+            Log.w(TAG, "photo fetch failed for $icaoHex: ${it.message}")
+        }.getOrNull()
     }
 }
