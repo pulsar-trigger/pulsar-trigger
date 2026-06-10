@@ -60,6 +60,8 @@ import com.ehrocha.pulsar.ui.components.SignalStrengthIndicator
 import com.ehrocha.pulsar.ui.components.NightModeToggle
 import com.ehrocha.pulsar.ui.screens.AircraftWatchScreen
 import com.ehrocha.pulsar.ui.screens.SpottingLogScreen
+import com.ehrocha.pulsar.ui.screens.NdCalculatorScreen
+import com.ehrocha.pulsar.ui.screens.DofCalculatorScreen
 import com.ehrocha.pulsar.ui.screens.MainMenuScreen
 import com.ehrocha.pulsar.ui.screens.ManageDevicesScreen
 import com.ehrocha.pulsar.ui.screens.ModeScreen
@@ -531,6 +533,8 @@ fun PulsarNavHost(
                     onStarFocusSelected = { currentScreen = AppScreen.StarFocus },
                     onTestCameraSelected = { currentScreen = AppScreen.TestCamera },
                     onAircraftWatchSelected = { currentScreen = AppScreen.AircraftWatch },
+                    onNdCalcSelected = { currentScreen = AppScreen.NdCalculator },
+                    onDofCalcSelected = { currentScreen = AppScreen.DofCalculator },
                     onDiagnosticsSelected = { currentScreen = AppScreen.Diagnostics },
                     // Top-bar Settings icon lands on the menu (no
                     // pre-selected section). The update banner has its own
@@ -659,6 +663,14 @@ fun PulsarNavHost(
             AppScreen.SpottingLog -> {
                 BackHandler { currentScreen = AppScreen.AircraftWatch }
                 SpottingLogScreen(onBack = { currentScreen = AppScreen.AircraftWatch })
+            }
+            AppScreen.NdCalculator -> {
+                BackHandler { currentScreen = AppScreen.Menu }
+                NdCalculatorScreen(onBack = { currentScreen = AppScreen.Menu })
+            }
+            AppScreen.DofCalculator -> {
+                BackHandler { currentScreen = AppScreen.Menu }
+                DofCalculatorScreen(onBack = { currentScreen = AppScreen.Menu })
             }
             AppScreen.Diagnostics -> {
                 BackHandler { currentScreen = AppScreen.Menu }
@@ -797,6 +809,8 @@ private sealed class AppScreen {
     data object TestCamera : AppScreen()
     data object AircraftWatch : AppScreen()
     data object SpottingLog : AppScreen()
+    data object NdCalculator : AppScreen()
+    data object DofCalculator : AppScreen()
     data object Diagnostics : AppScreen()
     /** Manage Devices — reachable only from the Scan landing (pre-connect)
      *  so the user can't accidentally forget the body they're currently

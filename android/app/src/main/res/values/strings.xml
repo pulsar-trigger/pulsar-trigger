@@ -848,6 +848,21 @@
     <string name="dew_detail">Temp %1$s°C, Dew point %2$s°C, Spread %3$s°C</string>
 
     <!-- Twilight card -->
+    <string name="nd_calc_title">ND Filter</string>
+    <string name="nd_calc_result_label">Long exposure time</string>
+    <string name="nd_calc_base">Base shutter: %1$s</string>
+    <string name="nd_calc_filter">Filter: ND%1$d (%2$d stops)</string>
+    <string name="nd_calc_hint">Meter without the filter, then dial in these stops. Times over ~30 s usually need Bulb mode — set up an Intervalometer or Bulb flow with this duration.</string>
+    <string name="dof_calc_title">Depth of Field</string>
+    <string name="dof_calc_near">Near limit</string>
+    <string name="dof_calc_far">Far limit</string>
+    <string name="dof_calc_total">Total DoF</string>
+    <string name="dof_calc_hyperfocal">Hyperfocal</string>
+    <string name="dof_calc_infinity">∞</string>
+    <string name="dof_calc_sensor">Sensor</string>
+    <string name="dof_calc_focal">Focal length: %1$d mm</string>
+    <string name="dof_calc_aperture">Aperture: %1$s</string>
+    <string name="dof_calc_distance">Subject distance: %1$s m</string>
     <string name="card_golden_blue">Golden &amp; Blue Hour</string>
     <string name="golden_hour">Golden</string>
     <string name="blue_hour">Blue</string>

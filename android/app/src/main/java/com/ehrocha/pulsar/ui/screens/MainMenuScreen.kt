@@ -25,7 +25,9 @@ import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.FilterBAndW
 import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material.icons.filled.LensBlur
 import androidx.compose.material.icons.filled.LinkOff
@@ -77,6 +79,8 @@ fun MainMenuScreen(
     onStarFocusSelected: () -> Unit = {},
     onTestCameraSelected: () -> Unit = {},
     onAircraftWatchSelected: () -> Unit = {},
+    onNdCalcSelected: () -> Unit = {},
+    onDofCalcSelected: () -> Unit = {},
     onDiagnosticsSelected: () -> Unit = {},
     onUserModeRun: (com.ehrocha.pulsar.model.UserMode) -> Unit = {},
     onIntervalometer2Selected: () -> Unit = {},
@@ -191,6 +195,8 @@ fun MainMenuScreen(
             onStarFocusSelected = onStarFocusSelected,
             onTestCameraSelected = onTestCameraSelected,
             onAircraftWatchSelected = onAircraftWatchSelected,
+            onNdCalcSelected = onNdCalcSelected,
+            onDofCalcSelected = onDofCalcSelected,
             onDiagnosticsSelected = onDiagnosticsSelected,
             onUserModeRun = onUserModeRun,
             onIntervalometer2Selected = onIntervalometer2Selected,
@@ -299,6 +305,8 @@ private fun MenuPageContent(
     onStarFocusSelected: () -> Unit,
     onTestCameraSelected: () -> Unit,
     onAircraftWatchSelected: () -> Unit,
+    onNdCalcSelected: () -> Unit,
+    onDofCalcSelected: () -> Unit,
     onDiagnosticsSelected: () -> Unit,
     onUserModeRun: (com.ehrocha.pulsar.model.UserMode) -> Unit,
     onIntervalometer2Selected: () -> Unit,
@@ -499,6 +507,15 @@ private fun MenuPageContent(
                             R.string.aircraft_watch_title,
                             Icons.Default.FlightTakeoff,
                         ) { onAircraftWatchSelected() },
+                        // Pure-math field calculators — no transport needed.
+                        launcherItem(
+                            R.string.nd_calc_title,
+                            Icons.Default.FilterBAndW,
+                        ) { onNdCalcSelected() },
+                        launcherItem(
+                            R.string.dof_calc_title,
+                            Icons.Default.CenterFocusStrong,
+                        ) { onDofCalcSelected() },
                     )
                     Box(
                         modifier = Modifier
