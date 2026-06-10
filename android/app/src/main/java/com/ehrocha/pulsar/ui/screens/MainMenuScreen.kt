@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.FilterBAndW
@@ -86,6 +87,7 @@ fun MainMenuScreen(
     onIntervalometer2Selected: () -> Unit = {},
     onAstroMode2Selected: () -> Unit = {},
     onTimelapseSelected: () -> Unit = {},
+    onStarTrailsSelected: () -> Unit = {},
     onSettingsSelected: () -> Unit = {},
     /** Routed when the user taps the "Go to Settings" button on the
      *  in-app update banner — should jump to Updates, not the menu root. */
@@ -202,6 +204,7 @@ fun MainMenuScreen(
             onIntervalometer2Selected = onIntervalometer2Selected,
             onAstroMode2Selected = onAstroMode2Selected,
             onTimelapseSelected = onTimelapseSelected,
+            onStarTrailsSelected = onStarTrailsSelected,
         )
     }
 
@@ -312,6 +315,7 @@ private fun MenuPageContent(
     onIntervalometer2Selected: () -> Unit,
     onAstroMode2Selected: () -> Unit,
     onTimelapseSelected: () -> Unit,
+    onStarTrailsSelected: () -> Unit = {},
 ) {
     when (page) {
         DEST_DASHBOARD -> {
@@ -343,6 +347,8 @@ private fun MenuPageContent(
                             enabled = !bulbBlocked) { onIntervalometer2Selected() },
                         launcherItem(R.string.mode_astro, Icons.Default.Stars,
                             enabled = !bulbBlocked) { onAstroMode2Selected() },
+                        launcherItem(R.string.mode_star_trails, Icons.Default.AutoAwesome,
+                            enabled = !bulbBlocked) { onStarTrailsSelected() },
                         launcherItem(R.string.mode_dark_frame, Icons.Default.LensBlur,
                             enabled = !bulbBlocked) { onQuickFlow(FlowStepType.DARK_FRAME) },
                         launcherItem(R.string.mode_ramp, Icons.AutoMirrored.Filled.TrendingUp,

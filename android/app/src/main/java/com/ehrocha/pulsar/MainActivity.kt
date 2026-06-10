@@ -62,6 +62,7 @@ import com.ehrocha.pulsar.ui.screens.AircraftWatchScreen
 import com.ehrocha.pulsar.ui.screens.SpottingLogScreen
 import com.ehrocha.pulsar.ui.screens.NdCalculatorScreen
 import com.ehrocha.pulsar.ui.screens.DofCalculatorScreen
+import com.ehrocha.pulsar.ui.screens.StarTrailsScreen
 import com.ehrocha.pulsar.ui.screens.MainMenuScreen
 import com.ehrocha.pulsar.ui.screens.ManageDevicesScreen
 import com.ehrocha.pulsar.ui.screens.ModeScreen
@@ -509,6 +510,7 @@ fun PulsarNavHost(
                     onTimelapseSelected = {
                         currentScreen = AppScreen.PresetPicker(TriggerMode.TIMELAPSE)
                     },
+                    onStarTrailsSelected = { currentScreen = AppScreen.StarTrails },
                     onUserModeRun = { mode ->
                         // Bookmarked tile click — fire the preset immediately
                         // instead of re-walking the wizard. The user already
@@ -672,6 +674,10 @@ fun PulsarNavHost(
                 BackHandler { currentScreen = AppScreen.Menu }
                 DofCalculatorScreen(onBack = { currentScreen = AppScreen.Menu })
             }
+            AppScreen.StarTrails -> {
+                BackHandler { currentScreen = AppScreen.Menu }
+                StarTrailsScreen(vm = vm, onBack = { currentScreen = AppScreen.Menu })
+            }
             AppScreen.Diagnostics -> {
                 BackHandler { currentScreen = AppScreen.Menu }
                 com.ehrocha.pulsar.ui.screens.DiagnosticsScreen(
@@ -811,6 +817,7 @@ private sealed class AppScreen {
     data object SpottingLog : AppScreen()
     data object NdCalculator : AppScreen()
     data object DofCalculator : AppScreen()
+    data object StarTrails : AppScreen()
     data object Diagnostics : AppScreen()
     /** Manage Devices — reachable only from the Scan landing (pre-connect)
      *  so the user can't accidentally forget the body they're currently

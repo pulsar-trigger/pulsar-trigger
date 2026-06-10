@@ -585,6 +585,15 @@
     <string name="dew_warning">Risco de orvalho — possível embaçamento da lente</string>
     <string name="dew_critical">Alto risco de orvalho — embaçamento provável!</string>
     <string name="dew_detail">Temp %1$s°C, Ponto de orvalho %2$s°C, Diferença %3$s°C</string>
+    <string name="mode_star_trails">Rastros de estrelas</string>
+    <string name="star_trails_frames">Quadros</string>
+    <string name="star_trails_total">Tempo total</string>
+    <string name="star_trails_arc">Arco do rastro</string>
+    <string name="star_trails_duration">Duração da sessão: %1$d min</string>
+    <string name="star_trails_sub">Subexposição: %1$d s</string>
+    <string name="star_trails_gap">Intervalo entre quadros: %1$d s</string>
+    <string name="star_trails_hint">Coloque Bulb + Manual no seletor. Rastros empilhados: muitos quadros com intervalo mínimo, combinados depois (StarStaX, Sequator…). Mantenha o intervalo curto para os rastros não saírem tracejados. Faça alguns darks depois.</string>
+    <string name="star_trails_not_connected">Conecte uma câmera para iniciar.</string>
     <string name="nd_calc_title">Filtro ND</string>
     <string name="nd_calc_result_label">Tempo de longa exposição</string>
     <string name="nd_calc_base">Velocidade base: %1$s</string>

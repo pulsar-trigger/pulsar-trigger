@@ -585,6 +585,15 @@
     <string name="dew_warning">Taurisiko — Objektivbeschlag möglich</string>
     <string name="dew_critical">Hohes Taurisiko — Beschlag wahrscheinlich!</string>
     <string name="dew_detail">Temp %1$s°C, Taupunkt %2$s°C, Differenz %3$s°C</string>
+    <string name="mode_star_trails">Sternspuren</string>
+    <string name="star_trails_frames">Bilder</string>
+    <string name="star_trails_total">Gesamtzeit</string>
+    <string name="star_trails_arc">Spurbogen</string>
+    <string name="star_trails_duration">Sitzungsdauer: %1$d Min</string>
+    <string name="star_trails_sub">Teilbelichtung: %1$d s</string>
+    <string name="star_trails_gap">Pause zwischen Bildern: %1$d s</string>
+    <string name="star_trails_hint">Stelle Bulb + Manuell am Kamerarad ein. Gestapelte Spuren: viele Teilbilder mit winziger Pause, später verrechnet (StarStaX, Sequator…). Halte die Pause klein, damit die Spuren nicht gestrichelt werden. Mach danach ein paar Dunkelbilder.</string>
+    <string name="star_trails_not_connected">Kamera verbinden, um zu starten.</string>
     <string name="nd_calc_title">ND-Filter</string>
     <string name="nd_calc_result_label">Langzeitbelichtung</string>
     <string name="nd_calc_base">Basiszeit: %1$s</string>

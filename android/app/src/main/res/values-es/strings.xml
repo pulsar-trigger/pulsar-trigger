@@ -583,6 +583,15 @@
     <string name="dew_warning">Riesgo de rocío — posible empañamiento del lente</string>
     <string name="dew_critical">Alto riesgo de rocío — ¡empañamiento probable!</string>
     <string name="dew_detail">Temp %1$s°C, Punto de rocío %2$s°C, Diferencia %3$s°C</string>
+    <string name="mode_star_trails">Estelas estelares</string>
+    <string name="star_trails_frames">Fotogramas</string>
+    <string name="star_trails_total">Tiempo total</string>
+    <string name="star_trails_arc">Arco de estela</string>
+    <string name="star_trails_duration">Duración de sesión: %1$d min</string>
+    <string name="star_trails_sub">Subexposición: %1$d s</string>
+    <string name="star_trails_gap">Intervalo entre tomas: %1$d s</string>
+    <string name="star_trails_hint">Pon Bulb + Manual en el dial. Estelas apiladas: muchas tomas con un intervalo mínimo, combinadas después (StarStaX, Sequator…). Mantén el intervalo corto para que las estelas no salgan discontinuas. Haz unos darks después.</string>
+    <string name="star_trails_not_connected">Conecta una cámara para empezar.</string>
     <string name="nd_calc_title">Filtro ND</string>
     <string name="nd_calc_result_label">Tiempo de larga exposición</string>
     <string name="nd_calc_base">Velocidad base: %1$s</string>
