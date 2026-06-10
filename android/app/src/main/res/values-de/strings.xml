@@ -585,6 +585,11 @@
     <string name="dew_warning">Taurisiko — Objektivbeschlag möglich</string>
     <string name="dew_critical">Hohes Taurisiko — Beschlag wahrscheinlich!</string>
     <string name="dew_detail">Temp %1$s°C, Taupunkt %2$s°C, Differenz %3$s°C</string>
+    <string name="card_golden_blue">Goldene &amp; blaue Stunde</string>
+    <string name="golden_hour">Golden</string>
+    <string name="blue_hour">Blau</string>
+    <string name="golden_blue_am">Morgens</string>
+    <string name="golden_blue_pm">Abends</string>
     <string name="card_twilight">Dämmerungsverlauf</string>
     <string name="tw_civil_end">Bürgerliche Dämmerung endet</string>
     <string name="tw_nautical_end">Nautische Dämmerung endet</string>

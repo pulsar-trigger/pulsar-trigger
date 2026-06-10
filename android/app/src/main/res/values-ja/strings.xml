@@ -585,6 +585,11 @@
     <string name="dew_warning">結露リスク — レンズの曇りの可能性</string>
     <string name="dew_critical">高結露リスク — レンズの曇りの可能性大！</string>
     <string name="dew_detail">気温 %1$s°C、露点 %2$s°C、差 %3$s°C</string>
+    <string name="card_golden_blue">ゴールデン＆ブルーアワー</string>
+    <string name="golden_hour">ゴールデン</string>
+    <string name="blue_hour">ブルー</string>
+    <string name="golden_blue_am">朝</string>
+    <string name="golden_blue_pm">夕</string>
     <string name="card_twilight">薄明タイムライン</string>
     <string name="tw_civil_end">市民薄明終了</string>
     <string name="tw_nautical_end">航海薄明終了</string>

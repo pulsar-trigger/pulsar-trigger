@@ -38,6 +38,7 @@ data class DashboardState(
     val bestWindows: List<PhotoWindow> = emptyList(),
     val dewPoint: DewPointInfo? = null,
     val twilight: TwilightInfo? = null,
+    val goldenBlue: GoldenBlueInfo? = null,
     val planets: List<PlanetInfo> = emptyList(),
     val loading: Boolean = false,
     val error: String? = null,
@@ -126,6 +127,20 @@ data class TwilightInfo(
     val astroStart: String?,    // time astronomical twilight starts (morning)
     val nauticalStart: String?, // time nautical twilight starts (morning)
     val civilStart: String?,    // time civil twilight starts (morning)
+)
+
+/** A start–end time window, both as local "HH:mm" strings. */
+data class TimeWindow(val start: String, val end: String)
+
+/** Golden + blue hour windows for the day. Golden = sun between +6° and
+ *  −4°; blue = sun between −4° and −6° (civil-twilight boundary). Morning
+ *  and evening each have both. Null window = that band doesn't occur (high
+ *  latitudes / polar day). */
+data class GoldenBlueInfo(
+    val morningBlue: TimeWindow?,
+    val morningGolden: TimeWindow?,
+    val eveningGolden: TimeWindow?,
+    val eveningBlue: TimeWindow?,
 )
 
 data class PlanetInfo(
@@ -498,6 +513,59 @@ object AstroCalculator {
         )
     }
 
+    /** Golden + blue hour windows. Same altitude-scan approach as
+     *  [twilightPhases], crossing the +6° (golden top), −4° (golden/blue
+     *  boundary) and −6° (blue bottom / civil twilight) thresholds in the
+     *  evening (descending) and morning (ascending). */
+    fun goldenBlueHours(
+        lat: Double, lon: Double, date: LocalDate,
+        sunriseIso: String?, sunsetIso: String?,
+    ): GoldenBlueInfo {
+        val tz = date.atStartOfDay(ZoneId.systemDefault()).offset.totalSeconds / 3600.0
+        val (sunRa, sunDec) = sunPosition(date)
+        val sunsetLocal = parseIsoHour(sunsetIso) ?: 18.0
+        val sunriseLocal = parseIsoHour(sunriseIso) ?: 6.0
+        val goldenTop = 6.0
+        val goldenBlue = -4.0
+        val blueBottom = AppConfig.CIVIL_TWILIGHT_DEG  // -6°
+
+        // Evening — sun descending through +6 → -4 → -6.
+        var evGoldenStart: Double? = null
+        var evGoldenEnd: Double? = null   // also = evening blue start
+        var evBlueEnd: Double? = null
+        var t = sunsetLocal - 1.5
+        while (t <= sunsetLocal + 2.0) {
+            val sunAlt = altitude(lat, sunDec, lst(date, t - tz, lon) - sunRa)
+            if (evGoldenStart == null && sunAlt < goldenTop) evGoldenStart = t
+            if (evGoldenEnd == null && sunAlt < goldenBlue) evGoldenEnd = t
+            if (evBlueEnd == null && sunAlt < blueBottom) evBlueEnd = t
+            t += 1.0 / 60.0
+        }
+
+        // Morning — sun ascending through -6 → -4 → +6.
+        var moBlueStart: Double? = null
+        var moBlueEnd: Double? = null     // also = morning golden start
+        var moGoldenEnd: Double? = null
+        t = sunriseLocal + 24.0 - 2.0
+        while (t <= sunriseLocal + 24.0 + 1.5) {
+            val sunAlt = altitude(lat, sunDec, lst(date, t - tz, lon) - sunRa)
+            if (moBlueStart == null && sunAlt > blueBottom) moBlueStart = t
+            if (moBlueEnd == null && sunAlt > goldenBlue) moBlueEnd = t
+            if (moGoldenEnd == null && sunAlt > goldenTop) moGoldenEnd = t
+            t += 1.0 / 60.0
+        }
+
+        fun win(a: Double?, b: Double?): TimeWindow? =
+            if (a != null && b != null) TimeWindow(fmtHour(a), fmtHour(b)) else null
+
+        return GoldenBlueInfo(
+            morningBlue = win(moBlueStart, moBlueEnd),
+            morningGolden = win(moBlueEnd, moGoldenEnd),
+            eveningGolden = win(evGoldenStart, evGoldenEnd),
+            eveningBlue = win(evGoldenEnd, evBlueEnd),
+        )
+    }
+
     // ── Planetary positions ──────────────────────────────────────
 
     private data class PlanetElements(
@@ -713,6 +781,7 @@ class AstroDashboardManager(private val context: Context) {
             s.milkyWay?.let { put("mw", serializeMilkyWay(it)) }
             s.dewPoint?.let { put("dew", serializeDewPoint(it)) }
             s.twilight?.let { put("tw", serializeTwilight(it)) }
+            s.goldenBlue?.let { put("gb", serializeGoldenBlue(it)) }
             if (s.bestWindows.isNotEmpty()) {
                 put("windows", org.json.JSONArray().apply {
                     s.bestWindows.forEach { put(serializePhotoWindow(it)) }
@@ -742,6 +811,7 @@ class AstroDashboardManager(private val context: Context) {
             milkyWay = j.optJSONObject("mw")?.let { deserializeMilkyWay(it) },
             dewPoint = j.optJSONObject("dew")?.let { deserializeDewPoint(it) },
             twilight = j.optJSONObject("tw")?.let { deserializeTwilight(it) },
+            goldenBlue = j.optJSONObject("gb")?.let { deserializeGoldenBlue(it) },
             bestWindows = j.optJSONArray("windows")?.let { arr ->
                 (0 until arr.length()).map { deserializePhotoWindow(arr.getJSONObject(it)) }
             } ?: emptyList(),
@@ -859,6 +929,18 @@ class AstroDashboardManager(private val context: Context) {
         j.optString("ns").takeIf { it.isNotEmpty() },
         j.optString("cs").takeIf { it.isNotEmpty() },
     )
+
+    private fun serializeGoldenBlue(g: GoldenBlueInfo) = JSONObject().apply {
+        g.morningBlue?.let { put("mb", "${it.start}|${it.end}") }
+        g.morningGolden?.let { put("mg", "${it.start}|${it.end}") }
+        g.eveningGolden?.let { put("eg", "${it.start}|${it.end}") }
+        g.eveningBlue?.let { put("eb", "${it.start}|${it.end}") }
+    }
+    private fun deserializeGoldenBlue(j: JSONObject): GoldenBlueInfo {
+        fun w(k: String): TimeWindow? = j.optString(k).takeIf { it.isNotEmpty() }
+            ?.split("|")?.takeIf { it.size == 2 }?.let { TimeWindow(it[0], it[1]) }
+        return GoldenBlueInfo(w("mb"), w("mg"), w("eg"), w("eb"))
+    }
 
     private fun serializePhotoWindow(w: PhotoWindow) = JSONObject().apply {
         put("start", w.startTime); put("end", w.endTime)
@@ -981,6 +1063,10 @@ class AstroDashboardManager(private val context: Context) {
             lat, lon, date,
             sunInfo.sunrise, sunInfo.sunset,
         )
+        val goldenBlueInfo = AstroCalculator.goldenBlueHours(
+            lat, lon, date,
+            sunInfo.sunrise, sunInfo.sunset,
+        )
 
         // Visible planets
         val planets = AstroCalculator.visiblePlanets(
@@ -998,6 +1084,7 @@ class AstroDashboardManager(private val context: Context) {
             bestWindows = bestWindows,
             dewPoint = dewPointInfo,
             twilight = twilightInfo,
+            goldenBlue = goldenBlueInfo,
             planets = planets,
             loading = false,
             weatherError = weatherError,

@@ -585,6 +585,11 @@
     <string name="dew_warning">结露风险 — 镜头可能起雾</string>
     <string name="dew_critical">高结露风险 — 镜头很可能起雾！</string>
     <string name="dew_detail">温度 %1$s°C，露点 %2$s°C，差值 %3$s°C</string>
+    <string name="card_golden_blue">黄金时刻和蓝调时刻</string>
+    <string name="golden_hour">黄金</string>
+    <string name="blue_hour">蓝调</string>
+    <string name="golden_blue_am">早晨</string>
+    <string name="golden_blue_pm">傍晚</string>
     <string name="card_twilight">暮光时间线</string>
     <string name="tw_civil_end">民用暮光结束</string>
     <string name="tw_nautical_end">航海暮光结束</string>

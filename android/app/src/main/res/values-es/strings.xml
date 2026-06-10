@@ -583,6 +583,11 @@
     <string name="dew_warning">Riesgo de rocío — posible empañamiento del lente</string>
     <string name="dew_critical">Alto riesgo de rocío — ¡empañamiento probable!</string>
     <string name="dew_detail">Temp %1$s°C, Punto de rocío %2$s°C, Diferencia %3$s°C</string>
+    <string name="card_golden_blue">Hora dorada y azul</string>
+    <string name="golden_hour">Dorada</string>
+    <string name="blue_hour">Azul</string>
+    <string name="golden_blue_am">Mañana</string>
+    <string name="golden_blue_pm">Tarde</string>
     <string name="card_twilight">Cronología crepuscular</string>
     <string name="tw_civil_end">Crepúsculo civil termina</string>
     <string name="tw_nautical_end">Crepúsculo náutico termina</string>

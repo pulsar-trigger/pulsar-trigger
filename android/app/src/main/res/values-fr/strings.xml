@@ -585,6 +585,11 @@
     <string name="dew_warning">Risque de rosée — buée possible sur l\&#039;objectif</string>
     <string name="dew_critical">Haut risque de rosée — buée probable !</string>
     <string name="dew_detail">Temp %1$s°C, Point de rosée %2$s°C, Écart %3$s°C</string>
+    <string name="card_golden_blue">Heure dorée &amp; bleue</string>
+    <string name="golden_hour">Dorée</string>
+    <string name="blue_hour">Bleue</string>
+    <string name="golden_blue_am">Matin</string>
+    <string name="golden_blue_pm">Soir</string>
     <string name="card_twilight">Chronologie crépusculaire</string>
     <string name="tw_civil_end">Crépuscule civil se termine</string>
     <string name="tw_nautical_end">Crépuscule nautique se termine</string>

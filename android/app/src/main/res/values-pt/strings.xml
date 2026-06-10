@@ -585,6 +585,11 @@
     <string name="dew_warning">Risco de orvalho — possível embaçamento da lente</string>
     <string name="dew_critical">Alto risco de orvalho — embaçamento provável!</string>
     <string name="dew_detail">Temp %1$s°C, Ponto de orvalho %2$s°C, Diferença %3$s°C</string>
+    <string name="card_golden_blue">Hora dourada e azul</string>
+    <string name="golden_hour">Dourada</string>
+    <string name="blue_hour">Azul</string>
+    <string name="golden_blue_am">Manhã</string>
+    <string name="golden_blue_pm">Tarde</string>
     <string name="card_twilight">Linha do tempo crepuscular</string>
     <string name="tw_civil_end">Crepúsculo civil termina</string>
     <string name="tw_nautical_end">Crepúsculo náutico termina</string>

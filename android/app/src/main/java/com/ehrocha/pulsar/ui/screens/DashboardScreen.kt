@@ -809,6 +809,35 @@ fun DashboardScreen(
                 }
             }
 
+            // ── Golden & blue hour card ──────────────────────────────
+            state.goldenBlue?.let { gb ->
+                val hasAny = listOf(
+                    gb.morningGolden, gb.eveningGolden,
+                    gb.morningBlue, gb.eveningBlue,
+                ).any { it != null }
+                if (hasAny) {
+                    DashCard(
+                        title = stringResource(R.string.card_golden_blue),
+                        icon = Icons.Default.WbSunny,
+                        initiallyExpanded = true,
+                    ) {
+                        GoldenBlueRow(
+                            emoji = "🌅",
+                            label = stringResource(R.string.golden_hour),
+                            morning = gb.morningGolden,
+                            evening = gb.eveningGolden,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        GoldenBlueRow(
+                            emoji = "🔵",
+                            label = stringResource(R.string.blue_hour),
+                            morning = gb.morningBlue,
+                            evening = gb.eveningBlue,
+                        )
+                    }
+                }
+            }
+
             // ── Planets card ─────────────────────────────────────────
             if (state.planets.isNotEmpty()) {
                 DashCard(
@@ -1073,6 +1102,49 @@ internal fun WeatherStat(emoji: String, value: String, label: String) {
 internal fun formatTime(isoTime: String): String {
     // Handles "2026-04-03T14:00" → "14:00"
     return isoTime.substringAfter("T", isoTime).take(5)
+}
+
+/** One band (golden or blue) with its morning + evening windows. Shows a
+ *  "—" for whichever window doesn't occur at this latitude/date. */
+@Composable
+private fun GoldenBlueRow(
+    emoji: String,
+    label: String,
+    morning: com.ehrocha.pulsar.astro.TimeWindow?,
+    evening: com.ehrocha.pulsar.astro.TimeWindow?,
+) {
+    val morningStr = morning?.let { "${formatTime(it.start)}–${formatTime(it.end)}" } ?: "—"
+    val eveningStr = evening?.let { "${formatTime(it.start)}–${formatTime(it.end)}" } ?: "—"
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(emoji, fontSize = 16.sp, modifier = Modifier.width(26.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.width(72.dp),
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    stringResource(R.string.golden_blue_am),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(morningStr, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+            }
+            Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    stringResource(R.string.golden_blue_pm),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(eveningStr, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+            }
+        }
+    }
 }
 
 internal fun abs(d: Double): Double = kotlin.math.abs(d)

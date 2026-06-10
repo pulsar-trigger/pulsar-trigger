@@ -848,6 +848,11 @@
     <string name="dew_detail">Temp %1$s°C, Dew point %2$s°C, Spread %3$s°C</string>
 
     <!-- Twilight card -->
+    <string name="card_golden_blue">Golden &amp; Blue Hour</string>
+    <string name="golden_hour">Golden</string>
+    <string name="blue_hour">Blue</string>
+    <string name="golden_blue_am">Morning</string>
+    <string name="golden_blue_pm">Evening</string>
     <string name="card_twilight">Twilight Timeline</string>
     <string name="tw_civil_end">Civil twilight ends</string>
     <string name="tw_nautical_end">Nautical twilight ends</string>
