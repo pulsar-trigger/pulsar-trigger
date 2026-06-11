@@ -422,6 +422,8 @@
     <string name="card_summary">Résumé</string>
     <string name="tonight_signal_title">Signal de la nuit</string>
     <string name="tonight_signal_best">Meilleure fenêtre %1$s · %2$d%% nuages</string>
+    <string name="tonight_signal_help_title">Lire le signal</string>
+    <string name="tonight_signal_help_body">Chaque ligne est une heure de la nuit, de haut en bas. Plus l\'impulsion est haute, meilleure est l\'heure pour photographier.\n\n• L\'obscurité du ciel la porte — l\'impulsion grandit quand le soleil descend à travers les crépuscules\n• Les nuages aplatissent la ligne\n• Une lune brillante atténue chaque heure\n• La pluie l\'efface presque\n\nLa ligne colorée est la meilleure fenêtre de la nuit — son heure est teintée à droite et nommée sous le graphique.</string>
     <string name="location_north">N</string>
     <string name="location_south">S</string>
     <string name="location_east">E</string>

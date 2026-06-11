@@ -697,10 +697,9 @@ private fun CanonBulbBanner(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (reconnecting) {
-                CircularProgressIndicator(
-                    strokeWidth = 2.dp,
+                com.ehrocha.pulsar.ui.components.SignalSweep(
+                    modifier = Modifier.size(32.dp, 12.dp),
                     color = onContainer,
-                    modifier = Modifier.size(16.dp),
                 )
             } else {
                 Icon(
@@ -738,10 +737,9 @@ private fun CanonBleBanner(reconnecting: Boolean) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (reconnecting) {
-                CircularProgressIndicator(
-                    strokeWidth = 2.dp,
+                com.ehrocha.pulsar.ui.components.SignalSweep(
+                    modifier = Modifier.size(32.dp, 12.dp),
                     color = onContainer,
-                    modifier = Modifier.size(16.dp),
                 )
             } else {
                 Icon(
@@ -779,10 +777,9 @@ private fun PtpBanner(reconnecting: Boolean) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (reconnecting) {
-                CircularProgressIndicator(
-                    strokeWidth = 2.dp,
+                com.ehrocha.pulsar.ui.components.SignalSweep(
+                    modifier = Modifier.size(32.dp, 12.dp),
                     color = onContainer,
-                    modifier = Modifier.size(16.dp),
                 )
             } else {
                 Icon(

@@ -641,6 +641,8 @@
     <string name="card_summary">Summary</string>
     <string name="tonight_signal_title">Tonight\'s signal</string>
     <string name="tonight_signal_best">Best window %1$s · %2$d%% cloud</string>
+    <string name="tonight_signal_help_title">How to read the signal</string>
+    <string name="tonight_signal_help_body">Each line is one hour of tonight, top to bottom. The taller the pulse, the better that hour is for shooting.\n\n• Sky darkness drives it — the pulse grows as the sun sinks through civil, nautical and astronomical twilight\n• Cloud cover flattens the line\n• A bright moon dampens every hour\n• Rain all but kills it\n\nThe line drawn in colour is tonight\'s best window — its hour is tinted on the right and named under the chart. Flat trace: daylight, cloud or rain. Tall sharp pulse: go.</string>
     <string name="location_north">N</string>
     <string name="location_south">S</string>
     <string name="location_east">E</string>

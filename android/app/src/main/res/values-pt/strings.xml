@@ -422,6 +422,8 @@
     <string name="card_summary">Resumo</string>
     <string name="tonight_signal_title">Sinal desta noite</string>
     <string name="tonight_signal_best">Melhor janela %1$s · %2$d%% nuvens</string>
+    <string name="tonight_signal_help_title">Como ler o sinal</string>
+    <string name="tonight_signal_help_body">Cada linha é uma hora desta noite, de cima para baixo. Quanto mais alto o pulso, melhor aquela hora para fotografar.\n\n• A escuridão do céu comanda — o pulso cresce conforme o sol desce pelos crepúsculos civil, náutico e astronômico\n• Nuvens achatam a linha\n• Lua brilhante amortece todas as horas\n• Chuva praticamente a elimina\n\nA linha colorida é a melhor janela da noite — sua hora fica destacada à direita e nomeada abaixo do gráfico.</string>
     <string name="location_north">N</string>
     <string name="location_south">S</string>
     <string name="location_east">L</string>

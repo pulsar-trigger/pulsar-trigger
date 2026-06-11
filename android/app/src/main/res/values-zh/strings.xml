@@ -424,6 +424,8 @@
     <string name="card_summary">摘要</string>
     <string name="tonight_signal_title">今晚的信号</string>
     <string name="tonight_signal_best">最佳时段 %1$s · 云量 %2$d%%</string>
+    <string name="tonight_signal_help_title">如何读懂信号</string>
+    <string name="tonight_signal_help_body">每条线代表今晚的一个小时（从上到下）。脉冲越高，该时段越适合拍摄。\n\n• 天空黑暗度是主因——太阳沉过民用、航海、天文暮光时脉冲增长\n• 云量会压平曲线\n• 明亮的月亮削弱每个时段\n• 降雨几乎将其抹平\n\n彩色线条是今晚的最佳窗口——其时刻在右侧高亮，并在图表下方注明。</string>
     <string name="location_north">北</string>
     <string name="location_south">南</string>
     <string name="location_east">东</string>

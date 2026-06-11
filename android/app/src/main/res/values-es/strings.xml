@@ -422,6 +422,8 @@
     <string name="card_summary">Resumen</string>
     <string name="tonight_signal_title">Señal de esta noche</string>
     <string name="tonight_signal_best">Mejor ventana %1$s · %2$d%% nubes</string>
+    <string name="tonight_signal_help_title">Cómo leer la señal</string>
+    <string name="tonight_signal_help_body">Cada línea es una hora de esta noche, de arriba abajo. Cuanto más alto el pulso, mejor esa hora para fotografiar.\n\n• La oscuridad del cielo lo impulsa — el pulso crece mientras el sol baja por los crepúsculos civil, náutico y astronómico\n• Las nubes aplanan la línea\n• Una luna brillante amortigua todas las horas\n• La lluvia casi la elimina\n\nLa línea de color es la mejor ventana de la noche — su hora está resaltada a la derecha y nombrada bajo el gráfico.</string>
     <string name="location_north">N</string>
     <string name="location_south">S</string>
     <string name="location_east">E</string>
