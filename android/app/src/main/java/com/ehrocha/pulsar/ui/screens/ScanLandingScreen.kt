@@ -116,9 +116,11 @@ fun ScanLandingScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Image(
-                    painter = painterResource(R.drawable.ic_launcher_foreground),
+                    // White-forward brand mark — the launcher foreground's
+                    // violet beams vanished against this violet circle.
+                    painter = painterResource(R.drawable.ic_pulsar_mark),
                     contentDescription = null,
-                    modifier = Modifier.size(56.dp),
+                    modifier = Modifier.size(52.dp),
                 )
             }
             Spacer(Modifier.width(16.dp))

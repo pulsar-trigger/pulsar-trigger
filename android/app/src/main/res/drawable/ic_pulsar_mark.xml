@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- In-app brand mark: same pulsar geometry as the launcher icon but
+     white-forward, for sitting on violet/coloured surfaces (the scan
+     landing brand circle). Full-bleed — no adaptive safe-zone padding. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:pathData="M55.9,46.6 L66.3,20.4 Q78.6,22.5 83.6,34.0 L60.7,50.3 Z"
+        android:fillColor="#59FFFFFF" />
+    <path android:pathData="M56.9,47.4 L69.8,23.2 Q77.4,24.1 80.0,31.2 L59.7,49.6 Z"
+        android:fillColor="#D9FFFFFF" />
+    <path android:pathData="M52.1,61.4 L41.7,87.6 Q29.4,85.5 24.4,74.0 L47.3,57.7 Z"
+        android:fillColor="#59FFFFFF" />
+    <path android:pathData="M51.1,60.6 L38.2,84.8 Q30.6,83.9 28.0,76.8 L48.3,58.4 Z"
+        android:fillColor="#D9FFFFFF" />
+    <path android:pathData="M54,54 m-13,0 a13,13 0 1 1 26,0 a13,13 0 1 1 -26,0">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="radial"
+                android:centerX="54" android:centerY="54"
+                android:gradientRadius="13">
+                <item android:offset="0.0" android:color="#FFFFFFFF" />
+                <item android:offset="0.45" android:color="#E6FFFFFF" />
+                <item android:offset="1.0" android:color="#00FFFFFF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M54,54 m-6.5,0 a6.5,6.5 0 1 1 13,0 a6.5,6.5 0 1 1 -13,0"
+        android:fillColor="#FFFFFFFF" />
+</vector>
