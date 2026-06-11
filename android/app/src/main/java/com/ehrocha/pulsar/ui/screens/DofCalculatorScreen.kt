@@ -90,28 +90,24 @@ fun DofCalculatorScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             // Result card — DoF range + total + hyperfocal.
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                    DofResultRow(
+            com.ehrocha.pulsar.ui.components.StatPanel {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    com.ehrocha.pulsar.ui.components.StatRow(
                         stringResource(R.string.dof_calc_near),
                         formatDistance(nearMm),
                     )
-                    DofResultRow(
+                    com.ehrocha.pulsar.ui.components.StatRow(
                         stringResource(R.string.dof_calc_far),
                         if (farInfinite) stringResource(R.string.dof_calc_infinity)
                         else formatDistance(farMm),
                     )
-                    DofResultRow(
+                    com.ehrocha.pulsar.ui.components.StatRow(
                         stringResource(R.string.dof_calc_total),
                         if (dofMm.isInfinite()) stringResource(R.string.dof_calc_infinity)
                         else formatDistance(dofMm),
                         emphasise = true,
                     )
-                    DofResultRow(
+                    com.ehrocha.pulsar.ui.components.StatRow(
                         stringResource(R.string.dof_calc_hyperfocal),
                         formatDistance(hMm),
                     )
@@ -176,27 +172,6 @@ fun DofCalculatorScreen(onBack: () -> Unit) {
     }
 }
 
-@Composable
-private fun DofResultRow(label: String, value: String, emphasise: Boolean = false) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-        )
-        Text(
-            value,
-            style = if (emphasise) MaterialTheme.typography.titleMedium
-                    else MaterialTheme.typography.bodyLarge,
-            fontWeight = if (emphasise) FontWeight.Bold else FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-        )
-    }
-}
 
 private fun formatFstop(n: Double): String =
     if (n == n.toInt().toDouble()) "f/${n.toInt()}" else "f/$n"

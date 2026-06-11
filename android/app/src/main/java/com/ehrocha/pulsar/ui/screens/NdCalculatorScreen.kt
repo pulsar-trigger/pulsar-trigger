@@ -37,6 +37,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ui.components.StatHero
+import com.ehrocha.pulsar.ui.components.StatPanel
 import com.ehrocha.pulsar.ui.components.PulsarTopBar
 import kotlin.math.roundToInt
 
@@ -79,28 +81,11 @@ fun NdCalculatorScreen(onBack: () -> Unit) {
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // Result card.
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(
-                        stringResource(R.string.nd_calc_result_label),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                    Text(
-                        formatExposure(resultSec),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
+            StatPanel {
+                StatHero(
+                    stringResource(R.string.nd_calc_result_label),
+                    formatExposure(resultSec),
+                )
             }
 
             Spacer(Modifier.height(4.dp))

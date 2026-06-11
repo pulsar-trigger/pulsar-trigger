@@ -100,22 +100,18 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             // Summary card.
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                    StarTrailSummaryRow(
+            com.ehrocha.pulsar.ui.components.StatPanel {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    com.ehrocha.pulsar.ui.components.StatRow(
                         stringResource(R.string.star_trails_frames),
                         "$frames",
                         emphasise = true,
                     )
-                    StarTrailSummaryRow(
+                    com.ehrocha.pulsar.ui.components.StatRow(
                         stringResource(R.string.star_trails_total),
                         formatExposure(actualTotalSec.toDouble()),
                     )
-                    StarTrailSummaryRow(
+                    com.ehrocha.pulsar.ui.components.StatRow(
                         stringResource(R.string.star_trails_arc),
                         String.format(java.util.Locale.US, "%.1f°", arcDeg),
                     )
@@ -224,24 +220,3 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     }
 }
 
-@Composable
-private fun StarTrailSummaryRow(label: String, value: String, emphasise: Boolean = false) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-        )
-        Text(
-            value,
-            style = if (emphasise) MaterialTheme.typography.titleLarge
-                    else MaterialTheme.typography.bodyLarge,
-            fontWeight = if (emphasise) FontWeight.Bold else FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
-        )
-    }
-}
