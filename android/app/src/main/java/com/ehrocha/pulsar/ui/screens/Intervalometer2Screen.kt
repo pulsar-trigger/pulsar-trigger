@@ -757,8 +757,11 @@ internal fun RunningView(
 
         // Current-phase countdown (this exposure / gap / start-delay), colored
         // by phase so it reads at a glance distinct from the total below.
+        // The countdown number stays first-class (user: "still countdowns
+        // are important"); the cycle trace below it shows WHERE in the
+        // duty cycle that number lives.
         if (phaseLabel != null && phaseRemainingMs > 0) {
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(16.dp))
             Text(
                 iv2FormatHmsPretty(phaseRemainingMs),
                 style = androidx.compose.material3.LocalTextStyle.current.copy(fontFamily = com.ehrocha.pulsar.ui.theme.Mono, fontFeatureSettings = "tnum"),
@@ -767,9 +770,27 @@ internal fun RunningView(
                 color = if (state == DeviceState.RUNNING) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.tertiary,
             )
+            // The cycle as the signal it is: exposure = plateau pulse in
+            // the live gradient, gap = flat trace, playhead riding it.
+            // Skipped during the pre-roll start delay (not part of the
+            // cycle) and when there's no periodic structure at all.
+            val inStartDelay = state == DeviceState.WAITING &&
+                shotsTaken == 0 && startDelayMs > 0L
+            if (!inStartDelay && (exposureMs > 0L || gapMs > 0L)) {
+                Spacer(Modifier.height(10.dp))
+                com.ehrocha.pulsar.ui.components.CyclePhaseTrace(
+                    exposureMs = exposureMs,
+                    gapMs = gapMs,
+                    exposing = state == DeviceState.RUNNING,
+                    phaseFraction = if (phaseDurationMs > 0L) {
+                        1f - phaseRemainingMs.toFloat() / phaseDurationMs
+                    } else 0f,
+                    modifier = Modifier.fillMaxWidth().height(44.dp),
+                )
+            }
             Text(
                 phaseLabel,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
