@@ -1,28 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- SIGNAL launcher mark: one CP 1919 pulse on carbon. The trace sits in
-     the adaptive-icon safe zone (66/108); stroke drawn in the live
-     violet→magenta gradient. -->
+<!-- SIGNAL launcher mark, take 2: the celestial object itself. A pulsar
+     is a lighthouse — a compact bright star with two off-axis radio beams
+     (the tilt is WHY it pulses). Star core + two tapered gradient beams +
+     faint wavefront arcs, all inside the 66dp adaptive safe zone. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+
+    <!-- beam up-right -->
     <path
-        android:name="trace"
-        android:pathData="M26,62 L42,62 C46,62 46.5,38 51,38 C55.5,38 55,68 59,68 C61.5,68 62,62 66,62 L82,62"
-        android:strokeWidth="4.5"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:fillColor="@android:color/transparent">
-        <aapt:attr name="android:strokeColor">
+        android:pathData="M54.8,47.6 L63.1,22.3 Q73,21.1 76.9,30.3 L59.2,50.1 Z">
+        <aapt:attr name="android:fillColor">
             <gradient
                 android:type="linear"
-                android:startX="26" android:startY="54"
-                android:endX="82" android:endY="54">
+                android:startX="57" android:startY="49"
+                android:endX="70" android:endY="26">
                 <item android:offset="0.0" android:color="#FFB15CFF" />
-                <item android:offset="1.0" android:color="#FFFF4FA3" />
+                <item android:offset="1.0" android:color="#D9FF4FA3" />
             </gradient>
         </aapt:attr>
     </path>
+
+    <!-- beam down-left (point mirror) -->
+    <path
+        android:pathData="M53.2,60.4 L44.9,85.7 Q35,86.9 31.1,77.7 L48.8,57.9 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="51" android:startY="59"
+                android:endX="38" android:endY="82">
+                <item android:offset="0.0" android:color="#FFB15CFF" />
+                <item android:offset="1.0" android:color="#D9FF4FA3" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- pulse wavefront arcs crossing each beam -->
+    <path
+        android:pathData="M58.2,30.4 A24,24 0 0 1 72.4,38.6"
+        android:strokeColor="#73FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent" />
+    <path
+        android:pathData="M49.8,77.6 A24,24 0 0 1 35.6,69.4"
+        android:strokeColor="#73FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:fillColor="@android:color/transparent" />
+
+    <!-- the neutron star: bright core + thin violet corona -->
+    <path
+        android:pathData="M54,54 m-9,0 a9,9 0 1 1 18,0 a9,9 0 1 1 -18,0"
+        android:strokeColor="#80B15CFF"
+        android:strokeWidth="1.6"
+        android:fillColor="@android:color/transparent" />
+    <path
+        android:pathData="M54,54 m-5.5,0 a5.5,5.5 0 1 1 11,0 a5.5,5.5 0 1 1 -11,0"
+        android:fillColor="#FFFFFFFF" />
 </vector>
