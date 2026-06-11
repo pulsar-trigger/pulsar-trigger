@@ -385,8 +385,10 @@ fun IntScrubField(
                     val isZeroSpecial = zeroLabel != null && displayedValue == 0
                     Text(
                         if (isZeroSpecial) zeroLabel!! else "$displayedValue",
-                        style = MaterialTheme.typography.displaySmall
-                            .copy(fontFeatureSettings = "tnum"),
+                        style = MaterialTheme.typography.displaySmall.copy(
+                            fontFamily = com.ehrocha.pulsar.ui.theme.Mono,
+                            fontFeatureSettings = "tnum",
+                        ),
                         fontWeight = FontWeight.Bold,
                         color = if (isDragging) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.onSurface,

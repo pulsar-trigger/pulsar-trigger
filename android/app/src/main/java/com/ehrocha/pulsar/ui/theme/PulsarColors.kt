@@ -40,6 +40,11 @@ data class PulsarColors(
     val selection: Color,
     /** Trail / path strokes on the map. */
     val trail: Color,
+    // The SIGNAL live gradient — reserved for elements that are actively
+    // doing something (a run in progress, an armed start control). Idle UI
+    // never wears it.
+    val liveStart: Color,
+    val liveEnd: Color,
     // Banner surfaces (inline warnings: compass, GPS, …)
     val cautionContainer: Color,
     val onCautionContainer: Color,
@@ -71,8 +76,10 @@ private val ChromaticPulsarColors = PulsarColors(
     caution = Color(0xFFF9A825),
     critical = Color(0xFFD32F2F),
     info = Color(0xFF5C6BC0),
-    selection = Color(0xFFFFEB3B),
-    trail = Color(0xFF00E5FF),
+    selection = Color(0xFFFF4FA3),
+    trail = Color(0xFFB15CFF),
+    liveStart = Color(0xFFB15CFF),
+    liveEnd = Color(0xFFFF4FA3),
     cautionContainer = Color(0xFFFFF1C2),
     onCautionContainer = Color(0xFF6E4F00),
     proximityNear = Color(0xFF2E7D32),
@@ -116,6 +123,8 @@ private val RedPulsarColors = PulsarColors(
     info = Color(0xFF7A2A2A),
     selection = Color(0xFFE05050),
     trail = Color(0xFFB03838),
+    liveStart = Color(0xFFCC2222),
+    liveEnd = Color(0xFFFF4444),
     cautionContainer = Color(0xFF2A0A0A),
     onCautionContainer = Color(0xFFCC4444),
     proximityNear = Color(0xFFD04040),

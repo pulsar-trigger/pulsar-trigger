@@ -367,7 +367,7 @@ private fun FocusStep(
                     )
                     Text(
                         "$sharpness / 255",
-                        style = androidx.compose.material3.LocalTextStyle.current.copy(fontFeatureSettings = "tnum"),
+                        style = androidx.compose.material3.LocalTextStyle.current.copy(fontFamily = com.ehrocha.pulsar.ui.theme.Mono, fontFeatureSettings = "tnum"),
                         fontWeight = FontWeight.Bold,
                         fontSize = 22.sp,
                     )

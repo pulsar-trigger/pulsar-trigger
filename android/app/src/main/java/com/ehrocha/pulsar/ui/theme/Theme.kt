@@ -14,34 +14,57 @@ import com.ehrocha.pulsar.ble.StatusFrame
 
 enum class ThemeMode { Light, Outdoor, Dark, RedLight }
 
+// ── SIGNAL palette ──────────────────────────────────────────────────────
+// Carbon surfaces, one electric accent. The violet→magenta gradient is
+// reserved for LIVE elements (a running flow, an armed control); idle UI
+// stays calm monochrome. See PulsarColors for the per-mode role ramps.
 val PulsarViolet = Color(0xFFB15CFF)
-val PulsarDark = Color(0xFF1C1B1F)
-val PulsarSurface = Color(0xFF252429)
-val PulsarOnSurface = Color(0xFFE6E1E5)
-val PulsarSecondary = Color(0xFF353439)
+val PulsarMagenta = Color(0xFFFF4FA3)
+val PulsarDark = Color(0xFF0C0C0F)        // carbon, not Material gray
+val PulsarSurface = Color(0xFF131318)
+val PulsarOnSurface = Color(0xFFECECF1)
+val PulsarSecondary = Color(0xFF1C1C24)
 
+// "Chart Paper" — black traces on warm paper, like a pen plotter. NOT a
+// white SaaS app: the background is cream, the primary is deep violet.
 val LightColorScheme = lightColorScheme(
-    primary = PulsarViolet,
+    primary = Color(0xFF6A30D9),
     onPrimary = Color.White,
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    surfaceVariant = Color(0xFFE7E0EC),
-    onSurfaceVariant = Color(0xFF49454F),
-    outline = Color(0xFF79747E),
+    primaryContainer = Color(0xFFE7DBFB),
+    onPrimaryContainer = Color(0xFF26104A),
+    secondary = Color(0xFFC8327E),
+    onSecondary = Color.White,
+    background = Color(0xFFF7F4EE),
+    surface = Color(0xFFF7F4EE),
+    onBackground = Color(0xFF17171C),
+    onSurface = Color(0xFF17171C),
+    surfaceVariant = Color(0xFFEAE5DA),
+    onSurfaceVariant = Color(0xFF4A4A52),
+    surfaceContainerHigh = Color(0xFFEFEBE2),
+    surfaceContainerHighest = Color(0xFFE8E3D8),
+    outline = Color(0xFF74747E),
 )
 
+// "Carbon" — the default. Near-black with violet reserved for what's live.
 val DarkColorScheme = darkColorScheme(
     primary = PulsarViolet,
-    onPrimary = Color.White,
+    onPrimary = Color(0xFF1C0A33),
+    primaryContainer = Color(0xFF2A1247),
+    onPrimaryContainer = Color(0xFFE4CCFF),
+    secondary = PulsarMagenta,
+    onSecondary = Color(0xFF330D20),
+    secondaryContainer = Color(0xFF2A1430),
+    onSecondaryContainer = Color(0xFFFFD6E8),
     background = PulsarDark,
     surface = PulsarSurface,
     onBackground = PulsarOnSurface,
     onSurface = PulsarOnSurface,
     surfaceVariant = PulsarSecondary,
-    onSurfaceVariant = Color(0xFFCAC4D0),
-    outline = Color(0xFF938F99)
+    onSurfaceVariant = Color(0xFF9C9CAC),
+    surfaceContainerHigh = Color(0xFF1C1C24),
+    surfaceContainerHighest = Color(0xFF24242E),
+    outline = Color(0xFF3A3A46),
+    error = Color(0xFFFF5C5C),
 )
 
 // ── Outdoor / high-contrast mode ───────────────────────────────────────────
@@ -50,10 +73,10 @@ val DarkColorScheme = darkColorScheme(
 // of cheap phones under direct sun.
 
 val OutdoorColorScheme = lightColorScheme(
-    primary = Color(0xFF0050B0),          // saturated blue, visible at low brightness
+    primary = Color(0xFF4B1FB8),          // deep violet, 8:1 on white — brand at full sun
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFD8E8FF),
-    onPrimaryContainer = Color(0xFF001A4D),
+    primaryContainer = Color(0xFFE3D8FF),
+    onPrimaryContainer = Color(0xFF1C0A4D),
     secondary = Color(0xFF005530),
     onSecondary = Color.White,
     background = Color(0xFFFFFFFF),

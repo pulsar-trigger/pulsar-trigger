@@ -58,7 +58,10 @@ fun StatRow(label: String, value: String, emphasise: Boolean = false) {
             value,
             style = (if (emphasise) MaterialTheme.typography.titleLarge
                      else MaterialTheme.typography.bodyLarge)
-                .copy(fontFeatureSettings = "tnum"),
+                .copy(
+                    fontFamily = com.ehrocha.pulsar.ui.theme.Mono,
+                    fontFeatureSettings = "tnum",
+                ),
             fontWeight = if (emphasise) FontWeight.Bold else FontWeight.Medium,
             color = MaterialTheme.colorScheme.onPrimaryContainer,
         )
@@ -76,7 +79,10 @@ fun ColumnScope.StatHero(label: String, value: String) {
     )
     Text(
         value,
-        style = MaterialTheme.typography.headlineMedium.copy(fontFeatureSettings = "tnum"),
+        style = MaterialTheme.typography.headlineMedium.copy(
+            fontFamily = com.ehrocha.pulsar.ui.theme.Mono,
+            fontFeatureSettings = "tnum",
+        ),
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onPrimaryContainer,
         modifier = Modifier.align(Alignment.CenterHorizontally),

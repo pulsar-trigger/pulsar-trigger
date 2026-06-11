@@ -767,7 +767,7 @@ private fun FocalLengthSlider(
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
                     if (valueMm <= 0) "—" else "$valueMm",
-                    style = androidx.compose.material3.LocalTextStyle.current.copy(fontFeatureSettings = "tnum"),
+                    style = androidx.compose.material3.LocalTextStyle.current.copy(fontFamily = com.ehrocha.pulsar.ui.theme.Mono, fontFeatureSettings = "tnum"),
                     fontSize = 44.sp,
                     fontWeight = FontWeight.Light,
                     color = if (valueMm <= 0) onSurfaceVariant else onSurface,

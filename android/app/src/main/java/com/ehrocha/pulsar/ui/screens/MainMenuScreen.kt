@@ -225,9 +225,11 @@ fun MainMenuScreen(
             // TopAppBar so the bottom belongs entirely to navigation.
             TopAppBar(
                 title = {
+                    // Destination names are the brand voice — Unbounded,
+                    // the only place type shouts on an idle screen.
                     Text(
                         destinations[pagerState.currentPage],
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.headlineMedium,
                     )
                 },
                 actions = {

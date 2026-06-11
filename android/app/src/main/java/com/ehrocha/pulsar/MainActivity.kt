@@ -182,7 +182,10 @@ class MainActivity : AppCompatActivity() {
                 com.ehrocha.pulsar.ui.theme.LocalPulsarColors provides
                     com.ehrocha.pulsar.ui.theme.pulsarColorsFor(nightMode.value),
             ) {
-            MaterialTheme(colorScheme = colorScheme) {
+            MaterialTheme(
+                colorScheme = colorScheme,
+                typography = com.ehrocha.pulsar.ui.theme.PulsarTypography,
+            ) {
                 Surface(
                     Modifier
                         .fillMaxSize()
