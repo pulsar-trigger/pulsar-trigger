@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Splash: the pulse draws itself left to right. Pre-API-31 launchers
+     show the static full trace (trimPathEnd defaults to 1 in the base
+     vector), 31+ plays the draw-on. -->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:drawable="@drawable/ic_splash_trace">
+    <target android:name="trace">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="trimPathEnd"
+                android:valueFrom="0"
+                android:valueTo="1"
+                android:duration="800"
+                android:interpolator="@android:interpolator/fast_out_slow_in" />
+        </aapt:attr>
+    </target>
+</animated-vector>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SIGNAL launcher mark: one CP 1919 pulse on carbon. The trace sits in
+     the adaptive-icon safe zone (66/108); stroke drawn in the live
+     violet→magenta gradient. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:name="trace"
+        android:pathData="M26,62 L42,62 C46,62 46.5,38 51,38 C55.5,38 55,68 59,68 C61.5,68 62,62 66,62 L82,62"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:startX="26" android:startY="54"
+                android:endX="82" android:endY="54">
+                <item android:offset="0.0" android:color="#FFB15CFF" />
+                <item android:offset="1.0" android:color="#FFFF4FA3" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

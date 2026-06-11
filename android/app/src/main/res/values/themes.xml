@@ -4,4 +4,13 @@
         <item name="android:statusBarColor">@color/background_dark</item>
         <item name="android:navigationBarColor">@color/background_dark</item>
     </style>
+
+    <!-- SIGNAL splash: carbon window, the pulse draws itself, then hands
+         over to the app theme. core-splashscreen backports to API 26. -->
+    <style name="Theme.Pulsar.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#0C0C0F</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/avd_splash_pulse</item>
+        <item name="windowSplashScreenAnimationDuration">800</item>
+        <item name="postSplashScreenTheme">@style/Theme.Pulsar</item>
+    </style>
 </resources>

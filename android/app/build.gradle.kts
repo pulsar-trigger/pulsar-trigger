@@ -20,8 +20,8 @@ android {
         applicationId = "com.ehrocha.pulsar"
         minSdk = 26
         targetSdk = 35
-        versionCode = 442
-        versionName = "0.431.0"
+        versionCode = 443
+        versionName = "0.432.0"
     }
 
     signingConfigs {
@@ -72,6 +72,7 @@ dependencies {
 
     // Core
     implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")

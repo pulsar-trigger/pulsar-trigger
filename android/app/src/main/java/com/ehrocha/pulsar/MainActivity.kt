@@ -38,6 +38,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.animation.togetherWith
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.runtime.*
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
@@ -160,6 +161,9 @@ class MainActivity : AppCompatActivity() {
 
     @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
+        // SIGNAL splash (carbon + self-drawing pulse); must run before
+        // super.onCreate so the compat splash can take the first frame.
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         val pendingImportJson = readImportIntent()
         enableEdgeToEdge()
