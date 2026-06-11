@@ -747,6 +747,7 @@
     <string name="scan_section_recent">Zuletzt</string>
     <string name="scan_section_tools">Werkzeuge</string>
     <string name="trigger_section_bulb">Bulb-Modi</string>
+    <string name="trigger_resume_last">Weiter: %1$s</string>
     <string name="tools_section_astro">Astro</string>
     <string name="tools_section_field">Feldrechner</string>
     <string name="tools_section_spotting">Spotting</string>

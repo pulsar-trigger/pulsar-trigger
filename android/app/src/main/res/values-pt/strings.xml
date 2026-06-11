@@ -747,6 +747,7 @@
     <string name="scan_section_recent">Recentes</string>
     <string name="scan_section_tools">Ferramentas</string>
     <string name="trigger_section_bulb">Modos Bulb</string>
+    <string name="trigger_resume_last">Continuar: %1$s</string>
     <string name="tools_section_astro">Astro</string>
     <string name="tools_section_field">Calculadoras de campo</string>
     <string name="tools_section_spotting">Observação</string>

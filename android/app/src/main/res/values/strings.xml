@@ -1024,6 +1024,7 @@
     <string name="scan_section_recent">Recent</string>
     <string name="scan_section_tools">Tools</string>
     <string name="trigger_section_bulb">Bulb modes</string>
+    <string name="trigger_resume_last">Continue: %1$s</string>
     <string name="tools_section_astro">Astro</string>
     <string name="tools_section_field">Field calculators</string>
     <string name="tools_section_spotting">Spotting</string>

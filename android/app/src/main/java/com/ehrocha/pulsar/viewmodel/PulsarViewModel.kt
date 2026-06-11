@@ -123,6 +123,17 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     private val prefs = app.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+    // ── Last-used trigger mode (the "Continue" row on the Trigger page) ──
+    private val _lastTriggerKey =
+        MutableStateFlow<String?>(app.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString("last_trigger_key", null))
+    val lastTriggerKey: StateFlow<String?> = _lastTriggerKey
+
+    fun recordTriggerUsed(key: String) {
+        _lastTriggerKey.value = key
+        prefs.edit().putString("last_trigger_key", key).apply()
+    }
+
     val shotLog = com.ehrocha.pulsar.model.ShotLog(prefs)
 
     // ── Debug mode (gates the in-app GATT Explorer + future dev tools) ──

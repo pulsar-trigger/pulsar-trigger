@@ -747,6 +747,7 @@
     <string name="scan_section_recent">最近</string>
     <string name="scan_section_tools">工具</string>
     <string name="trigger_section_bulb">B 门模式</string>
+    <string name="trigger_resume_last">继续：%1$s</string>
     <string name="tools_section_astro">天文</string>
     <string name="tools_section_field">现场计算器</string>
     <string name="tools_section_spotting">观察</string>

@@ -747,6 +747,7 @@
     <string name="scan_section_recent">Récents</string>
     <string name="scan_section_tools">Outils</string>
     <string name="trigger_section_bulb">Modes Bulb</string>
+    <string name="trigger_resume_last">Continuer : %1$s</string>
     <string name="tools_section_astro">Astro</string>
     <string name="tools_section_field">Calculatrices de terrain</string>
     <string name="tools_section_spotting">Repérage</string>

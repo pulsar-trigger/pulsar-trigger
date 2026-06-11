@@ -21,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
@@ -372,6 +373,20 @@ private fun MenuPageContent(
                         launcherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList,
                             enabled = !bulbBlocked) { onCustomFlowSelected() },
                     )
+                    // Every trigger tile records itself as last-used so the
+                    // "Continue" row can re-open it next visit.
+                    fun rec(items: List<LauncherItem>) = items.map { item ->
+                        item.copy(onClick = {
+                            vm.recordTriggerUsed(item.key)
+                            item.onClick()
+                        })
+                    }
+                    val bulbR = rec(bulbTiles)
+                    val standardR = rec(standardTiles)
+                    val customR = rec(customTiles)
+                    val lastKey by vm.lastTriggerKey.collectAsState()
+                    val lastTile = (bulbR + standardR + customR)
+                        .find { it.key == lastKey && it.enabled }
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -391,16 +406,19 @@ private fun MenuPageContent(
                         if (onCanonBle || canonBleReconnecting) {
                             CanonBleBanner(reconnecting = canonBleReconnecting)
                         }
+                        if (lastTile != null) {
+                            ResumeLastRow(lastTile)
+                        }
                         // Filter chips removed (v0.416 design review): three
                         // always-visible sections need no filtering ceremony.
                         SectionContainer(title = stringResource(R.string.trigger_section_bulb)) {
-                            SectionGrid(bulbTiles)
+                            SectionGrid(bulbR)
                         }
                         SectionContainer(title = stringResource(R.string.trigger_section_standard)) {
-                            SectionGrid(standardTiles)
+                            SectionGrid(standardR)
                         }
                         SectionContainer(title = stringResource(R.string.trigger_section_custom)) {
-                            SectionGrid(customTiles)
+                            SectionGrid(customR)
                         }
                         Spacer(Modifier.height(8.dp))
                     }
@@ -542,6 +560,40 @@ const val DEST_FAVORITES = 2
 const val DEST_TOOLS = 3
 
 
+@Composable
+private fun ResumeLastRow(tile: LauncherItem) {
+    Surface(
+        onClick = tile.onClick,
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                tile.icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            Text(
+                stringResource(R.string.trigger_resume_last, tile.label),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.weight(1f),
+            )
+            Icon(
+                Icons.Default.PlayArrow,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+        }
+    }
+}
+
 private data class LauncherItem(
     val key: String,
     val label: String,
@@ -557,7 +609,10 @@ private fun launcherItem(
     enabled: Boolean = true,
     onClick: () -> Unit,
 ): LauncherItem = LauncherItem(
-    key = "res:$labelRes",
+    // Resource ENTRY NAME, not the int — R values shuffle between builds
+    // and this key is persisted for the Trigger "Continue" row.
+    key = "res:" + androidx.compose.ui.platform.LocalContext.current.resources
+        .getResourceEntryName(labelRes),
     label = stringResource(labelRes),
     icon = icon,
     enabled = enabled,
