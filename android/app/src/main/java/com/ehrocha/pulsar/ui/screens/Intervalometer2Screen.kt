@@ -551,6 +551,9 @@ private fun ScrubSegment(
 
     Text(
         text = text,
+        // Tabular numerals: digits keep one width, so the value doesn't
+        // wobble sideways while scrubbing or while a countdown ticks.
+        style = androidx.compose.material3.LocalTextStyle.current.copy(fontFeatureSettings = "tnum"),
         fontSize = fontSize,
         fontWeight = FontWeight.Light,
         color = if (isDragging) MaterialTheme.colorScheme.primary
@@ -729,12 +732,14 @@ internal fun RunningView(
         Row(verticalAlignment = Alignment.Bottom) {
             Text(
                 "$shotsTakenDisplay",
+                style = androidx.compose.material3.LocalTextStyle.current.copy(fontFeatureSettings = "tnum"),
                 fontSize = 96.sp,
                 fontWeight = FontWeight.Light,
                 color = MaterialTheme.colorScheme.primary,
             )
             Text(
                 if (continuous) " / ∞" else " / $plannedShots",
+                style = androidx.compose.material3.LocalTextStyle.current.copy(fontFeatureSettings = "tnum"),
                 fontSize = 32.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 16.dp),
@@ -752,6 +757,7 @@ internal fun RunningView(
             Spacer(Modifier.height(20.dp))
             Text(
                 iv2FormatHmsPretty(phaseRemainingMs),
+                style = androidx.compose.material3.LocalTextStyle.current.copy(fontFeatureSettings = "tnum"),
                 fontSize = 44.sp,
                 fontWeight = FontWeight.Bold,
                 color = if (state == DeviceState.RUNNING) MaterialTheme.colorScheme.primary
@@ -769,6 +775,7 @@ internal fun RunningView(
         if (!continuous && liveRemainingMs > 0) {
             Text(
                 iv2FormatHmsPretty(liveRemainingMs),
+                style = androidx.compose.material3.LocalTextStyle.current.copy(fontFeatureSettings = "tnum"),
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
             )

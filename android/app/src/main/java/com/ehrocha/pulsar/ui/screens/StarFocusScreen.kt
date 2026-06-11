@@ -365,7 +365,12 @@ private fun FocusStep(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Text("$sharpness / 255", fontWeight = FontWeight.Bold, fontSize = 22.sp)
+                    Text(
+                        "$sharpness / 255",
+                        style = androidx.compose.material3.LocalTextStyle.current.copy(fontFeatureSettings = "tnum"),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 22.sp,
+                    )
                 }
             }
         }

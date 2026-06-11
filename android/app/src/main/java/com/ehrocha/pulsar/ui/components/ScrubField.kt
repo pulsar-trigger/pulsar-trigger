@@ -385,7 +385,8 @@ fun IntScrubField(
                     val isZeroSpecial = zeroLabel != null && displayedValue == 0
                     Text(
                         if (isZeroSpecial) zeroLabel!! else "$displayedValue",
-                        style = MaterialTheme.typography.displaySmall,
+                        style = MaterialTheme.typography.displaySmall
+                            .copy(fontFeatureSettings = "tnum"),
                         fontWeight = FontWeight.Bold,
                         color = if (isDragging) MaterialTheme.colorScheme.primary
                                 else MaterialTheme.colorScheme.onSurface,
