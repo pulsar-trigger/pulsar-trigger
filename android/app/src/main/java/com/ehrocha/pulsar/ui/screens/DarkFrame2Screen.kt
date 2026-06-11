@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ui.components.StartStopBar
 import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.model.FlowStep
 import com.ehrocha.pulsar.model.RunState
@@ -151,7 +152,7 @@ fun DarkFrame2Screen(
             )
         },
         bottomBar = {
-            BottomBar(
+            StartStopBar(
                 running = running,
                 currentTabIdx = tabIdx,
                 tabCount = DfTab.entries.size,

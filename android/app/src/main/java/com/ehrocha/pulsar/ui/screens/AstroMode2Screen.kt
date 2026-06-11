@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ui.components.StartStopBar
 import com.ehrocha.pulsar.model.FlowStep
 import com.ehrocha.pulsar.model.RunState
 import com.ehrocha.pulsar.ui.components.NumPadDialog
@@ -259,7 +260,7 @@ fun AstroMode2Screen(
             )
         },
         bottomBar = {
-            BottomBar(
+            StartStopBar(
                 running = running,
                 currentTabIdx = tabIdx,
                 tabCount = AstroTab.entries.size,

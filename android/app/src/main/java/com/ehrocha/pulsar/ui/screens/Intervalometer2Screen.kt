@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ui.components.StartStopBar
 import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.model.FlowStep
 import com.ehrocha.pulsar.model.RunState
@@ -224,7 +225,7 @@ fun Intervalometer2Screen(
             )
         },
         bottomBar = {
-            BottomBar(
+            StartStopBar(
                 running = running,
                 currentTabIdx = tabIdx,
                 tabCount = visibleTabs.size,
@@ -1001,98 +1002,7 @@ internal fun SummaryStrip(
  *
  * During a run the whole nav collapses to a single Stop pill.
  */
-@Composable
-internal fun BottomBar(
-    running: Boolean,
-    currentTabIdx: Int,
-    tabCount: Int,
-    currentTabValid: Boolean,
-    canStart: Boolean,
-    hint: String?,
-    hintIsAccent: Boolean = false,
-    onPrev: () -> Unit,
-    onNext: () -> Unit,
-    onStart: () -> Unit,
-    onStop: () -> Unit,
-) {
-    val isLast = currentTabIdx >= tabCount - 1
-    val isFirst = currentTabIdx == 0
-    Surface(tonalElevation = 2.dp) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            if (hint != null) {
-                Text(
-                    hint,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (hintIsAccent) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = if (hintIsAccent) FontWeight.Bold else FontWeight.Normal,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                )
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                if (running) {
-                    Spacer(Modifier.weight(1f))
-                    Button(
-                        onClick = onStop,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                        ),
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier.height(56.dp).fillMaxWidth(0.6f),
-                    ) {
-                        Icon(Icons.Default.Stop, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.btn_stop), fontWeight = FontWeight.Bold)
-                    }
-                    Spacer(Modifier.weight(1f))
-                } else {
-                    OutlinedButton(
-                        onClick = onPrev,
-                        enabled = !isFirst,
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier.height(56.dp).weight(1f),
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                        Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.iv2_wizard_prev))
-                    }
-                    if (isLast) {
-                        Button(
-                            onClick = onStart,
-                            enabled = canStart,
-                            shape = RoundedCornerShape(20.dp),
-                            modifier = Modifier.height(56.dp).weight(1.4f),
-                        ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.btn_start), fontWeight = FontWeight.Bold)
-                        }
-                    } else {
-                        Button(
-                            onClick = onNext,
-                            enabled = currentTabValid,
-                            shape = RoundedCornerShape(20.dp),
-                            modifier = Modifier.height(56.dp).weight(1f),
-                        ) {
-                            Text(stringResource(R.string.iv2_wizard_next), fontWeight = FontWeight.Bold)
-                            Spacer(Modifier.width(6.dp))
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
+// StartStopBar (ex-BottomBar) now lives in ui/components — shared by all wizards.
 
 /**
  * Save-preset dialog used by both Iv2 and Astro 2 wizards. Asks for a name;

@@ -90,6 +90,30 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
         topBar = {
             PulsarTopBar(title = stringResource(R.string.mode_star_trails), onBack = onBack)
         },
+        bottomBar = {
+            com.ehrocha.pulsar.ui.components.StartStopBar(
+                running = running,
+                canStart = connected,
+                hint = if (!connected && !running) {
+                    stringResource(R.string.star_trails_not_connected)
+                } else null,
+                onStart = {
+                    vm.saveFlowSteps(
+                        listOf(
+                            FlowStep.Intervalometer(
+                                intervalMs = gapSec * 1000L,
+                                exposureMs = subSec * 1000L,
+                                shotCount = frames,
+                                delayMs = 0L,
+                                useAutofocus = useAutofocus,
+                            )
+                        )
+                    )
+                    vm.startFlow()
+                },
+                onStop = { vm.stopFlow() },
+            )
+        },
     ) { pad ->
         Column(
             modifier = Modifier
@@ -179,43 +203,6 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
             )
 
             Spacer(Modifier.height(8.dp))
-            if (running) {
-                OutlinedButton(
-                    onClick = { vm.stopFlow() },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(R.string.btn_stop))
-                }
-            } else {
-                Button(
-                    onClick = {
-                        vm.saveFlowSteps(
-                            listOf(
-                                FlowStep.Intervalometer(
-                                    intervalMs = gapSec * 1000L,
-                                    exposureMs = subSec * 1000L,
-                                    shotCount = frames,
-                                    delayMs = 0L,
-                                    useAutofocus = useAutofocus,
-                                )
-                            )
-                        )
-                        vm.startFlow()
-                    },
-                    enabled = connected,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(R.string.btn_start))
-                }
-            }
-            if (!connected && !running) {
-                Text(
-                    stringResource(R.string.star_trails_not_connected),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(top = 4.dp),
-                )
-            }
         }
     }
 }
