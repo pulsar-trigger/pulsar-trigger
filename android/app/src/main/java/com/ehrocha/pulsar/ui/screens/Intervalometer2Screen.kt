@@ -789,12 +789,20 @@ internal fun RunningView(
 
         Spacer(Modifier.height(32.dp))
 
+        // SIGNAL: the run draws itself — one pulse per captured frame.
+        com.ehrocha.pulsar.ui.components.PulseScope(
+            shotsTaken = shotsTakenDisplay,
+            plannedShots = if (continuous) 0 else plannedShots,
+            exposing = state == DeviceState.RUNNING,
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+        )
+        Spacer(Modifier.height(8.dp))
         if (continuous) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(3.dp))
         } else {
             LinearProgressIndicator(
                 progress = { progress },
-                modifier = Modifier.fillMaxWidth().height(8.dp),
+                modifier = Modifier.fillMaxWidth().height(3.dp),
             )
         }
     }
