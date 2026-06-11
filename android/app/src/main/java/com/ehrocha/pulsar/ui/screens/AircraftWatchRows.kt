@@ -610,35 +610,31 @@ internal fun AircraftDetailDialog(
     val lighting = lightingFor(s.bearingDeg, sunDir)
     val elevation = elevationDeg(s)
     val closest = closestApproach(s, userLat, userLon)
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_dismiss))
-            }
+    com.ehrocha.pulsar.ui.components.DetailSheet(
+        onDismiss = onDismiss,
+        // Callsign + lighting condition side by side — the lighting is the
+        // at-a-glance "is it worth shooting right now" cue, so it lives at
+        // the top next to the flight number.
+        title = {
+            Text(
+                s.callsign ?: s.icaoHex.uppercase(),
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f),
+            )
+            LightingChip(lighting)
         },
-        dismissButton = {
+        actions = {
             androidx.compose.material3.TextButton(onClick = {
                 onLogSighting()
                 onDismiss()
             }) {
                 Text(stringResource(R.string.aircraft_log_this))
             }
-        },
-        title = {
-            // Callsign + lighting condition side by side — the lighting is
-            // the at-a-glance "is it worth shooting right now" cue, so it
-            // lives at the top next to the flight number.
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    s.callsign ?: s.icaoHex.uppercase(),
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f),
-                )
-                LightingChip(lighting)
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_dismiss))
             }
         },
-        text = {
+    ) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 // Hero photo + credit. Tapping opens the source page in the
                 // browser — planespotters.net AUP requires the link to be
@@ -748,8 +744,7 @@ internal fun AircraftDetailDialog(
                         recommendedFocalLengthMm(s)),
                 )
             }
-        },
-    )
+    }
 }
 
 @Composable

@@ -445,28 +445,19 @@ internal fun CompassCalibrationDialog(onDismiss: () -> Unit) {
  *  and lets the writer arrange the prose to read naturally per language. */
 @Composable
 internal fun PhotoTipsDialog(onDismiss: () -> Unit) {
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.action_dismiss))
-            }
-        },
+    com.ehrocha.pulsar.ui.components.DetailSheet(
+        onDismiss = onDismiss,
         title = {
             Text(
                 stringResource(R.string.aircraft_photo_tips_title),
                 fontWeight = FontWeight.Bold,
             )
         },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()),
-            ) {
-                Text(
-                    stringResource(R.string.aircraft_photo_tips_body),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        },
-    )
+    ) {
+        // The sheet scrolls its content itself — no nested scroll column.
+        Text(
+            stringResource(R.string.aircraft_photo_tips_body),
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
 }
