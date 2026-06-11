@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Share
@@ -91,18 +92,11 @@ fun SpottingLogScreen(onBack: () -> Unit) {
         },
     ) { pad ->
         if (entries.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(pad),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    stringResource(R.string.spotting_log_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            com.ehrocha.pulsar.ui.components.EmptyState(
+                icon = Icons.Default.FlightTakeoff,
+                text = stringResource(R.string.spotting_log_empty),
+                modifier = Modifier.padding(pad),
+            )
         } else {
             LazyColumn(
                 modifier = Modifier

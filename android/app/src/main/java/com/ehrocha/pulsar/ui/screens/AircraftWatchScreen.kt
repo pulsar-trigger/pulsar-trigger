@@ -214,7 +214,9 @@ fun AircraftWatchScreen(
     BottomSheetScaffold(
         scaffoldState = scaffoldState,
         // Peek shows roughly: drag handle + status row + small bottom padding.
-        sheetPeekHeight = 76.dp,
+        // Peek shows a text line — scale with the user's font size so
+        // large-text accessibility settings don't clip it (audit P0-4).
+        sheetPeekHeight = (76 * androidx.compose.ui.platform.LocalDensity.current.fontScale).dp,
         topBar = {
             PulsarTopBar(
                 title = stringResource(R.string.aircraft_watch_title),

@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DeleteOutline
@@ -62,13 +63,11 @@ fun ShotLogScreen(vm: PulsarViewModel, onBack: () -> Unit) {
         },
     ) { pad ->
         if (entries.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) {
-                Text(
-                    stringResource(R.string.shot_log_empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            com.ehrocha.pulsar.ui.components.EmptyState(
+                icon = Icons.Default.PhotoCamera,
+                text = stringResource(R.string.shot_log_empty),
+                modifier = Modifier.padding(pad),
+            )
         } else {
             ShotLogStats(entries)
             LazyColumn(
