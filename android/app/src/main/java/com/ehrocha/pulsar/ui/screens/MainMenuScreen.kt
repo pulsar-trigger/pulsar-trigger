@@ -835,10 +835,14 @@ private fun LauncherTile(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 16.dp),
         ) {
             val contentAlpha = if (enabled) 1f else 0.35f
+            // SIGNAL press feedback: the icon slides along the live
+            // gradient (violet → magenta) while held.
             Icon(
                 icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = contentAlpha),
+                tint = (if (pressed && enabled)
+                    com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.liveEnd
+                else MaterialTheme.colorScheme.primary).copy(alpha = contentAlpha),
                 modifier = Modifier.size(26.dp),
             )
             Spacer(Modifier.height(8.dp))

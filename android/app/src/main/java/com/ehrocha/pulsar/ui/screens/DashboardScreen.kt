@@ -1050,8 +1050,12 @@ internal fun DashCard(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            title,
-            style = MaterialTheme.typography.labelLarge,
+            title.uppercase(),
+            style = MaterialTheme.typography.labelLarge.copy(
+                letterSpacing = androidx.compose.ui.unit.TextUnit(
+                    1.5f, androidx.compose.ui.unit.TextUnitType.Sp,
+                ),
+            ),
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.weight(1f),
         )
@@ -1065,6 +1069,9 @@ internal fun DashCard(
                 .rotate(rotation),
         )
     }
+    // SIGNAL: dashboard section rules carry the pulse, same as the
+    // launcher pages' SectionContainer.
+    com.ehrocha.pulsar.ui.components.PulseDivider()
     AnimatedVisibility(
         visible = expanded,
         enter = expandVertically(),
