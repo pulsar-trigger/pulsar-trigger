@@ -420,6 +420,8 @@
     <string name="btn_go_to_settings">Ir a Ajustes</string>
     <string name="status_fetching_data">Obteniendo ubicación &amp; datos…</string>
     <string name="card_summary">Resumen</string>
+    <string name="tonight_signal_title">Señal de esta noche</string>
+    <string name="tonight_signal_best">Mejor ventana %1$s · %2$d%% nubes</string>
     <string name="location_north">N</string>
     <string name="location_south">S</string>
     <string name="location_east">E</string>

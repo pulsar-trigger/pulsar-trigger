@@ -207,6 +207,9 @@ fun DashboardScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            // ── Tonight's Signal — the SIGNAL hero. CP 1919 ridgeline of
+            // tonight's hours; amplitude = shooting quality. ─────────
+            TonightSignalCard(state)
             // ── Summary card ──────────────────────────────────────
             state.location?.let { loc ->
                 DashCard(title = stringResource(R.string.card_summary), icon = Icons.Default.MyLocation) {

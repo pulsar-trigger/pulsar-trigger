@@ -422,6 +422,8 @@
     <string name="btn_go_to_settings">前往设置</string>
     <string name="status_fetching_data">正在获取位置 &amp; 数据…</string>
     <string name="card_summary">摘要</string>
+    <string name="tonight_signal_title">今晚的信号</string>
+    <string name="tonight_signal_best">最佳时段 %1$s · 云量 %2$d%%</string>
     <string name="location_north">北</string>
     <string name="location_south">南</string>
     <string name="location_east">东</string>

@@ -420,6 +420,8 @@
     <string name="btn_go_to_settings">設定へ</string>
     <string name="status_fetching_data">位置情報＆データを取得中…</string>
     <string name="card_summary">サマリー</string>
+    <string name="tonight_signal_title">今夜のシグナル</string>
+    <string name="tonight_signal_best">ベスト %1$s · 雲量 %2$d%%</string>
     <string name="location_north">北</string>
     <string name="location_south">南</string>
     <string name="location_east">東</string>
