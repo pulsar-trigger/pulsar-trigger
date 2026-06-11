@@ -980,6 +980,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val _combinedFlows = MutableStateFlow<List<SavedFlow>>(FlowPresets.ALL)
     private val _flowRunning = MutableStateFlow(false)
     val flowRunning: StateFlow<Boolean> = _flowRunning
+
+    /** One-shot event: a flow ran to natural completion (all planned shots
+     *  taken, or a continuous run the user ended with frames in the bag).
+     *  Payload = completed shot count. MainActivity turns it into the
+     *  success snackbar + haptic — the SIGNAL "one clean pulse". */
+    private val _runCompleted = kotlinx.coroutines.flow.MutableSharedFlow<Int>(extraBufferCapacity = 1)
+    val runCompleted: kotlinx.coroutines.flow.SharedFlow<Int> = _runCompleted
     private val _flowPaused = MutableStateFlow(false)
     val flowPaused: StateFlow<Boolean> = _flowPaused
     private val _flowCurrentStep = MutableStateFlow(-1)
@@ -2266,6 +2273,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         threw && completed < plannedShots -> com.ehrocha.pulsar.model.ShotLogStatus.STOPPED
                         completed >= plannedShots -> com.ehrocha.pulsar.model.ShotLogStatus.COMPLETED
                         else -> com.ehrocha.pulsar.model.ShotLogStatus.STOPPED
+                    }
+                    if (status == com.ehrocha.pulsar.model.ShotLogStatus.COMPLETED && completed > 0) {
+                        _runCompleted.tryEmit(completed)
                     }
                     shotLog.record(
                         com.ehrocha.pulsar.model.ShotLogEntry(

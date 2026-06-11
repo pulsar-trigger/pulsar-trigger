@@ -422,6 +422,7 @@
     <string name="card_summary">Zusammenfassung</string>
     <string name="tonight_signal_title">Signal heute Nacht</string>
     <string name="tonight_signal_best">Bestes Fenster %1$s · %2$d%% Wolken</string>
+    <string name="run_complete_snack">Aufnahme abgeschlossen · %1$d Bilder</string>
     <string name="tonight_signal_help_title">So liest du das Signal</string>
     <string name="tonight_signal_help_body">Jede Linie ist eine Stunde der Nacht, von oben nach unten. Je höher der Puls, desto besser die Stunde zum Fotografieren.\n\n• Himmelsdunkelheit treibt ihn — der Puls wächst, während die Sonne durch die Dämmerungsphasen sinkt\n• Bewölkung flacht die Linie ab\n• Heller Mond dämpft jede Stunde\n• Regen löscht sie fast aus\n\nDie farbige Linie ist das beste Fenster der Nacht — ihre Stunde ist rechts markiert und unter dem Diagramm benannt.</string>
     <string name="location_north">N</string>

@@ -388,6 +388,31 @@ fun PulsarNavHost(
     // ── Auto-import from .pulsar file intent ──────────────────────
     val context = androidx.compose.ui.platform.LocalContext.current
     val snackbarHostLocal = com.ehrocha.pulsar.ui.components.LocalSnackbarHost.current
+    // SIGNAL success moment: a finished run lands as one clean pulse — a
+    // crisp double-tick you can FEEL at the tripod without looking, plus
+    // the snackbar naming the frame count.
+    LaunchedEffect(Unit) {
+        vm.runCompleted.collect { frames ->
+            runCatching {
+                val vibrator = if (android.os.Build.VERSION.SDK_INT >= 31) {
+                    (context.getSystemService(android.content.Context.VIBRATOR_MANAGER_SERVICE)
+                        as android.os.VibratorManager).defaultVibrator
+                } else {
+                    @Suppress("DEPRECATION")
+                    context.getSystemService(android.content.Context.VIBRATOR_SERVICE)
+                        as android.os.Vibrator
+                }
+                vibrator.vibrate(
+                    android.os.VibrationEffect.createWaveform(
+                        longArrayOf(0, 35, 110, 35), -1,
+                    ),
+                )
+            }
+            snackbarHostLocal.showSnackbar(
+                context.getString(R.string.run_complete_snack, frames),
+            )
+        }
+    }
     LaunchedEffect(importJson) {
         if (importJson != null) {
             val event = vm.plannerManager.importEvent(importJson)
