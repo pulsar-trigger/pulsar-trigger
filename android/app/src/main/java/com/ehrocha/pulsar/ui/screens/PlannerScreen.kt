@@ -1223,13 +1223,14 @@ private fun AddSessionDialog(
 
                 // ── GPS button ───────────────────────────────────────
                 val gpsUnavailableMsg = stringResource(R.string.planner_gps_unavailable)
+                val notify = com.ehrocha.pulsar.ui.components.rememberSnackbarPoster()
                 OutlinedButton(
                     onClick = {
                         val hasPermission = ContextCompat.checkSelfPermission(
                             context, Manifest.permission.ACCESS_FINE_LOCATION
                         ) == PackageManager.PERMISSION_GRANTED
                         if (!hasPermission) {
-                            Toast.makeText(context, gpsUnavailableMsg, Toast.LENGTH_LONG).show()
+                            notify(gpsUnavailableMsg)
                             return@OutlinedButton
                         }
                         gpsLoading = true
@@ -1255,7 +1256,7 @@ private fun AddSessionDialog(
                                         if (name.isBlank()) name = myLocationStr
                                     }
                                 } else {
-                                    Toast.makeText(context, gpsUnavailableMsg, Toast.LENGTH_LONG).show()
+                                    notify(gpsUnavailableMsg)
                                 }
                             } finally {
                                 gpsLoading = false

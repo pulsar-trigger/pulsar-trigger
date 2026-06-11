@@ -171,9 +171,11 @@ class MainActivity : AppCompatActivity() {
                 ThemeMode.Dark -> DarkColorScheme
                 ThemeMode.RedLight -> RedLightColorScheme
             }
+            val snackbarHost = remember { androidx.compose.material3.SnackbarHostState() }
             CompositionLocalProvider(
                 LocalNightMode provides nightMode,
                 LocalNightModeLocked provides nightModeLocked,
+                com.ehrocha.pulsar.ui.components.LocalSnackbarHost provides snackbarHost,
                 // Semantic roles resolved per mode — under RedLight every
                 // role collapses to a red/grey luminance ramp so the user's
                 // night-vision choice is honoured by all surfaces.
@@ -187,6 +189,7 @@ class MainActivity : AppCompatActivity() {
                         .systemBarsPadding(),
                     color = MaterialTheme.colorScheme.background,
                 ) {
+                androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
                     // Permission list has to match the manifest's <uses-permission>
                     // SDK gates. Asking for a permission that isn't in the merged
                     // manifest is a silent no-op — the user sees no system dialog
@@ -229,6 +232,11 @@ class MainActivity : AppCompatActivity() {
                             onRequestAgain = { permissions.launchMultiplePermissionRequest() },
                         )
                     }
+                    androidx.compose.material3.SnackbarHost(
+                        hostState = snackbarHost,
+                        modifier = Modifier.align(androidx.compose.ui.Alignment.BottomCenter),
+                    )
+                }
                 }
             }
             }
@@ -371,22 +379,19 @@ fun PulsarNavHost(
 
     // ── Auto-import from .pulsar file intent ──────────────────────
     val context = androidx.compose.ui.platform.LocalContext.current
+    val snackbarHostLocal = com.ehrocha.pulsar.ui.components.LocalSnackbarHost.current
     LaunchedEffect(importJson) {
         if (importJson != null) {
             val event = vm.plannerManager.importEvent(importJson)
             if (event != null) {
-                android.widget.Toast.makeText(
-                    context,
+                snackbarHostLocal.showSnackbar(
                     context.getString(R.string.planner_import_success, event.name),
-                    android.widget.Toast.LENGTH_LONG,
-                ).show()
+                )
                 currentScreen = AppScreen.EventSessions(event)
             } else {
-                android.widget.Toast.makeText(
-                    context,
+                snackbarHostLocal.showSnackbar(
                     context.getString(R.string.planner_import_failed),
-                    android.widget.Toast.LENGTH_LONG,
-                ).show()
+                )
             }
         }
     }

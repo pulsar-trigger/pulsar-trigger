@@ -462,6 +462,7 @@ internal fun AircraftRow(
     val lighting = lightingFor(s.bearingDeg, sunDir)
     val elevation = elevationDeg(s)
     val logScope = androidx.compose.runtime.rememberCoroutineScope()
+    val notify = com.ehrocha.pulsar.ui.components.rememberSnackbarPoster()
     // Selected rows get a stronger background + a leading accent so the
     // tap-to-highlight feedback is obvious without a separate selection
     // chip. The colour matches the map's highlight ring.
@@ -584,11 +585,7 @@ internal fun AircraftRow(
                             userLon = userLon,
                         ),
                     )
-                    android.widget.Toast.makeText(
-                        ctx,
-                        ctx.getString(R.string.aircraft_log_added),
-                        android.widget.Toast.LENGTH_SHORT,
-                    ).show()
+                    notify(ctx.getString(R.string.aircraft_log_added))
                 }
             },
         )

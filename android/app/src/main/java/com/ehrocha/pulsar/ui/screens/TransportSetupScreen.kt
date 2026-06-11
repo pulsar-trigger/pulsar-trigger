@@ -596,6 +596,7 @@ private fun PtpSetup(vm: PulsarViewModel) {
     val ptpErrSessionFailed = stringResource(R.string.ptp_err_session_failed)
     val ptpErrGeneric = stringResource(R.string.ptp_err_generic)
     val toastCtx = androidx.compose.ui.platform.LocalContext.current
+    val snackbarHost = com.ehrocha.pulsar.ui.components.LocalSnackbarHost.current
     val scrollState = rememberScrollState()
 
     // Same Toast-the-failure pattern as the legacy screen — surfaces
@@ -609,7 +610,7 @@ private fun PtpSetup(vm: PulsarViewModel) {
             "session_failed" -> ptpErrSessionFailed
             else -> ptpErrGeneric.format(e)
         }
-        android.widget.Toast.makeText(toastCtx, msg, android.widget.Toast.LENGTH_LONG).show()
+        snackbarHost.showSnackbar(msg)
         vm.clearPtpError()
     }
     // PTP discovery is push-based (UsbManager broadcasts on attach/detach)
@@ -671,6 +672,7 @@ private fun CanonBleSetup(vm: PulsarViewModel) {
     val canonBleErrGeneric = stringResource(R.string.canon_ble_err_connect_failed)
     val canonBleErrNoShutter = stringResource(R.string.canon_ble_err_no_ble_shutter)
     val toastCtx = androidx.compose.ui.platform.LocalContext.current
+    val snackbarHost = com.ehrocha.pulsar.ui.components.LocalSnackbarHost.current
     val scrollState = rememberScrollState()
 
     // Surface connect failures. "no_ble_shutter" = a smartphone-mode body with
@@ -678,7 +680,7 @@ private fun CanonBleSetup(vm: PulsarViewModel) {
     LaunchedEffect(canonBleError) {
         val err = canonBleError ?: return@LaunchedEffect
         val msg = if (err == "no_ble_shutter") canonBleErrNoShutter else canonBleErrGeneric
-        android.widget.Toast.makeText(toastCtx, msg, android.widget.Toast.LENGTH_LONG).show()
+        snackbarHost.showSnackbar(msg)
         vm.clearCanonBleError()
     }
 
@@ -852,6 +854,7 @@ private fun PtpIpSetup(vm: PulsarViewModel) {
     val awaitingConfirm by vm.ptpIpAwaitingConfirm.collectAsState()
     val ptpIpError by vm.ptpIpError.collectAsState()
     val toastCtx = androidx.compose.ui.platform.LocalContext.current
+    val snackbarHost = com.ehrocha.pulsar.ui.components.LocalSnackbarHost.current
     val rejectedStr = stringResource(R.string.ptp_ip_err_rejected)
     val connectFailedStr = stringResource(R.string.ptp_ip_err_connect_failed)
     val sessionFailedStr = stringResource(R.string.ptp_ip_err_session_failed)
@@ -867,7 +870,7 @@ private fun PtpIpSetup(vm: PulsarViewModel) {
             "reconnect_failed" -> reconnectFailedStr
             else -> genericStr.format(e)
         }
-        android.widget.Toast.makeText(toastCtx, msg, android.widget.Toast.LENGTH_LONG).show()
+        snackbarHost.showSnackbar(msg)
         vm.clearPtpIpError()
     }
 

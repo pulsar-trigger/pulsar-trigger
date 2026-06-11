@@ -1379,6 +1379,7 @@ private fun WidgetOpacitySlider() {
 @Composable
 internal fun BackupRestoreSectionContent(vm: PulsarViewModel) {
     val context = LocalContext.current
+    val notify = com.ehrocha.pulsar.ui.components.rememberSnackbarPoster()
 
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json"),
@@ -1388,9 +1389,9 @@ internal fun BackupRestoreSectionContent(vm: PulsarViewModel) {
                 context.contentResolver.openOutputStream(uri)?.use { stream ->
                     stream.write(vm.exportSettingsJson().toByteArray())
                 }
-                Toast.makeText(context, context.getString(R.string.toast_settings_exported), Toast.LENGTH_SHORT).show()
+                notify(context.getString(R.string.toast_settings_exported))
             } catch (e: Exception) {
-                Toast.makeText(context, context.getString(R.string.toast_export_failed, e.message), Toast.LENGTH_LONG).show()
+                notify(context.getString(R.string.toast_export_failed, e.message))
             }
         }
     }
@@ -1404,9 +1405,9 @@ internal fun BackupRestoreSectionContent(vm: PulsarViewModel) {
                     val json = stream.bufferedReader().readText()
                     vm.importSettingsJson(json)
                 }
-                Toast.makeText(context, context.getString(R.string.toast_settings_imported), Toast.LENGTH_SHORT).show()
+                notify(context.getString(R.string.toast_settings_imported))
             } catch (e: Exception) {
-                Toast.makeText(context, context.getString(R.string.toast_import_failed, e.message), Toast.LENGTH_LONG).show()
+                notify(context.getString(R.string.toast_import_failed, e.message))
             }
         }
     }
