@@ -222,7 +222,7 @@ private fun StepIndicator(current: Step, modifier: Modifier = Modifier) {
                 modifier = Modifier.weight(1f),
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
@@ -231,7 +231,7 @@ private fun StepIndicator(current: Step, modifier: Modifier = Modifier) {
                         tint = color,
                         modifier = Modifier.size(16.dp),
                     )
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text(
                         stringResource(s.labelRes),
                         style = MaterialTheme.typography.labelSmall,
@@ -479,7 +479,7 @@ private fun LiveViewBox(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(Color.Black)
             .onSizeChanged { onDisplayedSizeChange(it) },
         contentAlignment = Alignment.Center,

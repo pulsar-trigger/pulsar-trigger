@@ -126,7 +126,7 @@ internal fun SettingsPanel(
             statusText + "  ·  " + String.format(Locale.US, "%.4f°, %.4f°", lat, lon),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 6.dp),
+            modifier = Modifier.padding(bottom = 8.dp),
         )
         // Sliders — only visible when the sheet is expanded. Stacked
         // vertically with full-row widths for thumb-friendly hit targets.
@@ -329,7 +329,7 @@ internal fun CompassCalibrationBanner(onDismiss: () -> Unit) {
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -338,7 +338,7 @@ internal fun CompassCalibrationBanner(onDismiss: () -> Unit) {
                 tint = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.onCautionContainer,
                 modifier = Modifier.size(20.dp),
             )
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(8.dp))
             Text(
                 stringResource(R.string.aircraft_compass_calibration),
                 style = MaterialTheme.typography.bodySmall,
@@ -381,7 +381,7 @@ internal fun GpsAccuracyBanner(
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -390,7 +390,7 @@ internal fun GpsAccuracyBanner(
                 tint = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.onCautionContainer,
                 modifier = Modifier.size(20.dp),
             )
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     stringResource(R.string.aircraft_gps_warning),
@@ -519,7 +519,7 @@ internal fun AircraftRow(
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -547,10 +547,10 @@ internal fun AircraftRow(
                 // Lighting chip + rare-aircraft badges share one wrap row.
                 // Lighting is the most photographically glanceable, so it
                 // leads.
-                Spacer(Modifier.height(3.dp))
+                Spacer(Modifier.height(4.dp))
                 androidx.compose.foundation.layout.FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     LightingChip(lighting)
                     rowBadges.forEach { BadgeChip(it) }
@@ -673,7 +673,7 @@ internal fun AircraftDetailDialog(
             }
         },
     ) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 // Hero photo + credit. Tapping opens the source page in the
                 // browser — planespotters.net AUP requires the link to be
                 // surfaced, not just hidden in About.
@@ -715,7 +715,7 @@ internal fun AircraftDetailDialog(
                 }
                 if (badges.isNotEmpty()) {
                     androidx.compose.foundation.layout.FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         badges.forEach { BadgeChip(it) }
                     }
@@ -793,7 +793,7 @@ internal fun LightingChip(lighting: LightingKind) {
     ) {
         Text(
             "☀ " + stringResource(lighting.labelRes),
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             style = MaterialTheme.typography.labelSmall,
             color = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.of(lighting),
             fontWeight = FontWeight.SemiBold,
@@ -909,7 +909,7 @@ internal fun BadgeChip(badge: AircraftBadgeKind) {
     ) {
         Text(
             stringResource(badge.labelRes),
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             style = MaterialTheme.typography.labelSmall,
             color = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.of(badge),
             fontWeight = FontWeight.SemiBold,

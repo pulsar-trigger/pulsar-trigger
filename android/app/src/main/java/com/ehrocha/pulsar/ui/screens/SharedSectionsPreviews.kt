@@ -50,7 +50,7 @@ private fun IntervalometerPanelPreview() {
         var delay by remember { mutableLongStateOf(5_000L) }
 
         Surface(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             tonalElevation = 1.dp,
             modifier = Modifier.fillMaxSize(),
         ) {
@@ -85,7 +85,7 @@ private fun AstroPanelPreview() {
 
     MaterialTheme(colorScheme = DarkColorScheme) {
         Surface(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             tonalElevation = 1.dp,
             modifier = Modifier.fillMaxSize(),
         ) {
@@ -117,7 +117,7 @@ private fun AstroPanelPreview() {
 private fun ManualPanelPreview() {
     MaterialTheme(colorScheme = DarkColorScheme) {
         Surface(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             tonalElevation = 1.dp,
             modifier = Modifier.fillMaxSize(),
         ) {
@@ -336,7 +336,7 @@ fun ScanScreenPreview() {
 
             Surface(
                 onClick = { },
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(12.dp),
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -372,7 +372,7 @@ fun ScanScreenPreview() {
                     shape = RoundedCornerShape(20.dp),
                     color = MaterialTheme.colorScheme.surface,
                     tonalElevation = 2.dp,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
                 ) {
                     Row(
                         modifier = Modifier.padding(20.dp),
@@ -437,7 +437,7 @@ fun MainMenuPreview() {
                     shape = RoundedCornerShape(20.dp),
                     color = MaterialTheme.colorScheme.surface,
                     tonalElevation = 2.dp,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,

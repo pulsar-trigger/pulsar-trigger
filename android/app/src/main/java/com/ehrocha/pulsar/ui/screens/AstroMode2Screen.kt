@@ -467,7 +467,7 @@ private fun LensTab(
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(8.dp))
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
             SENSOR_OPTS.forEachIndexed { i, opt ->
                 SegmentedButton(
@@ -491,7 +491,7 @@ private fun LensTab(
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(8.dp))
         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
             val rules = listOf(
                 AppConfig.DEFAULT_RULE_DIVISOR to R.string.chip_500_rule,
@@ -536,8 +536,8 @@ private fun ExposureSection(focalLength: Int, cropFactor: Float, maxExpMs: Long)
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             // Headline: rule's pick. Big value right-aligned.
             Row(
@@ -754,7 +754,7 @@ private fun FocalLengthSlider(
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         // Big tap-to-edit current value
         Box(
@@ -776,7 +776,7 @@ private fun FocalLengthSlider(
                     "mm",
                     style = MaterialTheme.typography.labelMedium,
                     color = onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 10.dp),
+                    modifier = Modifier.padding(bottom = 8.dp),
                 )
             }
         }

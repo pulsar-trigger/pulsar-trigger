@@ -299,7 +299,7 @@ private fun FlowLibraryView(
                 modifier = Modifier
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 FilterChip(
                     selected = activeTagFilter == null && !showFavoritesOnly,
@@ -355,7 +355,7 @@ private fun FlowLibraryView(
             modifier = Modifier.weight(1f),
         ) { page ->
             Surface(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(12.dp),
                 tonalElevation = 1.dp,
                 modifier = Modifier.fillMaxSize(),
             ) {
@@ -408,7 +408,7 @@ private fun FlowLibraryView(
         Button(
             onClick = onNewFlow,
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
         ) {
             Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
@@ -467,7 +467,7 @@ private fun EditTagsDialog(
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             tonalElevation = 6.dp,
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
@@ -486,8 +486,8 @@ private fun EditTagsDialog(
                 @OptIn(ExperimentalLayoutApi::class)
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     allTags.forEach { tag ->
                         FilterChip(
@@ -511,7 +511,7 @@ private fun EditTagsDialog(
                     }
                 }
                 if (showNewTagField) {
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
                             value = newTag,
@@ -697,7 +697,7 @@ private fun SavedFlowCard(
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                             ) {
                                 Icon(
                                     stepIcon(step.type),
@@ -705,7 +705,7 @@ private fun SavedFlowCard(
                                     modifier = Modifier.size(12.dp),
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
-                                Spacer(Modifier.width(3.dp))
+                                Spacer(Modifier.width(4.dp))
                                 Text(
                                     step.type.displayName(context),
                                     style = MaterialTheme.typography.labelSmall,
@@ -814,7 +814,7 @@ private fun FlowEditorView(
 
         // ── Step list ────────────────────────────────────────────────────
         Surface(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             tonalElevation = 1.dp,
             modifier = Modifier.weight(1f),
         ) {
@@ -924,7 +924,7 @@ private fun FlowEditorView(
                 shape = RoundedCornerShape(12.dp),
             ) {
                 Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(8.dp))
                 Text(if (editingFlowName != null) stringResource(R.string.save) else stringResource(R.string.btn_save_as))
             }
 
@@ -936,7 +936,7 @@ private fun FlowEditorView(
             Button(
                 onClick = { vm.stopFlow() },
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = StatusRed),
             ) {
                 Icon(Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(20.dp))
@@ -962,7 +962,7 @@ private fun FlowEditorView(
                 onClick = { vm.startFlow() },
                 enabled = connected && steps.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(12.dp),
             ) {
                 Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
@@ -1084,14 +1084,14 @@ private fun FlowStepCard(
                             modifier = Modifier.size(16.dp),
                             tint = MaterialTheme.colorScheme.primary,
                         )
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text(
                             step.type.displayName(context),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                         )
                         if (isCurrent) {
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(8.dp))
                             CircularProgressIndicator(
                                 modifier = Modifier.size(14.dp),
                                 strokeWidth = 2.dp,
@@ -1283,7 +1283,7 @@ private fun FlowStepCard(
                     label = "flowWaitProgress",
                 )
 
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
 
                 // Exposure bar
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1651,7 +1651,7 @@ private fun SaveFlowDialog(
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             tonalElevation = 6.dp,
         ) {
             Column(modifier = Modifier.padding(24.dp)) {
@@ -1676,12 +1676,12 @@ private fun SaveFlowDialog(
                 // ── Tag selector ────────────────────────────────────────
                 Spacer(Modifier.height(12.dp))
                 Text(stringResource(R.string.label_tags), style = MaterialTheme.typography.labelMedium)
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
                 @OptIn(ExperimentalLayoutApi::class)
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     allTags.forEach { tag ->
                         FilterChip(
@@ -1706,7 +1706,7 @@ private fun SaveFlowDialog(
                     }
                 }
                 if (showNewTagField) {
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
                             value = newTag,

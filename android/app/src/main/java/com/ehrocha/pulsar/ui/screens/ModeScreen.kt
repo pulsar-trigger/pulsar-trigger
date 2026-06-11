@@ -165,7 +165,7 @@ fun ModeScreen(
         Spacer(Modifier.height(12.dp))
 
         Surface(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             tonalElevation = 1.dp,
             modifier = Modifier.weight(1f),
         ) {
@@ -317,7 +317,7 @@ fun SettingsScreen(
         Spacer(Modifier.height(12.dp))
 
         Surface(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             tonalElevation = 1.dp,
             modifier = Modifier.weight(1f),
         ) {
@@ -456,7 +456,7 @@ private fun SwipeToUnlockBar(onUnlocked: () -> Unit) {
     val unlockThreshold = 200f
 
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
         modifier = Modifier
             .fillMaxWidth()
@@ -595,7 +595,7 @@ private fun RunningStatusContent(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
                 Box(
                     modifier = Modifier
@@ -735,7 +735,7 @@ private fun RunningStatusPreview() {
     MaterialTheme(colorScheme = DarkColorScheme) {
         CompositionLocalProvider(LocalDeviceStatus provides mockStatus) {
             Surface(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(12.dp),
                 tonalElevation = 1.dp,
                 modifier = Modifier.fillMaxSize(),
             ) {

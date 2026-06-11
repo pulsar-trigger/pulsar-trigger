@@ -73,7 +73,7 @@ fun ShotLogScreen(vm: PulsarViewModel, onBack: () -> Unit) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(pad),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 88.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(entries, key = { it.id }) { entry -> ShotLogRow(entry) }
             }
@@ -124,7 +124,7 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = modifier,
     ) {
-        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
             Text(
                 label,
                 style = MaterialTheme.typography.labelSmall,
@@ -152,7 +152,7 @@ private fun ShotLogRow(entry: ShotLogEntry) {
         ),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))

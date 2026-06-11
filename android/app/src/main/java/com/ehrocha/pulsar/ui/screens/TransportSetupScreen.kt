@@ -116,7 +116,7 @@ private fun TopBar(kind: TransportKind, onBack: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 10.dp),
+                .padding(horizontal = 4.dp, vertical = 8.dp),
         ) {
             IconButton(onClick = onBack) {
                 Icon(
@@ -236,12 +236,12 @@ private fun PulsarBleSetup(vm: PulsarViewModel) {
 private fun InstructionCard(iconRes: ImageVector, lines: List<String>) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -274,7 +274,7 @@ private fun InstructionCard(iconRes: ImageVector, lines: List<String>) {
                             )
                         }
                     }
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text(
                         line,
                         style = MaterialTheme.typography.bodyMedium,
@@ -290,7 +290,7 @@ private fun InstructionCard(iconRes: ImageVector, lines: List<String>) {
 private fun EmptyState(text: String) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Text(
@@ -409,7 +409,7 @@ private fun CcapiSetup(vm: PulsarViewModel) {
                 contentDescription = null,
                 modifier = Modifier.size(16.dp),
             )
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(8.dp))
             Text(stringResource(R.string.canon_manual_add_button))
         }
 
@@ -556,7 +556,7 @@ private fun WifiNetworkRow(ssid: String?) {
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -565,7 +565,7 @@ private fun WifiNetworkRow(ssid: String?) {
                 tint = if (ssid != null) onSurface else MaterialTheme.colorScheme.error,
                 modifier = Modifier.size(20.dp),
             )
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(8.dp))
             Column(Modifier.fillMaxWidth()) {
                 Text(
                     text = ssid ?: stringResource(R.string.ccapi_setup_no_wifi_title),
@@ -820,7 +820,7 @@ private fun PulsarBleDeviceCard(scanned: ScannedDevice, onClick: () -> Unit) {
                     )
                 }
             }
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(
                     @Suppress("MissingPermission")
@@ -905,7 +905,7 @@ private fun PtpIpSetup(vm: PulsarViewModel) {
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     androidx.compose.material3.CircularProgressIndicator(
@@ -956,13 +956,13 @@ private fun PtpIpCameraCard(
 ) {
     Surface(
         onClick = { if (!connecting) onClick() },
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(

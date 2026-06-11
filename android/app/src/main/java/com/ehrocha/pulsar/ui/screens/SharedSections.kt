@@ -178,7 +178,7 @@ internal fun ManualActionsContent(
         }
 
         Surface(
-            shape = RoundedCornerShape(32.dp),
+            shape = RoundedCornerShape(20.dp),
             color = if (active) MaterialTheme.colorScheme.error
                     else MaterialTheme.colorScheme.primary,
             tonalElevation = if (active) 8.dp else 2.dp,
@@ -294,7 +294,7 @@ private fun HeroSummary(
                 }
             }
             if (totalDurationMs != null && totalDurationMs > 0) {
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.End,
@@ -370,7 +370,7 @@ internal fun IntervalometerPanelContent(
             totalDurationMs = if (continuous) null else totalSequenceTimeMs,
         )
 
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             ScrubField(
                 label = stringResource(R.string.label_exposure),
                 totalMs = exposureMs,
@@ -498,7 +498,7 @@ internal fun AstroPanelContent(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         stringResource(R.string.label_max_exposure),
@@ -513,7 +513,7 @@ internal fun AstroPanelContent(
                         Text(
                             stringResource(R.string.label_effective_focal, "%.1f".format(focalLength * cropFactor)),
                             style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
                 }
@@ -616,7 +616,7 @@ internal fun AstroPanelContent(
             }
         }
 
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 SENSOR_PRESETS.forEachIndexed { index, preset ->
                     SegmentedButton(
@@ -642,7 +642,7 @@ internal fun AstroPanelContent(
             )
         }
 
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             // Rule selection happens via the tappable RuleCompareCells in the
             // hero card above — no separate segmented row needed.
 
@@ -710,7 +710,7 @@ private fun RuleCompareCell(
         modifier = modifier.then(surfaceMod),
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -768,7 +768,7 @@ internal fun DarkFramePanelContent(
             totalDurationMs = totalTimeMs,
         )
 
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             ScrubField(
                 label = stringResource(R.string.label_exposure),
                 totalMs = exposureMs,
@@ -836,7 +836,7 @@ internal fun RampPanelContent(
             steps = steps,
         )
 
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             ScrubField(
                 label = stringResource(R.string.label_ramp_start_exposure),
                 totalMs = startExposureMs,
@@ -886,7 +886,7 @@ private fun RampCurvePreview(
     val onSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
     val ascending = endExposureMs >= startExposureMs
     Surface(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -907,7 +907,7 @@ private fun RampCurvePreview(
                     fontWeight = FontWeight.Bold,
                 )
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
             androidx.compose.foundation.Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1195,8 +1195,8 @@ internal fun DeviceSectionContent(
                 Text(stringResource(R.string.label_auto_off), style = MaterialTheme.typography.titleSmall)
                 @OptIn(ExperimentalLayoutApi::class)
                 FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     autoOffOptions.forEach { minutes ->
                         val label = if (minutes == 0) stringResource(R.string.auto_off_disabled)
@@ -1606,7 +1606,7 @@ private fun DiagnosticsRow(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
         ) {
             Icon(
                 icon,
@@ -2236,7 +2236,7 @@ private fun UpdatesSection(vm: PulsarViewModel, showFirmware: Boolean = true) {
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.btn_open_release_page))
                     }
                 }
@@ -2344,7 +2344,7 @@ private fun VersionRollbackPicker(updateManager: com.ehrocha.pulsar.update.AppUp
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {

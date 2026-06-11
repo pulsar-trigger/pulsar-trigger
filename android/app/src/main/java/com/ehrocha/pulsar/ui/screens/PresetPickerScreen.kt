@@ -58,7 +58,7 @@ fun PresetPickerScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(pad),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             item {
                 StartFreshCard(onClick = onStartFresh)
@@ -117,7 +117,7 @@ fun PresetPickerScreen(
 private fun StartFreshCard(onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.primaryContainer,
         modifier = Modifier.fillMaxWidth(),
     ) {

@@ -302,7 +302,7 @@ fun Intervalometer2Screen(
                             color = MaterialTheme.colorScheme.tertiaryContainer,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 6.dp),
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
                             shape = RoundedCornerShape(8.dp),
                         ) {
                             Text(
@@ -737,7 +737,7 @@ internal fun RunningView(
                 if (continuous) " / ∞" else " / $plannedShots",
                 fontSize = 32.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 14.dp),
+                modifier = Modifier.padding(bottom = 16.dp),
             )
         }
         Text(
@@ -887,7 +887,7 @@ private fun CurrentStepChip(step: FlowStep) {
     ) {
         Text(
             text = summary,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface,
@@ -1153,7 +1153,7 @@ private fun SettingPicker(
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
         )
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(8.dp))
         ExposedDropdownMenuBox(
             expanded = menuOpen,
             onExpandedChange = { if (enabled) menuOpen = !menuOpen },

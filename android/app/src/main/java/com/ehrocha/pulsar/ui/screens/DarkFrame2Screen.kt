@@ -322,7 +322,7 @@ private fun PairWithLastLightsCard(
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(22.dp),
             )
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     stringResource(R.string.df2_pair_title),
@@ -367,7 +367,7 @@ private fun LensCapReminder(modifier: Modifier = Modifier) {
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(14.dp),
         )
-        Spacer(Modifier.width(6.dp))
+        Spacer(Modifier.width(8.dp))
         Text(
             stringResource(R.string.df2_lens_cap_reminder),
             style = MaterialTheme.typography.labelSmall,

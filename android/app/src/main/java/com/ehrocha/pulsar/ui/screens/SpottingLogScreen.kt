@@ -153,7 +153,7 @@ private fun LogRow(entry: LoggedSighting, onDelete: () -> Unit) {
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
             Text(
                 entry.callsign ?: entry.icaoHex.uppercase(),
                 style = MaterialTheme.typography.titleSmall,

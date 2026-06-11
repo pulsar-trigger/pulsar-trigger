@@ -101,7 +101,7 @@ internal fun CanonCameraCard(
                     )
                 }
             }
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(displayName,
                     style = MaterialTheme.typography.titleMedium,
@@ -406,7 +406,7 @@ internal fun UsbCameraCard(
                         modifier = Modifier.size(28.dp))
                 }
             }
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(name,
                     style = MaterialTheme.typography.titleMedium,
@@ -456,7 +456,7 @@ internal fun CanonBleCameraCard(
                         modifier = Modifier.size(28.dp))
                 }
             }
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(name,
                     style = MaterialTheme.typography.titleMedium,

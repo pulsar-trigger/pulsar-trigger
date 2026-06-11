@@ -70,7 +70,7 @@ fun StartStopBar(
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
             Row(
@@ -120,7 +120,7 @@ fun StartStopBar(
                             modifier = Modifier.height(56.dp).weight(1f),
                         ) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.iv2_wizard_prev))
                         }
                         if (isLast) {
@@ -142,7 +142,7 @@ fun StartStopBar(
                                 modifier = Modifier.height(56.dp).weight(1f),
                             ) {
                                 Text(stringResource(R.string.iv2_wizard_next), fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.width(6.dp))
+                                Spacer(Modifier.width(8.dp))
                                 Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
                             }
                         }

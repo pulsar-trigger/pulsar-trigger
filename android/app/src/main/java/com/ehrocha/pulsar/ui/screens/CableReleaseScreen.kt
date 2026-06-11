@@ -116,7 +116,7 @@ fun CableReleaseScreen(vm: PulsarViewModel, onBack: () -> Unit) {
 
         // ── Main panel (matches ManualPanel surface) ─────────────────────
         Surface(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             tonalElevation = 1.dp,
             modifier = Modifier.fillMaxWidth().weight(1f),
         ) {
@@ -156,7 +156,7 @@ fun CableReleaseScreen(vm: PulsarViewModel, onBack: () -> Unit) {
 
         // ── Action button (matches Manual hold/lock button) ──────────────
         Surface(
-            shape = RoundedCornerShape(32.dp),
+            shape = RoundedCornerShape(20.dp),
             color = if (connected) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.surfaceContainerHighest,
             tonalElevation = 2.dp,

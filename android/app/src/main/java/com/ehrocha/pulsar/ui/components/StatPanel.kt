@@ -45,7 +45,7 @@ fun StatPanel(
 @Composable
 fun StatRow(label: String, value: String, emphasise: Boolean = false) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {

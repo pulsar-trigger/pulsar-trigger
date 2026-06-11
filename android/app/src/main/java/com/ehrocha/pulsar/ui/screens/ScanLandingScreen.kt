@@ -121,7 +121,7 @@ fun ScanLandingScreen(
                     modifier = Modifier.size(56.dp),
                 )
             }
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(16.dp))
             Text(
                 stringResource(R.string.app_name),
                 style = MaterialTheme.typography.headlineSmall,
@@ -172,7 +172,7 @@ fun ScanLandingScreen(
             rows.forEach { row ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     row.forEach { spec ->
                         if (spec != null) {
@@ -243,7 +243,7 @@ private data class TileSpec(
 private fun TransportTile(spec: TileSpec, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
         modifier = modifier.height(108.dp),
@@ -284,7 +284,7 @@ private fun TransportTile(spec: TileSpec, modifier: Modifier = Modifier, onClick
 private fun SimulatorTile(modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
         modifier = modifier.height(108.dp),
@@ -336,7 +336,7 @@ private fun ActionRow(
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -392,7 +392,7 @@ private fun ReconnectRow(
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier.padding(start = 14.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
+            modifier = Modifier.padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(modifier = Modifier.size(22.dp), contentAlignment = Alignment.Center) {
