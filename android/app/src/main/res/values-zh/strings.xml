@@ -323,6 +323,7 @@
     <string name="aircraft_detail_flight">飞行</string>
     <string name="aircraft_alert_notable">特殊机型提醒</string>
     <string name="aircraft_keep_screen_on">保持屏幕常亮</string>
+    <string name="aircraft_display_settings">显示与提醒</string>
     <string name="aircraft_detail_elevation">仰角</string>
     <string name="aircraft_detail_closest">最近接近</string>
     <string name="aircraft_closest_in">%1$d 秒后（~%2$s km）</string>

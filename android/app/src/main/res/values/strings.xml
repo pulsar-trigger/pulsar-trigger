@@ -515,6 +515,7 @@
     <string name="aircraft_detail_flight">Flight</string>
     <string name="aircraft_alert_notable">Alert on notable aircraft</string>
     <string name="aircraft_keep_screen_on">Keep screen on</string>
+    <string name="aircraft_display_settings">Display &amp; alerts</string>
     <string name="aircraft_detail_elevation">Elevation</string>
     <string name="aircraft_detail_closest">Closest approach</string>
     <string name="aircraft_closest_in">in %1$d s (~%2$s km)</string>

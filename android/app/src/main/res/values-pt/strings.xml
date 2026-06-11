@@ -321,6 +321,7 @@
     <string name="aircraft_detail_flight">Voo</string>
     <string name="aircraft_alert_notable">Alertar sobre aviões notáveis</string>
     <string name="aircraft_keep_screen_on">Manter tela ligada</string>
+    <string name="aircraft_display_settings">Exibição e alertas</string>
     <string name="aircraft_detail_elevation">Elevação</string>
     <string name="aircraft_detail_closest">Aproximação máxima</string>
     <string name="aircraft_closest_in">em %1$d s (~%2$s km)</string>

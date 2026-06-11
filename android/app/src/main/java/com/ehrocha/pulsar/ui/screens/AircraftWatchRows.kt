@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
@@ -101,22 +102,9 @@ internal fun SettingsPanel(
     lon: Double,
     radiusKm: Int,
     onRadiusChange: (Int) -> Unit,
-    maxAltFt: Int,
-    onMaxAltChange: (Int) -> Unit,
     intervalSec: Int,
     onIntervalChange: (Int) -> Unit,
-    showSunMoon: Boolean,
-    onShowSunMoonChange: (Boolean) -> Unit,
-    mapHeadingLock: Boolean,
-    onMapHeadingLockChange: (Boolean) -> Unit,
-    mapHybrid: Boolean,
-    onMapHybridChange: (Boolean) -> Unit,
-    alertNotable: Boolean,
-    onAlertNotableChange: (Boolean) -> Unit,
-    keepScreenOn: Boolean,
-    onKeepScreenOnChange: (Boolean) -> Unit,
-    compassAccuracy: Int,
-    onShowCalibrate: () -> Unit,
+    onShowDisplaySettings: () -> Unit,
     watching: Boolean,
     lastUpdateMs: Long,
     providerName: String,
@@ -149,6 +137,73 @@ internal fun SettingsPanel(
             steps = 38,
             onChange = { onRadiusChange(it.roundToInt()) },
         )
+        // Interval slider: 0 is the "Live" sentinel (drag fully left), 5..60
+        // are real seconds. Snap the unreachable 1..4 zone up to 5 — the
+        // slider visually allows landing there but the value commits to 5.
+        SliderRow(
+            label = if (intervalSec == 0) stringResource(R.string.aircraft_watch_interval_live)
+                    else stringResource(R.string.aircraft_watch_interval_label, intervalSec),
+            value = intervalSec.toFloat(),
+            range = 0f..60f,
+            steps = 60,
+            onChange = {
+                val r = it.roundToInt()
+                onIntervalChange(if (r in 1..4) 5 else r)
+            },
+        )
+        // Everything that changes how the map LOOKS (vs what it polls)
+        // lives behind one entry — the sheet had become a junk drawer with
+        // 3 sliders + 5 toggles + compass row (audit P0-3).
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                stringResource(R.string.aircraft_display_settings),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            androidx.compose.material3.IconButton(onClick = onShowDisplaySettings) {
+                Icon(
+                    Icons.Default.Tune,
+                    contentDescription = stringResource(R.string.aircraft_display_settings),
+                )
+            }
+        }
+    }
+}
+
+/** "Display & alerts" sheet — the map-appearance toggles, altitude filter
+ *  and compass tools moved out of the always-visible bottom panel. */
+@Composable
+internal fun DisplaySettingsSheet(
+    onDismiss: () -> Unit,
+    maxAltFt: Int,
+    onMaxAltChange: (Int) -> Unit,
+    showSunMoon: Boolean,
+    onShowSunMoonChange: (Boolean) -> Unit,
+    mapHeadingLock: Boolean,
+    onMapHeadingLockChange: (Boolean) -> Unit,
+    mapHybrid: Boolean,
+    onMapHybridChange: (Boolean) -> Unit,
+    alertNotable: Boolean,
+    onAlertNotableChange: (Boolean) -> Unit,
+    keepScreenOn: Boolean,
+    onKeepScreenOnChange: (Boolean) -> Unit,
+    compassAccuracy: Int,
+    onShowCalibrate: () -> Unit,
+) {
+    com.ehrocha.pulsar.ui.components.DetailSheet(
+        onDismiss = onDismiss,
+        title = {
+            Text(
+                stringResource(R.string.aircraft_display_settings),
+                fontWeight = FontWeight.Bold,
+            )
+        },
+    ) {
         SliderRow(
             label = stringResource(R.string.aircraft_watch_max_alt_label, maxAltFt),
             value = maxAltFt.toFloat(),
@@ -164,32 +219,15 @@ internal fun SettingsPanel(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 4.dp, top = 0.dp, bottom = 4.dp),
         )
-        // Interval slider: 0 is the "Live" sentinel (drag fully left), 5..60
-        // are real seconds. Snap the unreachable 1..4 zone up to 5 — the
-        // slider visually allows landing there but the value commits to 5.
-        SliderRow(
-            label = if (intervalSec == 0) stringResource(R.string.aircraft_watch_interval_live)
-                    else stringResource(R.string.aircraft_watch_interval_label, intervalSec),
-            value = intervalSec.toFloat(),
-            range = 0f..60f,
-            steps = 60,
-            onChange = {
-                val r = it.roundToInt()
-                onIntervalChange(if (r in 1..4) 5 else r)
-            },
-        )
-        // Toggles, below the sliders so the more-commonly-used controls
-        // stay at the top of the sheet.
         ToggleRow(R.string.aircraft_show_sun_moon, showSunMoon, onShowSunMoonChange)
         ToggleRow(R.string.aircraft_map_heading_lock, mapHeadingLock, onMapHeadingLockChange)
         ToggleRow(R.string.aircraft_map_hybrid, mapHybrid, onMapHybridChange)
         ToggleRow(R.string.aircraft_alert_notable, alertNotable, onAlertNotableChange)
         ToggleRow(R.string.aircraft_keep_screen_on, keepScreenOn, onKeepScreenOnChange)
-        // Compass status + manual calibrate. Always visible: the sensor
-        // accuracy banner above the map only fires when Android self-
-        // reports low confidence, but the compass can read consistently
-        // wrong (near metal / electronics) while the sensor still says
-        // "HIGH". Manual calibrate gives the user an escape hatch.
+        // Compass status + manual calibrate. The sensor-accuracy banner
+        // above the map only fires when Android self-reports low
+        // confidence, but the compass can read consistently wrong (near
+        // metal / electronics) while the sensor still says "HIGH".
         Row(
             modifier = Modifier
                 .fillMaxWidth()

@@ -107,6 +107,7 @@ fun AircraftWatchScreen(
     var selectedIcao by remember { mutableStateOf<String?>(null) }
     var showPhotoTips by remember { mutableStateOf(false) }
     var showCalibrationDialog by remember { mutableStateOf(false) }
+    var showDisplaySettings by remember { mutableStateOf(false) }
     val rawSightings by vm.aircraftSightings.collectAsState()
     val showSunMoon by vm.aircraftWatchShowSunMoon.collectAsState()
     val mapHeadingLock by vm.aircraftWatchMapHeadingLock.collectAsState()
@@ -251,22 +252,9 @@ fun AircraftWatchScreen(
                     lon = loc.second,
                     radiusKm = radiusKm,
                     onRadiusChange = vm::setAircraftWatchRadiusKm,
-                    maxAltFt = maxAltFt,
-                    onMaxAltChange = vm::setAircraftWatchMaxAltitudeFt,
                     intervalSec = intervalSec,
                     onIntervalChange = vm::setAircraftWatchIntervalSec,
-                    showSunMoon = showSunMoon,
-                    onShowSunMoonChange = vm::setAircraftWatchShowSunMoon,
-                    mapHeadingLock = mapHeadingLock,
-                    onMapHeadingLockChange = vm::setAircraftWatchMapHeadingLock,
-                    mapHybrid = mapHybrid,
-                    onMapHybridChange = vm::setAircraftWatchMapHybrid,
-                    alertNotable = alertNotable,
-                    onAlertNotableChange = vm::setAircraftWatchAlertNotable,
-                    keepScreenOn = keepScreenOn,
-                    onKeepScreenOnChange = vm::setAircraftWatchKeepScreenOn,
-                    compassAccuracy = deviceCompass.accuracy,
-                    onShowCalibrate = { showCalibrationDialog = true },
+                    onShowDisplaySettings = { showDisplaySettings = true },
                     watching = watching,
                     lastUpdateMs = lastUpdateMs,
                     providerName = vm.aircraftFeedName,
@@ -397,6 +385,25 @@ fun AircraftWatchScreen(
     }
     if (showPhotoTips) {
         PhotoTipsDialog(onDismiss = { showPhotoTips = false })
+    }
+    if (showDisplaySettings) {
+        DisplaySettingsSheet(
+            onDismiss = { showDisplaySettings = false },
+            maxAltFt = maxAltFt,
+            onMaxAltChange = vm::setAircraftWatchMaxAltitudeFt,
+            showSunMoon = showSunMoon,
+            onShowSunMoonChange = vm::setAircraftWatchShowSunMoon,
+            mapHeadingLock = mapHeadingLock,
+            onMapHeadingLockChange = vm::setAircraftWatchMapHeadingLock,
+            mapHybrid = mapHybrid,
+            onMapHybridChange = vm::setAircraftWatchMapHybrid,
+            alertNotable = alertNotable,
+            onAlertNotableChange = vm::setAircraftWatchAlertNotable,
+            keepScreenOn = keepScreenOn,
+            onKeepScreenOnChange = vm::setAircraftWatchKeepScreenOn,
+            compassAccuracy = deviceCompass.accuracy,
+            onShowCalibrate = { showCalibrationDialog = true },
+        )
     }
     if (showCalibrationDialog) {
         CompassCalibrationDialog(onDismiss = { showCalibrationDialog = false })

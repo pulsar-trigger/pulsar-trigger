@@ -321,6 +321,7 @@
     <string name="aircraft_detail_flight">Flug</string>
     <string name="aircraft_alert_notable">Bei besonderen Flugzeugen warnen</string>
     <string name="aircraft_keep_screen_on">Bildschirm anlassen</string>
+    <string name="aircraft_display_settings">Anzeige &amp; Alarme</string>
     <string name="aircraft_detail_elevation">Höhenwinkel</string>
     <string name="aircraft_detail_closest">Nächste Annäherung</string>
     <string name="aircraft_closest_in">in %1$d s (~%2$s km)</string>
