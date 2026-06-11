@@ -747,14 +747,13 @@
     <string name="scan_section_recent">Récents</string>
     <string name="scan_section_tools">Outils</string>
     <string name="trigger_section_bulb">Modes Bulb</string>
+    <string name="tools_section_astro">Astro</string>
+    <string name="tools_section_field">Calculatrices de terrain</string>
+    <string name="tools_section_spotting">Repérage</string>
     <string name="trigger_section_standard">Modes standard</string>
     <string name="trigger_section_favorites">Favoris</string>
     <string name="trigger_section_custom">Personnalisé</string>
-    <string name="trigger_chip_all">Tous</string>
-    <string name="trigger_chip_bulb">Bulb</string>
-    <string name="trigger_chip_standard">Standard</string>
     <string name="trigger_chip_favorites">Favoris</string>
-    <string name="trigger_chip_custom">Personnalisé</string>
     <string name="trigger_no_favorites">Aucun favori — épinglez n\'importe quel préréglage sauvegardé pour le retrouver ici.</string>
     <string name="transport_tile_simulator_title">Simulateur</string>
     <string name="transport_tile_simulator_subtitle">Essayer sans matériel</string>

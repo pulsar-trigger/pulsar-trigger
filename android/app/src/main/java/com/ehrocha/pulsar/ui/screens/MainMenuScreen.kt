@@ -372,12 +372,6 @@ private fun MenuPageContent(
                         launcherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList,
                             enabled = !bulbBlocked) { onCustomFlowSelected() },
                     )
-                    // Jetsnack-style filter chips — All / Bulb / Standard /
-                    // Favorites / Custom. Default = ALL preserves the current
-                    // sectioned view; selecting a single chip collapses to
-                    // just that section. The chip selection is per-session
-                    // (no persistence), so opening the app always lands on All.
-                    var triggerFilter by remember { mutableStateOf(TriggerFilter.ALL) }
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -397,27 +391,16 @@ private fun MenuPageContent(
                         if (onCanonBle || canonBleReconnecting) {
                             CanonBleBanner(reconnecting = canonBleReconnecting)
                         }
-                        TriggerFilterChips(
-                            selected = triggerFilter,
-                            onSelect = { triggerFilter = it },
-                        )
-                        val showBulb = triggerFilter == TriggerFilter.ALL || triggerFilter == TriggerFilter.BULB
-                        val showStandard = triggerFilter == TriggerFilter.ALL || triggerFilter == TriggerFilter.STANDARD
-                        val showCustom = triggerFilter == TriggerFilter.ALL || triggerFilter == TriggerFilter.CUSTOM
-                        if (showBulb) {
-                            SectionContainer(title = stringResource(R.string.trigger_section_bulb)) {
-                                SectionGrid(bulbTiles)
-                            }
+                        // Filter chips removed (v0.416 design review): three
+                        // always-visible sections need no filtering ceremony.
+                        SectionContainer(title = stringResource(R.string.trigger_section_bulb)) {
+                            SectionGrid(bulbTiles)
                         }
-                        if (showStandard) {
-                            SectionContainer(title = stringResource(R.string.trigger_section_standard)) {
-                                SectionGrid(standardTiles)
-                            }
+                        SectionContainer(title = stringResource(R.string.trigger_section_standard)) {
+                            SectionGrid(standardTiles)
                         }
-                        if (showCustom) {
-                            SectionContainer(title = stringResource(R.string.trigger_section_custom)) {
-                                SectionGrid(customTiles)
-                            }
+                        SectionContainer(title = stringResource(R.string.trigger_section_custom)) {
+                            SectionGrid(customTiles)
                         }
                         Spacer(Modifier.height(8.dp))
                     }
@@ -488,7 +471,11 @@ private fun MenuPageContent(
                     val ptpIpLive = ptpIpTx?.liveViewSupportedFlow
                         ?.collectAsState(initial = false)?.value == true
                     val starFocusEnabled = canonOn || ptpLive || ptpIpLive
-                    val toolItems = listOf(
+                    // Grouped like the Trigger page — the flat grid had
+                    // become a junk drawer (audit P1-8). Astro planning,
+                    // pure-math field calculators, and spotting are
+                    // different jobs.
+                    val astroTools = listOf(
                         launcherItem(R.string.mode_planner, Icons.Default.DateRange) {
                             onPlannerSelected()
                         },
@@ -505,15 +492,9 @@ private fun MenuPageContent(
                             Icons.Default.Star,
                             enabled = starFocusEnabled,
                         ) { onStarFocusSelected() },
-                        // No transport dependency — Aircraft Watch only needs
-                        // the planner location + network. Useful pre-connect
-                        // (decide whether to wait for the next pass) and
-                        // during long bulb runs (trail interference).
-                        launcherItem(
-                            R.string.aircraft_watch_title,
-                            Icons.Default.FlightTakeoff,
-                        ) { onAircraftWatchSelected() },
-                        // Pure-math field calculators — no transport needed.
+                    )
+                    // Pure-math field calculators — no transport needed.
+                    val fieldTools = listOf(
                         launcherItem(
                             R.string.nd_calc_title,
                             Icons.Default.FilterBAndW,
@@ -523,13 +504,33 @@ private fun MenuPageContent(
                             Icons.Default.CenterFocusStrong,
                         ) { onDofCalcSelected() },
                     )
-                    Box(
+                    // No transport dependency — Aircraft Watch only needs
+                    // the planner location + network. Useful pre-connect
+                    // (decide whether to wait for the next pass) and
+                    // during long bulb runs (trail interference).
+                    val spottingTools = listOf(
+                        launcherItem(
+                            R.string.aircraft_watch_title,
+                            Icons.Default.FlightTakeoff,
+                        ) { onAircraftWatchSelected() },
+                    )
+                    Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(horizontal = 16.dp),
-                        contentAlignment = Alignment.TopStart,
+                            .padding(horizontal = 16.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.Top),
                     ) {
-                        LauncherGrid(toolItems)
+                        SectionContainer(title = stringResource(R.string.tools_section_astro)) {
+                            SectionGrid(astroTools)
+                        }
+                        SectionContainer(title = stringResource(R.string.tools_section_field)) {
+                            SectionGrid(fieldTools)
+                        }
+                        SectionContainer(title = stringResource(R.string.tools_section_spotting)) {
+                            SectionGrid(spottingTools)
+                        }
+                        Spacer(Modifier.height(8.dp))
                     }
                 }
             }
@@ -540,34 +541,6 @@ const val DEST_TRIGGER = 1
 const val DEST_FAVORITES = 2
 const val DEST_TOOLS = 3
 
-/** Filter chip values for the Trigger destination. ALL keeps the original
- *  sectioned view; the others collapse to a single category. Favorites
- *  is its own destination so it doesn't appear as a chip here. */
-private enum class TriggerFilter(val labelRes: Int) {
-    ALL(R.string.trigger_chip_all),
-    BULB(R.string.trigger_chip_bulb),
-    STANDARD(R.string.trigger_chip_standard),
-    CUSTOM(R.string.trigger_chip_custom),
-}
-
-@Composable
-private fun TriggerFilterChips(
-    selected: TriggerFilter,
-    onSelect: (TriggerFilter) -> Unit,
-) {
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        items(TriggerFilter.entries) { filter ->
-            FilterChip(
-                selected = selected == filter,
-                onClick = { onSelect(filter) },
-                label = { Text(stringResource(filter.labelRes)) },
-            )
-        }
-    }
-}
 
 private data class LauncherItem(
     val key: String,

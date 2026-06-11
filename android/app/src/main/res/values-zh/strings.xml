@@ -747,14 +747,13 @@
     <string name="scan_section_recent">最近</string>
     <string name="scan_section_tools">工具</string>
     <string name="trigger_section_bulb">B 门模式</string>
+    <string name="tools_section_astro">天文</string>
+    <string name="tools_section_field">现场计算器</string>
+    <string name="tools_section_spotting">观察</string>
     <string name="trigger_section_standard">标准模式</string>
     <string name="trigger_section_favorites">收藏</string>
     <string name="trigger_section_custom">自定义</string>
-    <string name="trigger_chip_all">全部</string>
-    <string name="trigger_chip_bulb">Bulb</string>
-    <string name="trigger_chip_standard">标准</string>
     <string name="trigger_chip_favorites">收藏</string>
-    <string name="trigger_chip_custom">自定义</string>
     <string name="trigger_no_favorites">尚无收藏 — 给任何已保存的预设加星标即可固定到这里。</string>
     <string name="transport_tile_simulator_title">模拟器</string>
     <string name="transport_tile_simulator_subtitle">无硬件试用</string>

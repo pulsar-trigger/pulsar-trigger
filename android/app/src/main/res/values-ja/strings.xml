@@ -747,14 +747,13 @@
     <string name="scan_section_recent">最近</string>
     <string name="scan_section_tools">ツール</string>
     <string name="trigger_section_bulb">バルブモード</string>
+    <string name="tools_section_astro">天体</string>
+    <string name="tools_section_field">フィールド計算機</string>
+    <string name="tools_section_spotting">スポッティング</string>
     <string name="trigger_section_standard">標準モード</string>
     <string name="trigger_section_favorites">お気に入り</string>
     <string name="trigger_section_custom">カスタム</string>
-    <string name="trigger_chip_all">すべて</string>
-    <string name="trigger_chip_bulb">バルブ</string>
-    <string name="trigger_chip_standard">標準</string>
     <string name="trigger_chip_favorites">お気に入り</string>
-    <string name="trigger_chip_custom">カスタム</string>
     <string name="trigger_no_favorites">お気に入りがまだありません — 保存したプリセットをブックマークするとここに表示されます。</string>
     <string name="transport_tile_simulator_title">シミュレーター</string>
     <string name="transport_tile_simulator_subtitle">ハードウェアなしで試す</string>

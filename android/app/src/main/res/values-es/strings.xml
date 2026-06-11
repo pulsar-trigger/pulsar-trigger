@@ -745,14 +745,13 @@
     <string name="scan_section_recent">Recientes</string>
     <string name="scan_section_tools">Herramientas</string>
     <string name="trigger_section_bulb">Modos Bulb</string>
+    <string name="tools_section_astro">Astro</string>
+    <string name="tools_section_field">Calculadoras de campo</string>
+    <string name="tools_section_spotting">Avistamiento</string>
     <string name="trigger_section_standard">Modos estándar</string>
     <string name="trigger_section_favorites">Favoritos</string>
     <string name="trigger_section_custom">Personalizado</string>
-    <string name="trigger_chip_all">Todos</string>
-    <string name="trigger_chip_bulb">Bulb</string>
-    <string name="trigger_chip_standard">Estándar</string>
     <string name="trigger_chip_favorites">Favoritos</string>
-    <string name="trigger_chip_custom">Personalizado</string>
     <string name="trigger_no_favorites">Sin favoritos — marca cualquier preset guardado para fijarlo aquí.</string>
     <string name="transport_tile_simulator_title">Simulador</string>
     <string name="transport_tile_simulator_subtitle">Prueba sin hardware</string>

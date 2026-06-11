@@ -747,14 +747,13 @@
     <string name="scan_section_recent">Zuletzt</string>
     <string name="scan_section_tools">Werkzeuge</string>
     <string name="trigger_section_bulb">Bulb-Modi</string>
+    <string name="tools_section_astro">Astro</string>
+    <string name="tools_section_field">Feldrechner</string>
+    <string name="tools_section_spotting">Spotting</string>
     <string name="trigger_section_standard">Standardmodi</string>
     <string name="trigger_section_favorites">Favoriten</string>
     <string name="trigger_section_custom">Benutzerdefiniert</string>
-    <string name="trigger_chip_all">Alle</string>
-    <string name="trigger_chip_bulb">Bulb</string>
-    <string name="trigger_chip_standard">Standard</string>
     <string name="trigger_chip_favorites">Favoriten</string>
-    <string name="trigger_chip_custom">Benutzerdefiniert</string>
     <string name="trigger_no_favorites">Noch keine Favoriten — markiere ein gespeichertes Preset, um es hier anzuheften.</string>
     <string name="transport_tile_simulator_title">Simulator</string>
     <string name="transport_tile_simulator_subtitle">Ohne Hardware testen</string>

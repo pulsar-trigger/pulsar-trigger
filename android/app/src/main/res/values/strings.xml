@@ -1024,14 +1024,13 @@
     <string name="scan_section_recent">Recent</string>
     <string name="scan_section_tools">Tools</string>
     <string name="trigger_section_bulb">Bulb modes</string>
+    <string name="tools_section_astro">Astro</string>
+    <string name="tools_section_field">Field calculators</string>
+    <string name="tools_section_spotting">Spotting</string>
     <string name="trigger_section_standard">Standard modes</string>
     <string name="trigger_section_favorites">Favorites</string>
     <string name="trigger_section_custom">Custom</string>
-    <string name="trigger_chip_all">All</string>
-    <string name="trigger_chip_bulb">Bulb</string>
-    <string name="trigger_chip_standard">Standard</string>
     <string name="trigger_chip_favorites">Favorites</string>
-    <string name="trigger_chip_custom">Custom</string>
     <string name="trigger_no_favorites">No favorites yet — bookmark any saved preset to pin it here.</string>
     <string name="transport_tile_simulator_title">Simulator</string>
     <string name="transport_tile_simulator_subtitle">Try without hardware</string>
