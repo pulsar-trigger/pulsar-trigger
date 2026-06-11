@@ -37,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.*
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
@@ -455,7 +456,26 @@ fun PulsarNavHost(
         }
         // ── Screen content ───────────────────────────────────────────
         Box(Modifier.weight(1f)) {
-        when (val screen = currentScreen) {
+        // SIGNAL motion: screens enter with a fast fade + 1/24-height rise,
+        // exit with a quicker fade — the app stops hard-cutting between
+        // surfaces. State (currentScreen) is unchanged; this only wraps
+        // the existing dispatch.
+        androidx.compose.animation.AnimatedContent(
+            targetState = currentScreen,
+            transitionSpec = {
+                (androidx.compose.animation.fadeIn(
+                    androidx.compose.animation.core.tween(180),
+                ) + androidx.compose.animation.slideInVertically(
+                    androidx.compose.animation.core.tween(220),
+                ) { it / 24 }).togetherWith(
+                    androidx.compose.animation.fadeOut(
+                        androidx.compose.animation.core.tween(110),
+                    ),
+                )
+            },
+            label = "screenTransition",
+        ) { screen ->
+        when (screen) {
             AppScreen.ScanLanding -> ScanLandingScreen(
                 vm = vm,
                 onTransportSelected = { kind ->
@@ -800,6 +820,7 @@ fun PulsarNavHost(
                     initialPresetId = screen.presetId,
                 )
             }
+        }
         }
     }
     }
