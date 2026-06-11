@@ -397,9 +397,8 @@ private fun ReconnectRow(
         ) {
             Box(modifier = Modifier.size(22.dp), contentAlignment = Alignment.Center) {
                 if (reconnecting) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp,
+                    com.ehrocha.pulsar.ui.components.SignalSweep(
+                        modifier = Modifier.size(22.dp, 12.dp),
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                 } else {

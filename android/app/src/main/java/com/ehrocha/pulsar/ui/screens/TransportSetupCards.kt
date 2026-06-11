@@ -239,8 +239,7 @@ internal fun CanonCapabilitiesDialog(
                     fontWeight = FontWeight.SemiBold)
                 when {
                     loading -> Row(verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(strokeWidth = 2.dp,
-                            modifier = Modifier.size(16.dp))
+                        com.ehrocha.pulsar.ui.components.SignalSweep(modifier = Modifier.size(32.dp, 12.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.canon_capabilities_probing),
                             style = MaterialTheme.typography.bodySmall)

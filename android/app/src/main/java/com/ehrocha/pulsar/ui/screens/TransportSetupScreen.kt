@@ -189,9 +189,8 @@ private fun PulsarBleSetup(vm: PulsarViewModel) {
                 modifier = Modifier.weight(1f),
             )
             if (scanning) {
-                CircularProgressIndicator(
-                    strokeWidth = 2.dp,
-                    modifier = Modifier.size(18.dp),
+                com.ehrocha.pulsar.ui.components.SignalSweep(
+                    modifier = Modifier.size(36.dp, 14.dp),
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
@@ -723,9 +722,8 @@ private fun CanonBleSetup(vm: PulsarViewModel) {
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
+                    com.ehrocha.pulsar.ui.components.SignalSweep(
+                        modifier = Modifier.size(36.dp, 16.dp),
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
@@ -908,10 +906,9 @@ private fun PtpIpSetup(vm: PulsarViewModel) {
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    androidx.compose.material3.CircularProgressIndicator(
-                        strokeWidth = 2.dp,
+                    com.ehrocha.pulsar.ui.components.SignalSweep(
+                        modifier = Modifier.size(36.dp, 14.dp),
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.width(12.dp))
                     Text(
