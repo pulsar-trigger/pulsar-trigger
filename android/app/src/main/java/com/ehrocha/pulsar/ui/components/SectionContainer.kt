@@ -54,6 +54,9 @@ fun SectionContainer(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 4.dp, top = 2.dp),
                 )
+                // SIGNAL: the section rule is a flat trace with one pulse
+                // in it — the CP 1919 mark instead of a hairline.
+                PulseDivider(modifier = Modifier.padding(horizontal = 4.dp))
             }
             content()
         }

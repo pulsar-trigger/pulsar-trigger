@@ -5,6 +5,12 @@
 
 package com.ehrocha.pulsar.ui.components
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -27,13 +33,17 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ui.theme.PulsarTheme
 
 /**
  * The app's one flow-launching affordance (audit P1-6): every screen that
@@ -58,8 +68,30 @@ fun StartStopBar(
 ) {
     val isLast = currentTabIdx >= tabCount - 1
     val isFirst = currentTabIdx == 0
+    val live = PulsarTheme.colors
+    val liveBrush = Brush.horizontalGradient(listOf(live.liveStart, live.liveEnd))
     Surface(tonalElevation = 2.dp) {
         Column(modifier = Modifier.fillMaxWidth()) {
+            if (running) {
+                // The live strip: a thin breathing gradient across the top
+                // edge — the SIGNAL convention that something is happening.
+                val breathe by rememberInfiniteTransition(label = "live")
+                    .animateFloat(
+                        initialValue = 0.45f,
+                        targetValue = 1f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(durationMillis = 1000),
+                            repeatMode = RepeatMode.Reverse,
+                        ),
+                        label = "liveAlpha",
+                    )
+                androidx.compose.foundation.layout.Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(2.dp)
+                        .background(liveBrush, alpha = breathe),
+                )
+            }
             if (hint != null) {
                 Text(
                     hint,
@@ -104,7 +136,18 @@ fun StartStopBar(
                             onClick = onStart,
                             enabled = canStart,
                             shape = RoundedCornerShape(20.dp),
-                            modifier = Modifier.height(56.dp).fillMaxWidth(0.75f),
+                            colors = if (canStart) ButtonDefaults.buttonColors(
+                                containerColor = Color.Transparent,
+                                contentColor = Color.White,
+                            ) else ButtonDefaults.buttonColors(),
+                            modifier = Modifier
+                                .height(56.dp)
+                                .fillMaxWidth(0.75f)
+                                .then(
+                                    if (canStart) Modifier.background(
+                                        liveBrush, RoundedCornerShape(20.dp),
+                                    ) else Modifier,
+                                ),
                         ) {
                             Icon(Icons.Default.PlayArrow, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
@@ -128,7 +171,18 @@ fun StartStopBar(
                                 onClick = onStart,
                                 enabled = canStart,
                                 shape = RoundedCornerShape(20.dp),
-                                modifier = Modifier.height(56.dp).weight(1.4f),
+                                colors = if (canStart) ButtonDefaults.buttonColors(
+                                    containerColor = Color.Transparent,
+                                    contentColor = Color.White,
+                                ) else ButtonDefaults.buttonColors(),
+                                modifier = Modifier
+                                    .height(56.dp)
+                                    .weight(1.4f)
+                                    .then(
+                                        if (canStart) Modifier.background(
+                                            liveBrush, RoundedCornerShape(20.dp),
+                                        ) else Modifier,
+                                    ),
                             ) {
                                 Icon(Icons.Default.PlayArrow, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
