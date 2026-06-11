@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ui.components.PulsarTopBar
 import com.ehrocha.pulsar.ble.DeviceState
 import com.ehrocha.pulsar.ble.StatusFrame
 import com.ehrocha.pulsar.model.FlowStep
@@ -1471,13 +1472,9 @@ private fun EditStepDialog(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(step.type.displayName(context)) },
-                navigationIcon = {
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                    }
-                },
+            PulsarTopBar(
+                title = step.type.displayName(context),
+                onBack = onDismiss,
                 actions = {
                     TextButton(onClick = { onSave(current) }) {
                         Text(stringResource(R.string.save))

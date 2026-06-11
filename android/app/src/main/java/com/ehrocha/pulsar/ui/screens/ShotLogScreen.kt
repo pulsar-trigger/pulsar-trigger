@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ui.components.PulsarTopBar
 import com.ehrocha.pulsar.model.ShotLogEntry
 import com.ehrocha.pulsar.model.ShotLogStatus
 import com.ehrocha.pulsar.ui.theme.StatusGreen
@@ -47,13 +48,9 @@ fun ShotLogScreen(vm: PulsarViewModel, onBack: () -> Unit) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.shot_log_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
-                    }
-                },
+            PulsarTopBar(
+                title = stringResource(R.string.shot_log_title),
+                onBack = onBack,
                 actions = {
                     if (entries.isNotEmpty()) {
                         IconButton(onClick = { confirmClear = true }) {

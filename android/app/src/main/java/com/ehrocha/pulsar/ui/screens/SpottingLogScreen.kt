@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ui.components.PulsarTopBar
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
@@ -65,21 +66,9 @@ fun SpottingLogScreen(onBack: () -> Unit) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        stringResource(R.string.spotting_log_title),
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
-                        )
-                    }
-                },
+            PulsarTopBar(
+                title = stringResource(R.string.spotting_log_title),
+                onBack = onBack,
                 actions = {
                     if (entries.isNotEmpty()) {
                         IconButton(onClick = {

@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ui.components.PulsarTopBar
 import com.ehrocha.pulsar.canonble.GattExplorerClient
 import com.ehrocha.pulsar.canonble.GattExplorerLog
 import com.ehrocha.pulsar.canonble.KnownGattUuids
@@ -100,13 +101,9 @@ fun GattExplorerScreen(vm: PulsarViewModel, onBack: () -> Unit) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.gatt_explorer_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                    }
-                },
+            PulsarTopBar(
+                title = stringResource(R.string.gatt_explorer_title),
+                onBack = onBack,
             )
         },
     ) { pad ->

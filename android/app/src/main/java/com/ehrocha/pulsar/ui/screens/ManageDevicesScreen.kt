@@ -24,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ui.components.PulsarTopBar
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 
 /**
@@ -36,21 +37,9 @@ import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 fun ManageDevicesScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        stringResource(R.string.section_devices),
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
-                        )
-                    }
-                },
+            PulsarTopBar(
+                title = stringResource(R.string.section_devices),
+                onBack = onBack,
             )
         },
     ) { pad ->

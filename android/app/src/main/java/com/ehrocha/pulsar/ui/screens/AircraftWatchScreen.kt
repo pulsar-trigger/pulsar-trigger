@@ -66,6 +66,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ui.components.PulsarTopBar
 import com.ehrocha.pulsar.transport.aircraft.AircraftSighting
 import com.ehrocha.pulsar.transport.aircraft.AircraftSize
 import com.ehrocha.pulsar.transport.aircraft.aircraftSizeFor
@@ -214,21 +215,9 @@ fun AircraftWatchScreen(
         // Peek shows roughly: drag handle + status row + small bottom padding.
         sheetPeekHeight = 76.dp,
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        stringResource(R.string.aircraft_watch_title),
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
-                        )
-                    }
-                },
+            PulsarTopBar(
+                title = stringResource(R.string.aircraft_watch_title),
+                onBack = onBack,
                 actions = {
                     IconButton(onClick = { showPhotoTips = true }) {
                         Icon(

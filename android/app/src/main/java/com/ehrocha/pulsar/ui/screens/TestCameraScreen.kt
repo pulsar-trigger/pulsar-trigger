@@ -50,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ui.components.PulsarTopBar
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -116,13 +117,9 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.test_camera_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                    }
-                },
+            PulsarTopBar(
+                title = stringResource(R.string.test_camera_title),
+                onBack = onBack,
             )
         },
     ) { pad ->
