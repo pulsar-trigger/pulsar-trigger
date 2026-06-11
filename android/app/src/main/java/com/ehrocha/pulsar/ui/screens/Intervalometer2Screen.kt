@@ -427,32 +427,35 @@ internal fun SegmentedTimeEditor(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Row(verticalAlignment = Alignment.Bottom) {
+            // Sizes are tuned to JetBrains Mono's ~0.6em digit advance:
+            // 11 glyphs must fit a 360dp row at fontScale 1.15. The old
+            // 64sp sizes (pre-mono) overflowed and clipped the .cs segment.
             ScrubSegment(
                 value = h, range = 0..23, format = "%02d",
                 onChange = { commit(newH = it) },
                 enabled = enabled,
-                fontSize = 64.sp,
+                fontSize = 44.sp,
             )
-            Separator(":", fontSize = 56.sp)
+            Separator(":", fontSize = 36.sp)
             ScrubSegment(
                 value = m, range = 0..59, format = "%02d",
                 onChange = { commit(newM = it) },
                 enabled = enabled,
-                fontSize = 64.sp,
+                fontSize = 44.sp,
             )
-            Separator(":", fontSize = 56.sp)
+            Separator(":", fontSize = 36.sp)
             ScrubSegment(
                 value = s, range = 0..59, format = "%02d",
                 onChange = { commit(newS = it) },
                 enabled = enabled,
-                fontSize = 64.sp,
+                fontSize = 44.sp,
             )
-            Separator(".", fontSize = 56.sp)
+            Separator(".", fontSize = 36.sp)
             ScrubSegment(
                 value = cs, range = 0..99, format = "%02d",
                 onChange = { commit(newCs = it) },
                 enabled = enabled,
-                fontSize = 44.sp,
+                fontSize = 32.sp,
                 pxPerStep = 8.dp,
             )
         }
@@ -489,7 +492,7 @@ internal fun ShotsEditor(
             zeroLabel = "∞",
             onChange = onChange,
             enabled = enabled,
-            fontSize = 96.sp,
+            fontSize = 72.sp,
             maxDigits = 4,
             pxPerStep = 8.dp,
         )
@@ -734,16 +737,16 @@ internal fun RunningView(
             Text(
                 "$shotsTakenDisplay",
                 style = androidx.compose.material3.LocalTextStyle.current.copy(fontFamily = com.ehrocha.pulsar.ui.theme.Mono, fontFeatureSettings = "tnum"),
-                fontSize = 96.sp,
+                fontSize = 64.sp,
                 fontWeight = FontWeight.Light,
                 color = MaterialTheme.colorScheme.primary,
             )
             Text(
                 if (continuous) " / ∞" else " / $plannedShots",
                 style = androidx.compose.material3.LocalTextStyle.current.copy(fontFamily = com.ehrocha.pulsar.ui.theme.Mono, fontFeatureSettings = "tnum"),
-                fontSize = 32.sp,
+                fontSize = 24.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 16.dp),
+                modifier = Modifier.padding(bottom = 10.dp),
             )
         }
         Text(
@@ -759,7 +762,7 @@ internal fun RunningView(
             Text(
                 iv2FormatHmsPretty(phaseRemainingMs),
                 style = androidx.compose.material3.LocalTextStyle.current.copy(fontFamily = com.ehrocha.pulsar.ui.theme.Mono, fontFeatureSettings = "tnum"),
-                fontSize = 44.sp,
+                fontSize = 36.sp,
                 fontWeight = FontWeight.Bold,
                 color = if (state == DeviceState.RUNNING) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.tertiary,
