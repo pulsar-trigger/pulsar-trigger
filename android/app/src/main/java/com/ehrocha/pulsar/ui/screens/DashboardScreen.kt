@@ -241,8 +241,8 @@ fun DashboardScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Surface(
-                                color = if (good) Color(0xFF2E7D32).copy(alpha = 0.12f)
-                                        else Color(0xFFE65100).copy(alpha = 0.12f),
+                                color = if (good) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive.copy(alpha = 0.12f)
+                                        else com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative.copy(alpha = 0.12f),
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.weight(1f),
                             ) {
@@ -256,7 +256,7 @@ fun DashboardScreen(
                                         label,
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Medium,
-                                        color = if (good) Color(0xFF2E7D32) else Color(0xFFE65100),
+                                        color = if (good) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive else com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative,
                                     )
                                 }
                             }
@@ -401,7 +401,7 @@ fun DashboardScreen(
                                 )
                                 Surface(
                                     color = when (w.rating) {
-                                        3 -> Color(0xFF2E7D32); 2 -> Color(0xFF558B2F); else -> Color(0xFFF9A825)
+                                        3 -> com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive; 2 -> com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positiveMuted; else -> com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.caution
                                     }.copy(alpha = 0.15f),
                                     shape = RoundedCornerShape(8.dp),
                                 ) {
@@ -415,7 +415,7 @@ fun DashboardScreen(
                                         fontWeight = FontWeight.Bold,
                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                         color = when (w.rating) {
-                                            3 -> Color(0xFF2E7D32); 2 -> Color(0xFF558B2F); else -> Color(0xFFF9A825)
+                                            3 -> com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive; 2 -> com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positiveMuted; else -> com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.caution
                                         },
                                     )
                                 }
@@ -444,13 +444,13 @@ fun DashboardScreen(
                 ) {
                     errors.forEach { msg ->
                         Surface(
-                            color = Color(0xFFE65100).copy(alpha = 0.12f),
+                            color = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative.copy(alpha = 0.12f),
                             shape = RoundedCornerShape(8.dp),
                         ) {
                             Text(
                                 msg,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color(0xFFE65100),
+                                color = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative,
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                             )
                         }
@@ -521,9 +521,9 @@ fun DashboardScreen(
                     Spacer(Modifier.height(8.dp))
                     Surface(
                         color = if (moon.goodForAstro)
-                            Color(0xFF2E7D32).copy(alpha = 0.15f)
+                            com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive.copy(alpha = 0.15f)
                         else
-                            Color(0xFFE65100).copy(alpha = 0.15f),
+                            com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative.copy(alpha = 0.15f),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
@@ -535,7 +535,7 @@ fun DashboardScreen(
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.padding(8.dp),
-                            color = if (moon.goodForAstro) Color(0xFF2E7D32) else Color(0xFFE65100),
+                            color = if (moon.goodForAstro) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive else com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative,
                         )
                     }
                 }
@@ -545,8 +545,8 @@ fun DashboardScreen(
             state.milkyWay?.let { mw ->
                 DashCard(title = stringResource(R.string.card_milky_way), icon = Icons.Default.AutoAwesome, initiallyExpanded = false) {
                     Surface(
-                        color = if (mw.visible) Color(0xFF2E7D32).copy(alpha = 0.15f)
-                                else Color(0xFFE65100).copy(alpha = 0.15f),
+                        color = if (mw.visible) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive.copy(alpha = 0.15f)
+                                else com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative.copy(alpha = 0.15f),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
@@ -559,7 +559,7 @@ fun DashboardScreen(
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.padding(8.dp),
-                            color = if (mw.visible) Color(0xFF2E7D32) else Color(0xFFE65100),
+                            color = if (mw.visible) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive else com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative,
                         )
                     }
                     if (mw.coreRise != null || mw.coreSet != null) {
@@ -623,8 +623,8 @@ fun DashboardScreen(
                     }
                     Spacer(Modifier.height(8.dp))
                     Surface(
-                        color = if (good) Color(0xFF2E7D32).copy(alpha = 0.15f)
-                                else Color(0xFFE65100).copy(alpha = 0.15f),
+                        color = if (good) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive.copy(alpha = 0.15f)
+                                else com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative.copy(alpha = 0.15f),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
@@ -634,7 +634,7 @@ fun DashboardScreen(
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.padding(8.dp),
-                            color = if (good) Color(0xFF2E7D32) else Color(0xFFE65100),
+                            color = if (good) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive else com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative,
                         )
                     }
                 }
@@ -682,9 +682,9 @@ fun DashboardScreen(
                     val hasRain = weather.precipitationMm > 0.1
                     Surface(
                         color = when {
-                            hasRain || weather.cloudCoverPct > AppConfig.CLOUD_COVER_PARTLY_THRESHOLD -> Color(0xFFE65100).copy(alpha = 0.15f)
-                            weather.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD && !hasRain -> Color(0xFF2E7D32).copy(alpha = 0.15f)
-                            else -> Color(0xFFF9A825).copy(alpha = 0.15f)
+                            hasRain || weather.cloudCoverPct > AppConfig.CLOUD_COVER_PARTLY_THRESHOLD -> com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative.copy(alpha = 0.15f)
+                            weather.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD && !hasRain -> com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive.copy(alpha = 0.15f)
+                            else -> com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.caution.copy(alpha = 0.15f)
                         },
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth(),
@@ -700,9 +700,9 @@ fun DashboardScreen(
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.padding(8.dp),
                             color = when {
-                                hasRain || weather.cloudCoverPct > AppConfig.CLOUD_COVER_PARTLY_THRESHOLD -> Color(0xFFE65100)
-                                weather.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD -> Color(0xFF2E7D32)
-                                else -> Color(0xFFF9A825)
+                                hasRain || weather.cloudCoverPct > AppConfig.CLOUD_COVER_PARTLY_THRESHOLD -> com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative
+                                weather.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD -> com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive
+                                else -> com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.caution
                             },
                         )
                     }
@@ -719,7 +719,7 @@ fun DashboardScreen(
                         initiallyExpanded = false,
                     ) {
                         Surface(
-                            color = (if (isCritical) Color(0xFFE65100) else Color(0xFFF9A825)).copy(alpha = 0.15f),
+                            color = (if (isCritical) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative else com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.caution).copy(alpha = 0.15f),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.fillMaxWidth(),
                         ) {
@@ -729,7 +729,7 @@ fun DashboardScreen(
                                            else stringResource(R.string.dew_warning),
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (isCritical) Color(0xFFE65100) else Color(0xFFF9A825),
+                                    color = if (isCritical) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative else com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.caution,
                                 )
                                 Spacer(Modifier.height(4.dp))
                                 Text(
@@ -765,11 +765,11 @@ fun DashboardScreen(
                     )
                     // Visual bar
                     val colors = listOf(
-                        Color(0xFF1A237E), // civil → nautical
-                        Color(0xFF0D47A1), // nautical → astro
-                        Color(0xFF000033), // full dark
-                        Color(0xFF0D47A1), // astro → nautical
-                        Color(0xFF1A237E), // nautical → civil
+                        com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.skyTwilight, // civil → nautical
+                        com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.skyNautical, // nautical → astro
+                        com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.skyDark, // full dark
+                        com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.skyNautical, // astro → nautical
+                        com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.skyTwilight, // nautical → civil
                     )
                     Row(
                         modifier = Modifier
@@ -883,8 +883,8 @@ fun DashboardScreen(
                             )
                             Spacer(Modifier.width(4.dp))
                             Surface(
-                                color = if (planet.visible) Color(0xFF2E7D32).copy(alpha = 0.15f)
-                                        else Color(0xFFE65100).copy(alpha = 0.15f),
+                                color = if (planet.visible) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive.copy(alpha = 0.15f)
+                                        else com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative.copy(alpha = 0.15f),
                                 shape = RoundedCornerShape(8.dp),
                             ) {
                                 Text(
@@ -892,7 +892,7 @@ fun DashboardScreen(
                                     else stringResource(R.string.planet_low),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (planet.visible) Color(0xFF2E7D32) else Color(0xFFE65100),
+                                    color = if (planet.visible) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive else com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                 )
                             }
@@ -988,9 +988,9 @@ fun DashboardScreen(
                                         .clip(RoundedCornerShape(4.dp))
                                         .background(
                                             when {
-                                                h.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD -> Color(0xFF2E7D32)
-                                                h.cloudCoverPct <= AppConfig.CLOUD_COVER_PARTLY_THRESHOLD -> Color(0xFFF9A825)
-                                                else -> Color(0xFFE65100)
+                                                h.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD -> com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive
+                                                h.cloudCoverPct <= AppConfig.CLOUD_COVER_PARTLY_THRESHOLD -> com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.caution
+                                                else -> com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative
                                             }
                                         ),
                                 )
@@ -1006,7 +1006,7 @@ fun DashboardScreen(
                                 Text(
                                     String.format(Locale.US, "%.1f", h.precipitationMm),
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = Color(0xFF1565C0),
+                                    color = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.info,
                                     modifier = Modifier.width(36.dp),
                                     textAlign = TextAlign.End,
                                 )

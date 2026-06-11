@@ -287,7 +287,7 @@ internal fun NoLocationCard() {
 internal fun CompassCalibrationBanner(onDismiss: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = androidx.compose.ui.graphics.Color(0xFFFFF59D),
+        color = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.cautionContainer,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
@@ -297,21 +297,21 @@ internal fun CompassCalibrationBanner(onDismiss: () -> Unit) {
             Icon(
                 Icons.Default.Explore,
                 contentDescription = null,
-                tint = androidx.compose.ui.graphics.Color(0xFF7C5D00),
+                tint = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.onCautionContainer,
                 modifier = Modifier.size(20.dp),
             )
             Spacer(Modifier.width(10.dp))
             Text(
                 stringResource(R.string.aircraft_compass_calibration),
                 style = MaterialTheme.typography.bodySmall,
-                color = androidx.compose.ui.graphics.Color(0xFF5D4500),
+                color = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.onCautionContainer,
                 modifier = Modifier.weight(1f),
             )
             IconButton(onClick = onDismiss) {
                 Icon(
                     Icons.Default.Close,
                     contentDescription = stringResource(R.string.dismiss),
-                    tint = androidx.compose.ui.graphics.Color(0xFF7C5D00),
+                    tint = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.onCautionContainer,
                 )
             }
         }
@@ -339,7 +339,7 @@ internal fun GpsAccuracyBanner(
     }.ifBlank { "—" }
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = androidx.compose.ui.graphics.Color(0xFFFFCC80),
+        color = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.cautionContainer,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
@@ -349,7 +349,7 @@ internal fun GpsAccuracyBanner(
             Icon(
                 Icons.Default.FlightTakeoff,
                 contentDescription = null,
-                tint = androidx.compose.ui.graphics.Color(0xFF7C3E00),
+                tint = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.onCautionContainer,
                 modifier = Modifier.size(20.dp),
             )
             Spacer(Modifier.width(10.dp))
@@ -357,19 +357,19 @@ internal fun GpsAccuracyBanner(
                 Text(
                     stringResource(R.string.aircraft_gps_warning),
                     style = MaterialTheme.typography.bodySmall,
-                    color = androidx.compose.ui.graphics.Color(0xFF5D2A00),
+                    color = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.onCautionContainer,
                 )
                 Text(
                     detail,
                     style = MaterialTheme.typography.labelSmall,
-                    color = androidx.compose.ui.graphics.Color(0xFF7C3E00),
+                    color = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.onCautionContainer,
                 )
             }
             if (refreshing) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(20.dp),
                     strokeWidth = 2.dp,
-                    color = androidx.compose.ui.graphics.Color(0xFF7C3E00),
+                    color = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.onCautionContainer,
                 )
             } else {
                 androidx.compose.material3.TextButton(
@@ -377,7 +377,7 @@ internal fun GpsAccuracyBanner(
                 ) {
                     Text(
                         stringResource(R.string.aircraft_gps_refresh),
-                        color = androidx.compose.ui.graphics.Color(0xFF5D2A00),
+                        color = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.onCautionContainer,
                     )
                 }
             }
@@ -385,7 +385,7 @@ internal fun GpsAccuracyBanner(
                 Icon(
                     Icons.Default.Close,
                     contentDescription = stringResource(R.string.dismiss),
-                    tint = androidx.compose.ui.graphics.Color(0xFF7C3E00),
+                    tint = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.onCautionContainer,
                 )
             }
         }
@@ -413,19 +413,21 @@ internal fun ErrorBanner(error: String) {
     }
 }
 
-internal val PROXIMITY_NEAR = androidx.compose.ui.graphics.Color(0xFF2E7D32)
-internal val PROXIMITY_MID = androidx.compose.ui.graphics.Color(0xFFF9A825)
-internal val PROXIMITY_FAR = androidx.compose.ui.graphics.Color(0xFFE65100)
+// Proximity ramp lives in PulsarColors so it follows the theme mode.
 
 /** Map distance / radius ratio onto the green / yellow / red palette.
  *  Thresholds at 1/3 and 2/3 so each band feels like a meaningful chunk
  *  of the user's chosen search radius. */
-internal fun proximityColor(distanceKm: Double, radiusKm: Int): androidx.compose.ui.graphics.Color {
+internal fun proximityColor(
+    distanceKm: Double,
+    radiusKm: Int,
+    c: com.ehrocha.pulsar.ui.theme.PulsarColors,
+): androidx.compose.ui.graphics.Color {
     val ratio = if (radiusKm <= 0) 1.0 else distanceKm / radiusKm.toDouble()
     return when {
-        ratio < 1.0 / 3.0 -> PROXIMITY_NEAR
-        ratio < 2.0 / 3.0 -> PROXIMITY_MID
-        else -> PROXIMITY_FAR
+        ratio < 1.0 / 3.0 -> c.proximityNear
+        ratio < 2.0 / 3.0 -> c.proximityMid
+        else -> c.proximityFar
     }
 }
 
@@ -453,7 +455,8 @@ internal fun AircraftRow(
     onSelectOnMap: () -> Unit,
 ) {
     var showDetails by remember { mutableStateOf(false) }
-    val accent = proximityColor(s.distanceKm, radiusKm)
+    val pulsarColors = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors
+    val accent = proximityColor(s.distanceKm, radiusKm, pulsarColors)
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val rowBadges = aircraftBadges(s)
     val lighting = lightingFor(s.bearingDeg, sunDir)
@@ -472,7 +475,7 @@ internal fun AircraftRow(
         color = accent.copy(alpha = bgAlpha),
         border = if (selected) androidx.compose.foundation.BorderStroke(
             2.dp,
-            androidx.compose.ui.graphics.Color(0xFFFFEB3B),
+            pulsarColors.selection,
         ) else null,
         modifier = Modifier.fillMaxWidth(),
     ) {
@@ -756,13 +759,13 @@ internal fun AircraftDetailDialog(
 internal fun LightingChip(lighting: LightingKind) {
     Surface(
         shape = RoundedCornerShape(50),
-        color = lighting.color.copy(alpha = 0.18f),
+        color = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.let { it.of(lighting).copy(alpha = it.chipAlpha) },
     ) {
         Text(
             "☀ " + stringResource(lighting.labelRes),
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
             style = MaterialTheme.typography.labelSmall,
-            color = lighting.color,
+            color = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.of(lighting),
             fontWeight = FontWeight.SemiBold,
         )
     }
@@ -822,18 +825,28 @@ internal fun formatTime(epochMs: Long): String {
 // nothing to cache. Each badge has a short label + a tint colour; the row
 // shows zero-or-more chips.
 
-internal enum class AircraftBadgeKind(
-    val labelRes: Int,
-    val color: androidx.compose.ui.graphics.Color,
-) {
-    EMERGENCY(R.string.aircraft_badge_emergency,
-        androidx.compose.ui.graphics.Color(0xFFD32F2F)),
-    VINTAGE(R.string.aircraft_badge_vintage,
-        androidx.compose.ui.graphics.Color(0xFF6D4C41)),
-    MILITARY(R.string.aircraft_badge_military,
-        androidx.compose.ui.graphics.Color(0xFF455A64)),
-    HEAVY(R.string.aircraft_badge_heavy,
-        androidx.compose.ui.graphics.Color(0xFF1565C0)),
+internal enum class AircraftBadgeKind(val labelRes: Int) {
+    EMERGENCY(R.string.aircraft_badge_emergency),
+    VINTAGE(R.string.aircraft_badge_vintage),
+    MILITARY(R.string.aircraft_badge_military),
+    HEAVY(R.string.aircraft_badge_heavy),
+}
+
+/** Resolve a badge to the active theme's role colour — RedLight renders
+ *  these as luminance steps instead of hues. */
+internal fun com.ehrocha.pulsar.ui.theme.PulsarColors.of(b: AircraftBadgeKind) = when (b) {
+    AircraftBadgeKind.EMERGENCY -> badgeEmergency
+    AircraftBadgeKind.VINTAGE -> badgeVintage
+    AircraftBadgeKind.MILITARY -> badgeMilitary
+    AircraftBadgeKind.HEAVY -> badgeHeavy
+}
+
+internal fun com.ehrocha.pulsar.ui.theme.PulsarColors.of(l: LightingKind) = when (l) {
+    LightingKind.GOLDEN -> lightingGolden
+    LightingKind.FRONT_LIT -> lightingFront
+    LightingKind.SIDE_LIT -> lightingSide
+    LightingKind.BACK_LIT -> lightingBack
+    LightingKind.NIGHT -> lightingNight
 }
 
 internal fun aircraftBadges(s: AircraftSighting): List<AircraftBadgeKind> {
@@ -862,13 +875,13 @@ internal fun aircraftBadges(s: AircraftSighting): List<AircraftBadgeKind> {
 internal fun BadgeChip(badge: AircraftBadgeKind) {
     Surface(
         shape = RoundedCornerShape(50),
-        color = badge.color.copy(alpha = 0.18f),
+        color = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.let { it.of(badge).copy(alpha = it.chipAlpha) },
     ) {
         Text(
             stringResource(badge.labelRes),
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
             style = MaterialTheme.typography.labelSmall,
-            color = badge.color,
+            color = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.of(badge),
             fontWeight = FontWeight.SemiBold,
         )
     }

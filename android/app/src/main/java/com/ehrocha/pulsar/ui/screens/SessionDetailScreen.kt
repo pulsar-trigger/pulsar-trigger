@@ -263,8 +263,8 @@ fun SessionDetailScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Surface(
-                                color = if (good) Color(0xFF2E7D32).copy(alpha = 0.12f)
-                                        else Color(0xFFE65100).copy(alpha = 0.12f),
+                                color = if (good) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive.copy(alpha = 0.12f)
+                                        else com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative.copy(alpha = 0.12f),
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.weight(1f),
                             ) {
@@ -278,7 +278,7 @@ fun SessionDetailScreen(
                                         label,
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Medium,
-                                        color = if (good) Color(0xFF2E7D32) else Color(0xFFE65100),
+                                        color = if (good) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive else com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative,
                                     )
                                 }
                             }
@@ -398,7 +398,7 @@ fun SessionDetailScreen(
                                 )
                                 Surface(
                                     color = when (w.rating) {
-                                        3 -> Color(0xFF2E7D32); 2 -> Color(0xFF558B2F); else -> Color(0xFFF9A825)
+                                        3 -> com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive; 2 -> com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positiveMuted; else -> com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.caution
                                     }.copy(alpha = 0.15f),
                                     shape = RoundedCornerShape(8.dp),
                                 ) {
@@ -412,7 +412,7 @@ fun SessionDetailScreen(
                                         fontWeight = FontWeight.Bold,
                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                         color = when (w.rating) {
-                                            3 -> Color(0xFF2E7D32); 2 -> Color(0xFF558B2F); else -> Color(0xFFF9A825)
+                                            3 -> com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive; 2 -> com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positiveMuted; else -> com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.caution
                                         },
                                     )
                                 }
@@ -434,13 +434,13 @@ fun SessionDetailScreen(
                 ) {
                     errors.forEach { msg ->
                         Surface(
-                            color = Color(0xFFE65100).copy(alpha = 0.12f),
+                            color = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative.copy(alpha = 0.12f),
                             shape = RoundedCornerShape(8.dp),
                         ) {
                             Text(
                                 msg,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color(0xFFE65100),
+                                color = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative,
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                             )
                         }
@@ -507,9 +507,9 @@ fun SessionDetailScreen(
                     Spacer(Modifier.height(8.dp))
                     Surface(
                         color = if (moon.goodForAstro)
-                            Color(0xFF2E7D32).copy(alpha = 0.15f)
+                            com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive.copy(alpha = 0.15f)
                         else
-                            Color(0xFFE65100).copy(alpha = 0.15f),
+                            com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative.copy(alpha = 0.15f),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
@@ -521,7 +521,7 @@ fun SessionDetailScreen(
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.padding(8.dp),
-                            color = if (moon.goodForAstro) Color(0xFF2E7D32) else Color(0xFFE65100),
+                            color = if (moon.goodForAstro) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive else com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative,
                         )
                     }
                 }
@@ -576,11 +576,11 @@ fun SessionDetailScreen(
                         tw.civilStart?.let { stringResource(R.string.tw_civil_start) to it },
                     )
                     val colors = listOf(
-                        Color(0xFF1A237E),
-                        Color(0xFF0D47A1),
-                        Color(0xFF000033),
-                        Color(0xFF0D47A1),
-                        Color(0xFF1A237E),
+                        com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.skyTwilight,
+                        com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.skyNautical,
+                        com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.skyDark,
+                        com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.skyNautical,
+                        com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.skyTwilight,
                     )
                     Row(
                         modifier = Modifier
@@ -664,8 +664,8 @@ fun SessionDetailScreen(
                             )
                             Spacer(Modifier.width(4.dp))
                             Surface(
-                                color = if (planet.visible) Color(0xFF2E7D32).copy(alpha = 0.15f)
-                                        else Color(0xFFE65100).copy(alpha = 0.15f),
+                                color = if (planet.visible) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive.copy(alpha = 0.15f)
+                                        else com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative.copy(alpha = 0.15f),
                                 shape = RoundedCornerShape(8.dp),
                             ) {
                                 Text(
@@ -673,7 +673,7 @@ fun SessionDetailScreen(
                                     else stringResource(R.string.planet_low),
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (planet.visible) Color(0xFF2E7D32) else Color(0xFFE65100),
+                                    color = if (planet.visible) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive else com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                 )
                             }

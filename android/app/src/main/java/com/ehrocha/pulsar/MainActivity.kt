@@ -174,6 +174,11 @@ class MainActivity : AppCompatActivity() {
             CompositionLocalProvider(
                 LocalNightMode provides nightMode,
                 LocalNightModeLocked provides nightModeLocked,
+                // Semantic roles resolved per mode — under RedLight every
+                // role collapses to a red/grey luminance ramp so the user's
+                // night-vision choice is honoured by all surfaces.
+                com.ehrocha.pulsar.ui.theme.LocalPulsarColors provides
+                    com.ehrocha.pulsar.ui.theme.pulsarColorsFor(nightMode.value),
             ) {
             MaterialTheme(colorScheme = colorScheme) {
                 Surface(

@@ -160,6 +160,9 @@ internal fun AircraftMap(
     }
 
     val ctx = androidx.compose.ui.platform.LocalContext.current
+    // Theme roles snapshotted at composition — the marker effect below is
+    // not a composable scope, so it captures this value instead.
+    val pc = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors
     val iconFactory = remember(ctx) { IconFactory.getInstance(ctx) }
     // Rotated marker icons are expensive to build (drawable → bitmap →
     // matrix rotate). Cache key = (heading-bucket, size-class, tint,
@@ -289,13 +292,19 @@ internal fun AircraftMap(
     // tracked alongside the regular plane markers; rebuilt whenever the
     // selection changes OR the underlying sighting moves (live tick).
     var highlightMarker by remember { mutableStateOf<Marker?>(null) }
-    val highlightIcon = remember(ctx) {
+    val highlightIcon = remember(ctx, pc) {
         iconFactory.fromBitmap(
             rotatedAircraftBitmap(
                 ctx,
                 headingDeg = 0f,
                 sizeScale = 1.5f,
                 drawableRes = R.drawable.ic_aircraft_highlight,
+                tintColor = android.graphics.Color.argb(
+                    200,
+                    (pc.selection.red * 255).toInt(),
+                    (pc.selection.green * 255).toInt(),
+                    (pc.selection.blue * 255).toInt(),
+                ),
             ),
         )
     }
@@ -387,9 +396,9 @@ internal fun AircraftMap(
             // Selected: bright cyan, thick. Others: dim cyan, thin — same
             // colour family so the eye can still link them, just toned down.
             val pastColor = if (isSelected)
-                android.graphics.Color.argb(240, 0x00, 0xE5, 0xFF)
+                android.graphics.Color.argb(240, (pc.trail.red * 255).toInt(), (pc.trail.green * 255).toInt(), (pc.trail.blue * 255).toInt())
             else
-                android.graphics.Color.argb(100, 0x00, 0xBC, 0xD4)
+                android.graphics.Color.argb(100, (pc.trail.red * 255).toInt(), (pc.trail.green * 255).toInt(), (pc.trail.blue * 255).toInt())
             val pastWidth = if (isSelected) 5.0f else 1.5f
             if (pastPoints.size >= 2) {
                 trailPolylines += m.addPolyline(
@@ -404,9 +413,9 @@ internal fun AircraftMap(
             val futureSegs = futureTrailSegments(s, sLat, sLon, effectiveHeading)
                 .let { if (isSelected) it else it.take(2) }
             val futureColor = if (isSelected)
-                android.graphics.Color.argb(220, 0x00, 0xE5, 0xFF)
+                android.graphics.Color.argb(220, (pc.trail.red * 255).toInt(), (pc.trail.green * 255).toInt(), (pc.trail.blue * 255).toInt())
             else
-                android.graphics.Color.argb(90, 0x00, 0xBC, 0xD4)
+                android.graphics.Color.argb(90, (pc.trail.red * 255).toInt(), (pc.trail.green * 255).toInt(), (pc.trail.blue * 255).toInt())
             val futureWidth = if (isSelected) 4.0f else 1.5f
             futureSegs.forEach { seg ->
                 trailPolylines += m.addPolyline(
@@ -506,7 +515,7 @@ internal fun AircraftMap(
             // the sky. Hue = near/far, alpha = low/high — two orthogonal
             // channels. Compose Color → Android Color int.
             val op = altitudeOpacity(s.altitudeFt)
-            val tint = proximityColor(s.distanceKm, radiusKm).let {
+            val tint = proximityColor(s.distanceKm, radiusKm, pc).let {
                 android.graphics.Color.argb(
                     (it.alpha * op * 255).toInt().coerceIn(0, 255),
                     (it.red * 255).toInt(),
@@ -763,15 +772,12 @@ internal fun elevationDeg(s: AircraftSighting): Double? {
     return Math.toDegrees(kotlin.math.atan2(altM, groundM))
 }
 
-internal enum class LightingKind(
-    val labelRes: Int,
-    val color: androidx.compose.ui.graphics.Color,
-) {
-    GOLDEN(R.string.aircraft_lighting_golden, androidx.compose.ui.graphics.Color(0xFFFF8F00)),
-    FRONT_LIT(R.string.aircraft_lighting_front, androidx.compose.ui.graphics.Color(0xFF2E7D32)),
-    SIDE_LIT(R.string.aircraft_lighting_side, androidx.compose.ui.graphics.Color(0xFF5C6BC0)),
-    BACK_LIT(R.string.aircraft_lighting_back, androidx.compose.ui.graphics.Color(0xFFD84315)),
-    NIGHT(R.string.aircraft_lighting_night, androidx.compose.ui.graphics.Color(0xFF607D8B)),
+internal enum class LightingKind(val labelRes: Int) {
+    GOLDEN(R.string.aircraft_lighting_golden),
+    FRONT_LIT(R.string.aircraft_lighting_front),
+    SIDE_LIT(R.string.aircraft_lighting_side),
+    BACK_LIT(R.string.aircraft_lighting_back),
+    NIGHT(R.string.aircraft_lighting_night),
 }
 
 /** Smallest unsigned angular difference between two bearings, 0..180. */
