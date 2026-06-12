@@ -210,6 +210,9 @@ fun DashboardScreen(
             // ── Tonight's Signal — the SIGNAL hero. CP 1919 ridgeline of
             // tonight's hours; amplitude = shooting quality. ─────────
             TonightSignalCard(state)
+            ConditionsStrip(state)
+            // ── Detail cards — collapsed by default: the hero + strip ARE
+            // the dashboard; the stack below is the drill-down. ──────
             // ── Summary card ──────────────────────────────────────
             state.location?.let { loc ->
                 DashCard(title = stringResource(R.string.card_summary), icon = Icons.Default.MyLocation) {
@@ -822,7 +825,7 @@ fun DashboardScreen(
                     DashCard(
                         title = stringResource(R.string.card_golden_blue),
                         icon = Icons.Default.WbSunny,
-                        initiallyExpanded = true,
+                        initiallyExpanded = false,
                     ) {
                         GoldenBlueRow(
                             emoji = "🌅",
@@ -936,7 +939,7 @@ fun DashboardScreen(
                 DashCard(
                     title = stringResource(R.string.card_dso_suggestions),
                     icon = Icons.Default.Stars,
-                    initiallyExpanded = true,
+                    initiallyExpanded = false,
                 ) {
                     if (recs.isEmpty()) {
                         Text(
@@ -1033,7 +1036,7 @@ fun DashboardScreen(
 internal fun DashCard(
     title: String,
     icon: ImageVector,
-    initiallyExpanded: Boolean = true,
+    initiallyExpanded: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     var expanded by remember { mutableStateOf(initiallyExpanded) }

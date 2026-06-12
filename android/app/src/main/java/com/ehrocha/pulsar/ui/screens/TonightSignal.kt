@@ -6,6 +6,7 @@
 package com.ehrocha.pulsar.ui.screens
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -247,6 +248,67 @@ internal fun TonightSignalCard(state: DashboardState) {
                 style = MaterialTheme.typography.labelSmall.copy(fontFamily = Mono),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+    }
+}
+
+
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+/** The at-a-glance instrument strip under the hero (Eduardo's #1: "if the
+ *  dashboard is complete enough" the card stack below can stay collapsed).
+ *  Six numbers a night photographer triages by; everything deeper lives in
+ *  the collapsed detail cards. */
+@Composable
+internal fun ConditionsStrip(state: DashboardState) {
+    val chips = buildList {
+        state.bortle?.let { add(Triple("BORTLE", "%.0f".format(it.bortleClass), null)) }
+        state.moon?.let {
+            add(Triple("MOON", "${it.illuminationPct.toInt()}%",
+                if (it.goodForAstro) PulsarTheme.colors.positive else PulsarTheme.colors.negative))
+        }
+        state.weather?.let {
+            add(Triple("CLOUD", "${it.cloudCoverPct}%",
+                when {
+                    it.cloudCoverPct <= 25 -> PulsarTheme.colors.positive
+                    it.cloudCoverPct <= 60 -> PulsarTheme.colors.caution
+                    else -> PulsarTheme.colors.negative
+                }))
+        }
+        state.dewPoint?.let { add(Triple("DEW Δ", "%.1f°".format(it.spreadC), null)) }
+        state.goldenBlue?.eveningGolden?.let { add(Triple("GOLDEN", it.start, null)) }
+        state.milkyWay?.let {
+            add(Triple("MW CORE", if (it.visible) "VIS" else "—",
+                if (it.visible) PulsarTheme.colors.positive else null))
+        }
+    }
+    if (chips.isEmpty()) return
+    androidx.compose.foundation.layout.FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        maxItemsInEachRow = 3,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        chips.forEach { (label, value, tint) ->
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                modifier = Modifier.weight(1f),
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                ) {
+                    Text(
+                        label,
+                        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.2.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        value,
+                        style = MaterialTheme.typography.titleMedium.copy(fontFamily = Mono),
+                        color = tint ?: MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
         }
     }
 }
