@@ -762,7 +762,6 @@
     <string name="trigger_section_favorites">Favoritos</string>
     <string name="trigger_section_custom">Personalizado</string>
     <string name="trigger_chip_favorites">Favoritos</string>
-    <string name="trigger_no_favorites">Sin favoritos — marca cualquier preset guardado para fijarlo aquí.</string>
     <string name="transport_tile_simulator_title">Simulador</string>
     <string name="transport_tile_simulator_subtitle">Prueba sin hardware</string>
     <string name="transport_tile_pulsar_ble_title">Pulsar BLE</string>
@@ -959,8 +958,6 @@
     <string name="ramp2_tab_steps">Pasos</string>
     <string name="ramp_hint">Ramp de exposición (timelapse Holy Grail) transiciona suavemente de exposiciones cortas a largas en varios pasos. Ideal para transiciones día-noche o noche-día.</string>
     <string name="session_edit_title">Editar sesión</string>
-    <string name="dest_favorites">Favoritos</string>
-    <string name="favorites_empty_title">Aún sin favoritos</string>
     <string name="dest_dashboard">Dashboard</string>
     <string name="dest_tools">Herramientas</string>
     <string name="dest_trigger">Trigger</string>

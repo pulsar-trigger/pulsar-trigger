@@ -23,7 +23,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Bluetooth
-import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -411,23 +410,6 @@ private fun MenuPageContent(
                         }
                         if (lastTile != null) {
                             ResumeLastRow(lastTile)
-                        }
-                        // Bookmarked presets, one tap from the trigger page —
-                        // hidden entirely when there are none (the bookmark
-                        // gesture lives in every wizard's Save dialog).
-                        val favUserModes by vm.userModes.collectAsState()
-                        val favoriteTiles = favUserModes.filter { it.bookmarked }.map { mode ->
-                            LauncherItem(
-                                key = "user:${mode.id}",
-                                label = mode.name,
-                                icon = Icons.Default.Bookmark,
-                                onClick = { onUserModeRun(mode) },
-                            )
-                        }
-                        if (favoriteTiles.isNotEmpty()) {
-                            SectionContainer(title = stringResource(R.string.dest_favorites)) {
-                                SectionGrid(favoriteTiles)
-                            }
                         }
                         // Filter chips removed (v0.416 design review): three
                         // always-visible sections need no filtering ceremony.

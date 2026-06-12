@@ -764,7 +764,6 @@
     <string name="trigger_section_favorites">收藏</string>
     <string name="trigger_section_custom">自定义</string>
     <string name="trigger_chip_favorites">收藏</string>
-    <string name="trigger_no_favorites">尚无收藏 — 给任何已保存的预设加星标即可固定到这里。</string>
     <string name="transport_tile_simulator_title">模拟器</string>
     <string name="transport_tile_simulator_subtitle">无硬件试用</string>
     <string name="transport_tile_pulsar_ble_title">Pulsar BLE</string>
@@ -957,8 +956,6 @@
     <string name="ramp2_tab_steps">步数</string>
     <string name="ramp_hint">曝光 Ramp (Holy Grail 延时) 在多个步骤中平滑地从短曝光过渡到长曝光。适合日转夜或夜转日。</string>
     <string name="session_edit_title">编辑会话</string>
-    <string name="dest_favorites">收藏</string>
-    <string name="favorites_empty_title">尚无收藏</string>
     <string name="dest_dashboard">仪表盘</string>
     <string name="wake_on_pause_hint">到达此暂停时点亮屏幕并震动</string>
     <string name="whats_up_help">显示当前在您所在位置地平线以上的深空天体 (星云、星系、星团)。\n\n• 按高度排序 — 越高位置越好\n• 绿色图标：位置佳 (高于 30°)，适合拍摄\n• 灰色图标：低空 (10–30°)，可拍但不理想\n• 天文黑夜时段效果最佳\n\n目录包含 ~27 个常用天体摄影目标。</string>
