@@ -1553,19 +1553,84 @@ private fun EditStepDialog(
 
 @Composable
 private fun IntervalometerStepEditor(step: FlowStep.Intervalometer, onChange: (FlowStep.Intervalometer) -> Unit) {
-    IntervalometerPanelContent(
-        intervalMs = step.intervalMs,
-        exposureMs = step.exposureMs,
-        shotCount = step.shotCount,
-        delayMs = step.delayMs,
-        onIntervalChanged = { onChange(step.copy(intervalMs = it.coerceAtLeast(AppConfig.MIN_INTERVAL_MS))) },
-        onExposureChanged = { onChange(step.copy(exposureMs = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS))) },
-        onShotCountChanged = { onChange(step.copy(shotCount = it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT))) },
-        onDelayChanged = { onChange(step.copy(delayMs = it)) },
-        // No ∞ inside a multi-step flow — a continuous step would block
-        // every subsequent step from running.
-        allowContinuous = false,
-    )
+    // The step editor presents the SAME instruments as the Iv2 wizard
+    // (Eduardo's flow feedback #2: reuse the rebuilt input panels, no
+    // parallel UI) — segmented scrub clocks + the big shots dial, stacked
+    // instead of tabbed. A TIMELAPSE step hides the exposure instrument:
+    // its sentinel exposure is an implementation detail.
+    val isTimelapse = step.type == FlowStepType.TIMELAPSE
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (!isTimelapse) {
+            StepInstrument(stringResource(R.string.iv2_tab_exposure)) {
+                SegmentedTimeEditor(
+                    ms = step.exposureMs,
+                    onChange = {
+                        onChange(step.copy(
+                            exposureMs = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS),
+                        ))
+                    },
+                    rangeMs = 0L..86_400_000L,
+                    enabled = true,
+                )
+            }
+        }
+        StepInstrument(stringResource(R.string.iv2_tab_interval)) {
+            SegmentedTimeEditor(
+                ms = step.intervalMs,
+                onChange = {
+                    onChange(step.copy(
+                        intervalMs = it.coerceAtLeast(AppConfig.MIN_INTERVAL_MS),
+                    ))
+                },
+                rangeMs = 0L..3_600_000L,
+                enabled = true,
+            )
+        }
+        StepInstrument(stringResource(R.string.iv2_tab_shots), height = 190.dp) {
+            // No ∞ inside a multi-step flow — a continuous step would
+            // block every subsequent step from running.
+            ShotsEditor(
+                value = step.shotCount,
+                onChange = { onChange(step.copy(shotCount = it.coerceAtLeast(1))) },
+                enabled = true,
+            )
+        }
+        StepInstrument(stringResource(R.string.iv2_tab_delay)) {
+            SegmentedTimeEditor(
+                ms = step.delayMs,
+                onChange = { onChange(step.copy(delayMs = it)) },
+                rangeMs = 0L..3_600_000L,
+                enabled = true,
+            )
+        }
+    }
+}
+
+/** One wizard instrument framed as a card inside the step editor — keeps
+ *  the editors visually identical to the wizards they mirror. */
+@Composable
+private fun StepInstrument(
+    label: String,
+    height: androidx.compose.ui.unit.Dp = 165.dp,
+    content: @Composable () -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 1.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(vertical = 12.dp)) {
+            Text(
+                label.uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.5.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+            Box(modifier = Modifier.fillMaxWidth().height(height)) { content() }
+        }
+    }
 }
 
 @Composable
