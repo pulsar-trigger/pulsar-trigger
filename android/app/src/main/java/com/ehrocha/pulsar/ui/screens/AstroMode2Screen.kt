@@ -55,7 +55,7 @@ private val SENSOR_OPTS = listOf(
     SensorOpt("M4/3", 2.0f),
 )
 
-private val FOCAL_DIAL_PRESETS = listOf(8, 14, 24, 35, 50, 85, 105, 135, 200)
+private val FOCAL_DIAL_PRESETS = listOf(8, 14, 24, 35, 50, 85, 135, 200, 300, 600)
 
 /** Map a continuous slider position (in segments — 0 = first preset, n-1 =
  *  last) to an interpolated focal length in mm. Mirrors the old dial's
@@ -113,7 +113,13 @@ fun AstroMode2Screen(
     var editingPresetId by rememberSaveable { mutableStateOf(initialPresetId) }
 
     var focalLength by rememberSaveable {
-        mutableIntStateOf(loadedPreset?.body?.focalLength ?: 0)
+        // Never 0 (user report: selector started at 0 showing "—" and the
+        // NPF maths stayed dark until first touch). Default to a 24mm
+        // prime; floor at the app minimum for presets saved before this.
+        mutableIntStateOf(
+            (loadedPreset?.body?.focalLength?.takeIf { it > 0 } ?: 24)
+                .coerceIn(AppConfig.MIN_FOCAL_LENGTH, AppConfig.MAX_FOCAL_LENGTH),
+        )
     }
     var cropFactor by rememberSaveable {
         mutableFloatStateOf(loadedPreset?.body?.cropFactor ?: 1.0f)
@@ -170,6 +176,7 @@ fun AstroMode2Screen(
                 lensInfo = info
                 if (info != null && info.focalMm != null) {
                     focalLength = info.focalMm
+                        .coerceIn(AppConfig.MIN_FOCAL_LENGTH, AppConfig.MAX_FOCAL_LENGTH)
                 }
             } finally {
                 lensDetecting = false
@@ -740,7 +747,9 @@ private fun FocalLengthSlider(
 
     val n = FOCAL_DIAL_PRESETS.size
     val sliderValue = remember(valueMm) {
-        focalToSliderValue(valueMm.coerceAtLeast(0), FOCAL_DIAL_PRESETS)
+        focalToSliderValue(
+            valueMm.coerceAtLeast(AppConfig.MIN_FOCAL_LENGTH), FOCAL_DIAL_PRESETS,
+        )
     }
     // Last preset neighbourhood the user was in — fires haptic when crossing
     // into a different one (preserves the dial's preset-snap feel without
@@ -788,6 +797,7 @@ private fun FocalLengthSlider(
             value = sliderValue,
             onValueChange = { f ->
                 val newFocal = sliderValueToFocal(f, FOCAL_DIAL_PRESETS)
+                    .coerceAtLeast(AppConfig.MIN_FOCAL_LENGTH)
                 if (newFocal != valueMm) {
                     val newPresetIdx = nearestPresetIndex(newFocal, FOCAL_DIAL_PRESETS)
                     if (newPresetIdx != lastPresetIdx) {
