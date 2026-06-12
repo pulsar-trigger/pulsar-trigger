@@ -131,6 +131,21 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
             )
         },
     ) { pad ->
+        if (running) {
+            // Same instrument as every other wizard (Eduardo's #4): status
+            // pill, mono counters, CyclePhaseTrace, PulseScope — instead of
+            // a column of disabled sliders.
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier.fillMaxSize().padding(pad),
+            ) {
+                RunningView(
+                    plannedShots = frames,
+                    exposureMs = subSec * 1000L,
+                    gapMs = gapSec * 1000L,
+                )
+            }
+            return@Scaffold
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()

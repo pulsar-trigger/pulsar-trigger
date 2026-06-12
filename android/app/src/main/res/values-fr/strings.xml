@@ -520,6 +520,8 @@
     <string name="label_flow_name">Nom de la séquence</string>
     <string name="flow_name_exists">Une séquence portant ce nom existe déjà et sera remplacée.</string>
     <string name="step_type_intervalometer">Intervallomètre</string>
+    <string name="step_type_timelapse">Timelapse</string>
+    <string name="step_summary_timelapse">%1$d prises · toutes les %2$d ms</string>
     <string name="step_type_astro">Astro</string>
     <string name="step_type_pause">Pause</string>
     <string name="step_summary_intervalometer">%1$d photos, %2$dms exp, %3$dms écart</string>

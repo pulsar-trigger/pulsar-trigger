@@ -1427,6 +1427,7 @@ private fun FlowStepCard(
 
 private fun stepIcon(type: FlowStepType) = when (type) {
     FlowStepType.INTERVALOMETER -> Icons.Default.Timer
+    FlowStepType.TIMELAPSE -> Icons.Default.Timelapse
     FlowStepType.ASTRO -> Icons.Default.Stars
     FlowStepType.PAUSE -> Icons.Default.PauseCircle
     FlowStepType.DARK_FRAME -> Icons.Default.LensBlur

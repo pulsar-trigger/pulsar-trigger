@@ -520,6 +520,8 @@
     <string name="label_flow_name">フロー名</string>
     <string name="flow_name_exists">同じ名前のフローが既に存在します。置換されます。</string>
     <string name="step_type_intervalometer">インターバロメーター</string>
+    <string name="step_type_timelapse">タイムラプス</string>
+    <string name="step_summary_timelapse">%1$d 枚 · %2$d ms 間隔</string>
     <string name="step_type_astro">天体撮影</string>
     <string name="step_type_pause">一時停止</string>
     <string name="step_summary_intervalometer">%1$d ショット、%2$dms 露出、%3$dms 間隔</string>

@@ -518,6 +518,8 @@
     <string name="label_flow_name">Nombre del flujo</string>
     <string name="flow_name_exists">Un flujo con este nombre ya existe y será reemplazado.</string>
     <string name="step_type_intervalometer">Intervalómetro</string>
+    <string name="step_type_timelapse">Timelapse</string>
+    <string name="step_summary_timelapse">%1$d tomas · cada %2$d ms</string>
     <string name="step_type_astro">Astro</string>
     <string name="step_type_pause">Pausa</string>
     <string name="step_summary_intervalometer">%1$d fotos, %2$dms exp, %3$dms intervalo</string>

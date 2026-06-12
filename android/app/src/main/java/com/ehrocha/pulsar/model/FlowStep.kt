@@ -21,6 +21,11 @@ enum class FlowStepType {
     PAUSE,
     DARK_FRAME,
     RAMP,
+    // Timelapse is wire-identical to Intervalometer with the
+    // TIMELAPSE_PULSE_MS sentinel exposure (executeFlowStep dispatches on
+    // it); as a step TYPE it exists so the add-step picker offers every
+    // Pulsar mode and editors/summaries can hide the meaningless exposure.
+    TIMELAPSE,
 }
 
 /**
@@ -55,7 +60,9 @@ sealed class FlowStep {
         val cameraSettings: com.ehrocha.pulsar.transport.CameraSettings =
             com.ehrocha.pulsar.transport.CameraSettings.EMPTY,
     ) : FlowStep() {
-        override val type get() = FlowStepType.INTERVALOMETER
+        override val type get() =
+            if (exposureMs == AppConfig.TIMELAPSE_PULSE_MS) FlowStepType.TIMELAPSE
+            else FlowStepType.INTERVALOMETER
     }
 
     data class Astro(
@@ -156,6 +163,9 @@ sealed class FlowStep {
         /** Construct a step of the requested type with default field values. */
         fun forType(type: FlowStepType): FlowStep = when (type) {
             FlowStepType.INTERVALOMETER -> Intervalometer()
+            FlowStepType.TIMELAPSE -> Intervalometer(
+                exposureMs = AppConfig.TIMELAPSE_PULSE_MS,
+            )
             FlowStepType.ASTRO -> Astro()
             FlowStepType.DARK_FRAME -> DarkFrame()
             FlowStepType.RAMP -> Ramp()
@@ -168,7 +178,7 @@ sealed class FlowStep {
             val type = FlowStepType.entries.firstOrNull { it.name == json.optString("type") }
                 ?: FlowStepType.PAUSE
             return when (type) {
-                FlowStepType.INTERVALOMETER -> Intervalometer(
+                FlowStepType.INTERVALOMETER, FlowStepType.TIMELAPSE -> Intervalometer(
                     id = id,
                     intervalMs = json.optLong("intervalMs", AppConfig.DEFAULT_INTERVAL_MS),
                     exposureMs = json.optLong("exposureMs", AppConfig.DEFAULT_EXPOSURE_MS),
@@ -254,7 +264,13 @@ sealed class FlowStep {
 
 /** Summary label for a step in the flow builder list. */
 fun FlowStep.summaryLabel(context: Context): String = when (this) {
-    is FlowStep.Intervalometer -> context.getString(R.string.step_summary_intervalometer, shotCount, exposureMs, intervalMs)
+    is FlowStep.Intervalometer ->
+        if (type == FlowStepType.TIMELAPSE) {
+            // Sentinel exposure is an implementation detail — don't show it.
+            context.getString(R.string.step_summary_timelapse, shotCount, intervalMs)
+        } else {
+            context.getString(R.string.step_summary_intervalometer, shotCount, exposureMs, intervalMs)
+        }
     is FlowStep.Astro -> {
         val expS = AppConfig.astroExposureS(focalLength, cropFactor, ruleDivisor)
         context.getString(R.string.step_summary_astro, shotCount, "%.1f".format(expS), focalLength)
@@ -266,6 +282,7 @@ fun FlowStep.summaryLabel(context: Context): String = when (this) {
 
 fun FlowStepType.displayName(context: Context): String = when (this) {
     FlowStepType.INTERVALOMETER -> context.getString(R.string.step_type_intervalometer)
+    FlowStepType.TIMELAPSE -> context.getString(R.string.step_type_timelapse)
     FlowStepType.ASTRO -> context.getString(R.string.step_type_astro)
     FlowStepType.PAUSE -> context.getString(R.string.step_type_pause)
     FlowStepType.DARK_FRAME -> context.getString(R.string.step_type_dark_frame)

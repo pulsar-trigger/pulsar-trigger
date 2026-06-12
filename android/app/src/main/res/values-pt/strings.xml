@@ -520,6 +520,8 @@
     <string name="label_flow_name">Nome do fluxo</string>
     <string name="flow_name_exists">Um fluxo com este nome já existe e será substituído.</string>
     <string name="step_type_intervalometer">Intervalômetro</string>
+    <string name="step_type_timelapse">Timelapse</string>
+    <string name="step_summary_timelapse">%1$d fotos · a cada %2$d ms</string>
     <string name="step_type_astro">Astro</string>
     <string name="step_type_pause">Pausa</string>
     <string name="step_summary_intervalometer">%1$d fotos, %2$dms exp, %3$dms intervalo</string>

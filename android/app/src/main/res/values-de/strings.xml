@@ -520,6 +520,8 @@
     <string name="label_flow_name">Ablaufname</string>
     <string name="flow_name_exists">Ein Ablauf mit diesem Namen existiert bereits und wird ersetzt.</string>
     <string name="step_type_intervalometer">Intervalltimer</string>
+    <string name="step_type_timelapse">Zeitraffer</string>
+    <string name="step_summary_timelapse">%1$d Aufnahmen · alle %2$d ms</string>
     <string name="step_type_astro">Astro</string>
     <string name="step_type_pause">Pause</string>
     <string name="step_summary_intervalometer">%1$d Aufn., %2$dms Bel., %3$dms Pause</string>

@@ -751,6 +751,8 @@
 
     <!-- FlowStep model (used via context) -->
     <string name="step_type_intervalometer">Intervalometer</string>
+    <string name="step_type_timelapse">Timelapse</string>
+    <string name="step_summary_timelapse">%1$d shots · every %2$d ms</string>
     <string name="step_type_astro">Astro</string>
     <string name="step_type_pause">Pause</string>
     <string name="step_type_dark_frame">Dark Frame</string>

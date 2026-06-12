@@ -520,6 +520,8 @@
     <string name="label_flow_name">流程名称</string>
     <string name="flow_name_exists">同名流程已存在，将被替换。</string>
     <string name="step_type_intervalometer">间隔计时器</string>
+    <string name="step_type_timelapse">延时摄影</string>
+    <string name="step_summary_timelapse">%1$d 张 · 每 %2$d 毫秒</string>
     <string name="step_type_astro">天文</string>
     <string name="step_type_pause">暂停</string>
     <string name="step_summary_intervalometer">%1$d 张，%2$dms 曝光，%3$dms 间隔</string>
