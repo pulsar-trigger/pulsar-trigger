@@ -124,7 +124,7 @@ internal fun SettingsPanel(
         }
         Text(
             statusText + "  ·  " + String.format(Locale.US, "%.4f°, %.4f°", lat, lon),
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodySmall.copy(fontFamily = com.ehrocha.pulsar.ui.theme.Mono),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 8.dp),
         )
@@ -558,14 +558,14 @@ internal fun AircraftRow(
                 Spacer(Modifier.height(4.dp))
                 Text(
                     formatFlightLine(s),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = com.ehrocha.pulsar.ui.theme.Mono),
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     String.format(Locale.US, "%.1f km", s.distanceKm),
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleSmall.copy(fontFamily = com.ehrocha.pulsar.ui.theme.Mono),
                     fontWeight = FontWeight.SemiBold,
                     color = accent,
                 )
@@ -813,7 +813,9 @@ internal fun DetailRow(label: String, value: String?) {
         )
         Text(
             value,
-            style = MaterialTheme.typography.bodyMedium,
+            // Telemetry voice: aircraft data is live numbers — mono keeps
+            // columns of figures aligned across rows.
+            style = MaterialTheme.typography.bodyMedium.copy(fontFamily = com.ehrocha.pulsar.ui.theme.Mono),
             modifier = Modifier.weight(1f),
         )
     }
