@@ -589,6 +589,10 @@
     <string name="star_trails_hint">Coloque Bulb + Manual no seletor. Rastros empilhados: muitos quadros com intervalo mínimo, combinados depois (StarStaX, Sequator…). Mantenha o intervalo curto para os rastros não saírem tracejados. Faça alguns darks depois.</string>
     <string name="star_trails_not_connected">Conecte uma câmera para iniciar.</string>
     <string name="star_trails_ble_gap_note">Canon BLE: intervalo mínimo de 4 s — a câmera perde ciclos mais rápidos.</string>
+    <string name="star_trails_focal">Lente %1$d mm · %2$s</string>
+    <string name="star_trails_frame_row">Rastro no quadro</string>
+    <string name="star_trails_frame_value">≈ %1$d%% da largura</string>
+    <string name="star_trails_frame_full">sai do quadro</string>
     <string name="nd_calc_title">Filtro ND</string>
     <string name="nd_calc_result_label">Tempo de longa exposição</string>
     <string name="nd_calc_base">Velocidade base: %1$s</string>

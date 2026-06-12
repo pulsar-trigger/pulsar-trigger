@@ -852,6 +852,10 @@
     <string name="star_trails_hint">Set Bulb + Manual on the camera dial. Stacked trails: many subs with a tiny gap, blended later (StarStaX, Sequator…). Keep the gap small so the trails don\'t come out dashed. Shoot a few dark frames after for noise.</string>
     <string name="star_trails_not_connected">Connect a camera to start.</string>
     <string name="star_trails_ble_gap_note">Canon BLE: minimum gap is 4 s — the camera misses faster release/press cycles.</string>
+    <string name="star_trails_focal">Lens %1$d mm · %2$s</string>
+    <string name="star_trails_frame_row">Trail across frame</string>
+    <string name="star_trails_frame_value">≈ %1$d%% of frame width</string>
+    <string name="star_trails_frame_full">exits the frame</string>
     <string name="nd_calc_title">ND Filter</string>
     <string name="nd_calc_result_label">Long exposure time</string>
     <string name="nd_calc_base">Base shutter: %1$s</string>

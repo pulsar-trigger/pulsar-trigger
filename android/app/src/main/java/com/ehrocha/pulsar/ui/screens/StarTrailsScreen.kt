@@ -20,6 +20,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -56,12 +59,18 @@ import kotlin.math.roundToInt
  * The wizard owns only the maths + guidance; the actual shooting reuses the
  * proven `FlowStep.Intervalometer` bulb path across all transports.
  */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     var totalMin by rememberSaveable { mutableIntStateOf(60) }   // session length
     var subSec by rememberSaveable { mutableIntStateOf(30) }     // per-frame exposure
     var gapSec by rememberSaveable { mutableIntStateOf(2) }      // write gap
     var useAutofocus by rememberSaveable { mutableStateOf(false) }
+    // Lens + sensor: the sky arc is focal-length independent (15°/h), but
+    // what the arc means IN FRAME isn't — 30° through 16mm is a sweep,
+    // through 200mm it exits the frame.
+    var focalMm by rememberSaveable { mutableIntStateOf(24) }
+    var sensorIdx by rememberSaveable { mutableIntStateOf(0) }
 
     val runState = LocalRunState.current
     val running = runState !is RunState.Idle
@@ -85,6 +94,13 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     // Stars sweep 15°/hour (Earth's rotation). Arc is independent of where
     // you point — it's the trail length you'll get.
     val arcDeg = actualTotalSec / 3600.0 * 15.0
+    // Horizontal FOV for the chosen glass; trail share computed at the
+    // celestial equator (worst case — stars near the pole trail less).
+    val sensorWidthMm = listOf(36.0, 23.5, 17.3)[sensorIdx]
+    val hFovDeg = Math.toDegrees(
+        2.0 * Math.atan(sensorWidthMm / (2.0 * focalMm)),
+    )
+    val framePct = (arcDeg / hFovDeg * 100.0)
 
     Scaffold(
         topBar = {
@@ -139,6 +155,17 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                         stringResource(R.string.star_trails_arc),
                         String.format(java.util.Locale.US, "%.1f°", arcDeg),
                     )
+                    com.ehrocha.pulsar.ui.components.StatRow(
+                        stringResource(R.string.star_trails_frame_row),
+                        if (framePct >= 100.0) {
+                            stringResource(R.string.star_trails_frame_full)
+                        } else {
+                            stringResource(
+                                R.string.star_trails_frame_value,
+                                framePct.roundToInt(),
+                            )
+                        },
+                    )
                 }
             }
 
@@ -185,6 +212,35 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+
+            Text(
+                stringResource(
+                    R.string.star_trails_focal,
+                    focalMm,
+                    listOf("FF", "APS-C", "MFT")[sensorIdx],
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Slider(
+                value = focalMm.toFloat(),
+                onValueChange = { focalMm = it.roundToInt() },
+                valueRange = 8f..200f,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                listOf("Full-frame", "APS-C", "MFT").forEachIndexed { i, label ->
+                    SegmentedButton(
+                        selected = sensorIdx == i,
+                        onClick = { sensorIdx = i },
+                        shape = SegmentedButtonDefaults.itemShape(
+                            index = i, count = 3,
+                        ),
+                    ) { Text(label, style = MaterialTheme.typography.labelMedium) }
+                }
             }
 
             if (canControlAf) {

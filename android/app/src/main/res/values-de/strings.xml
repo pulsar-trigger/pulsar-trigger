@@ -589,6 +589,10 @@
     <string name="star_trails_hint">Stelle Bulb + Manuell am Kamerarad ein. Gestapelte Spuren: viele Teilbilder mit winziger Pause, später verrechnet (StarStaX, Sequator…). Halte die Pause klein, damit die Spuren nicht gestrichelt werden. Mach danach ein paar Dunkelbilder.</string>
     <string name="star_trails_not_connected">Kamera verbinden, um zu starten.</string>
     <string name="star_trails_ble_gap_note">Canon BLE: Mindestpause 4 s — die Kamera verpasst schnellere Loslassen/Drücken-Zyklen.</string>
+    <string name="star_trails_focal">Objektiv %1$d mm · %2$s</string>
+    <string name="star_trails_frame_row">Spur im Bild</string>
+    <string name="star_trails_frame_value">≈ %1$d%% der Bildbreite</string>
+    <string name="star_trails_frame_full">verlässt das Bild</string>
     <string name="nd_calc_title">ND-Filter</string>
     <string name="nd_calc_result_label">Langzeitbelichtung</string>
     <string name="nd_calc_base">Basiszeit: %1$s</string>

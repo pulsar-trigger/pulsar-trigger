@@ -110,10 +110,12 @@ fun MainMenuScreen(
     // landing destination — the one users open the app for. Favorites earns
     // a dedicated destination (between Trigger and Tools) because power users
     // live in their pinned presets.
+    // Favorites folded into the Trigger page (v0.438, Eduardo: a whole
+    // destination for bookmarked presets was an oddball — wizard preset
+    // pickers + the Trigger sections already cover it).
     val destinations = listOf(
         stringResource(R.string.dest_dashboard),
         stringResource(R.string.dest_trigger),
-        stringResource(R.string.dest_favorites),
         stringResource(R.string.dest_tools),
     )
     val pagerState = rememberPagerState(initialPage = initialDest, pageCount = { destinations.size })
@@ -214,7 +216,6 @@ fun MainMenuScreen(
     val destIcons = listOf(
         Icons.Default.Stars,         // Dashboard
         Icons.Default.PhotoCamera,   // Trigger
-        Icons.Default.Bookmark,      // Favorites
         Icons.Default.Science,       // Tools
     )
     val hasAnyUpdate = hasFwUpdate || hasAppUpdate
@@ -411,6 +412,23 @@ private fun MenuPageContent(
                         if (lastTile != null) {
                             ResumeLastRow(lastTile)
                         }
+                        // Bookmarked presets, one tap from the trigger page —
+                        // hidden entirely when there are none (the bookmark
+                        // gesture lives in every wizard's Save dialog).
+                        val favUserModes by vm.userModes.collectAsState()
+                        val favoriteTiles = favUserModes.filter { it.bookmarked }.map { mode ->
+                            LauncherItem(
+                                key = "user:${mode.id}",
+                                label = mode.name,
+                                icon = Icons.Default.Bookmark,
+                                onClick = { onUserModeRun(mode) },
+                            )
+                        }
+                        if (favoriteTiles.isNotEmpty()) {
+                            SectionContainer(title = stringResource(R.string.dest_favorites)) {
+                                SectionGrid(favoriteTiles)
+                            }
+                        }
                         // Filter chips removed (v0.416 design review): three
                         // always-visible sections need no filtering ceremony.
                         SectionContainer(title = stringResource(R.string.trigger_section_bulb)) {
@@ -421,57 +439,6 @@ private fun MenuPageContent(
                         }
                         SectionContainer(title = stringResource(R.string.trigger_section_custom)) {
                             SectionGrid(customR)
-                        }
-                        Spacer(Modifier.height(8.dp))
-                    }
-                }
-                DEST_FAVORITES -> {
-                    val userModes by vm.userModes.collectAsState()
-                    val favoriteTiles = userModes.filter { it.bookmarked }.map { mode ->
-                        LauncherItem(
-                            key = "user:${mode.id}",
-                            label = mode.name,
-                            icon = Icons.Default.Bookmark,
-                            onClick = { onUserModeRun(mode) },
-                        )
-                    }
-                    // fillMaxSize + Arrangement.Top so sparse content
-                    // (0–1 favorites) sits at the top of the page instead
-                    // of getting visually centered by the pager.
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp)
-                            .verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.Top),
-                    ) {
-                        if (favoriteTiles.isEmpty()) {
-                            // Empty state — guide the user to where the
-                            // bookmark gesture lives (in any wizard's Save
-                            // dialog).
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(20.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    Text(
-                                        stringResource(R.string.favorites_empty_title),
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.Bold,
-                                    )
-                                    Text(
-                                        stringResource(R.string.trigger_no_favorites),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
-                        } else {
-                            SectionGrid(favoriteTiles)
                         }
                         Spacer(Modifier.height(8.dp))
                     }
@@ -558,8 +525,7 @@ private fun MenuPageContent(
 
 const val DEST_DASHBOARD = 0
 const val DEST_TRIGGER = 1
-const val DEST_FAVORITES = 2
-const val DEST_TOOLS = 3
+const val DEST_TOOLS = 2
 
 
 @Composable

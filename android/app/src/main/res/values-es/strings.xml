@@ -587,6 +587,10 @@
     <string name="star_trails_hint">Pon Bulb + Manual en el dial. Estelas apiladas: muchas tomas con un intervalo mínimo, combinadas después (StarStaX, Sequator…). Mantén el intervalo corto para que las estelas no salgan discontinuas. Haz unos darks después.</string>
     <string name="star_trails_not_connected">Conecta una cámara para empezar.</string>
     <string name="star_trails_ble_gap_note">Canon BLE: intervalo mínimo de 4 s — la cámara pierde ciclos más rápidos.</string>
+    <string name="star_trails_focal">Objetivo %1$d mm · %2$s</string>
+    <string name="star_trails_frame_row">Trazo en el encuadre</string>
+    <string name="star_trails_frame_value">≈ %1$d%% del ancho</string>
+    <string name="star_trails_frame_full">sale del encuadre</string>
     <string name="nd_calc_title">Filtro ND</string>
     <string name="nd_calc_result_label">Tiempo de larga exposición</string>
     <string name="nd_calc_base">Velocidad base: %1$s</string>

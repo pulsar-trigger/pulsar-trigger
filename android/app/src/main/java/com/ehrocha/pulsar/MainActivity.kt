@@ -113,8 +113,7 @@ class MainActivity : AppCompatActivity() {
         // import the screen module.
         const val DEST_DASHBOARD = 0
         const val DEST_TRIGGER = 1
-        const val DEST_FAVORITES = 2
-        const val DEST_TOOLS = 3
+        const val DEST_TOOLS = 2
 
         /** Maximum byte size of an imported .pulsar event file. The
          *  largest event file we'd reasonably expect (a fully-populated

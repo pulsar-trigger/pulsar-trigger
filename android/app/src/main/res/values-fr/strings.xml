@@ -589,6 +589,10 @@
     <string name="star_trails_hint">Réglez Bulb + Manuel sur la molette. Filés empilés : nombreuses poses avec un intervalle minime, fusionnées ensuite (StarStaX, Sequator…). Gardez l\'intervalle court pour éviter les filés en pointillés. Faites quelques darks après.</string>
     <string name="star_trails_not_connected">Connectez un appareil pour démarrer.</string>
     <string name="star_trails_ble_gap_note">Canon BLE : intervalle minimum de 4 s — l\'appareil rate les cycles plus rapides.</string>
+    <string name="star_trails_focal">Objectif %1$d mm · %2$s</string>
+    <string name="star_trails_frame_row">Trace dans le cadre</string>
+    <string name="star_trails_frame_value">≈ %1$d%% de la largeur</string>
+    <string name="star_trails_frame_full">sort du cadre</string>
     <string name="nd_calc_title">Filtre ND</string>
     <string name="nd_calc_result_label">Temps de pose longue</string>
     <string name="nd_calc_base">Vitesse de base : %1$s</string>

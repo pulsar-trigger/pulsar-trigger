@@ -589,6 +589,10 @@
     <string name="star_trails_hint">ダイヤルをバルブ＋マニュアルに。比較明合成（StarStaX、Sequator など）用に、わずかな間隔で多数のサブ露光を撮影します。間隔を短く保つと軌跡が途切れません。終了後にダークフレームを数枚撮影してください。</string>
     <string name="star_trails_not_connected">開始するにはカメラを接続してください。</string>
     <string name="star_trails_ble_gap_note">Canon BLE: 最小間隔は 4 秒 — それより速い解放/押下サイクルをカメラが取りこぼします。</string>
+    <string name="star_trails_focal">レンズ %1$d mm · %2$s</string>
+    <string name="star_trails_frame_row">フレーム内の軌跡</string>
+    <string name="star_trails_frame_value">幅の約 %1$d%%</string>
+    <string name="star_trails_frame_full">フレームを越える</string>
     <string name="nd_calc_title">NDフィルター</string>
     <string name="nd_calc_result_label">長秒露光時間</string>
     <string name="nd_calc_base">基準シャッター: %1$s</string>
