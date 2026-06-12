@@ -283,7 +283,10 @@ internal fun SliderRow(
 ) {
     Text(
         label,
-        style = MaterialTheme.typography.bodyMedium,
+        // Same voice as SignalSlider — these labels carry live values.
+        style = MaterialTheme.typography.labelMedium.copy(
+            fontFamily = com.ehrocha.pulsar.ui.theme.Mono,
+        ),
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Slider(

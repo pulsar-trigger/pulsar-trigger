@@ -89,30 +89,20 @@ fun NdCalculatorScreen(onBack: () -> Unit) {
             }
 
             Spacer(Modifier.height(4.dp))
-            Text(
-                stringResource(R.string.nd_calc_base, baseLabel),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Slider(
+            com.ehrocha.pulsar.ui.components.SignalSlider(
+                text = stringResource(R.string.nd_calc_base, baseLabel),
                 value = baseIdx.toFloat(),
-                onValueChange = { baseIdx = it.roundToInt() },
-                valueRange = 0f..(ND_SHUTTER_SPEEDS.size - 1).toFloat(),
+                onChange = { baseIdx = it.roundToInt() },
+                range = 0f..(ND_SHUTTER_SPEEDS.size - 1).toFloat(),
                 steps = ND_SHUTTER_SPEEDS.size - 2,
-                modifier = Modifier.fillMaxWidth(),
             )
 
-            Text(
-                stringResource(R.string.nd_calc_filter, ndNumber, stops),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Slider(
+            com.ehrocha.pulsar.ui.components.SignalSlider(
+                text = stringResource(R.string.nd_calc_filter, ndNumber, stops),
                 value = stops.toFloat(),
-                onValueChange = { stops = it.roundToInt() },
-                valueRange = 1f..20f,
+                onChange = { stops = it.roundToInt() },
+                range = 1f..20f,
                 steps = 18,
-                modifier = Modifier.fillMaxWidth(),
             )
 
             Text(

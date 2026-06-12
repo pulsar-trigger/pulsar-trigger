@@ -131,42 +131,27 @@ fun DofCalculatorScreen(onBack: () -> Unit) {
                 }
             }
 
-            Text(
-                stringResource(R.string.dof_calc_focal, focalMm.roundToInt()),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Slider(
+            com.ehrocha.pulsar.ui.components.SignalSlider(
+                text = stringResource(R.string.dof_calc_focal, focalMm.roundToInt()),
                 value = focalMm,
-                onValueChange = { focalMm = it },
-                valueRange = 8f..600f,
-                modifier = Modifier.fillMaxWidth(),
+                onChange = { focalMm = it },
+                range = 8f..600f,
             )
 
-            Text(
-                stringResource(R.string.dof_calc_aperture, formatFstop(n)),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Slider(
+            com.ehrocha.pulsar.ui.components.SignalSlider(
+                text = stringResource(R.string.dof_calc_aperture, formatFstop(n)),
                 value = fstopIdx.toFloat(),
-                onValueChange = { fstopIdx = it.roundToInt() },
-                valueRange = 0f..(DOF_FSTOPS.size - 1).toFloat(),
+                onChange = { fstopIdx = it.roundToInt() },
+                range = 0f..(DOF_FSTOPS.size - 1).toFloat(),
                 steps = DOF_FSTOPS.size - 2,
-                modifier = Modifier.fillMaxWidth(),
             )
 
-            Text(
-                stringResource(R.string.dof_calc_distance,
+            com.ehrocha.pulsar.ui.components.SignalSlider(
+                text = stringResource(R.string.dof_calc_distance,
                     String.format(java.util.Locale.US, "%.1f", distanceM)),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Slider(
                 value = distanceM,
-                onValueChange = { distanceM = it },
-                valueRange = 0.5f..100f,
-                modifier = Modifier.fillMaxWidth(),
+                onChange = { distanceM = it },
+                range = 0.5f..100f,
             )
         }
     }

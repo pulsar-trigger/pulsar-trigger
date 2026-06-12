@@ -170,41 +170,26 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
             }
 
             Spacer(Modifier.height(4.dp))
-            Text(
-                stringResource(R.string.star_trails_duration, totalMin),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Slider(
+            com.ehrocha.pulsar.ui.components.SignalSlider(
+                text = stringResource(R.string.star_trails_duration, totalMin),
                 value = totalMin.toFloat(),
-                onValueChange = { totalMin = it.roundToInt() },
-                valueRange = 10f..240f,
-                modifier = Modifier.fillMaxWidth(),
+                onChange = { totalMin = it.roundToInt() },
+                range = 10f..240f,
             )
 
-            Text(
-                stringResource(R.string.star_trails_sub, subSec),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Slider(
+            com.ehrocha.pulsar.ui.components.SignalSlider(
+                text = stringResource(R.string.star_trails_sub, subSec),
                 value = subSec.toFloat(),
-                onValueChange = { subSec = it.roundToInt() },
-                valueRange = 10f..120f,
-                modifier = Modifier.fillMaxWidth(),
+                onChange = { subSec = it.roundToInt() },
+                range = 10f..120f,
             )
 
-            Text(
-                stringResource(R.string.star_trails_gap, gapSec),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Slider(
+            com.ehrocha.pulsar.ui.components.SignalSlider(
+                text = stringResource(R.string.star_trails_gap, gapSec),
                 value = gapSec.toFloat(),
-                onValueChange = { gapSec = it.roundToInt().coerceAtLeast(minGapSec) },
-                valueRange = minGapSec.toFloat()..8f,
+                onChange = { gapSec = it.roundToInt().coerceAtLeast(minGapSec) },
+                range = minGapSec.toFloat()..8f,
                 steps = (8 - minGapSec - 1).coerceAtLeast(0),
-                modifier = Modifier.fillMaxWidth(),
             )
             if (onCanonBle) {
                 Text(
@@ -214,20 +199,15 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                 )
             }
 
-            Text(
-                stringResource(
+            com.ehrocha.pulsar.ui.components.SignalSlider(
+                text = stringResource(
                     R.string.star_trails_focal,
                     focalMm,
                     listOf("FF", "APS-C", "MFT")[sensorIdx],
                 ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Slider(
                 value = focalMm.toFloat(),
-                onValueChange = { focalMm = it.roundToInt() },
-                valueRange = 8f..200f,
-                modifier = Modifier.fillMaxWidth(),
+                onChange = { focalMm = it.roundToInt() },
+                range = 8f..200f,
             )
             SingleChoiceSegmentedButtonRow(
                 modifier = Modifier.fillMaxWidth(),
