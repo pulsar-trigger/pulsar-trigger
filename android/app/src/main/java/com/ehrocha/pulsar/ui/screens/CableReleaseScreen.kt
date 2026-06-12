@@ -6,6 +6,7 @@
 package com.ehrocha.pulsar.ui.screens
 
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -155,14 +156,25 @@ fun CableReleaseScreen(vm: PulsarViewModel, onBack: () -> Unit) {
         Spacer(Modifier.height(16.dp))
 
         // ── Action button (matches Manual hold/lock button) ──────────────
+        val armedBrush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+            listOf(
+                com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.liveStart,
+                com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.liveEnd,
+            ),
+        )
         Surface(
             shape = RoundedCornerShape(20.dp),
-            color = if (connected) MaterialTheme.colorScheme.primary
+            color = if (connected) androidx.compose.ui.graphics.Color.Transparent
                     else MaterialTheme.colorScheme.surfaceContainerHighest,
-            tonalElevation = 2.dp,
+            tonalElevation = if (connected) 0.dp else 2.dp,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(64.dp)
+                .then(
+                    if (connected) Modifier.background(
+                        armedBrush, RoundedCornerShape(20.dp),
+                    ) else Modifier,
+                )
                 .pointerInput(connected) {
                     if (!connected) return@pointerInput
                     detectTapGestures(onTap = { vm.fireSingle() })
@@ -173,7 +185,7 @@ fun CableReleaseScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                     stringResource(R.string.btn_single_shot),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (connected) MaterialTheme.colorScheme.onPrimary
+                    color = if (connected) androidx.compose.ui.graphics.Color.White
                             else MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )

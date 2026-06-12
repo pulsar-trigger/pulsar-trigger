@@ -177,14 +177,29 @@ internal fun ManualActionsContent(
             }
         }
 
+        // StartStopBar standard (Eduardo's #3): armed = live gradient,
+        // firing = error red — same grammar as every wizard's Start/Stop.
+        val armedBrush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+            listOf(
+                com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.liveStart,
+                com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.liveEnd,
+            ),
+        )
         Surface(
             shape = RoundedCornerShape(20.dp),
-            color = if (active) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.primary,
-            tonalElevation = if (active) 8.dp else 2.dp,
+            color = when {
+                active -> MaterialTheme.colorScheme.error
+                else -> androidx.compose.ui.graphics.Color.Transparent
+            },
+            tonalElevation = if (active) 8.dp else 0.dp,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(64.dp)
+                .then(
+                    if (!active) Modifier.background(
+                        armedBrush, RoundedCornerShape(20.dp),
+                    ) else Modifier,
+                )
                 .pointerInput(connected, isHold) {
                     if (!connected) return@pointerInput
                     if (isHold) {
@@ -222,7 +237,8 @@ internal fun ManualActionsContent(
                     },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary,
+                    // White on both the gradient and the error red.
+                    color = androidx.compose.ui.graphics.Color.White,
                     textAlign = TextAlign.Center,
                 )
             }
