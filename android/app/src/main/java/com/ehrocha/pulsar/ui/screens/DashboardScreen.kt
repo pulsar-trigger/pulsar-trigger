@@ -1077,8 +1077,13 @@ internal fun DashCard(
     com.ehrocha.pulsar.ui.components.PulseDivider()
     AnimatedVisibility(
         visible = expanded,
-        enter = expandVertically(),
-        exit = shrinkVertically(),
+        enter = expandVertically(
+            animationSpec = androidx.compose.animation.core.spring(
+                dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy,
+                stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
+            ),
+        ) + androidx.compose.animation.fadeIn(),
+        exit = shrinkVertically() + androidx.compose.animation.fadeOut(),
     ) {
         Surface(
             shape = RoundedCornerShape(12.dp),

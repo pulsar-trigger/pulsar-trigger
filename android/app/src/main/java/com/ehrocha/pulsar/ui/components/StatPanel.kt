@@ -5,6 +5,7 @@
 
 package com.ehrocha.pulsar.ui.components
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -37,7 +38,12 @@ fun StatPanel(
         color = MaterialTheme.colorScheme.primaryContainer,
         modifier = modifier.fillMaxWidth(),
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) { content() }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .animateContentSize()
+                .padding(16.dp),
+        ) { content() }
     }
 }
 

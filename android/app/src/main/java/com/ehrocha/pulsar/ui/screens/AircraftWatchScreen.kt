@@ -364,6 +364,11 @@ fun AircraftWatchScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         items(sightings, key = { it.icaoHex }) { s ->
+                            // Rows glide to their new slot as proximity
+                            // order changes between polls (fluidity pass).
+                            androidx.compose.foundation.layout.Box(
+                                modifier = Modifier.animateItem(),
+                            ) {
                             AircraftRow(
                                 s = s,
                                 radiusKm = radiusKm,
@@ -379,6 +384,7 @@ fun AircraftWatchScreen(
                                                    else s.icaoHex
                                 },
                             )
+                            }
                         }
                     }
                 }
