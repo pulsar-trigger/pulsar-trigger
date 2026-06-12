@@ -20,8 +20,8 @@ android {
         applicationId = "com.ehrocha.pulsar"
         minSdk = 26
         targetSdk = 35
-        versionCode = 458
-        versionName = "0.447.0"
+        versionCode = 459
+        versionName = "0.448.0"
     }
 
     signingConfigs {

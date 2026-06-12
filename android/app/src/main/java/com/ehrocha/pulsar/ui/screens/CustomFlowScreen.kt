@@ -810,9 +810,52 @@ private fun FlowEditorView(
                 status = status,
             )
             Spacer(Modifier.height(12.dp))
+            // SIGNAL (Eduardo's #5): a custom/mixed run shows the SAME
+            // instrument as the wizards — status pill, mono counters,
+            // CyclePhaseTrace, PulseScope — fed per current step. The
+            // timeline above keeps the sequence position; the step list
+            // returns when the run ends.
+            val cur = steps.getOrNull(currentStep)
+            val plannedShots: Int
+            val exposureMs: Long
+            val gapMs: Long
+            val delayMs: Long
+            when (cur) {
+                is FlowStep.Intervalometer -> {
+                    plannedShots = cur.shotCount; exposureMs = cur.exposureMs
+                    gapMs = cur.intervalMs; delayMs = cur.delayMs
+                }
+                is FlowStep.Astro -> {
+                    plannedShots = cur.shotCount
+                    exposureMs = AppConfig.astroExposureMs(
+                        cur.focalLength, cur.cropFactor, cur.ruleDivisor,
+                    )
+                    gapMs = 0L; delayMs = cur.delayMs
+                }
+                is FlowStep.DarkFrame -> {
+                    plannedShots = cur.shotCount; exposureMs = cur.exposureMs
+                    gapMs = 0L; delayMs = 0L
+                }
+                is FlowStep.Ramp -> {
+                    plannedShots = 0  // exposure varies — indeterminate
+                    exposureMs = 0L; gapMs = cur.intervalMs; delayMs = cur.delayMs
+                }
+                else -> {
+                    plannedShots = 0; exposureMs = 0L; gapMs = 0L; delayMs = 0L
+                }
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                RunningView(
+                    plannedShots = plannedShots,
+                    exposureMs = exposureMs,
+                    gapMs = gapMs,
+                    startDelayMs = delayMs,
+                )
+            }
         }
 
-        // ── Step list ────────────────────────────────────────────────────
+        // ── Step list (editor) — hidden while running ─────────────────────
+        if (!running || steps.isEmpty()) {
         Surface(
             shape = RoundedCornerShape(12.dp),
             tonalElevation = 1.dp,
@@ -906,6 +949,7 @@ private fun FlowEditorView(
                     }
                 }
             }
+        }
         }
 
         Spacer(Modifier.height(16.dp))
