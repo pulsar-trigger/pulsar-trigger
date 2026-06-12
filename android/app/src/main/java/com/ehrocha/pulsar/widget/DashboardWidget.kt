@@ -58,6 +58,15 @@ import java.util.Locale
 import kotlin.math.abs
 
 // Verdict palette — matches DashboardScreen.kt's VerdictRow exactly.
+// SIGNAL: the widget follows the app's own schemes (Carbon when the
+// system is dark, Chart Paper in light) instead of Material You dynamic
+// color — it sits on the home screen next to the pulsar icon and should
+// match it. Glance can't load bundled fonts, so type stays system.
+private val PulsarWidgetColors = androidx.glance.material3.ColorProviders(
+    light = com.ehrocha.pulsar.ui.theme.LightColorScheme,
+    dark = com.ehrocha.pulsar.ui.theme.DarkColorScheme,
+)
+
 private val VERDICT_GOOD = Color(0xFF2E7D32)
 private val VERDICT_BAD = Color(0xFFE65100)
 private val WINDOW_EXCELLENT = Color(0xFF2E7D32)
@@ -85,7 +94,7 @@ class DashboardWidget : GlanceAppWidget() {
         val bgAlpha = DashboardSnapshotStore.backgroundAlpha(context)
         val textScale = DashboardSnapshotStore.textScale(context)
         provideContent {
-            GlanceTheme {
+            GlanceTheme(colors = PulsarWidgetColors) {
                 if (state == null) {
                     EmptyState(bgAlpha, textScale)
                 } else {
