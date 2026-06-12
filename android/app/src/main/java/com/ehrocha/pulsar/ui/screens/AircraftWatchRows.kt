@@ -519,15 +519,25 @@ internal fun AircraftRow(
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    s.callsign ?: s.icaoHex.uppercase(),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                )
+                // Compact row (Eduardo's #4): callsign and chips share the
+                // first line, aim figures share one line on the right —
+                // five text rows became three.
+                androidx.compose.foundation.layout.FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        s.callsign ?: s.icaoHex.uppercase(),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    LightingChip(lighting)
+                    rowBadges.forEach { BadgeChip(it) }
+                }
                 // Subline: model + operator if known, otherwise fall back
                 // to ICAO hex + country. The progressive enhancement means
                 // the row reads usefully on the first poll and gets richer
@@ -544,18 +554,7 @@ internal fun AircraftRow(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                // Lighting chip + rare-aircraft badges share one wrap row.
-                // Lighting is the most photographically glanceable, so it
-                // leads.
-                Spacer(Modifier.height(4.dp))
-                androidx.compose.foundation.layout.FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    LightingChip(lighting)
-                    rowBadges.forEach { BadgeChip(it) }
-                }
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(2.dp))
                 Text(
                     formatFlightLine(s),
                     style = MaterialTheme.typography.bodySmall.copy(fontFamily = com.ehrocha.pulsar.ui.theme.Mono),
@@ -570,19 +569,15 @@ internal fun AircraftRow(
                     color = accent,
                 )
                 // Bearing = where to aim horizontally; elevation = how far
-                // to tilt up. Together they're a complete "point here".
+                // to tilt up. One line: a complete "point here".
                 Text(
-                    "${bearingArrow(s.bearingDeg)} ${s.bearingDeg.roundToInt()}°",
-                    style = MaterialTheme.typography.labelMedium,
+                    "${bearingArrow(s.bearingDeg)} ${s.bearingDeg.roundToInt()}°" +
+                        (elevation?.let { " · ∡ ${it.roundToInt()}°" } ?: ""),
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontFamily = com.ehrocha.pulsar.ui.theme.Mono,
+                    ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (elevation != null) {
-                    Text(
-                        "∡ ${elevation.roundToInt()}°",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
             }
             // Info button — the secondary action, since the row body now
             // selects-on-map. Tap opens the full detail dialog.
