@@ -211,6 +211,7 @@ Pulsar talks to cameras through five mutually-exclusive transports, all routed t
 - **Discovery** — Nordic BLE scanner filtered on the Pulsar service UUID (`0000ff00-...`). Manufacturer-specific data in the advertisement carries board kind (`GENERIC_ESP32 = 1`, `M5STICK_S3 = 2`, `M5CORE2 = 3`) and firmware version so the scan list can show the right icon and label before connecting.
 - **Pairing** — BLE Secure Connections with bonding (`ESP_LE_AUTH_REQ_SC_MITM_BOND`). The command characteristic requires encrypted writes; status notify is open. ESP32 has no I/O for PIN entry → Just Works pairing (`ESP_IO_CAP_NONE`).
 - **Wire format** — opcode + version + TLV; see [docs/ble-protocol.md](docs/ble-protocol.md).
+- [docs/design-system.md](docs/design-system.md) — the SIGNAL design system (type, color roles, component kit)
 - **OTA** — firmware updates over BLE via a separate OTA service (`0000ff10-...`). Chunked 8 KB writes with CRC validation; full-screen overlay during the run.
 
 ### Canon CCAPI
