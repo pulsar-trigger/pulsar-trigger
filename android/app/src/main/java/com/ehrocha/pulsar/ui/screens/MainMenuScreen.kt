@@ -117,9 +117,20 @@ fun MainMenuScreen(
         stringResource(R.string.dest_trigger),
         stringResource(R.string.dest_tools),
     )
-    val pagerState = rememberPagerState(initialPage = initialDest, pageCount = { destinations.size })
+    // "Infinite" pager (Eduardo): swiping right past Tools wraps to
+    // Dashboard and vice-versa. Virtual page space, real destination =
+    // page % count; the bottom bar targets the nearest virtual page so a
+    // tap never spins the carousel.
+    val destCount = destinations.size
+    val virtualCount = destCount * 1000
+    val basePage = virtualCount / 2 - (virtualCount / 2) % destCount
+    val pagerState = rememberPagerState(
+        initialPage = basePage + initialDest,
+        pageCount = { virtualCount },
+    )
+    val currentDest = pagerState.currentPage % destCount
     val scope = rememberCoroutineScope()
-    LaunchedEffect(pagerState.currentPage) { onDestChanged(pagerState.currentPage) }
+    LaunchedEffect(currentDest) { onDestChanged(currentDest) }
 
     // Update banner extracted into a lambda so both layout branches render
     // the same dismissible banner without duplicating the markup.
@@ -228,7 +239,7 @@ fun MainMenuScreen(
                     // Destination names are the brand voice — Unbounded,
                     // the only place type shouts on an idle screen.
                     Text(
-                        destinations[pagerState.currentPage],
+                        destinations[currentDest],
                         style = MaterialTheme.typography.headlineMedium,
                     )
                 },
@@ -270,8 +281,14 @@ fun MainMenuScreen(
             NavigationBar(modifier = Modifier.height(64.dp)) {
                 destinations.forEachIndexed { index, title ->
                     NavigationBarItem(
-                        selected = pagerState.currentPage == index,
-                        onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
+                        selected = currentDest == index,
+                        onClick = {
+                            scope.launch {
+                                // nearest virtual page carrying this dest
+                                val delta = index - currentDest
+                                pagerState.animateScrollToPage(pagerState.currentPage + delta)
+                            }
+                        },
                         icon = { Icon(destIcons[index], contentDescription = title) },
                     )
                 }
@@ -290,7 +307,8 @@ fun MainMenuScreen(
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.weight(1f),
-            ) { page ->
+            ) { virtualPage ->
+                val page = virtualPage % destCount
                 pageContent(page)
             }
         }
