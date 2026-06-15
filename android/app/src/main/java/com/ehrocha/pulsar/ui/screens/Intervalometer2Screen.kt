@@ -75,7 +75,14 @@ fun Intervalometer2Screen(
     vm: PulsarViewModel,
     onBack: () -> Unit,
     initialPresetId: String? = null,
+    // Custom Flow step-edit mode (v0.454): when [onSaveStep] is non-null the
+    // screen is reused verbatim as a step editor — seeded from
+    // [stepEditInitial], the terminal button reads "Save" and returns the
+    // built step instead of firing. Same wizard, same look and feel.
+    stepEditInitial: FlowStep.Intervalometer? = null,
+    onSaveStep: ((FlowStep.Intervalometer) -> Unit)? = null,
 ) {
+    val isStepEdit = onSaveStep != null
     // Track which preset (if any) is being edited. null = brand-new config.
     val allModes by vm.userModes.collectAsState()
     val loadedPreset = remember(initialPresetId, allModes) {
@@ -87,29 +94,34 @@ fun Intervalometer2Screen(
     // "start fresh". rememberSaveable's initializer only runs once, so
     // changing presets requires navigating away and back.
     var exposureMs by rememberSaveable {
-        mutableLongStateOf(loadedPreset?.body?.exposureMs ?: 0L)
+        mutableLongStateOf(stepEditInitial?.exposureMs ?: loadedPreset?.body?.exposureMs ?: 0L)
     }
     var intervalMs by rememberSaveable {
-        mutableLongStateOf(loadedPreset?.body?.intervalMs ?: 0L)
+        mutableLongStateOf(stepEditInitial?.intervalMs ?: loadedPreset?.body?.intervalMs ?: 0L)
     }
     var shotCount by rememberSaveable {
-        mutableIntStateOf(loadedPreset?.body?.shotCount ?: 0)
+        mutableIntStateOf(stepEditInitial?.shotCount ?: loadedPreset?.body?.shotCount ?: 0)
     }
     var delayMs by rememberSaveable {
-        mutableLongStateOf(loadedPreset?.body?.delayMs ?: 0L)
+        mutableLongStateOf(stepEditInitial?.delayMs ?: loadedPreset?.body?.delayMs ?: 0L)
     }
     var useAutofocus by rememberSaveable {
-        mutableStateOf(loadedPreset?.body?.useAutofocus ?: false)
+        mutableStateOf(stepEditInitial?.useAutofocus ?: loadedPreset?.body?.useAutofocus ?: false)
     }
     // Camera-side settings (v0.338). null = "don't manage; leave as-is on the body".
-    var iso by rememberSaveable { mutableStateOf(loadedPreset?.body?.iso) }
-    var aperture by rememberSaveable { mutableStateOf(loadedPreset?.body?.aperture) }
+    var iso by rememberSaveable {
+        mutableStateOf(stepEditInitial?.cameraSettings?.iso ?: loadedPreset?.body?.iso)
+    }
+    var aperture by rememberSaveable {
+        mutableStateOf(stepEditInitial?.cameraSettings?.aperture ?: loadedPreset?.body?.aperture)
+    }
 
     // Save dialog state
     var showSaveDialog by remember { mutableStateOf(false) }
 
     val runState = LocalRunState.current
-    val running = runState !is RunState.Idle
+    // A step editor never "runs" — it only configures and saves.
+    val running = !isStepEdit && runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
     val onCanon = vm.canonCcapiTransport.collectAsState().value != null
     val onPtp = vm.ptpTransport.collectAsState().value != null
@@ -233,9 +245,10 @@ fun Intervalometer2Screen(
                 // Start is clickable as long as we have a device — the action
                 // checks config and routes to the first missing-field tab if
                 // not ready, so "nothing happens" is impossible.
-                canStart = connected && !running,
+                canStart = isStepEdit || (connected && !running),
                 hint = if (running) null else bottomHint,
                 hintIsAccent = hintIsContinuous,
+                startLabel = if (isStepEdit) stringResource(R.string.save) else null,
                 onPrev = { if (tabIdx > 0) tabIdx-- },
                 onNext = { if (tabIdx < visibleTabs.size - 1) tabIdx++ },
                 onStart = {
@@ -243,23 +256,25 @@ fun Intervalometer2Screen(
                         exposureMs == 0L -> tabIdx = IvTab.EXPOSURE.ordinal
                         intervalMs == 0L -> tabIdx = IvTab.INTERVAL.ordinal
                         else -> {
-                            vm.saveFlowSteps(
-                                listOf(
-                                    FlowStep.Intervalometer(
-                                        intervalMs = intervalMs,
-                                        exposureMs = exposureMs,
-                                        shotCount = shotCount,
-                                        delayMs = delayMs,
-                                        useAutofocus = useAutofocus,
-                                        cameraSettings = com.ehrocha.pulsar.transport
-                                            .CameraSettings(
-                                                iso = iso,
-                                                aperture = aperture,
-                                            ),
-                                    )
-                                )
+                            val builtStep = FlowStep.Intervalometer(
+                                intervalMs = intervalMs,
+                                exposureMs = exposureMs,
+                                shotCount = shotCount,
+                                delayMs = delayMs,
+                                useAutofocus = useAutofocus,
+                                cameraSettings = com.ehrocha.pulsar.transport
+                                    .CameraSettings(
+                                        iso = iso,
+                                        aperture = aperture,
+                                    ),
+                                timelapse = stepEditInitial?.timelapse ?: false,
                             )
-                            vm.startFlow()
+                            if (isStepEdit) {
+                                onSaveStep!!(builtStep)
+                            } else {
+                                vm.saveFlowSteps(listOf(builtStep))
+                                vm.startFlow()
+                            }
                         }
                     }
                 },

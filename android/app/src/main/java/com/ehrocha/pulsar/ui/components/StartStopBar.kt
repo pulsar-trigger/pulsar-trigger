@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Button
@@ -61,6 +62,11 @@ fun StartStopBar(
     currentTabIdx: Int = 0,
     tabCount: Int = 1,
     currentTabValid: Boolean = true,
+    /** When set, the terminal button reads this (e.g. "Save") with a check
+     *  icon instead of the play-arrow "Start" — used when a wizard is reused
+     *  as a Custom Flow step editor: same screen, the action just saves the
+     *  step instead of firing the camera. */
+    startLabel: String? = null,
     hint: String? = null,
     hintIsAccent: Boolean = false,
     onPrev: () -> Unit = {},
@@ -149,9 +155,16 @@ fun StartStopBar(
                                     ) else Modifier,
                                 ),
                         ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = null)
+                            Icon(
+                                if (startLabel != null) Icons.Default.Check
+                                else Icons.Default.PlayArrow,
+                                contentDescription = null,
+                            )
                             Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.btn_start), fontWeight = FontWeight.Bold)
+                            Text(
+                                startLabel ?: stringResource(R.string.btn_start),
+                                fontWeight = FontWeight.Bold,
+                            )
                         }
                         Spacer(Modifier.weight(1f))
                     }

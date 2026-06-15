@@ -62,6 +62,15 @@ import kotlinx.coroutines.launch
 
 private enum class FlowScreenState { LIBRARY, EDITOR }
 
+/** A step being edited in the reused full-wizard. [index] null = appending
+ *  a new step; non-null = replacing the step at that position. */
+private data class StepWizardTarget(val index: Int?, val step: FlowStep)
+
+/** Modes whose dedicated wizard is reused as the step editor (the rest still
+ *  use the inline dialog editor until migrated). */
+private fun isWizardBackedStep(type: FlowStepType): Boolean =
+    type == FlowStepType.INTERVALOMETER
+
 @Composable
 fun CustomFlowScreen(
     vm: PulsarViewModel,
@@ -771,6 +780,35 @@ private fun FlowEditorView(
     var showAddDialog by remember { mutableStateOf(false) }
     var editingIndex by remember { mutableIntStateOf(-1) }
     var showSaveDialog by remember { mutableStateOf(false) }
+    // Step being edited in the reused full wizard (null = not editing).
+    // index = null appends a new step; non-null replaces in place.
+    var stepWizard by remember { mutableStateOf<StepWizardTarget?>(null) }
+
+    // ── Step editor = the actual mode wizard, reused verbatim ────────────
+    // Picking "Add Step → Intervalometer" (or tapping an Intervalometer
+    // step) opens the SAME tabbed wizard as the Trigger tab, with the only
+    // difference being a "Save" button instead of "Start". Rendered in
+    // place of the editor so all flow state is preserved; system-back
+    // cancels the edit. Only set for wizard-backed types (see openStepWizard).
+    val activeWizard = stepWizard
+    val seedStep = activeWizard?.step
+    if (activeWizard != null && seedStep is FlowStep.Intervalometer && !seedStep.timelapse) {
+        BackHandler { stepWizard = null }
+        Intervalometer2Screen(
+            vm = vm,
+            onBack = { stepWizard = null },
+            stepEditInitial = seedStep,
+            onSaveStep = { built ->
+                val list = vm.flowSteps.value.toMutableList()
+                val idx = activeWizard.index
+                if (idx != null && idx in list.indices) list[idx] = built
+                else list.add(built)
+                vm.saveFlowSteps(list)
+                stepWizard = null
+            },
+        )
+        return
+    }
 
     Column(
         modifier = Modifier
@@ -911,7 +949,15 @@ private fun FlowEditorView(
                         isDone = isDone,
                         isPaused = isCurrent && paused,
                         enabled = !running,
-                        onEdit = { editingIndex = index },
+                        onEdit = {
+                            // Wizard-backed types open the reused full wizard;
+                            // the rest still use the inline dialog editor.
+                            if (isWizardBackedStep(step.type)) {
+                                stepWizard = StepWizardTarget(index = index, step = step)
+                            } else {
+                                editingIndex = index
+                            }
+                        },
                         onDelete = {
                             vm.saveFlowSteps(steps.toMutableList().apply { removeAt(index) })
                         },
@@ -1024,6 +1070,12 @@ private fun FlowEditorView(
             onAdd = { step ->
                 vm.saveFlowSteps(steps + step)
                 showAddDialog = false
+            },
+            onOpenWizard = { type ->
+                // Wizard-backed type: open the reused full wizard seeded
+                // with defaults, appending on Save.
+                showAddDialog = false
+                stepWizard = StepWizardTarget(index = null, step = FlowStep.forType(type))
             },
         )
     }
@@ -1440,6 +1492,7 @@ private fun stepIcon(type: FlowStepType) = when (type) {
 private fun AddStepDialog(
     onDismiss: () -> Unit,
     onAdd: (FlowStep) -> Unit,
+    onOpenWizard: (FlowStepType) -> Unit,
 ) {
     var selectedType by remember { mutableStateOf<FlowStepType?>(null) }
 
@@ -1461,7 +1514,12 @@ private fun AddStepDialog(
                     FlowStepType.entries.forEach { type ->
                         val context = LocalContext.current
                         Surface(
-                            onClick = { selectedType = type },
+                            onClick = {
+                                // Wizard-backed types open the full mode
+                                // wizard; others fall to the inline editor.
+                                if (isWizardBackedStep(type)) onOpenWizard(type)
+                                else selectedType = type
+                            },
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth(),
                         ) {
