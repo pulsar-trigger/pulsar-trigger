@@ -197,9 +197,16 @@ fun StartStopBar(
                                         ) else Modifier,
                                     ),
                             ) {
-                                Icon(Icons.Default.PlayArrow, contentDescription = null)
+                                Icon(
+                                    if (startLabel != null) Icons.Default.Check
+                                    else Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                )
                                 Spacer(Modifier.width(8.dp))
-                                Text(stringResource(R.string.btn_start), fontWeight = FontWeight.Bold)
+                                Text(
+                                    startLabel ?: stringResource(R.string.btn_start),
+                                    fontWeight = FontWeight.Bold,
+                                )
                             }
                         } else {
                             Button(
