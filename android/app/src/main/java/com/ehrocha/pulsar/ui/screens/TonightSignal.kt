@@ -48,7 +48,9 @@ import com.ehrocha.pulsar.ui.theme.Mono
 import com.ehrocha.pulsar.ui.theme.PulsarTheme
 import java.time.LocalDateTime
 import java.time.ZoneId
+import kotlin.math.PI
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 /**
  * SIGNAL's flagship moment: tonight rendered as a CP 1919-style stacked
@@ -267,48 +269,72 @@ internal fun TonightSignalCard(state: DashboardState) {
                     // (lower) rows occlude it with an opaque under-fill —
                     // the classic joyplot trick, and how the original
                     // CP 1919 plate reads.
-                    val bloomStroke = Stroke(width = 4.5.dp.toPx(), cap = StrokeCap.Round)
+                    val bloomStroke = Stroke(width = 3.5.dp.toPx(), cap = StrokeCap.Round)
                     hours.forEachIndexed { i, h ->
                         val baseY = rowPx * (i + 1)
                         val maxAmp = rowPx * 1.55f
-                        // The line IS the hour's quality curve: x = minute
-                        // (left :00 → right :59), height = quality then —
-                        // smoothed (Catmull-Rom) through the real samples.
                         val n = h.samples.size
-                        val pts = h.samples.mapIndexed { s, q ->
+
+                        // ENVELOPE = the real quality curve (smoothed). It
+                        // shapes the occlusion fill + glow, and it caps the
+                        // signal: the texture's peaks reach exactly here, so
+                        // the silhouette you read is true.
+                        val envPts = h.samples.mapIndexed { s, q ->
                             Offset(w * s / (n - 1), baseY - maxAmp * q)
                         }
-                        val line = Path().apply { moveTo(pts[0].x, pts[0].y); catmullRomTo(pts) }
                         val fill = Path().apply {
-                            moveTo(pts[0].x, baseY)
-                            lineTo(pts[0].x, pts[0].y)
-                            catmullRomTo(pts)
-                            lineTo(pts.last().x, baseY)
+                            moveTo(envPts[0].x, baseY)
+                            lineTo(envPts[0].x, envPts[0].y)
+                            catmullRomTo(envPts)
+                            lineTo(envPts.last().x, baseY)
                             close()
                         }
-                        // 1) opaque under-fill — the joyplot occlusion (lower
-                        //    ridges hide the ones behind). Same card colour.
+                        // 1) opaque under-fill — the joyplot occlusion.
                         drawPath(fill, fillColor)
                         // 2) luminous glow under the ridge — brighter toward
-                        //    the peak, so good hours visibly glow. Honest:
-                        //    it just shades the area under the real curve.
+                        //    the peak, so good hours visibly glow.
                         val glowEnd = if (h.best) live.liveEnd else traceColor
                         drawPath(
                             fill,
                             brush = Brush.verticalGradient(
-                                listOf(Color.Transparent, glowEnd.copy(alpha = if (h.best) 0.28f else 0.16f)),
+                                listOf(Color.Transparent, glowEnd.copy(alpha = if (h.best) 0.30f else 0.17f)),
                                 startY = baseY,
                                 endY = baseY - maxAmp,
                             ),
                         )
-                        // 3) soft bloom under-stroke + crisp line on top.
+
+                        // 3) The SIGNAL: a CP 1919 radio-noise trace whose
+                        //    amplitude envelope is the real quality. Peaks of
+                        //    the texture touch the true curve; valleys hang
+                        //    below — exactly like the original pulsar plot, a
+                        //    noisy signal modulated by a real intensity.
+                        fun qAt(u: Float): Float {
+                            val xx = (u * (n - 1)).coerceIn(0f, (n - 1).toFloat())
+                            val lo = xx.toInt()
+                            val hi = (lo + 1).coerceAtMost(n - 1)
+                            val f = xx - lo
+                            return h.samples[lo] * (1f - f) + h.samples[hi] * f
+                        }
+                        val steps = 110
+                        val signal = Path()
+                        for (s in 0..steps) {
+                            val u = s / steps.toFloat()
+                            val nz = (
+                                sin(u * 23f * PI + i * 2.39f) * 0.55f +
+                                sin(u * 9f * PI + i * 5.07f) * 0.45f
+                            ).toFloat()
+                            val tex = (0.5f + 0.5f * nz).coerceIn(0.04f, 1f)
+                            val y = baseY - maxAmp * qAt(u) * tex
+                            val x = w * u
+                            if (s == 0) signal.moveTo(x, y) else signal.lineTo(x, y)
+                        }
                         if (h.best) {
                             val g = Brush.horizontalGradient(listOf(live.liveStart, live.liveEnd))
-                            drawPath(line, brush = g, style = bloomStroke, alpha = 0.4f)
-                            drawPath(line, brush = g, style = stroke)
+                            drawPath(signal, brush = g, style = bloomStroke, alpha = 0.35f)
+                            drawPath(signal, brush = g, style = stroke)
                         } else {
-                            drawPath(line, traceColor.copy(alpha = 0.22f), style = bloomStroke)
-                            drawPath(line, traceColor, style = stroke)
+                            drawPath(signal, traceColor.copy(alpha = 0.20f), style = bloomStroke)
+                            drawPath(signal, traceColor, style = stroke)
                         }
                     }
                     // Quarter-hour guides (15 / 30 / 45 min) on top, so the
