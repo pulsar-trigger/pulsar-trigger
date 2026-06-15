@@ -50,7 +50,10 @@ fun TimelapseScreen(
     vm: PulsarViewModel,
     onBack: () -> Unit,
     initialPresetId: String? = null,
+    stepEditInitial: FlowStep.Intervalometer? = null,
+    onSaveStep: ((FlowStep.Intervalometer) -> Unit)? = null,
 ) {
+    val isStepEdit = onSaveStep != null
     val allModes by vm.userModes.collectAsState()
     val loadedPreset = remember(initialPresetId, allModes) {
         initialPresetId?.let { id -> allModes.firstOrNull { it.id == id } }
@@ -58,23 +61,23 @@ fun TimelapseScreen(
     var editingPresetId by rememberSaveable { mutableStateOf(initialPresetId) }
 
     var intervalMs by rememberSaveable {
-        mutableLongStateOf(loadedPreset?.body?.intervalMs ?: 0L)
+        mutableLongStateOf(stepEditInitial?.intervalMs ?: loadedPreset?.body?.intervalMs ?: 0L)
     }
     var delayMs by rememberSaveable {
-        mutableLongStateOf(loadedPreset?.body?.delayMs ?: 0L)
+        mutableLongStateOf(stepEditInitial?.delayMs ?: loadedPreset?.body?.delayMs ?: 0L)
     }
     var shotCount by rememberSaveable {
-        mutableIntStateOf(loadedPreset?.body?.shotCount ?: 0)
+        mutableIntStateOf(stepEditInitial?.shotCount ?: loadedPreset?.body?.shotCount ?: 0)
     }
     // Daylight Timelapse usually wants per-shot AF; default ON for this mode
     // unlike the bulb-based wizards.
     var useAutofocus by rememberSaveable {
-        mutableStateOf(loadedPreset?.body?.useAutofocus ?: true)
+        mutableStateOf(stepEditInitial?.useAutofocus ?: loadedPreset?.body?.useAutofocus ?: true)
     }
     var showSaveDialog by remember { mutableStateOf(false) }
 
     val runState = LocalRunState.current
-    val running = runState !is RunState.Idle
+    val running = !isStepEdit && runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
     val onCanon = vm.canonCcapiTransport.collectAsState().value != null
     val onPtp = vm.ptpTransport.collectAsState().value != null
@@ -153,7 +156,8 @@ fun TimelapseScreen(
                 currentTabIdx = tabIdx,
                 tabCount = TlTab.entries.size,
                 currentTabValid = currentTabValid,
-                canStart = connected && !running,
+                canStart = isStepEdit || (connected && !running),
+                startLabel = if (isStepEdit) stringResource(R.string.save) else null,
                 hint = if (running) null else bottomHint,
                 hintIsAccent = hintIsContinuous,
                 onPrev = { if (tabIdx > 0) tabIdx-- },
@@ -162,19 +166,16 @@ fun TimelapseScreen(
                     when {
                         intervalMs == 0L -> tabIdx = TlTab.INTERVAL.ordinal
                         else -> {
-                            vm.saveFlowSteps(
-                                listOf(
-                                    FlowStep.Intervalometer(
-                                        intervalMs = intervalMs,
-                                        exposureMs = pulseMs,
-                                        shotCount = shotCount,
-                                        delayMs = delayMs,
-                                        useAutofocus = useAutofocus,
-                                        timelapse = true,
-                                    )
-                                )
+                            val builtStep = FlowStep.Intervalometer(
+                                intervalMs = intervalMs,
+                                exposureMs = pulseMs,
+                                shotCount = shotCount,
+                                delayMs = delayMs,
+                                useAutofocus = useAutofocus,
+                                timelapse = true,
                             )
-                            vm.startFlow()
+                            if (isStepEdit) onSaveStep!!(builtStep)
+                            else { vm.saveFlowSteps(listOf(builtStep)); vm.startFlow() }
                         }
                     }
                 },

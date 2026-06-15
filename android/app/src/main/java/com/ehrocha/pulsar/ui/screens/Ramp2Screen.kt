@@ -40,7 +40,10 @@ fun Ramp2Screen(
     vm: PulsarViewModel,
     onBack: () -> Unit,
     initialPresetId: String? = null,
+    stepEditInitial: FlowStep.Ramp? = null,
+    onSaveStep: ((FlowStep.Ramp) -> Unit)? = null,
 ) {
+    val isStepEdit = onSaveStep != null
     val allModes by vm.userModes.collectAsState()
     val loadedPreset = remember(initialPresetId, allModes) {
         initialPresetId?.let { id -> allModes.firstOrNull { it.id == id } }
@@ -48,24 +51,24 @@ fun Ramp2Screen(
     var editingPresetId by rememberSaveable { mutableStateOf(initialPresetId) }
 
     var startExposureMs by rememberSaveable {
-        mutableLongStateOf(loadedPreset?.body?.rampStartExposureMs ?: 0L)
+        mutableLongStateOf(stepEditInitial?.startExposureMs ?: loadedPreset?.body?.rampStartExposureMs ?: 0L)
     }
     var endExposureMs by rememberSaveable {
-        mutableLongStateOf(loadedPreset?.body?.rampEndExposureMs ?: 0L)
+        mutableLongStateOf(stepEditInitial?.endExposureMs ?: loadedPreset?.body?.rampEndExposureMs ?: 0L)
     }
     var intervalMs by rememberSaveable {
-        mutableLongStateOf(loadedPreset?.body?.intervalMs ?: 0L)
+        mutableLongStateOf(stepEditInitial?.intervalMs ?: loadedPreset?.body?.intervalMs ?: 0L)
     }
     var steps by rememberSaveable {
-        mutableIntStateOf(loadedPreset?.body?.rampSteps ?: 0)
+        mutableIntStateOf(stepEditInitial?.steps ?: loadedPreset?.body?.rampSteps ?: 0)
     }
     var useAutofocus by rememberSaveable {
-        mutableStateOf(loadedPreset?.body?.useAutofocus ?: false)
+        mutableStateOf(stepEditInitial?.useAutofocus ?: loadedPreset?.body?.useAutofocus ?: false)
     }
     var showSaveDialog by remember { mutableStateOf(false) }
 
     val runState = LocalRunState.current
-    val running = runState !is RunState.Idle
+    val running = !isStepEdit && runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
     val onCanon = vm.canonCcapiTransport.collectAsState().value != null
     val onPtp = vm.ptpTransport.collectAsState().value != null
@@ -149,7 +152,8 @@ fun Ramp2Screen(
                 currentTabIdx = tabIdx,
                 tabCount = RampTab.entries.size,
                 currentTabValid = currentTabValid,
-                canStart = connected && !running,
+                canStart = isStepEdit || (connected && !running),
+                startLabel = if (isStepEdit) stringResource(R.string.save) else null,
                 hint = if (running) null else bottomHint,
                 onPrev = { if (tabIdx > 0) tabIdx-- },
                 onNext = { if (tabIdx < RampTab.entries.size - 1) tabIdx++ },
@@ -160,18 +164,15 @@ fun Ramp2Screen(
                         intervalMs == 0L -> tabIdx = RampTab.INTERVAL.ordinal
                         steps < 2 -> tabIdx = RampTab.STEPS.ordinal
                         else -> {
-                            vm.saveFlowSteps(
-                                listOf(
-                                    FlowStep.Ramp(
-                                        startExposureMs = startExposureMs,
-                                        endExposureMs = endExposureMs,
-                                        steps = steps,
-                                        intervalMs = intervalMs,
-                                        useAutofocus = useAutofocus,
-                                    )
-                                )
+                            val builtStep = FlowStep.Ramp(
+                                startExposureMs = startExposureMs,
+                                endExposureMs = endExposureMs,
+                                steps = steps,
+                                intervalMs = intervalMs,
+                                useAutofocus = useAutofocus,
                             )
-                            vm.startFlow()
+                            if (isStepEdit) onSaveStep!!(builtStep)
+                            else { vm.saveFlowSteps(listOf(builtStep)); vm.startFlow() }
                         }
                     }
                 },

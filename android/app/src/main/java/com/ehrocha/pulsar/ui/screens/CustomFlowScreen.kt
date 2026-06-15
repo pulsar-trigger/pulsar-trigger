@@ -66,10 +66,67 @@ private enum class FlowScreenState { LIBRARY, EDITOR }
  *  a new step; non-null = replacing the step at that position. */
 private data class StepWizardTarget(val index: Int?, val step: FlowStep)
 
-/** Modes whose dedicated wizard is reused as the step editor (the rest still
- *  use the inline dialog editor until migrated). */
-private fun isWizardBackedStep(type: FlowStepType): Boolean =
-    type == FlowStepType.INTERVALOMETER
+/** Pause has no Trigger-tab wizard, so it gets the same wizard shell
+ *  (PulsarTopBar + Save bar) for a consistent look and feel. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PauseStepWizard(
+    initial: FlowStep.Pause?,
+    onCancel: () -> Unit,
+    onSave: (FlowStep.Pause) -> Unit,
+) {
+    var label by remember { mutableStateOf(initial?.label ?: "") }
+    var wake by remember { mutableStateOf(initial?.wakeOnPause ?: true) }
+    BackHandler(onBack = onCancel)
+    Scaffold(
+        topBar = {
+            PulsarTopBar(title = stringResource(R.string.step_type_pause), onBack = onCancel)
+        },
+        bottomBar = {
+            com.ehrocha.pulsar.ui.components.StartStopBar(
+                running = false,
+                canStart = true,
+                startLabel = stringResource(R.string.save),
+                onStart = { onSave(FlowStep.Pause(label = label, wakeOnPause = wake)) },
+                onStop = {},
+            )
+        },
+    ) { pad ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(pad)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            OutlinedTextField(
+                value = label,
+                onValueChange = { label = it },
+                label = { Text(stringResource(R.string.label_pause_message)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                supportingText = { Text(stringResource(R.string.pause_message_hint)) },
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.label_wake_on_pause),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Text(
+                        stringResource(R.string.wake_on_pause_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(checked = wake, onCheckedChange = { wake = it })
+            }
+        }
+    }
+}
 
 @Composable
 fun CustomFlowScreen(
@@ -778,7 +835,6 @@ private fun FlowEditorView(
     val connected = LocalDeviceConnected.current
     val status = LocalDeviceStatus.current
     var showAddDialog by remember { mutableStateOf(false) }
-    var editingIndex by remember { mutableIntStateOf(-1) }
     var showSaveDialog by remember { mutableStateOf(false) }
     // Step being edited in the reused full wizard (null = not editing).
     // index = null appends a new step; non-null replaces in place.
@@ -791,22 +847,48 @@ private fun FlowEditorView(
     // place of the editor so all flow state is preserved; system-back
     // cancels the edit. Only set for wizard-backed types (see openStepWizard).
     val activeWizard = stepWizard
-    val seedStep = activeWizard?.step
-    if (activeWizard != null && seedStep is FlowStep.Intervalometer && !seedStep.timelapse) {
+    if (activeWizard != null) {
         BackHandler { stepWizard = null }
-        Intervalometer2Screen(
-            vm = vm,
-            onBack = { stepWizard = null },
-            stepEditInitial = seedStep,
-            onSaveStep = { built ->
-                val list = vm.flowSteps.value.toMutableList()
-                val idx = activeWizard.index
-                if (idx != null && idx in list.indices) list[idx] = built
-                else list.add(built)
-                vm.saveFlowSteps(list)
-                stepWizard = null
-            },
-        )
+        // New steps open the wizard FRESH (no stale forType defaults — the
+        // wizard resolves missing fields); editing seeds from the step.
+        val isNew = activeWizard.index == null
+        val cancel: () -> Unit = { stepWizard = null }
+        val onSave: (FlowStep) -> Unit = { built ->
+            val list = vm.flowSteps.value.toMutableList()
+            val idx = activeWizard.index
+            if (idx != null && idx in list.indices) list[idx] = built else list.add(built)
+            vm.saveFlowSteps(list)
+            stepWizard = null
+        }
+        when (val s = activeWizard.step) {
+            is FlowStep.Intervalometer ->
+                if (s.timelapse) {
+                    TimelapseScreen(
+                        vm = vm, onBack = cancel,
+                        stepEditInitial = if (isNew) null else s, onSaveStep = onSave,
+                    )
+                } else {
+                    Intervalometer2Screen(
+                        vm = vm, onBack = cancel,
+                        stepEditInitial = if (isNew) null else s, onSaveStep = onSave,
+                    )
+                }
+            is FlowStep.Astro -> AstroMode2Screen(
+                vm = vm, onBack = cancel,
+                stepEditInitial = if (isNew) null else s, onSaveStep = onSave,
+            )
+            is FlowStep.DarkFrame -> DarkFrame2Screen(
+                vm = vm, onBack = cancel,
+                stepEditInitial = if (isNew) null else s, onSaveStep = onSave,
+            )
+            is FlowStep.Ramp -> Ramp2Screen(
+                vm = vm, onBack = cancel,
+                stepEditInitial = if (isNew) null else s, onSaveStep = onSave,
+            )
+            is FlowStep.Pause -> PauseStepWizard(
+                initial = if (isNew) null else s, onCancel = cancel, onSave = onSave,
+            )
+        }
         return
     }
 
@@ -854,41 +936,91 @@ private fun FlowEditorView(
             // timeline above keeps the sequence position; the step list
             // returns when the run ends.
             val cur = steps.getOrNull(currentStep)
-            val plannedShots: Int
-            val exposureMs: Long
-            val gapMs: Long
-            val delayMs: Long
-            when (cur) {
-                is FlowStep.Intervalometer -> {
-                    plannedShots = cur.shotCount; exposureMs = cur.exposureMs
-                    gapMs = cur.intervalMs; delayMs = cur.delayMs
+            if (cur is FlowStep.Pause) {
+                // A Pause step blocks the run until the user continues. The
+                // shared RunningView has no resume control (it's a shutter
+                // instrument), so the flow would hang with only Stop — the
+                // regression Eduardo hit. Surface the Continue affordance.
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.padding(24.dp),
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = StatusOrange.copy(alpha = 0.15f),
+                        ) {
+                            Text(
+                                stringResource(R.string.flow_waiting_for_user),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = StatusOrange,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            )
+                        }
+                        if (cur.label.isNotBlank()) {
+                            Text(
+                                cur.label,
+                                style = MaterialTheme.typography.titleMedium,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                        Button(
+                            onClick = { vm.continueFlow() },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                        ) {
+                            Icon(
+                                Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                stringResource(R.string.continue_label),
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    }
                 }
-                is FlowStep.Astro -> {
-                    plannedShots = cur.shotCount
-                    exposureMs = AppConfig.astroExposureMs(
-                        cur.focalLength, cur.cropFactor, cur.ruleDivisor,
+            } else {
+                val plannedShots: Int
+                val exposureMs: Long
+                val gapMs: Long
+                val delayMs: Long
+                when (cur) {
+                    is FlowStep.Intervalometer -> {
+                        plannedShots = cur.shotCount; exposureMs = cur.exposureMs
+                        gapMs = cur.intervalMs; delayMs = cur.delayMs
+                    }
+                    is FlowStep.Astro -> {
+                        plannedShots = cur.shotCount
+                        exposureMs = AppConfig.astroExposureMs(
+                            cur.focalLength, cur.cropFactor, cur.ruleDivisor,
+                        )
+                        gapMs = 0L; delayMs = cur.delayMs
+                    }
+                    is FlowStep.DarkFrame -> {
+                        plannedShots = cur.shotCount; exposureMs = cur.exposureMs
+                        gapMs = 0L; delayMs = 0L
+                    }
+                    is FlowStep.Ramp -> {
+                        plannedShots = 0  // exposure varies — indeterminate
+                        exposureMs = 0L; gapMs = cur.intervalMs; delayMs = cur.delayMs
+                    }
+                    else -> {
+                        plannedShots = 0; exposureMs = 0L; gapMs = 0L; delayMs = 0L
+                    }
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    RunningView(
+                        plannedShots = plannedShots,
+                        exposureMs = exposureMs,
+                        gapMs = gapMs,
+                        startDelayMs = delayMs,
                     )
-                    gapMs = 0L; delayMs = cur.delayMs
                 }
-                is FlowStep.DarkFrame -> {
-                    plannedShots = cur.shotCount; exposureMs = cur.exposureMs
-                    gapMs = 0L; delayMs = 0L
-                }
-                is FlowStep.Ramp -> {
-                    plannedShots = 0  // exposure varies — indeterminate
-                    exposureMs = 0L; gapMs = cur.intervalMs; delayMs = cur.delayMs
-                }
-                else -> {
-                    plannedShots = 0; exposureMs = 0L; gapMs = 0L; delayMs = 0L
-                }
-            }
-            Box(modifier = Modifier.weight(1f)) {
-                RunningView(
-                    plannedShots = plannedShots,
-                    exposureMs = exposureMs,
-                    gapMs = gapMs,
-                    startDelayMs = delayMs,
-                )
             }
         }
 
@@ -950,13 +1082,7 @@ private fun FlowEditorView(
                         isPaused = isCurrent && paused,
                         enabled = !running,
                         onEdit = {
-                            // Wizard-backed types open the reused full wizard;
-                            // the rest still use the inline dialog editor.
-                            if (isWizardBackedStep(step.type)) {
-                                stepWizard = StepWizardTarget(index = index, step = step)
-                            } else {
-                                editingIndex = index
-                            }
+                            stepWizard = StepWizardTarget(index = index, step = step)
                         },
                         onDelete = {
                             vm.saveFlowSteps(steps.toMutableList().apply { removeAt(index) })
@@ -1067,28 +1193,10 @@ private fun FlowEditorView(
     if (showAddDialog) {
         AddStepDialog(
             onDismiss = { showAddDialog = false },
-            onAdd = { step ->
-                vm.saveFlowSteps(steps + step)
-                showAddDialog = false
-            },
-            onOpenWizard = { type ->
-                // Wizard-backed type: open the reused full wizard seeded
-                // with defaults, appending on Save.
+            onPickType = { type ->
+                // Open the mode's full wizard fresh; appended on Save.
                 showAddDialog = false
                 stepWizard = StepWizardTarget(index = null, step = FlowStep.forType(type))
-            },
-        )
-    }
-
-    if (editingIndex >= 0 && editingIndex < steps.size) {
-        EditStepDialog(
-            step = steps[editingIndex],
-            onDismiss = { editingIndex = -1 },
-            onSave = { updated ->
-                val mutable = steps.toMutableList()
-                mutable[editingIndex] = updated
-                vm.saveFlowSteps(mutable)
-                editingIndex = -1
             },
         )
     }
@@ -1491,363 +1599,54 @@ private fun stepIcon(type: FlowStepType) = when (type) {
 @Composable
 private fun AddStepDialog(
     onDismiss: () -> Unit,
-    onAdd: (FlowStep) -> Unit,
-    onOpenWizard: (FlowStepType) -> Unit,
+    onPickType: (FlowStepType) -> Unit,
 ) {
-    var selectedType by remember { mutableStateOf<FlowStepType?>(null) }
+    // Type picker only — choosing a mode opens its full wizard (see the
+    // FlowEditorView dispatch). No inline editing here any more.
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            tonalElevation = 8.dp,
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                Text(
+                    stringResource(R.string.btn_add_step),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.height(16.dp))
 
-    if (selectedType == null) {
-        // Step type picker
-        Dialog(onDismissRequest = onDismiss) {
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                tonalElevation = 8.dp,
-            ) {
-                Column(modifier = Modifier.padding(24.dp)) {
-                    Text(
-                        stringResource(R.string.btn_add_step),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Spacer(Modifier.height(16.dp))
-
-                    FlowStepType.entries.forEach { type ->
-                        val context = LocalContext.current
-                        Surface(
-                            onClick = {
-                                // Wizard-backed types open the full mode
-                                // wizard; others fall to the inline editor.
-                                if (isWizardBackedStep(type)) onOpenWizard(type)
-                                else selectedType = type
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth(),
+                FlowStepType.entries.forEach { type ->
+                    val context = LocalContext.current
+                    Surface(
+                        onClick = { onPickType(type) },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(12.dp),
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(12.dp),
-                            ) {
-                                Icon(
-                                    stepIcon(type),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(24.dp),
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                Text(
-                                    type.displayName(context),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                )
-                            }
+                            Icon(
+                                stepIcon(type),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp),
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                type.displayName(context),
+                                style = MaterialTheme.typography.bodyLarge,
+                            )
                         }
                     }
+                }
 
-                    Spacer(Modifier.height(8.dp))
-                    TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
-                        Text(stringResource(R.string.cancel))
-                    }
+                Spacer(Modifier.height(8.dp))
+                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
+                    Text(stringResource(R.string.cancel))
                 }
             }
-        }
-    } else {
-        // Edit params for chosen type
-        EditStepDialog(
-            step = FlowStep.forType(selectedType!!),
-            onDismiss = { selectedType = null },
-            onSave = onAdd,
-        )
-    }
-}
-
-// ─── Edit step (full-screen) ─────────────────────────────────────────────────
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun EditStepDialog(
-    step: FlowStep,
-    onDismiss: () -> Unit,
-    onSave: (FlowStep) -> Unit,
-) {
-    var current by remember { mutableStateOf(step) }
-    val context = LocalContext.current
-
-    BackHandler(onBack = onDismiss)
-
-    Scaffold(
-        topBar = {
-            PulsarTopBar(
-                title = step.type.displayName(context),
-                onBack = onDismiss,
-                actions = {
-                    TextButton(onClick = { onSave(current) }) {
-                        Text(stringResource(R.string.save))
-                    }
-                },
-            )
-        },
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            when (val s = current) {
-                is FlowStep.Intervalometer -> IntervalometerStepEditor(s) { current = it }
-                is FlowStep.Astro -> AstroStepEditor(s) { current = it }
-                is FlowStep.Pause -> PauseStepEditor(s) { current = it }
-                is FlowStep.DarkFrame -> DarkFrameStepEditor(s) { current = it }
-                is FlowStep.Ramp -> RampStepEditor(s) { current = it }
-            }
-
-            Spacer(Modifier.height(16.dp))
-        }
-    }
-}
-
-// ─── Step editors ────────────────────────────────────────────────────────────
-
-@Composable
-private fun IntervalometerStepEditor(step: FlowStep.Intervalometer, onChange: (FlowStep.Intervalometer) -> Unit) {
-    // The step editor presents the SAME instruments as the Iv2 wizard
-    // (Eduardo's flow feedback #2: reuse the rebuilt input panels, no
-    // parallel UI) — segmented scrub clocks + the big shots dial, stacked
-    // instead of tabbed. A TIMELAPSE step hides the exposure instrument:
-    // its sentinel exposure is an implementation detail.
-    val isTimelapse = step.type == FlowStepType.TIMELAPSE
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (!isTimelapse) {
-            StepInstrument(stringResource(R.string.iv2_tab_exposure)) {
-                SegmentedTimeEditor(
-                    ms = step.exposureMs,
-                    onChange = {
-                        onChange(step.copy(
-                            exposureMs = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS),
-                        ))
-                    },
-                    rangeMs = 0L..86_400_000L,
-                    enabled = true,
-                )
-            }
-        }
-        StepInstrument(stringResource(R.string.iv2_tab_interval)) {
-            SegmentedTimeEditor(
-                ms = step.intervalMs,
-                onChange = {
-                    onChange(step.copy(
-                        intervalMs = it.coerceAtLeast(AppConfig.MIN_INTERVAL_MS),
-                    ))
-                },
-                rangeMs = 0L..3_600_000L,
-                enabled = true,
-            )
-        }
-        StepInstrument(stringResource(R.string.iv2_tab_shots), height = 190.dp) {
-            // No ∞ inside a multi-step flow — a continuous step would
-            // block every subsequent step from running.
-            ShotsEditor(
-                value = step.shotCount,
-                onChange = { onChange(step.copy(shotCount = it.coerceAtLeast(1))) },
-                enabled = true,
-            )
-        }
-        StepInstrument(stringResource(R.string.iv2_tab_delay)) {
-            SegmentedTimeEditor(
-                ms = step.delayMs,
-                onChange = { onChange(step.copy(delayMs = it)) },
-                rangeMs = 0L..3_600_000L,
-                enabled = true,
-            )
-        }
-    }
-}
-
-/** One wizard instrument framed as a card inside the step editor — keeps
- *  the editors visually identical to the wizards they mirror. A null
- *  [height] lets the instrument size itself (the Lens panel isn't a fixed
- *  scrub); a value gives the scrub instruments their centred play area. */
-@Composable
-private fun StepInstrument(
-    label: String,
-    height: androidx.compose.ui.unit.Dp? = 165.dp,
-    content: @Composable () -> Unit,
-) {
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 1.dp,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(modifier = Modifier.padding(vertical = 12.dp)) {
-            Text(
-                label.uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.5.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-            if (height != null) {
-                Box(modifier = Modifier.fillMaxWidth().height(height)) { content() }
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                ) { content() }
-            }
-        }
-    }
-}
-
-@Composable
-private fun AstroStepEditor(step: FlowStep.Astro, onChange: (FlowStep.Astro) -> Unit) {
-    // Same instruments as the Astro wizard (LensTab + scrub clocks + shots
-    // dial), stacked instead of tabbed. Lens detection is a connected-camera
-    // affordance that doesn't belong inside flow editing, so it's off here.
-    val maxExpMs = AppConfig.astroExposureMs(step.focalLength, step.cropFactor, step.ruleDivisor)
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        StepInstrument(stringResource(R.string.astro2_tab_lens), height = null) {
-            LensTab(
-                focalLength = step.focalLength,
-                cropFactor = step.cropFactor,
-                ruleDivisor = step.ruleDivisor,
-                maxExpMs = maxExpMs,
-                lensInfo = null,
-                canDetectLens = false,
-                lensDetecting = false,
-                onDetectLens = {},
-                onFocalChange = { onChange(step.copy(focalLength = it)) },
-                onCropChange = { onChange(step.copy(cropFactor = it)) },
-                onRuleChange = { onChange(step.copy(ruleDivisor = it)) },
-                enabled = true,
-            )
-        }
-        StepInstrument(stringResource(R.string.iv2_tab_interval)) {
-            SegmentedTimeEditor(
-                ms = step.gapMs,
-                onChange = { onChange(step.copy(gapMs = it.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS))) },
-                rangeMs = 0L..3_600_000L,
-                enabled = true,
-            )
-        }
-        StepInstrument(stringResource(R.string.iv2_tab_delay)) {
-            SegmentedTimeEditor(
-                ms = step.delayMs,
-                onChange = { onChange(step.copy(delayMs = it)) },
-                rangeMs = 0L..3_600_000L,
-                enabled = true,
-            )
-        }
-        StepInstrument(stringResource(R.string.iv2_tab_shots), height = 190.dp) {
-            ShotsEditor(
-                value = step.shotCount,
-                onChange = { onChange(step.copy(shotCount = it.coerceAtLeast(1))) },
-                enabled = true,
-            )
-        }
-    }
-}
-
-@Composable
-private fun PauseStepEditor(step: FlowStep.Pause, onChange: (FlowStep.Pause) -> Unit) {
-    OutlinedTextField(
-        value = step.label,
-        onValueChange = { onChange(step.copy(label = it)) },
-        label = { Text(stringResource(R.string.label_pause_message)) },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
-        supportingText = { Text(stringResource(R.string.pause_message_hint)) },
-    )
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 4.dp),
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                stringResource(R.string.label_wake_on_pause),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Text(
-                stringResource(R.string.wake_on_pause_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Switch(
-            checked = step.wakeOnPause,
-            onCheckedChange = { onChange(step.copy(wakeOnPause = it)) },
-        )
-    }
-}
-
-@Composable
-private fun DarkFrameStepEditor(step: FlowStep.DarkFrame, onChange: (FlowStep.DarkFrame) -> Unit) {
-    // Same instruments as the Dark Frame wizard, stacked.
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        StepInstrument(stringResource(R.string.iv2_tab_exposure)) {
-            SegmentedTimeEditor(
-                ms = step.exposureMs,
-                onChange = { onChange(step.copy(exposureMs = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS))) },
-                rangeMs = 0L..86_400_000L,
-                enabled = true,
-            )
-        }
-        StepInstrument(stringResource(R.string.iv2_tab_interval)) {
-            SegmentedTimeEditor(
-                ms = step.gapMs,
-                onChange = { onChange(step.copy(gapMs = it.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS))) },
-                rangeMs = 0L..3_600_000L,
-                enabled = true,
-            )
-        }
-        StepInstrument(stringResource(R.string.iv2_tab_shots), height = 190.dp) {
-            ShotsEditor(
-                value = step.shotCount,
-                onChange = { onChange(step.copy(shotCount = it.coerceAtLeast(1))) },
-                enabled = true,
-            )
-        }
-    }
-}
-
-@Composable
-private fun RampStepEditor(step: FlowStep.Ramp, onChange: (FlowStep.Ramp) -> Unit) {
-    // Same instruments as the Ramp wizard, stacked.
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        StepInstrument(stringResource(R.string.ramp2_tab_start)) {
-            SegmentedTimeEditor(
-                ms = step.startExposureMs,
-                onChange = { onChange(step.copy(startExposureMs = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS))) },
-                rangeMs = 0L..86_400_000L,
-                enabled = true,
-            )
-        }
-        StepInstrument(stringResource(R.string.ramp2_tab_end)) {
-            SegmentedTimeEditor(
-                ms = step.endExposureMs,
-                onChange = { onChange(step.copy(endExposureMs = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS))) },
-                rangeMs = 0L..86_400_000L,
-                enabled = true,
-            )
-        }
-        StepInstrument(stringResource(R.string.iv2_tab_interval)) {
-            SegmentedTimeEditor(
-                ms = step.intervalMs,
-                onChange = { onChange(step.copy(intervalMs = it.coerceAtLeast(AppConfig.MIN_INTERVAL_MS))) },
-                rangeMs = 0L..3_600_000L,
-                enabled = true,
-            )
-        }
-        StepInstrument(stringResource(R.string.ramp2_tab_steps), height = 190.dp) {
-            ShotsEditor(
-                value = step.steps,
-                onChange = { onChange(step.copy(steps = it.coerceAtLeast(2))) },
-                enabled = true,
-            )
         }
     }
 }

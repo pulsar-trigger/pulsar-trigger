@@ -45,7 +45,10 @@ fun DarkFrame2Screen(
     vm: PulsarViewModel,
     onBack: () -> Unit,
     initialPresetId: String? = null,
+    stepEditInitial: FlowStep.DarkFrame? = null,
+    onSaveStep: ((FlowStep.DarkFrame) -> Unit)? = null,
 ) {
+    val isStepEdit = onSaveStep != null
     val allModes by vm.userModes.collectAsState()
     val loadedPreset = remember(initialPresetId, allModes) {
         initialPresetId?.let { id -> allModes.firstOrNull { it.id == id } }
@@ -53,16 +56,16 @@ fun DarkFrame2Screen(
     var editingPresetId by rememberSaveable { mutableStateOf(initialPresetId) }
 
     var exposureMs by rememberSaveable {
-        mutableLongStateOf(loadedPreset?.body?.exposureMs ?: 0L)
+        mutableLongStateOf(stepEditInitial?.exposureMs ?: loadedPreset?.body?.exposureMs ?: 0L)
     }
     var intervalMs by rememberSaveable {
-        mutableLongStateOf(loadedPreset?.body?.intervalMs ?: 0L)
+        mutableLongStateOf(stepEditInitial?.gapMs ?: loadedPreset?.body?.intervalMs ?: 0L)
     }
     var shotCount by rememberSaveable {
-        mutableIntStateOf(loadedPreset?.body?.shotCount ?: 0)
+        mutableIntStateOf(stepEditInitial?.shotCount ?: loadedPreset?.body?.shotCount ?: 0)
     }
     var useAutofocus by rememberSaveable {
-        mutableStateOf(loadedPreset?.body?.useAutofocus ?: false)
+        mutableStateOf(stepEditInitial?.useAutofocus ?: loadedPreset?.body?.useAutofocus ?: false)
     }
     var showSaveDialog by remember { mutableStateOf(false) }
 
@@ -80,7 +83,7 @@ fun DarkFrame2Screen(
         exposureMs == 0L && shotCount == 0
 
     val runState = LocalRunState.current
-    val running = runState !is RunState.Idle
+    val running = !isStepEdit && runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
     val onCanon = vm.canonCcapiTransport.collectAsState().value != null
     val onPtp = vm.ptpTransport.collectAsState().value != null
@@ -157,7 +160,8 @@ fun DarkFrame2Screen(
                 currentTabIdx = tabIdx,
                 tabCount = DfTab.entries.size,
                 currentTabValid = currentTabValid,
-                canStart = connected && !running,
+                canStart = isStepEdit || (connected && !running),
+                startLabel = if (isStepEdit) stringResource(R.string.save) else null,
                 hint = if (running) null else bottomHint,
                 onPrev = { if (tabIdx > 0) tabIdx-- },
                 onNext = { if (tabIdx < DfTab.entries.size - 1) tabIdx++ },
@@ -167,17 +171,14 @@ fun DarkFrame2Screen(
                         intervalMs == 0L -> tabIdx = DfTab.INTERVAL.ordinal
                         shotCount == 0 -> tabIdx = DfTab.SHOTS.ordinal
                         else -> {
-                            vm.saveFlowSteps(
-                                listOf(
-                                    FlowStep.DarkFrame(
-                                        shotCount = shotCount,
-                                        exposureMs = exposureMs,
-                                        gapMs = intervalMs,
-                                        useAutofocus = useAutofocus,
-                                    )
-                                )
+                            val builtStep = FlowStep.DarkFrame(
+                                shotCount = shotCount,
+                                exposureMs = exposureMs,
+                                gapMs = intervalMs,
+                                useAutofocus = useAutofocus,
                             )
-                            vm.startFlow()
+                            if (isStepEdit) onSaveStep!!(builtStep)
+                            else { vm.saveFlowSteps(listOf(builtStep)); vm.startFlow() }
                         }
                     }
                 },

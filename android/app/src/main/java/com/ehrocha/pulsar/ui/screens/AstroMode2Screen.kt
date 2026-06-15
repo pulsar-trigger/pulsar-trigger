@@ -105,7 +105,10 @@ fun AstroMode2Screen(
     vm: PulsarViewModel,
     onBack: () -> Unit,
     initialPresetId: String? = null,
+    stepEditInitial: FlowStep.Astro? = null,
+    onSaveStep: ((FlowStep.Astro) -> Unit)? = null,
 ) {
+    val isStepEdit = onSaveStep != null
     val allModes by vm.userModes.collectAsState()
     val loadedPreset = remember(initialPresetId, allModes) {
         initialPresetId?.let { id -> allModes.firstOrNull { it.id == id } }
@@ -117,32 +120,32 @@ fun AstroMode2Screen(
         // NPF maths stayed dark until first touch). Default to a 24mm
         // prime; floor at the app minimum for presets saved before this.
         mutableIntStateOf(
-            (loadedPreset?.body?.focalLength?.takeIf { it > 0 } ?: 24)
+            (stepEditInitial?.focalLength ?: loadedPreset?.body?.focalLength?.takeIf { it > 0 } ?: 24)
                 .coerceIn(AppConfig.MIN_FOCAL_LENGTH, AppConfig.MAX_FOCAL_LENGTH),
         )
     }
     var cropFactor by rememberSaveable {
-        mutableFloatStateOf(loadedPreset?.body?.cropFactor ?: 1.0f)
+        mutableFloatStateOf(stepEditInitial?.cropFactor ?: loadedPreset?.body?.cropFactor ?: 1.0f)
     }
     var ruleDivisor by rememberSaveable {
-        mutableIntStateOf(loadedPreset?.body?.ruleDivisor ?: AppConfig.NPF_RULE_DIVISOR)
+        mutableIntStateOf(stepEditInitial?.ruleDivisor ?: loadedPreset?.body?.ruleDivisor ?: AppConfig.NPF_RULE_DIVISOR)
     }
     var intervalMs by rememberSaveable {
-        mutableLongStateOf(loadedPreset?.body?.intervalMs ?: 0L)
+        mutableLongStateOf(stepEditInitial?.gapMs ?: loadedPreset?.body?.intervalMs ?: 0L)
     }
     var delayMs by rememberSaveable {
-        mutableLongStateOf(loadedPreset?.body?.delayMs ?: 0L)
+        mutableLongStateOf(stepEditInitial?.delayMs ?: loadedPreset?.body?.delayMs ?: 0L)
     }
     var shotCount by rememberSaveable {
-        mutableIntStateOf(loadedPreset?.body?.shotCount ?: 0)
+        mutableIntStateOf(stepEditInitial?.shotCount ?: loadedPreset?.body?.shotCount ?: 0)
     }
     var useAutofocus by rememberSaveable {
-        mutableStateOf(loadedPreset?.body?.useAutofocus ?: false)
+        mutableStateOf(stepEditInitial?.useAutofocus ?: loadedPreset?.body?.useAutofocus ?: false)
     }
     var showSaveDialog by remember { mutableStateOf(false) }
 
     val runState = LocalRunState.current
-    val running = runState !is RunState.Idle
+    val running = !isStepEdit && runState !is RunState.Idle
     val connected = LocalDeviceConnected.current
     val canonCcapiTransport = vm.canonCcapiTransport.collectAsState().value
     val ptpTransport = vm.ptpTransport.collectAsState().value
@@ -274,7 +277,8 @@ fun AstroMode2Screen(
                 currentTabValid = currentTabValid,
                 // Always clickable when connected — the action routes to
                 // the first missing-field tab if config isn't ready.
-                canStart = connected && !running,
+                canStart = isStepEdit || (connected && !running),
+                startLabel = if (isStepEdit) stringResource(R.string.save) else null,
                 hint = if (running) null else bottomHint,
                 hintIsAccent = configComplete && continuous,
                 onPrev = { if (tabIdx > 0) tabIdx-- },
@@ -284,20 +288,17 @@ fun AstroMode2Screen(
                         focalLength == 0 -> tabIdx = AstroTab.LENS.ordinal
                         intervalMs == 0L -> tabIdx = AstroTab.INTERVAL.ordinal
                         else -> {
-                            vm.saveFlowSteps(
-                                listOf(
-                                    FlowStep.Astro(
-                                        focalLength = focalLength,
-                                        cropFactor = cropFactor,
-                                        ruleDivisor = ruleDivisor,
-                                        gapMs = intervalMs,
-                                        shotCount = shotCount,
-                                        delayMs = delayMs,
-                                        useAutofocus = useAutofocus,
-                                    )
-                                )
+                            val builtStep = FlowStep.Astro(
+                                focalLength = focalLength,
+                                cropFactor = cropFactor,
+                                ruleDivisor = ruleDivisor,
+                                gapMs = intervalMs,
+                                shotCount = shotCount,
+                                delayMs = delayMs,
+                                useAutofocus = useAutofocus,
                             )
-                            vm.startFlow()
+                            if (isStepEdit) onSaveStep!!(builtStep)
+                            else { vm.saveFlowSteps(listOf(builtStep)); vm.startFlow() }
                         }
                     }
                 },
