@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -71,6 +72,23 @@ internal data class HourSignal(
 /** Sub-samples per hour-row. Sun altitude is recomputed at each, so the
  *  curve traces real minute-level darkness (every 2.5 min). */
 private const val SAMPLES_PER_HOUR = 25
+
+/** Append a Catmull-Rom spline through [pts] (current point must be pts[0])
+ *  as cubic béziers — graceful organic curves through the real samples,
+ *  without inventing data between them. */
+private fun Path.catmullRomTo(pts: List<Offset>) {
+    for (i in 0 until pts.size - 1) {
+        val p0 = pts[(i - 1).coerceAtLeast(0)]
+        val p1 = pts[i]
+        val p2 = pts[i + 1]
+        val p3 = pts[(i + 2).coerceAtMost(pts.size - 1)]
+        cubicTo(
+            p1.x + (p2.x - p0.x) / 6f, p1.y + (p2.y - p0.y) / 6f,
+            p2.x - (p3.x - p1.x) / 6f, p2.y - (p3.y - p1.y) / 6f,
+            p2.x, p2.y,
+        )
+    }
+}
 
 /** Quality model per forecast hour. Pure derivation from data the
  *  dashboard already fetched — no new network. */
@@ -249,35 +267,48 @@ internal fun TonightSignalCard(state: DashboardState) {
                     // (lower) rows occlude it with an opaque under-fill —
                     // the classic joyplot trick, and how the original
                     // CP 1919 plate reads.
+                    val bloomStroke = Stroke(width = 4.5.dp.toPx(), cap = StrokeCap.Round)
                     hours.forEachIndexed { i, h ->
                         val baseY = rowPx * (i + 1)
                         val maxAmp = rowPx * 1.55f
-                        val path = Path()
-                        val fill = Path()
                         // The line IS the hour's quality curve: x = minute
-                        // (left :00 → right :59), height = quality then.
+                        // (left :00 → right :59), height = quality then —
+                        // smoothed (Catmull-Rom) through the real samples.
                         val n = h.samples.size
-                        h.samples.forEachIndexed { s, q ->
-                            val x = w * s / (n - 1)
-                            val y = baseY - maxAmp * q
-                            if (s == 0) {
-                                path.moveTo(x, y); fill.moveTo(x, baseY); fill.lineTo(x, y)
-                            } else {
-                                path.lineTo(x, y); fill.lineTo(x, y)
-                            }
+                        val pts = h.samples.mapIndexed { s, q ->
+                            Offset(w * s / (n - 1), baseY - maxAmp * q)
                         }
-                        fill.lineTo(w, baseY); fill.close()
+                        val line = Path().apply { moveTo(pts[0].x, pts[0].y); catmullRomTo(pts) }
+                        val fill = Path().apply {
+                            moveTo(pts[0].x, baseY)
+                            lineTo(pts[0].x, pts[0].y)
+                            catmullRomTo(pts)
+                            lineTo(pts.last().x, baseY)
+                            close()
+                        }
+                        // 1) opaque under-fill — the joyplot occlusion (lower
+                        //    ridges hide the ones behind). Same card colour.
                         drawPath(fill, fillColor)
+                        // 2) luminous glow under the ridge — brighter toward
+                        //    the peak, so good hours visibly glow. Honest:
+                        //    it just shades the area under the real curve.
+                        val glowEnd = if (h.best) live.liveEnd else traceColor
+                        drawPath(
+                            fill,
+                            brush = Brush.verticalGradient(
+                                listOf(Color.Transparent, glowEnd.copy(alpha = if (h.best) 0.28f else 0.16f)),
+                                startY = baseY,
+                                endY = baseY - maxAmp,
+                            ),
+                        )
+                        // 3) soft bloom under-stroke + crisp line on top.
                         if (h.best) {
-                            drawPath(
-                                path,
-                                brush = Brush.horizontalGradient(
-                                    listOf(live.liveStart, live.liveEnd),
-                                ),
-                                style = stroke,
-                            )
+                            val g = Brush.horizontalGradient(listOf(live.liveStart, live.liveEnd))
+                            drawPath(line, brush = g, style = bloomStroke, alpha = 0.4f)
+                            drawPath(line, brush = g, style = stroke)
                         } else {
-                            drawPath(path, traceColor, style = stroke)
+                            drawPath(line, traceColor.copy(alpha = 0.22f), style = bloomStroke)
+                            drawPath(line, traceColor, style = stroke)
                         }
                     }
                     // Quarter-hour guides (15 / 30 / 45 min) on top, so the
