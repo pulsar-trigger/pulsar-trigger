@@ -170,6 +170,7 @@ fun TimelapseScreen(
                                         shotCount = shotCount,
                                         delayMs = delayMs,
                                         useAutofocus = useAutofocus,
+                                        timelapse = true,
                                     )
                                 )
                             )

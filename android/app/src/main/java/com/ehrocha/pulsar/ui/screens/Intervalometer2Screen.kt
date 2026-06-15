@@ -940,7 +940,7 @@ private fun stepSummary(step: FlowStep): String? {
     val s = step
     return when (s) {
         is FlowStep.Intervalometer ->
-            if (s.exposureMs == AppConfig.TIMELAPSE_PULSE_MS) {
+            if (s.timelapse) {
                 stringResource(
                     R.string.run_step_timelapse_summary,
                     s.shotCount, formatMsShort(s.intervalMs),

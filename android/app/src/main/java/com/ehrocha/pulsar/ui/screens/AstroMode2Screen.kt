@@ -418,9 +418,11 @@ fun AstroMode2Screen(
 }
 
 // ── Lens tab: rotary + sensor + rule ─────────────────────────────────────
+// internal so the CustomFlow Astro step editor renders the identical
+// focal/crop/rule instrument instead of a parallel panel.
 
 @Composable
-private fun LensTab(
+internal fun LensTab(
     focalLength: Int,
     cropFactor: Float,
     ruleDivisor: Int,

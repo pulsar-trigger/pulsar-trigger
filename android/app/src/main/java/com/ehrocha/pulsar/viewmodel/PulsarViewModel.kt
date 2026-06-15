@@ -2109,6 +2109,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 shotCount = mode.body.shotCount,
                 delayMs = mode.body.delayMs,
                 useAutofocus = mode.body.useAutofocus,
+                timelapse = true,
                 cameraSettings = com.ehrocha.pulsar.transport.CameraSettings(
                     iso = mode.body.iso,
                     aperture = mode.body.aperture,
@@ -2147,6 +2148,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 intervalMs = 2_000L,
                 exposureMs = AppConfig.TIMELAPSE_PULSE_MS,
                 shotCount = 1, delayMs = 0L, useAutofocus = false,
+                timelapse = true,
             ),
         )
         saveFlowSteps(test)
@@ -2446,12 +2448,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                                     "skipped=${result.skipped.iso ?: "-"}/${result.skipped.aperture ?: "-"}/${result.skipped.shutterSpeed ?: "-"}"
                             )
                         }
-                        // Timelapse wizard stores its pulse-length sentinel as
-                        // exposureMs; the camera owns timing in that path. Any
-                        // other exposureMs means a bulb-style run. awaitReady
-                        // is a no-op for non-CCAPI transports (see
-                        // [awaitCanonReady] — early-returns for PTP / Canon BLE).
-                        if (step.exposureMs == AppConfig.TIMELAPSE_PULSE_MS) {
+                        // Timelapse = single-shot pulses, the camera owns
+                        // timing; anything else is a bulb-style run. Routed
+                        // on the explicit flag, NOT exposureMs: the default
+                        // exposure (200 ms) equals the timelapse sentinel, so
+                        // the old sentinel check misrouted every fresh
+                        // intervalometer step into the timelapse path.
+                        // awaitReady is a no-op for non-CCAPI transports.
+                        if (step.timelapse) {
                             com.ehrocha.pulsar.transport.runCanonTimelapse(
                                 transport, step.shotCount, step.intervalMs, step.delayMs,
                                 af = step.useAutofocus, status = _status,
@@ -2525,19 +2529,51 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         status = _status, awaitReady = { awaitCanonReady(transport) },
                     )
                 } else {
+                    // Phone-driven ramp for simulator + ESP32 (the Canon path
+                    // above owns its own status via runCanonRamp). The shot
+                    // index must accumulate across the loop: the old code
+                    // called simulateShots(1, …) per step, which reset
+                    // shotsTaken to 1 — and flipped to IDLE — on EVERY
+                    // iteration, so the count was stuck at 1 and the run
+                    // looked like one endless exposure.
+                    if (_simulatorActive.value && step.delayMs > 0) {
+                        _status.update { it?.copy(
+                            state = DeviceState.WAITING, shotsTaken = 0,
+                        ) }
+                        delay(step.delayMs)
+                    }
                     for (i in 0 until rampSteps) {
                         coroutineContext.ensureActive()
                         val fraction = i.toDouble() / (rampSteps - 1)
                         val expMs = (step.startExposureMs +
                             fraction * (step.endExposureMs - step.startExposureMs)).toLong()
                         if (_simulatorActive.value) {
-                            simulateShots(1, expMs, step.intervalMs, 0L)
+                            val avgMs = (step.startExposureMs + step.endExposureMs) / 2
+                            val remaining = ((rampSteps - i) *
+                                (avgMs + step.intervalMs) - step.intervalMs)
+                                .coerceAtLeast(0)
+                            _status.update { it?.copy(
+                                state = DeviceState.RUNNING, shotsTaken = i,
+                                timeRemainingMs = remaining,
+                            ) }
+                            delay(expMs)
+                            _status.update { it?.copy(
+                                state = DeviceState.WAITING, shotsTaken = i + 1,
+                            ) }
+                            if (i < rampSteps - 1 && step.intervalMs > 0) {
+                                delay(step.intervalMs)
+                            }
                         } else {
                             sendModeCommand(
                                 CommandBuilder.setRamp(step.intervalMs, expMs, 1, 0L)
                             )
                             waitForCompletion(1)
                         }
+                    }
+                    if (_simulatorActive.value) {
+                        _status.update { it?.copy(
+                            state = DeviceState.IDLE, timeRemainingMs = 0L,
+                        ) }
                     }
                 }
             }

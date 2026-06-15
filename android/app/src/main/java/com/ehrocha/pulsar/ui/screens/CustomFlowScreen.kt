@@ -1607,11 +1607,13 @@ private fun IntervalometerStepEditor(step: FlowStep.Intervalometer, onChange: (F
 }
 
 /** One wizard instrument framed as a card inside the step editor — keeps
- *  the editors visually identical to the wizards they mirror. */
+ *  the editors visually identical to the wizards they mirror. A null
+ *  [height] lets the instrument size itself (the Lens panel isn't a fixed
+ *  scrub); a value gives the scrub instruments their centred play area. */
 @Composable
 private fun StepInstrument(
     label: String,
-    height: androidx.compose.ui.unit.Dp = 165.dp,
+    height: androidx.compose.ui.unit.Dp? = 165.dp,
     content: @Composable () -> Unit,
 ) {
     Surface(
@@ -1628,27 +1630,66 @@ private fun StepInstrument(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
-            Box(modifier = Modifier.fillMaxWidth().height(height)) { content() }
+            if (height != null) {
+                Box(modifier = Modifier.fillMaxWidth().height(height)) { content() }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                ) { content() }
+            }
         }
     }
 }
 
 @Composable
 private fun AstroStepEditor(step: FlowStep.Astro, onChange: (FlowStep.Astro) -> Unit) {
-    AstroPanelContent(
-        focalLength = step.focalLength,
-        cropFactor = step.cropFactor,
-        shotCount = step.shotCount,
-        delayMs = step.delayMs,
-        gapMs = step.gapMs,
-        ruleDivisor = step.ruleDivisor,
-        onCropFactorChanged = { onChange(step.copy(cropFactor = it)) },
-        onFocalLengthChanged = { onChange(step.copy(focalLength = it)) },
-        onGapMsChanged = { onChange(step.copy(gapMs = it.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS))) },
-        onShotCountChanged = { onChange(step.copy(shotCount = it.coerceAtLeast(AppConfig.MIN_SHOT_COUNT))) },
-        onDelayMsChanged = { onChange(step.copy(delayMs = it)) },
-        allowContinuous = false,
-    )
+    // Same instruments as the Astro wizard (LensTab + scrub clocks + shots
+    // dial), stacked instead of tabbed. Lens detection is a connected-camera
+    // affordance that doesn't belong inside flow editing, so it's off here.
+    val maxExpMs = AppConfig.astroExposureMs(step.focalLength, step.cropFactor, step.ruleDivisor)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        StepInstrument(stringResource(R.string.astro2_tab_lens), height = null) {
+            LensTab(
+                focalLength = step.focalLength,
+                cropFactor = step.cropFactor,
+                ruleDivisor = step.ruleDivisor,
+                maxExpMs = maxExpMs,
+                lensInfo = null,
+                canDetectLens = false,
+                lensDetecting = false,
+                onDetectLens = {},
+                onFocalChange = { onChange(step.copy(focalLength = it)) },
+                onCropChange = { onChange(step.copy(cropFactor = it)) },
+                onRuleChange = { onChange(step.copy(ruleDivisor = it)) },
+                enabled = true,
+            )
+        }
+        StepInstrument(stringResource(R.string.iv2_tab_interval)) {
+            SegmentedTimeEditor(
+                ms = step.gapMs,
+                onChange = { onChange(step.copy(gapMs = it.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS))) },
+                rangeMs = 0L..3_600_000L,
+                enabled = true,
+            )
+        }
+        StepInstrument(stringResource(R.string.iv2_tab_delay)) {
+            SegmentedTimeEditor(
+                ms = step.delayMs,
+                onChange = { onChange(step.copy(delayMs = it)) },
+                rangeMs = 0L..3_600_000L,
+                enabled = true,
+            )
+        }
+        StepInstrument(stringResource(R.string.iv2_tab_shots), height = 190.dp) {
+            ShotsEditor(
+                value = step.shotCount,
+                onChange = { onChange(step.copy(shotCount = it.coerceAtLeast(1))) },
+                enabled = true,
+            )
+        }
+    }
 }
 
 @Composable
@@ -1687,60 +1728,70 @@ private fun PauseStepEditor(step: FlowStep.Pause, onChange: (FlowStep.Pause) -> 
 
 @Composable
 private fun DarkFrameStepEditor(step: FlowStep.DarkFrame, onChange: (FlowStep.DarkFrame) -> Unit) {
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                stringResource(R.string.dark_frame_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+    // Same instruments as the Dark Frame wizard, stacked.
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        StepInstrument(stringResource(R.string.iv2_tab_exposure)) {
+            SegmentedTimeEditor(
+                ms = step.exposureMs,
+                onChange = { onChange(step.copy(exposureMs = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS))) },
+                rangeMs = 0L..86_400_000L,
+                enabled = true,
+            )
+        }
+        StepInstrument(stringResource(R.string.iv2_tab_interval)) {
+            SegmentedTimeEditor(
+                ms = step.gapMs,
+                onChange = { onChange(step.copy(gapMs = it.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS))) },
+                rangeMs = 0L..3_600_000L,
+                enabled = true,
+            )
+        }
+        StepInstrument(stringResource(R.string.iv2_tab_shots), height = 190.dp) {
+            ShotsEditor(
+                value = step.shotCount,
+                onChange = { onChange(step.copy(shotCount = it.coerceAtLeast(1))) },
+                enabled = true,
             )
         }
     }
-    Spacer(Modifier.height(8.dp))
-    // Delegate to the main DarkFrame panel — same scrub-with-presets UX as
-    // when the user enters via the Trigger tab.
-    DarkFramePanelContent(
-        count = step.shotCount,
-        exposureMs = step.exposureMs,
-        gapMs = step.gapMs,
-        onCountChanged = { onChange(step.copy(shotCount = it.coerceAtLeast(1))) },
-        onExposureMsChanged = { onChange(step.copy(exposureMs = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS))) },
-        onGapMsChanged = { onChange(step.copy(gapMs = it.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS))) },
-    )
 }
 
 @Composable
 private fun RampStepEditor(step: FlowStep.Ramp, onChange: (FlowStep.Ramp) -> Unit) {
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                stringResource(R.string.ramp_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+    // Same instruments as the Ramp wizard, stacked.
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        StepInstrument(stringResource(R.string.ramp2_tab_start)) {
+            SegmentedTimeEditor(
+                ms = step.startExposureMs,
+                onChange = { onChange(step.copy(startExposureMs = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS))) },
+                rangeMs = 0L..86_400_000L,
+                enabled = true,
+            )
+        }
+        StepInstrument(stringResource(R.string.ramp2_tab_end)) {
+            SegmentedTimeEditor(
+                ms = step.endExposureMs,
+                onChange = { onChange(step.copy(endExposureMs = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS))) },
+                rangeMs = 0L..86_400_000L,
+                enabled = true,
+            )
+        }
+        StepInstrument(stringResource(R.string.iv2_tab_interval)) {
+            SegmentedTimeEditor(
+                ms = step.intervalMs,
+                onChange = { onChange(step.copy(intervalMs = it.coerceAtLeast(AppConfig.MIN_INTERVAL_MS))) },
+                rangeMs = 0L..3_600_000L,
+                enabled = true,
+            )
+        }
+        StepInstrument(stringResource(R.string.ramp2_tab_steps), height = 190.dp) {
+            ShotsEditor(
+                value = step.steps,
+                onChange = { onChange(step.copy(steps = it.coerceAtLeast(2))) },
+                enabled = true,
             )
         }
     }
-    Spacer(Modifier.height(8.dp))
-    // Delegate to the main Ramp panel — sub-second start/end exposures with
-    // presets, interval with presets, IntScrubField for steps.
-    RampPanelContent(
-        startExposureMs = step.startExposureMs,
-        endExposureMs = step.endExposureMs,
-        steps = step.steps,
-        intervalMs = step.intervalMs,
-        onStartExposureChanged = { onChange(step.copy(startExposureMs = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS))) },
-        onEndExposureChanged = { onChange(step.copy(endExposureMs = it.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS))) },
-        onIntervalChanged = { onChange(step.copy(intervalMs = it.coerceAtLeast(AppConfig.MIN_INTERVAL_MS))) },
-        onStepsChanged = { onChange(step.copy(steps = it.coerceAtLeast(2))) },
-    )
 }
 
 // ─── Save Flow dialog ────────────────────────────────────────────────────────

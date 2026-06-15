@@ -59,10 +59,15 @@ sealed class FlowStep {
          *  shown to the user in a banner. */
         val cameraSettings: com.ehrocha.pulsar.transport.CameraSettings =
             com.ehrocha.pulsar.transport.CameraSettings.EMPTY,
+        /** True when this step IS a timelapse (single-shot pulses on the
+         *  interval). Explicit flag — it cannot be inferred from the
+         *  sentinel exposure because DEFAULT_EXPOSURE_MS and
+         *  TIMELAPSE_PULSE_MS are both 200 ms, which made every fresh
+         *  Intervalometer step masquerade as a Timelapse. */
+        val timelapse: Boolean = false,
     ) : FlowStep() {
         override val type get() =
-            if (exposureMs == AppConfig.TIMELAPSE_PULSE_MS) FlowStepType.TIMELAPSE
-            else FlowStepType.INTERVALOMETER
+            if (timelapse) FlowStepType.TIMELAPSE else FlowStepType.INTERVALOMETER
     }
 
     data class Astro(
@@ -123,6 +128,7 @@ sealed class FlowStep {
                 put("exposureMs", s.exposureMs)
                 put("shotCount", s.shotCount)
                 put("delayMs", s.delayMs)
+                put("timelapse", s.timelapse)
                 put("useAutofocus", s.useAutofocus)
                 s.cameraSettings.iso?.let { put("iso", it) }
                 s.cameraSettings.aperture?.let { put("aperture", it) }
@@ -165,6 +171,7 @@ sealed class FlowStep {
             FlowStepType.INTERVALOMETER -> Intervalometer()
             FlowStepType.TIMELAPSE -> Intervalometer(
                 exposureMs = AppConfig.TIMELAPSE_PULSE_MS,
+                timelapse = true,
             )
             FlowStepType.ASTRO -> Astro()
             FlowStepType.DARK_FRAME -> DarkFrame()
@@ -185,6 +192,7 @@ sealed class FlowStep {
                     shotCount = json.optInt("shotCount", AppConfig.DEFAULT_SHOT_COUNT),
                     delayMs = json.optLong("delayMs", AppConfig.DEFAULT_DELAY_MS),
                     useAutofocus = json.optBoolean("useAutofocus", false),
+                    timelapse = json.optBoolean("timelapse", type == FlowStepType.TIMELAPSE),
                     cameraSettings = com.ehrocha.pulsar.transport.CameraSettings(
                         iso = json.optString("iso").takeIf { it.isNotEmpty() },
                         aperture = json.optString("aperture").takeIf { it.isNotEmpty() },
