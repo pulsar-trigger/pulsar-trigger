@@ -80,6 +80,17 @@ class AppUpdateManager(
     private var downloadedApk: File? = null
     private var downloadJob: Job? = null
 
+    private val prefs =
+        context.getSharedPreferences("pulsar_app_update", Context.MODE_PRIVATE)
+
+    /** Wall-clock millis of the last completed app-update check, or null if
+     *  never checked. Persisted so Settings can show "Last checked …"
+     *  instead of a useless no-op OK button after an up-to-date result. */
+    private val _lastCheckedAt = MutableStateFlow(
+        prefs.getLong("last_checked_at", 0L).takeIf { it > 0L },
+    )
+    val lastCheckedAt: StateFlow<Long?> = _lastCheckedAt
+
     fun checkForUpdate(currentVersion: String) {
         scope.launch(Dispatchers.IO) {
             _state.value = AppUpdateState.CHECKING
@@ -92,6 +103,9 @@ class AppUpdateManager(
                 } else {
                     _state.value = AppUpdateState.UP_TO_DATE
                 }
+                val now = System.currentTimeMillis()
+                prefs.edit().putLong("last_checked_at", now).apply()
+                _lastCheckedAt.value = now
             } catch (e: Exception) {
                 Log.e(TAG, "Check failed", e)
                 _errorMessage.value = e.message

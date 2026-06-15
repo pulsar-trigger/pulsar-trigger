@@ -1437,6 +1437,7 @@ private fun UpdatesSection(vm: PulsarViewModel, showFirmware: Boolean = true) {
     val appRelease by updateManager.latestRelease.collectAsState()
     val appError by updateManager.errorMessage.collectAsState()
     val appVersion = BuildConfig.VERSION_NAME
+    val lastCheckedAt by updateManager.lastCheckedAt.collectAsState()
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (showFirmware) {
@@ -1600,7 +1601,31 @@ private fun UpdatesSection(vm: PulsarViewModel, showFirmware: Boolean = true) {
         )
 
         when (updateState) {
-            AppUpdateState.IDLE -> {
+            // Before a check AND after an "up to date" result: always offer
+            // the check button (no useless no-op OK), and show when we last
+            // checked + the up-to-date confirmation.
+            AppUpdateState.IDLE, AppUpdateState.UP_TO_DATE -> {
+                if (updateState == AppUpdateState.UP_TO_DATE) {
+                    Text(
+                        stringResource(R.string.status_up_to_date),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                lastCheckedAt?.let { ts ->
+                    Text(
+                        stringResource(
+                            R.string.app_update_last_checked,
+                            android.text.format.DateUtils.getRelativeTimeSpanString(
+                                ts,
+                                System.currentTimeMillis(),
+                                android.text.format.DateUtils.MINUTE_IN_MILLIS,
+                            ).toString(),
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 OutlinedButton(
                     onClick = { updateManager.checkForUpdate(appVersion) },
                     modifier = Modifier.fillMaxWidth(),
@@ -1618,19 +1643,6 @@ private fun UpdatesSection(vm: PulsarViewModel, showFirmware: Boolean = true) {
                     Spacer(Modifier.width(12.dp))
                     Text(stringResource(R.string.status_checking_github), style = MaterialTheme.typography.bodyMedium)
                 }
-            }
-
-            AppUpdateState.UP_TO_DATE -> {
-                Text(
-                    stringResource(R.string.status_up_to_date),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                OutlinedButton(
-                    onClick = { updateManager.reset() },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                ) { Text(stringResource(R.string.ok)) }
             }
 
             AppUpdateState.AVAILABLE -> {

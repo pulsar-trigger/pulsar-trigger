@@ -344,7 +344,12 @@ fun SettingsScreen(
                     SettingsSection.PLANNER -> PlannerSettingsSectionContent(vm)
                     SettingsSection.BACKGROUND -> BackgroundSectionContent(vm)
                     SettingsSection.BACKUP_RESTORE -> BackupRestoreSectionContent(vm)
-                    SettingsSection.UPDATES -> UpdatesSectionContent(vm, showFirmware = onEsp)
+                    // Firmware OTA only applies to a REAL ESP32 over Pulsar
+                    // BLE — not the simulator (nothing to flash) and not a
+                    // camera transport. So gate on the live BLE connection,
+                    // not onEsp (which is also true in the simulator).
+                    SettingsSection.UPDATES ->
+                        UpdatesSectionContent(vm, showFirmware = pulsarBleConnected)
                     SettingsSection.DIAGNOSTICS -> DiagnosticsSectionContent(
                         onTestCameraClick = onTestCameraSelected,
                         onDiagnosticsClick = onDiagnosticsSelected,

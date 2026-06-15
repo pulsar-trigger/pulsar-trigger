@@ -574,6 +574,7 @@
     <string name="status_update_failed">Update failed</string>
     <string name="label_app">App</string>
     <string name="btn_check_app_update">Check for App Update</string>
+    <string name="app_update_last_checked">Last checked %1$s</string>
     <string name="status_up_to_date">You\'re up to date!</string>
     <string name="btn_open_release_page">Open Release Page</string>
     <string name="btn_download_install">Download &amp; Install</string>

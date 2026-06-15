@@ -382,6 +382,7 @@
     <string name="status_update_failed">Update fehlgeschlagen</string>
     <string name="label_app">App</string>
     <string name="btn_check_app_update">Nach App-Update suchen</string>
+    <string name="app_update_last_checked">Zuletzt geprüft %1$s</string>
     <string name="status_up_to_date">Alles auf dem neuesten Stand!</string>
     <string name="status_update_check_failed">Update-Prüfung fehlgeschlagen</string>
     <string name="hw_simulator_note">Hardware-Infos im Simulatormodus nicht verfügbar</string>

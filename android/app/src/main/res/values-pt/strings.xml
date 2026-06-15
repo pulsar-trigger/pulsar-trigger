@@ -382,6 +382,7 @@
     <string name="status_update_failed">Falha na atualização</string>
     <string name="label_app">App</string>
     <string name="btn_check_app_update">Verificar Atualização do App</string>
+    <string name="app_update_last_checked">Última verificação %1$s</string>
     <string name="status_up_to_date">Você está atualizado!</string>
     <string name="status_update_check_failed">Falha ao verificar atualização</string>
     <string name="hw_simulator_note">Informações de hardware não disponíveis no modo simulador</string>

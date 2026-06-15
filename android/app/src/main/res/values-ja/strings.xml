@@ -382,6 +382,7 @@
     <string name="status_update_failed">アップデート失敗</string>
     <string name="label_app">アプリ</string>
     <string name="btn_check_app_update">アプリの更新を確認</string>
+    <string name="app_update_last_checked">最終確認 %1$s</string>
     <string name="status_up_to_date">最新の状態です！</string>
     <string name="status_update_check_failed">更新の確認に失敗しました</string>
     <string name="hw_simulator_note">シミュレーターモードではハードウェア情報を利用できません</string>

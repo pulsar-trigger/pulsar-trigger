@@ -384,6 +384,7 @@
     <string name="status_update_failed">更新失败</string>
     <string name="label_app">应用</string>
     <string name="btn_check_app_update">检查应用更新</string>
+    <string name="app_update_last_checked">上次检查 %1$s</string>
     <string name="status_up_to_date">已是最新版本！</string>
     <string name="status_update_check_failed">检查更新失败</string>
     <string name="hw_simulator_note">模拟器模式下无法查看硬件信息</string>
