@@ -429,7 +429,7 @@
 
 Une ligne qui monte vers la droite signifie que les conditions s\'améliorent au fil de l\'heure (crépuscule qui s\'approfondit, nuages qui se dissipent) ; une ligne qui descend signifie qu\'elles se dégradent (nuages, lever de lune, aube).
 
-La hauteur vient de l\'obscurité du ciel × ciel dégagé × pas de lune brillante × pas de pluie. La ligne lumineuse contient le meilleur moment de la nuit — nommé sous le graphique.</string>
+La hauteur vient de l\'obscurité du ciel × ciel dégagé × pas de lune brillante × pas de pluie. La ligne lumineuse contient le meilleur moment de la nuit — nommé sous le graphique. Les repères verticaux marquent chaque quart d\'heure (15, 30, 45 min) ; la barre à côté de chaque heure indique son niveau global.</string>
     <string name="location_north">N</string>
     <string name="location_south">S</string>
     <string name="location_east">E</string>

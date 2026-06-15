@@ -429,7 +429,7 @@
 
 Uma linha que sobe para a direita significa que as condições melhoram ao longo da hora (crepúsculo aprofundando, nuvens se dissipando); uma linha que desce significa que pioram (nuvens, nascer da lua ou amanhecer).
 
-A altura vem da escuridão do céu × céu limpo × sem lua brilhante × sem chuva. A linha brilhante contém o melhor momento da noite — indicado abaixo do gráfico.</string>
+A altura vem da escuridão do céu × céu limpo × sem lua brilhante × sem chuva. A linha brilhante contém o melhor momento da noite — indicado abaixo do gráfico. As guias verticais marcam cada quarto de hora (15, 30, 45 min); a barra ao lado de cada hora mostra o nível geral.</string>
     <string name="location_north">N</string>
     <string name="location_south">S</string>
     <string name="location_east">L</string>

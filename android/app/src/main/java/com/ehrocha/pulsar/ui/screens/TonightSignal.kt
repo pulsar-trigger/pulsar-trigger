@@ -6,14 +6,19 @@
 package com.ehrocha.pulsar.ui.screens
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
@@ -137,6 +142,37 @@ internal fun buildTonightSignal(state: DashboardState): List<HourSignal> {
     return out.mapIndexed { i, h -> if (i == bestIdx) h.copy(best = true) else h }
 }
 
+/** Tiny vertical level gauge: filled to [level] (0..1 = this hour's peak
+ *  quality). The absolute reference the honest ridgeline needs — a flat-high
+ *  and a flat-low line are obvious here even though both look flat. */
+@Composable
+private fun QualityPip(level: Float, best: Boolean) {
+    val colors = PulsarTheme.colors
+    Box(
+        modifier = Modifier
+            .width(5.dp)
+            .height(16.dp)
+            .clip(RoundedCornerShape(3.dp))
+            .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(level.coerceIn(0.06f, 1f))
+                .then(
+                    if (best) {
+                        Modifier.background(
+                            Brush.verticalGradient(listOf(colors.liveEnd, colors.liveStart)),
+                        )
+                    } else {
+                        Modifier.background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                    },
+                ),
+        )
+    }
+}
+
 @Composable
 internal fun TonightSignalCard(state: DashboardState) {
     val hours = remember(state.weather, state.moon, state.location) {
@@ -196,6 +232,7 @@ internal fun TonightSignalCard(state: DashboardState) {
             val rowHeight = 26.dp
             val traceColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
             val fillColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            val guideColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)
             val live = PulsarTheme.colors
             Row(verticalAlignment = Alignment.Top) {
                 Canvas(
@@ -206,6 +243,14 @@ internal fun TonightSignalCard(state: DashboardState) {
                     val rowPx = rowHeight.toPx()
                     val w = size.width
                     val stroke = Stroke(width = 1.6.dp.toPx(), cap = StrokeCap.Round)
+                    // Quarter-hour guides (15 / 30 / 45 min) — the within-
+                    // hour time scale. Drawn behind the ridges, so they show
+                    // in the open sky above each line (where peaks sit) and
+                    // are masked by the opaque fills where there's data.
+                    for (qm in 1..3) {
+                        val gx = w * qm / 4f
+                        drawLine(guideColor, Offset(gx, 0f), Offset(gx, size.height), 0.8.dp.toPx())
+                    }
                     // Painters order: draw the EARLIEST hour first; later
                     // (lower) rows occlude it with an opaque under-fill —
                     // the classic joyplot trick, and how the original
@@ -245,14 +290,24 @@ internal fun TonightSignalCard(state: DashboardState) {
                 Spacer(Modifier.width(12.dp))
                 Column {
                     hours.forEach { h ->
-                        Text(
-                            h.label,
-                            style = MaterialTheme.typography.labelSmall.copy(fontFamily = Mono),
-                            color = if (h.best) live.liveEnd
-                                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.End,
-                            modifier = Modifier.height(rowHeight).width(34.dp),
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.height(rowHeight),
+                        ) {
+                            // Absolute level gauge — disambiguates a flat-high
+                            // (great) hour from a flat-low (poor) one, which
+                            // the line shape alone can't.
+                            QualityPip(level = h.samples.max(), best = h.best)
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                h.label,
+                                style = MaterialTheme.typography.labelSmall.copy(fontFamily = Mono),
+                                color = if (h.best) live.liveEnd
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.End,
+                                modifier = Modifier.width(30.dp),
+                            )
+                        }
                     }
                 }
             }

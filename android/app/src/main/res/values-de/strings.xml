@@ -429,7 +429,7 @@
 
 Eine nach rechts steigende Linie bedeutet bessere Bedingungen im Lauf der Stunde (Dämmerung vertieft sich, Wolken lösen sich auf); eine fallende Linie bedeutet schlechtere (Wolken, Mondaufgang, Morgendämmerung).
 
-Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond × kein Regen. Die leuchtende Linie hält den besten Moment der Nacht — unter dem Diagramm benannt.</string>
+Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond × kein Regen. Die leuchtende Linie hält den besten Moment der Nacht — unter dem Diagramm benannt. Senkrechte Hilfslinien markieren jede Viertelstunde (15, 30, 45 min); der Balken neben jeder Stunde zeigt ihr Gesamtniveau.</string>
     <string name="location_north">N</string>
     <string name="location_south">S</string>
     <string name="location_east">O</string>
