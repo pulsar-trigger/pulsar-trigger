@@ -232,7 +232,9 @@ internal fun TonightSignalCard(state: DashboardState) {
             val rowHeight = 26.dp
             val traceColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
             val fillColor = MaterialTheme.colorScheme.surfaceContainerHigh
-            val guideColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)
+            // onSurface (near-white in dark) at low alpha — visible on the
+            // dark card, unlike outline which is dark-on-dark.
+            val guideColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f)
             val live = PulsarTheme.colors
             Row(verticalAlignment = Alignment.Top) {
                 Canvas(
@@ -243,14 +245,6 @@ internal fun TonightSignalCard(state: DashboardState) {
                     val rowPx = rowHeight.toPx()
                     val w = size.width
                     val stroke = Stroke(width = 1.6.dp.toPx(), cap = StrokeCap.Round)
-                    // Quarter-hour guides (15 / 30 / 45 min) — the within-
-                    // hour time scale. Drawn behind the ridges, so they show
-                    // in the open sky above each line (where peaks sit) and
-                    // are masked by the opaque fills where there's data.
-                    for (qm in 1..3) {
-                        val gx = w * qm / 4f
-                        drawLine(guideColor, Offset(gx, 0f), Offset(gx, size.height), 0.8.dp.toPx())
-                    }
                     // Painters order: draw the EARLIEST hour first; later
                     // (lower) rows occlude it with an opaque under-fill —
                     // the classic joyplot trick, and how the original
@@ -285,6 +279,14 @@ internal fun TonightSignalCard(state: DashboardState) {
                         } else {
                             drawPath(path, traceColor, style = stroke)
                         }
+                    }
+                    // Quarter-hour guides (15 / 30 / 45 min) on top, so the
+                    // within-hour time scale is always visible — read where
+                    // in the hour a peak falls. Faint enough not to fight the
+                    // traces.
+                    for (qm in 1..3) {
+                        val gx = w * qm / 4f
+                        drawLine(guideColor, Offset(gx, 0f), Offset(gx, size.height), 0.8.dp.toPx())
                     }
                 }
                 Spacer(Modifier.width(12.dp))
