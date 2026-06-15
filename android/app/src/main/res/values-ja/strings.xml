@@ -422,10 +422,14 @@
     <string name="status_fetching_data">位置情報＆データを取得中…</string>
     <string name="card_summary">サマリー</string>
     <string name="tonight_signal_title">今夜のシグナル</string>
-    <string name="tonight_signal_best">ベスト %1$s · 雲量 %2$d%%</string>
+    <string name="tonight_signal_best">ベスト ~%1$s · 雲量 %2$d%%</string>
     <string name="run_complete_snack">撮影完了 · %1$d 枚</string>
     <string name="tonight_signal_help_title">シグナルの読み方</string>
-    <string name="tonight_signal_help_body">各ラインは今夜の1時間（上から下へ）。パルスが高いほど撮影に適した時間です。\n\n• 空の暗さが基本 — 太陽が薄明を沈むほどパルスは成長\n• 雲量はラインを平坦に\n• 明るい月はすべての時間を減衰\n• 雨はほぼ消します\n\n色付きのラインが今夜のベストウィンドウ — その時刻は右側で強調され、チャートの下に表示されます。</string>
+    <string name="tonight_signal_help_body">各ラインは今夜の1時間で、上（早い）から下（遅い）へ並びます。ライン上の左から右はその1時間の60分で、高さはその瞬間の空の良さを表します。高いほど良好です。
+
+右に向かって上がるラインは、その時間内に条件が改善していること（薄明が深まる、雲が晴れる）を意味し、下がるラインは悪化（雲、月の出、夜明け）を意味します。
+
+高さは「空の暗さ × 晴天 × 明るい月がない × 雨がない」で決まります。光るラインが今夜の最良の瞬間を含み、チャートの下に表示されます。</string>
     <string name="location_north">北</string>
     <string name="location_south">南</string>
     <string name="location_east">東</string>

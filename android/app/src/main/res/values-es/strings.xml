@@ -422,10 +422,14 @@
     <string name="status_fetching_data">Obteniendo ubicación &amp; datos…</string>
     <string name="card_summary">Resumen</string>
     <string name="tonight_signal_title">Señal de esta noche</string>
-    <string name="tonight_signal_best">Mejor ventana %1$s · %2$d%% nubes</string>
+    <string name="tonight_signal_best">Mejor ~%1$s · %2$d%% nubes</string>
     <string name="run_complete_snack">Sesión completa · %1$d tomas</string>
     <string name="tonight_signal_help_title">Cómo leer la señal</string>
-    <string name="tonight_signal_help_body">Cada línea es una hora de esta noche, de arriba abajo. Cuanto más alto el pulso, mejor esa hora para fotografiar.\n\n• La oscuridad del cielo lo impulsa — el pulso crece mientras el sol baja por los crepúsculos civil, náutico y astronómico\n• Las nubes aplanan la línea\n• Una luna brillante amortigua todas las horas\n• La lluvia casi la elimina\n\nLa línea de color es la mejor ventana de la noche — su hora está resaltada a la derecha y nombrada bajo el gráfico.</string>
+    <string name="tonight_signal_help_body">Cada línea es una hora de esta noche, de arriba (pronto) a abajo (tarde). A lo largo de una línea, de izquierda a derecha están los 60 minutos de esa hora, y la altura indica qué tan bueno está el cielo en ese momento. Más alto es mejor.
+
+Una línea que sube hacia la derecha significa que las condiciones mejoran durante la hora (el crepúsculo se profundiza, las nubes se despejan); una línea que baja significa que empeoran (nubes, salida de la luna o amanecer).
+
+La altura proviene de la oscuridad del cielo × cielo despejado × sin luna brillante × sin lluvia. La línea brillante contiene el mejor momento de la noche, indicado bajo el gráfico.</string>
     <string name="location_north">N</string>
     <string name="location_south">S</string>
     <string name="location_east">E</string>

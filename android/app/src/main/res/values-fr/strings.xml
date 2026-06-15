@@ -422,10 +422,14 @@
     <string name="status_fetching_data">Récupération de la position &amp; des données…</string>
     <string name="card_summary">Résumé</string>
     <string name="tonight_signal_title">Signal de la nuit</string>
-    <string name="tonight_signal_best">Meilleure fenêtre %1$s · %2$d%% nuages</string>
+    <string name="tonight_signal_best">Meilleur ~%1$s · %2$d%% nuages</string>
     <string name="run_complete_snack">Session terminée · %1$d images</string>
     <string name="tonight_signal_help_title">Lire le signal</string>
-    <string name="tonight_signal_help_body">Chaque ligne est une heure de la nuit, de haut en bas. Plus l\'impulsion est haute, meilleure est l\'heure pour photographier.\n\n• L\'obscurité du ciel la porte — l\'impulsion grandit quand le soleil descend à travers les crépuscules\n• Les nuages aplatissent la ligne\n• Une lune brillante atténue chaque heure\n• La pluie l\'efface presque\n\nLa ligne colorée est la meilleure fenêtre de la nuit — son heure est teintée à droite et nommée sous le graphique.</string>
+    <string name="tonight_signal_help_body">Chaque ligne est une heure de la nuit, du haut (bientôt) au bas (tard). Le long d\'une ligne, de gauche à droite, ce sont les 60 minutes de cette heure — la hauteur indique la qualité du ciel à cet instant. Plus haut, c\'est mieux.
+
+Une ligne qui monte vers la droite signifie que les conditions s\'améliorent au fil de l\'heure (crépuscule qui s\'approfondit, nuages qui se dissipent) ; une ligne qui descend signifie qu\'elles se dégradent (nuages, lever de lune, aube).
+
+La hauteur vient de l\'obscurité du ciel × ciel dégagé × pas de lune brillante × pas de pluie. La ligne lumineuse contient le meilleur moment de la nuit — nommé sous le graphique.</string>
     <string name="location_north">N</string>
     <string name="location_south">S</string>
     <string name="location_east">E</string>

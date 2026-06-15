@@ -42,74 +42,98 @@ import com.ehrocha.pulsar.ui.theme.Mono
 import com.ehrocha.pulsar.ui.theme.PulsarTheme
 import java.time.LocalDateTime
 import java.time.ZoneId
-import kotlin.math.PI
-import kotlin.math.exp
-import kotlin.math.sin
+import kotlin.math.roundToInt
 
 /**
  * SIGNAL's flagship moment: tonight rendered as a CP 1919-style stacked
- * pulse plot — the chart the app is named after. Each line is one hour;
- * the pulse amplitude is that hour's shooting quality (sky darkness ×
- * cloud cover × moonlight × rain). The best hour's trace is drawn in the
- * live gradient. It's a homage AND a real chart.
+ * ridgeline — the chart the app is named after. Each line is one hour;
+ * within a line, **left→right is the 60 minutes of that hour** and the
+ * height at each point is the actual shooting quality at that minute
+ * (sky darkness × cloud × moonlight × rain). So a line that climbs through
+ * the hour means the sky is improving (twilight deepening); a falling line
+ * means it's degrading (cloud rolling in, moonrise, dawn). The row holding
+ * the single best moment is drawn in the live gradient. Homage AND honest
+ * chart — the horizontal axis carries real information, not decoration.
  */
 internal data class HourSignal(
-    val label: String,
-    val quality: Float,   // 0..1
+    val label: String,            // "19h"
+    val hour: Int,                // 0..23, for formatting the peak time
+    val samples: List<Float>,     // quality 0..1, left = :00, right = :59
     val cloudPct: Int,
     val best: Boolean = false,
 )
+
+/** Sub-samples per hour-row. Sun altitude is recomputed at each, so the
+ *  curve traces real minute-level darkness (every 2.5 min). */
+private const val SAMPLES_PER_HOUR = 25
 
 /** Quality model per forecast hour. Pure derivation from data the
  *  dashboard already fetched — no new network. */
 internal fun buildTonightSignal(state: DashboardState): List<HourSignal> {
     val loc = state.location ?: return emptyList()
-    val hourly = state.weather?.hourlyForecast ?: return emptyList()
-    if (hourly.isEmpty()) return emptyList()
+    val hourlyRaw = state.weather?.hourlyForecast ?: return emptyList()
+    if (hourlyRaw.isEmpty()) return emptyList()
+
+    // Parse + sort so we can interpolate cloud/rain between adjacent hours
+    // across a row (the within-hour trend).
+    data class HourPt(val t: LocalDateTime, val cloud: Int, val precip: Double)
+    val pts = hourlyRaw.mapNotNull { h ->
+        val t = runCatching { LocalDateTime.parse(h.time) }.getOrNull() ?: return@mapNotNull null
+        HourPt(t, h.cloudCoverPct, h.precipitationMm)
+    }.sortedBy { it.t }
+    if (pts.isEmpty()) return emptyList()
 
     val now = LocalDateTime.now()
-    val moonFactor = when (state.moon?.goodForAstro) {
-        false -> 0.6f
-        else -> 1f
-    }
+    val moonFactor = if (state.moon?.goodForAstro == false) 0.6f else 1f
 
-    val out = mutableListOf<HourSignal>()
-    for (h in hourly) {
-        val t = runCatching { LocalDateTime.parse(h.time) }.getOrNull() ?: continue
-        if (t.isBefore(now.minusMinutes(30)) || t.isAfter(now.plusHours(14))) continue
-
-        // Sun altitude at this hour — same maths goldenBlueHours uses.
-        val date = t.toLocalDate()
+    // Darkness at a given local hour-of-day — sun altitude through the
+    // twilights (0 at the horizon → 1 at astronomical dark). Recomputed per
+    // sub-sample so the curve reflects the sun genuinely sinking minute by
+    // minute (most of the within-hour motion near dusk/dawn).
+    fun darknessAt(localHour: Double, date: java.time.LocalDate): Double {
         val tzOff = date.atStartOfDay(ZoneId.systemDefault()).offset.totalSeconds / 3600.0
         val (sunRa, sunDec) = AstroCalculator.sunPosition(date)
-        val localHour = t.hour + t.minute / 60.0
         val sunAlt = AstroCalculator.altitude(
             loc.latitude, sunDec,
             AstroCalculator.lst(date, localHour - tzOff, loc.longitude) - sunRa,
         )
-        if (sunAlt > 5.0) continue  // daylight hours don't make the chart
-
-        // Darkness ramps through the twilights: 0 at the horizon, 1 at
-        // astronomical darkness.
-        val darkness = when {
+        return when {
             sunAlt >= 0 -> 0.05
             sunAlt >= -6 -> 0.12 + (-sunAlt / 6.0) * 0.18      // civil
             sunAlt >= -12 -> 0.30 + ((-sunAlt - 6) / 6.0) * 0.30 // nautical
             sunAlt >= -18 -> 0.60 + ((-sunAlt - 12) / 6.0) * 0.40 // astro
             else -> 1.0
         }
-        val cloudFactor = 1.0 - (h.cloudCoverPct / 100.0) * 0.9
-        val rainFactor = if (h.precipitationMm > 0.1) 0.25 else 1.0
-        val q = (darkness * cloudFactor * rainFactor * moonFactor).toFloat()
+    }
+
+    val out = mutableListOf<HourSignal>()
+    for ((idx, pt) in pts.withIndex()) {
+        val t = pt.t
+        if (t.isBefore(now.minusMinutes(30)) || t.isAfter(now.plusHours(14))) continue
+        val next = pts.getOrNull(idx + 1)
+        val date = t.toLocalDate()
+        val samples = (0 until SAMPLES_PER_HOUR).map { k ->
+            val f = k.toDouble() / (SAMPLES_PER_HOUR - 1)   // 0..1 across the hour
+            val darkness = darknessAt(t.hour + f, date)
+            val cloud = if (next != null) pt.cloud + (next.cloud - pt.cloud) * f else pt.cloud.toDouble()
+            val precip = if (next != null) pt.precip + (next.precip - pt.precip) * f else pt.precip
+            val cloudFactor = 1.0 - (cloud / 100.0) * 0.9
+            val rainFactor = if (precip > 0.1) 0.25 else 1.0
+            (darkness * cloudFactor * rainFactor * moonFactor).toFloat().coerceIn(0.02f, 1f)
+        }
+        // Skip hours that are essentially daylight the whole way through.
+        if ((samples.maxOrNull() ?: 0f) < 0.08f) continue
         out += HourSignal(
             label = "%02dh".format(t.hour),
-            quality = q.coerceIn(0.02f, 1f),
-            cloudPct = h.cloudCoverPct,
+            hour = t.hour,
+            samples = samples,
+            cloudPct = pt.cloud,
         )
         if (out.size >= 10) break
     }
     if (out.isEmpty()) return out
-    val bestIdx = out.indices.maxBy { out[it].quality }
+    // Highlight the row holding the single best MOMENT tonight.
+    val bestIdx = out.indices.maxByOrNull { i -> out[i].samples.max() } ?: 0
     return out.mapIndexed { i, h -> if (i == bestIdx) h.copy(best = true) else h }
 }
 
@@ -188,26 +212,17 @@ internal fun TonightSignalCard(state: DashboardState) {
                     // CP 1919 plate reads.
                     hours.forEachIndexed { i, h ->
                         val baseY = rowPx * (i + 1)
-                        val amp = rowPx * 1.55f * h.quality
+                        val maxAmp = rowPx * 1.55f
                         val path = Path()
                         val fill = Path()
-                        var first = true
-                        val steps = 72
-                        for (s in 0..steps) {
-                            val x = w * s / steps
-                            val u = s / steps.toFloat()
-                            // organic pulse cluster: gaussian envelope
-                            // around 42% width × two incommensurate sines,
-                            // phase-seeded per row so the plot is stable
-                            val env = exp(-((u - 0.42f) * (u - 0.42f)) / 0.022f)
-                            val n = (
-                                sin(u * 19f * PI + i * 2.39f) * 0.55f +
-                                sin(u * 7f * PI + i * 5.07f) * 0.45f
-                            ).toFloat()
-                            val y = baseY - amp * env * (0.55f + 0.45f * n).coerceAtLeast(0.04f)
-                            if (first) {
+                        // The line IS the hour's quality curve: x = minute
+                        // (left :00 → right :59), height = quality then.
+                        val n = h.samples.size
+                        h.samples.forEachIndexed { s, q ->
+                            val x = w * s / (n - 1)
+                            val y = baseY - maxAmp * q
+                            if (s == 0) {
                                 path.moveTo(x, y); fill.moveTo(x, baseY); fill.lineTo(x, y)
-                                first = false
                             } else {
                                 path.lineTo(x, y); fill.lineTo(x, y)
                             }
@@ -243,8 +258,13 @@ internal fun TonightSignalCard(state: DashboardState) {
             }
             Spacer(Modifier.height(4.dp))
             val best = hours.first { it.best }
+            // Pinpoint the single best moment: the peak sample's minute.
+            val peakIdx = best.samples.indices.maxByOrNull { best.samples[it] } ?: 0
+            val peakMin = (peakIdx.toFloat() / (best.samples.size - 1) * 60f)
+                .roundToInt().coerceIn(0, 59)
+            val peakTime = "%02d:%02d".format(best.hour, peakMin)
             Text(
-                stringResource(R.string.tonight_signal_best, best.label, best.cloudPct),
+                stringResource(R.string.tonight_signal_best, peakTime, best.cloudPct),
                 style = MaterialTheme.typography.labelSmall.copy(fontFamily = Mono),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

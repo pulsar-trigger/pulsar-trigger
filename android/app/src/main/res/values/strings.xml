@@ -639,10 +639,14 @@
     <string name="status_fetching_data">Fetching location &amp; data…</string>
     <string name="card_summary">Summary</string>
     <string name="tonight_signal_title">Tonight\'s signal</string>
-    <string name="tonight_signal_best">Best window %1$s · %2$d%% cloud</string>
+    <string name="tonight_signal_best">Best ~%1$s · %2$d%% cloud</string>
     <string name="run_complete_snack">Run complete · %1$d frames</string>
     <string name="tonight_signal_help_title">How to read the signal</string>
-    <string name="tonight_signal_help_body">Each line is one hour of tonight, top to bottom. The taller the pulse, the better that hour is for shooting.\n\n• Sky darkness drives it — the pulse grows as the sun sinks through civil, nautical and astronomical twilight\n• Cloud cover flattens the line\n• A bright moon dampens every hour\n• Rain all but kills it\n\nThe line drawn in colour is tonight\'s best window — its hour is tinted on the right and named under the chart. Flat trace: daylight, cloud or rain. Tall sharp pulse: go.</string>
+    <string name="tonight_signal_help_body">Each line is one hour of tonight, top (soonest) to bottom (latest). Across a line, left to right is that hour\'s 60 minutes — and the height is how good the sky is at that moment. Taller is better.
+
+So a line climbing to the right means conditions are improving through the hour (twilight deepening, clouds clearing); a line falling means they\'re getting worse (cloud, moonrise, or dawn).
+
+Height comes from sky darkness (sun below the horizon) × clear sky × no bright moon × no rain. The glowing line holds tonight\'s single best moment — named under the chart.</string>
     <string name="location_north">N</string>
     <string name="location_south">S</string>
     <string name="location_east">E</string>
