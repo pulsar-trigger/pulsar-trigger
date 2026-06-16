@@ -8,7 +8,6 @@ package com.ehrocha.pulsar.ui.screens
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.location.Geocoder
 import android.location.LocationManager
 import android.content.Context
 import android.widget.Toast
@@ -1242,18 +1241,11 @@ private fun AddSessionDialog(
                                 if (loc != null) {
                                     latStr = String.format(Locale.US, "%.5f", loc.latitude)
                                     lonStr = String.format(Locale.US, "%.5f", loc.longitude)
-                                    try {
-                                        @Suppress("DEPRECATION")
-                                        val addresses = Geocoder(context, Locale.getDefault())
-                                            .getFromLocation(loc.latitude, loc.longitude, 1)
-                                        addresses?.firstOrNull()?.let { addr ->
-                                            val geoName = listOfNotNull(
-                                                addr.locality, addr.adminArea, addr.countryCode
-                                            ).joinToString(", ")
-                                            if (geoName.isNotEmpty() && name.isBlank()) name = geoName
-                                        }
-                                    } catch (_: Exception) {
-                                        if (name.isBlank()) name = myLocationStr
+                                    val geoName = com.ehrocha.pulsar.util.reverseGeocodeName(
+                                        context, loc.latitude, loc.longitude,
+                                    )
+                                    if (name.isBlank()) {
+                                        name = geoName ?: myLocationStr
                                     }
                                 } else {
                                     notify(gpsUnavailableMsg)

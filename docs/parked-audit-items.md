@@ -8,7 +8,11 @@ starting point.
 Each item lists: *what the audit flagged*, *why we parked it*, *what to
 watch for*, and *the cheapest fix when we do tackle it*.
 
-> Last reviewed: v0.366 (commit `c9ffc17`, 2026-06-03).
+> Last reviewed: v0.463 (2026-06-16). Phase 1 cleanup shipped: the
+> `menuAnchor()` + `Geocoder` deprecations are DONE, and O2 is retired
+> (retracted by the audit author). Remaining items below are trigger-only;
+> the Map Annotations deprecation is now its own scoped item (it spans
+> `MapLocationPicker` **and** Aircraft Watch, and doubles as a perf win).
 
 ---
 
@@ -78,7 +82,13 @@ poll cycle, emit a single `_status.update { ... }` at the end.
 
 ---
 
-## O2 — Replace `runState = combine(5 flows)` with a single MutableStateFlow
+## O2 — Replace `runState = combine(5 flows)` with a single MutableStateFlow — 🗑️ RETIRED (won't fix)
+
+> **Closed 2026-06-16:** the audit author retracted this (below) — the
+> "fix" is worse than the status quo. Left here only so it isn't
+> re-flagged. Trigger to truly reconsider: a `RunState` field that can't
+> be derived from the existing leaf flows.
+
 
 **Audit claim:** Recomputes on every leaf change. As more flows are added,
 this won't scale.
@@ -141,7 +151,15 @@ manual testing on the planner flow.
 
 ---
 
-## `Geocoder.getFromLocation` sync API deprecation
+## `Geocoder.getFromLocation` sync API deprecation — ✅ DONE (v0.463)
+
+> **Fixed 2026-06-16.** Turned out to be **three** identical sites (map
+> picker, planner GPS button, astro dashboard), so they were consolidated
+> into one `util/GeocodeUtil.kt#reverseGeocodeName`, which uses the async
+> `GeocodeListener` overload on API 33+ and the sync call on ≤32. Genuine
+> dedup (two sites were byte-identical), not premature abstraction.
+> Original note kept below for context.
+
 
 **Audit claim:** 3-arg sync overload deprecated in API 33; should use the
 async overload with `GeocodeListener`.
@@ -158,7 +176,12 @@ keep the sync path for older devices.
 
 ---
 
-## `ExposedDropdownMenuBox.menuAnchor()` signature change
+## `ExposedDropdownMenuBox.menuAnchor()` signature change — ✅ DONE (v0.463)
+
+> **Fixed 2026-06-16.** The `SharedSections` site was already on the new
+> form; only `Intervalometer2Screen` still used the deprecated no-arg
+> overload. Now `menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)`.
+
 
 **Audit claim:** Old no-arg `Modifier.menuAnchor()` deprecated; new
 overload takes `MenuAnchorType` + `enabled`.

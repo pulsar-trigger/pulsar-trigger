@@ -5,7 +5,6 @@
 
 package com.ehrocha.pulsar.ui.screens
 
-import android.location.Geocoder
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -28,9 +27,7 @@ import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ui.components.PulsarTopBar
 import com.ehrocha.pulsar.ui.theme.LocalNightMode
 import com.ehrocha.pulsar.ui.theme.ThemeMode
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.maplibre.android.MapLibre
 import org.maplibre.android.annotations.Marker
 import org.maplibre.android.annotations.MarkerOptions
@@ -187,7 +184,9 @@ fun MapLocationPicker(
                             resolving = true
                             locationName = ""
                             scope.launch {
-                                val name = reverseGeocodeMap(ctx, latLng.latitude, latLng.longitude)
+                                val name = com.ehrocha.pulsar.util.reverseGeocodeName(
+                                    ctx, latLng.latitude, latLng.longitude,
+                                )
                                 locationName = name ?: ""
                                 resolving = false
                             }
@@ -199,17 +198,3 @@ fun MapLocationPicker(
         )
     }
 }
-
-@Suppress("DEPRECATION")
-private suspend fun reverseGeocodeMap(ctx: android.content.Context, lat: Double, lon: Double): String? =
-    withContext(Dispatchers.IO) {
-        try {
-            val geocoder = Geocoder(ctx, Locale.getDefault())
-            val addresses = geocoder.getFromLocation(lat, lon, 1)
-            addresses?.firstOrNull()?.let { addr ->
-                listOfNotNull(addr.locality, addr.adminArea, addr.countryCode)
-                    .joinToString(", ")
-                    .takeIf { it.isNotEmpty() }
-            }
-        } catch (_: Exception) { null }
-    }

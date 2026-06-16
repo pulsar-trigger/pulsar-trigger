@@ -1218,7 +1218,9 @@ private fun SettingPicker(
                 onValueChange = { },
                 readOnly = options.isNotEmpty(),
                 enabled = enabled,
-                modifier = Modifier.fillMaxWidth().menuAnchor(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true),
                 trailingIcon = {
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = menuOpen)
                 },
