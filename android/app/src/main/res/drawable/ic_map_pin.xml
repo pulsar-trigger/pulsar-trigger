@@ -1,0 +1,19 @@
+<!--
+  SPDX-License-Identifier: GPL-3.0-or-later
+  Selection pin for the map location picker (SymbolLayer icon). Tip at the
+  bottom-centre of the viewport → use ICON_ANCHOR_BOTTOM.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="36dp"
+    android:height="36dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M12,2C8.13,2 5,5.13 5,9c0,5.25 7,13 7,13s7,-7.75 7,-13c0,-3.87 -3.13,-7 -7,-7z"
+        android:fillColor="#B15CFF"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.7" />
+    <path
+        android:pathData="M12,11.5m-2.5,0a2.5,2.5 0 1,0 5,0a2.5,2.5 0 1,0 -5,0"
+        android:fillColor="#FFFFFF" />
+</vector>

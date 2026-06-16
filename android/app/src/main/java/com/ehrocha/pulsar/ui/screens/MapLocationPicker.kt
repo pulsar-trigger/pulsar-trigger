@@ -29,13 +29,24 @@ import com.ehrocha.pulsar.ui.theme.LocalNightMode
 import com.ehrocha.pulsar.ui.theme.ThemeMode
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
-import org.maplibre.android.annotations.Marker
-import org.maplibre.android.annotations.MarkerOptions
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
+import org.maplibre.android.style.layers.Property
+import org.maplibre.android.style.layers.PropertyFactory
+import org.maplibre.android.style.layers.SymbolLayer
+import org.maplibre.android.style.sources.GeoJsonSource
+import org.maplibre.geojson.Point
 import java.util.Locale
+
+// Non-deprecated single-marker path: a GeoJSON source whose point is moved
+// on each tap, drawn by a symbol layer. (Replaces the deprecated
+// Marker/MarkerOptions annotation API — same pattern the Aircraft Watch
+// map migration will use.)
+private const val PIN_SOURCE = "picker-pin-src"
+private const val PIN_LAYER = "picker-pin-layer"
+private const val PIN_IMAGE = "picker-pin-img"
 
 private const val STYLE_LIBERTY = "https://tiles.openfreemap.org/styles/liberty"
 private const val STYLE_POSITRON = "https://tiles.openfreemap.org/styles/positron"
@@ -62,7 +73,6 @@ fun MapLocationPicker(
 
     val mapViewRef = remember { mutableStateOf<MapView?>(null) }
     val mapRef = remember { mutableStateOf<MapLibreMap?>(null) }
-    val markerRef = remember { mutableStateOf<Marker?>(null) }
 
     // Forward lifecycle events to MapView
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -157,7 +167,17 @@ fun MapLocationPicker(
                     onCreate(null)
                     getMapAsync { map ->
                         mapRef.value = map
-                        map.setStyle(if (isDark) STYLE_POSITRON else STYLE_LIBERTY)
+                        map.setStyle(if (isDark) STYLE_POSITRON else STYLE_LIBERTY) { style ->
+                            style.addImage(PIN_IMAGE, drawableToBitmap(ctx, R.drawable.ic_map_pin))
+                            style.addSource(GeoJsonSource(PIN_SOURCE))
+                            style.addLayer(
+                                SymbolLayer(PIN_LAYER, PIN_SOURCE).withProperties(
+                                    PropertyFactory.iconImage(PIN_IMAGE),
+                                    PropertyFactory.iconAllowOverlap(true),
+                                    PropertyFactory.iconAnchor(Property.ICON_ANCHOR_BOTTOM),
+                                ),
+                            )
+                        }
                         map.uiSettings.isAttributionEnabled = true
                         map.uiSettings.isLogoEnabled = false
 
@@ -172,13 +192,10 @@ fun MapLocationPicker(
                             selectedLon = latLng.longitude
                             hasSelection = true
 
-                            // Replace existing marker
-                            markerRef.value?.let { map.removeMarker(it) }
-                            markerRef.value = map.addMarker(
-                                MarkerOptions()
-                                    .position(latLng)
-                                    .title(String.format(Locale.US, "%.5f, %.5f", latLng.latitude, latLng.longitude)),
-                            )
+                            // Move the selection pin (GeoJSON source updated
+                            // in place — the non-deprecated annotation path).
+                            map.style?.getSourceAs<GeoJsonSource>(PIN_SOURCE)
+                                ?.setGeoJson(Point.fromLngLat(latLng.longitude, latLng.latitude))
 
                             // Reverse geocode
                             resolving = true
@@ -197,4 +214,16 @@ fun MapLocationPicker(
             },
         )
     }
+}
+
+/** Render a (vector) drawable into a bitmap for `Style.addImage`. */
+private fun drawableToBitmap(ctx: android.content.Context, resId: Int): android.graphics.Bitmap {
+    val d = androidx.core.content.ContextCompat.getDrawable(ctx, resId)!!
+    val w = d.intrinsicWidth.coerceAtLeast(1)
+    val h = d.intrinsicHeight.coerceAtLeast(1)
+    val bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+    val canvas = android.graphics.Canvas(bmp)
+    d.setBounds(0, 0, w, h)
+    d.draw(canvas)
+    return bmp
 }

@@ -16,7 +16,13 @@ watch for*, and *the cheapest fix when we do tackle it*.
 
 ---
 
-## R3 — Further `disconnect()` extraction
+## R3 — Further `disconnect()` extraction — ⏸️ confirmed parked
+
+> **Re-reviewed 2026-06-16 against current code:** `disconnect()` is a clean,
+> well-commented 5-branch `when` over the active transport, each calling a
+> genuinely different `disconnectXxx()`. There is no duplication to remove —
+> extracting it would just hide the switch in a helper. Stays parked.
+
 
 **Audit claim:** Four near-identical transport-disconnect blocks in
 `PulsarViewModel.disconnect()` — brittle, easy to miss a field if a new
@@ -38,7 +44,14 @@ into. Net diff: ~10 lines, no behavior change.
 
 ---
 
-## C3 — Shared HTTP helper for 6 `HttpURLConnection` sites
+## C3 — Shared HTTP helper for 6 `HttpURLConnection` sites — ⏸️ confirmed parked
+
+> **Re-reviewed 2026-06-16:** even the narrowest subset (the 3 astro fetches)
+> isn't a clean dedup — `fetchLightPollution` needs 3 custom request headers
+> (Origin/Referer/User-Agent) the others don't, and disconnect handling
+> differs. The shared part is just `openConnection` + 2 timeouts: too thin to
+> helper-ize. Family resemblance, not duplication. Stays parked.
+
 
 **Audit claim:** Each of the 6 sites (`FirmwareUpdateManager`,
 `AppUpdateManager`, `VersionUtils` ×3, `PlannerManager`,
@@ -63,7 +76,13 @@ Leave the others alone.
 
 ---
 
-## O1 — Batch `_status` updates from CCAPI poll job
+## O1 — Batch `_status` updates from CCAPI poll job — ⏸️ confirmed parked
+
+> **Re-reviewed 2026-06-16:** `applyCanonPollUpdate` emits at most **two
+> conditional** `_status.update`s per poll (~1 Hz), on different fields
+> (battery vs shots). Compose batches recomposition per frame, so the
+> theoretical saving is nil. Stays parked.
+
 
 **Audit claim:** Each `_status` write in the poll loop triggers a full
 recompose; a busy session could see frame drops.
@@ -108,7 +127,14 @@ derived from the existing leaf flows.
 
 ---
 
-## O3 — CanonBleClient retry backoffs
+## O3 — CanonBleClient retry backoffs — 🛑 hold (device-only)
+
+> **Re-reviewed 2026-06-16:** changing the `150/300/500/800 ms` queue-retry
+> backoffs touches Canon BLE timing, which the project rule says must be
+> validated on real hardware — and there's still no evidence of slow connect.
+> Not a blind-edit candidate; hold until there's a logged symptom AND a
+> device to test on.
+
 
 **Audit claim:** Deterministic 150/300/500/800 ms backoffs total ~1.7 s
 worst case. Could be exponential-with-jitter, or could short-circuit when
