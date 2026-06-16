@@ -77,19 +77,19 @@ import org.maplibre.android.MapLibre
 import org.maplibre.android.annotations.IconFactory
 import org.maplibre.android.annotations.Marker
 import org.maplibre.android.annotations.MarkerOptions
-import org.maplibre.android.annotations.Polyline
-import org.maplibre.android.annotations.PolylineOptions
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.style.expressions.Expression
+import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
+import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
 import java.time.Instant
 import java.time.ZoneId
@@ -125,10 +125,26 @@ internal data class MarkerKey(
 private const val AC_SOURCE = "aircraft-src"
 private const val AC_LAYER = "aircraft-layer"
 
+// Trails render via a data-driven LineLayer (non-deprecated): one GeoJSON
+// source of LineString features, each carrying its own colour / width /
+// opacity property so the single layer styles them per-feature. Replaces the
+// deprecated addPolyline/removePolyline. Kept below the aircraft layer.
+private const val TRAIL_SOURCE = "trail-src"
+private const val TRAIL_LAYER = "trail-layer"
+
 /** Stable per-icon image name so the same (heading, size, tint, category)
  *  combination registers once and is re-fetched by name after a style swap. */
 private fun aircraftImageName(k: MarkerKey): String =
     "ac_${k.bucket}_${k.size.name}_${k.tint}_${k.category.name}"
+
+/** "#RRGGBB" for a Compose colour — feeds the data-driven `lineColor`
+ *  property (alpha is carried separately as `opacity`). */
+private fun colorHex(c: androidx.compose.ui.graphics.Color): String {
+    val r = (c.red * 255).toInt().coerceIn(0, 255)
+    val g = (c.green * 255).toInt().coerceIn(0, 255)
+    val b = (c.blue * 255).toInt().coerceIn(0, 255)
+    return String.format("#%02X%02X%02X", r, g, b)
+}
 
 /** Embedded MapLibre map showing the user's centre plus a marker per
  *  aircraft. Refreshes its marker layer every time [sightings] changes.
@@ -330,9 +346,8 @@ internal fun AircraftMap(
         )
     }
 
-    // Past + future trail polylines for the selected aircraft.
+    // Past + future trail history per aircraft (rendered as a LineLayer).
     val trailHistory = remember { mutableMapOf<String, MutableList<LatLng>>() }
-    val trailPolylines = remember { mutableListOf<Polyline>() }
 
     // Track previous selection so we can pan back to the user pin when the
     // user deselects (selected → null transition). Don't re-centre on
@@ -373,10 +388,9 @@ internal fun AircraftMap(
     // ICAO move or leave."
     LaunchedEffect(sightings, map, liveTick, selectedIcao, sunMoonTick, showSunMoon, mapCenter, visibleRadiusKm, styleEpoch) {
         val m = map ?: return@LaunchedEffect
+        val style = m.style
         highlightMarker?.let { m.removeMarker(it) }
         highlightMarker = null
-        trailPolylines.forEach { m.removePolyline(it) }
-        trailPolylines.clear()
         sunMarker?.let { m.removeMarker(it) }
         sunMarker = null
         moonMarker?.let { m.removeMarker(it) }
@@ -396,53 +410,82 @@ internal fun AircraftMap(
             }
         }
 
+        // ── Trails → data-driven LineLayer ───────────────────────────
         // Render trails for ALL aircraft so the user can see who's heading
         // where at a glance. Non-selected planes get a thin, faint trail;
         // the selected one gets the bright cyan treatment so it stays
-        // visually distinct.
-        sightings.forEach { s ->
-            val isSelected = s.icaoHex == selectedIcao
-            val (sLat, sLon) =
-                if (liveMode) deadReckon(s, liveTick) else s.lat to s.lon
-            val history = trailHistory[s.icaoHex] ?: emptyList()
-            val pastPoints = history.toMutableList()
-            val nowPt = LatLng(sLat, sLon)
-            if (pastPoints.lastOrNull()?.let {
-                    it.latitude != nowPt.latitude || it.longitude != nowPt.longitude
-                } != false) {
-                pastPoints += nowPt
-            }
-            // Selected: bright cyan, thick. Others: dim cyan, thin — same
-            // colour family so the eye can still link them, just toned down.
-            val pastColor = if (isSelected)
-                android.graphics.Color.argb(240, (pc.trail.red * 255).toInt(), (pc.trail.green * 255).toInt(), (pc.trail.blue * 255).toInt())
-            else
-                android.graphics.Color.argb(100, (pc.trail.red * 255).toInt(), (pc.trail.green * 255).toInt(), (pc.trail.blue * 255).toInt())
-            val pastWidth = if (isSelected) 5.0f else 1.5f
-            if (pastPoints.size >= 2) {
-                trailPolylines += m.addPolyline(
-                    PolylineOptions()
-                        .addAll(pastPoints).color(pastColor).width(pastWidth),
+        // visually distinct. One source of LineString features; each feature
+        // carries its own colour/width/opacity, read per-feature by the layer.
+        if (style != null) {
+            if (style.getSourceAs<GeoJsonSource>(TRAIL_SOURCE) == null) {
+                style.addSource(GeoJsonSource(TRAIL_SOURCE))
+                val trailLayer = LineLayer(TRAIL_LAYER, TRAIL_SOURCE).withProperties(
+                    PropertyFactory.lineColor(Expression.toColor(Expression.get("color"))),
+                    PropertyFactory.lineWidth(Expression.get("width")),
+                    PropertyFactory.lineOpacity(Expression.get("opacity")),
+                    PropertyFactory.lineCap(Property.LINE_CAP_ROUND),
+                    PropertyFactory.lineJoin(Property.LINE_JOIN_ROUND),
                 )
+                // Trails sit BELOW the aircraft icons (planes on top of their
+                // own tracks). If the aircraft layer already exists, slot the
+                // trail layer under it; otherwise add it now and the aircraft
+                // layer (created later in this pass) goes on top.
+                if (style.getLayer(AC_LAYER) != null) {
+                    style.addLayerBelow(trailLayer, AC_LAYER)
+                } else {
+                    style.addLayer(trailLayer)
+                }
             }
-            // Future: selected gets the 3-minute dashed projection; other
-            // aircraft get a short ~30s prediction (first 2 segments only)
-            // so the map doesn't drown in lines.
-            val effectiveHeading = s.headingDeg ?: derivedHeading(history)
-            val futureSegs = futureTrailSegments(s, sLat, sLon, effectiveHeading)
-                .let { if (isSelected) it else it.take(2) }
-            val futureColor = if (isSelected)
-                android.graphics.Color.argb(220, (pc.trail.red * 255).toInt(), (pc.trail.green * 255).toInt(), (pc.trail.blue * 255).toInt())
-            else
-                android.graphics.Color.argb(90, (pc.trail.red * 255).toInt(), (pc.trail.green * 255).toInt(), (pc.trail.blue * 255).toInt())
-            val futureWidth = if (isSelected) 4.0f else 1.5f
-            futureSegs.forEach { seg ->
-                trailPolylines += m.addPolyline(
-                    PolylineOptions()
-                        .add(seg.first).add(seg.second)
-                        .color(futureColor).width(futureWidth),
-                )
+            val trailColor = colorHex(pc.trail)
+            val trailFeats = mutableListOf<Feature>()
+            sightings.forEach { s ->
+                val isSelected = s.icaoHex == selectedIcao
+                val (sLat, sLon) =
+                    if (liveMode) deadReckon(s, liveTick) else s.lat to s.lon
+                val history = trailHistory[s.icaoHex] ?: emptyList()
+                val pastPoints = history.toMutableList()
+                val nowPt = LatLng(sLat, sLon)
+                if (pastPoints.lastOrNull()?.let {
+                        it.latitude != nowPt.latitude || it.longitude != nowPt.longitude
+                    } != false) {
+                    pastPoints += nowPt
+                }
+                // Selected: bright cyan, thick. Others: dim cyan, thin — same
+                // colour family so the eye can still link them, just toned down.
+                if (pastPoints.size >= 2) {
+                    trailFeats += Feature.fromGeometry(
+                        LineString.fromLngLats(
+                            pastPoints.map { Point.fromLngLat(it.longitude, it.latitude) },
+                        ),
+                    ).apply {
+                        addStringProperty("color", trailColor)
+                        addNumberProperty("opacity", if (isSelected) 240f / 255f else 100f / 255f)
+                        addNumberProperty("width", if (isSelected) 5.0f else 1.5f)
+                    }
+                }
+                // Future: selected gets the 3-minute dashed projection; other
+                // aircraft get a short ~30s prediction (first 2 segments only)
+                // so the map doesn't drown in lines.
+                val effectiveHeading = s.headingDeg ?: derivedHeading(history)
+                val futureSegs = futureTrailSegments(s, sLat, sLon, effectiveHeading)
+                    .let { if (isSelected) it else it.take(2) }
+                futureSegs.forEach { seg ->
+                    trailFeats += Feature.fromGeometry(
+                        LineString.fromLngLats(
+                            listOf(
+                                Point.fromLngLat(seg.first.longitude, seg.first.latitude),
+                                Point.fromLngLat(seg.second.longitude, seg.second.latitude),
+                            ),
+                        ),
+                    ).apply {
+                        addStringProperty("color", trailColor)
+                        addNumberProperty("opacity", if (isSelected) 220f / 255f else 90f / 255f)
+                        addNumberProperty("width", if (isSelected) 4.0f else 1.5f)
+                    }
+                }
             }
+            style.getSourceAs<GeoJsonSource>(TRAIL_SOURCE)
+                ?.setGeoJson(FeatureCollection.fromFeatures(trailFeats))
         }
 
         // Highlight ring + camera follow for the selected aircraft.
@@ -514,7 +557,6 @@ internal fun AircraftMap(
         // ── Aircraft markers → data-driven SymbolLayer ───────────────
         // A style swap drops the source/layer/images, so recreate the
         // source + layer when missing (this effect re-runs on styleEpoch).
-        val style = m.style
         if (style != null) {
             if (style.getSourceAs<GeoJsonSource>(AC_SOURCE) == null) {
                 style.addSource(GeoJsonSource(AC_SOURCE))
