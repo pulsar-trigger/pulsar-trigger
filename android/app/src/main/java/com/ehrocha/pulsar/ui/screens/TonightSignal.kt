@@ -320,13 +320,19 @@ internal fun TonightSignalCard(state: DashboardState) {
                             val f = xx - lo
                             return h.samples[lo] * (1f - f) + h.samples[hi] * f
                         }
-                        val steps = 110
+                        val steps = 150
                         val signal = Path()
                         for (s in 0..steps) {
                             val u = s / steps.toFloat()
+                            // Four incommensurate octaves → dense, irregular
+                            // radio-noise texture whose peaks vary in height
+                            // (they rarely all align to 1), so the upper edge
+                            // is jagged, not a smooth interpolated silhouette.
                             val nz = (
-                                sin(u * 23f * PI + i * 2.39f) * 0.55f +
-                                sin(u * 9f * PI + i * 5.07f) * 0.45f
+                                sin(u * 31f * PI + i * 1.7f) * 0.42f +
+                                sin(u * 53f * PI + i * 3.3f) * 0.28f +
+                                sin(u * 19f * PI + i * 5.1f) * 0.18f +
+                                sin(u * 83f * PI + i * 0.7f) * 0.12f
                             ).toFloat()
                             val tex = (0.5f + 0.5f * nz).coerceIn(0.04f, 1f)
                             val y = baseY - maxAmp * qAt(u) * tex
