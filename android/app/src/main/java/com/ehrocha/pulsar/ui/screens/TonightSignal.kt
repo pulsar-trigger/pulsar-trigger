@@ -250,6 +250,10 @@ internal fun TonightSignalCard(state: DashboardState) {
             Spacer(Modifier.height(8.dp))
 
             val rowHeight = 26.dp
+            // Headroom above the top row: a peak rises up to 1.55× the row
+            // height above its baseline, so the topmost hour needs ~0.55×
+            // row of clearance or its tall pulses get cut flat at the edge.
+            val topPad = 18.dp
             val traceColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
             val fillColor = MaterialTheme.colorScheme.surfaceContainerHigh
             // onSurface (near-white in dark) at low alpha — visible on the
@@ -260,9 +264,10 @@ internal fun TonightSignalCard(state: DashboardState) {
                 Canvas(
                     modifier = Modifier
                         .weight(1f)
-                        .height(rowHeight * hours.size + 8.dp),
+                        .height(rowHeight * hours.size + topPad + 8.dp),
                 ) {
                     val rowPx = rowHeight.toPx()
+                    val topPadPx = topPad.toPx()
                     val w = size.width
                     val stroke = Stroke(width = 1.6.dp.toPx(), cap = StrokeCap.Round)
                     // Painters order: draw the EARLIEST hour first; later
@@ -271,7 +276,7 @@ internal fun TonightSignalCard(state: DashboardState) {
                     // CP 1919 plate reads.
                     val bloomStroke = Stroke(width = 3.5.dp.toPx(), cap = StrokeCap.Round)
                     hours.forEachIndexed { i, h ->
-                        val baseY = rowPx * (i + 1)
+                        val baseY = topPadPx + rowPx * (i + 1)
                         val maxAmp = rowPx * 1.55f
                         val n = h.samples.size
 
@@ -348,6 +353,9 @@ internal fun TonightSignalCard(state: DashboardState) {
                 }
                 Spacer(Modifier.width(12.dp))
                 Column {
+                    // Match the canvas's top headroom so labels line up with
+                    // their rows.
+                    Spacer(Modifier.height(topPad))
                     hours.forEach { h ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
