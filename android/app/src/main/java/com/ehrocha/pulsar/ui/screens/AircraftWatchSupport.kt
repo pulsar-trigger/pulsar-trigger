@@ -74,9 +74,6 @@ import com.ehrocha.pulsar.ui.theme.ThemeMode
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
-import org.maplibre.android.annotations.IconFactory
-import org.maplibre.android.annotations.Marker
-import org.maplibre.android.annotations.MarkerOptions
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
@@ -119,9 +116,10 @@ internal data class MarkerKey(
 // one GeoJSON source holding a point feature per plane, each feature naming
 // its pre-rendered icon image (rotation + proximity tint + size + category
 // baked in, registered into the style by name). Replaces the deprecated
-// per-marker addMarker/removeMarker. Trails, sun/moon, the user pin + cone,
-// and the highlight ring are still on the annotation API for now — this
-// slice proves the data-driven icon + tap-to-select query first.
+// per-marker addMarker/removeMarker. The whole map is now off the legacy
+// annotation API — trails are a LineLayer, sun/moon + highlight ring + the
+// user pin/cone are each their own SymbolLayer. Layer stack (bottom→top):
+// trails, sun/moon, highlight, aircraft, user pin/cone.
 private const val AC_SOURCE = "aircraft-src"
 private const val AC_LAYER = "aircraft-layer"
 
@@ -146,6 +144,16 @@ private const val MOON_IMAGE = "sunmoon-moon"
 // theme change registers a fresh image.
 private const val HILITE_SOURCE = "hilite-src"
 private const val HILITE_LAYER = "hilite-layer"
+
+// User position: heading cone + pin in one SymbolLayer (non-deprecated),
+// drawn on top so the user's location/heading is always visible. The cone
+// rotates at draw time via data-driven iconRotate (bearing-compensated)
+// instead of a pre-rotated bitmap; symbol-z-order=source draws the pin
+// (2nd feature) over the cone (1st).
+private const val USER_SOURCE = "user-src"
+private const val USER_LAYER = "user-layer"
+private const val CONE_IMAGE = "user-cone"
+private const val USER_PIN_IMAGE = "user-pin"
 
 /** Stable per-icon image name so the same (heading, size, tint, category)
  *  combination registers once and is re-fetched by name after a style swap. */
@@ -215,7 +223,6 @@ internal fun AircraftMap(
     // Theme roles snapshotted at composition — the marker effect below is
     // not a composable scope, so it captures this value instead.
     val pc = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors
-    val iconFactory = remember(ctx) { IconFactory.getInstance(ctx) }
     // Rotated marker icons are expensive to build (drawable → bitmap →
     // matrix rotate). Cache key = (heading-bucket, size-class, tint,
     // category). The theoretical key space is large (24 buckets × 4 sizes ×
@@ -272,55 +279,12 @@ internal fun AircraftMap(
         m.uiSettings.isRotateGesturesEnabled = !mapHeadingLock
     }
 
-    // Directional cone + user pin — Google-Maps-style stack: cone goes on
-    // first, pin on top so the cone fans out from BEHIND the pin rather
-    // than covering it. Both are re-added on every azimuth change because
-    // MapLibre draws markers in insertion order (no z-index API).
-    var headingMarker by remember { mutableStateOf<Marker?>(null) }
-    var userMarker by remember { mutableStateOf<Marker?>(null) }
-    LaunchedEffect(map, deviceAzimuth, styleEpoch) {
-        val m = map ?: return@LaunchedEffect
-        headingMarker?.let { m.removeMarker(it) }
-        userMarker?.let { m.removeMarker(it) }
-        // 1) heading cone first → renders below.
-        // Compensate for the current map bearing: marker bitmaps are
-        // screen-aligned in MapLibre's legacy API, so we have to subtract
-        // the map's rotation to keep the cone pointing in the world
-        // direction the device is facing. When heading-lock is on, map
-        // bearing == device azimuth → cone rotation = 0 → cone is always
-        // upright on screen. When off, map bearing = 0 → cone rotation =
-        // device azimuth (the old behaviour). Without this subtraction,
-        // both the map AND the cone visibly rotated with the user, which
-        // read as "the map rotates twice" during a spin.
-        val mapBearing = m.cameraPosition.bearing.toFloat()
-        val coneRotation = ((deviceAzimuth.toFloat() - mapBearing) + 360f) % 360f
-        val coneBmp = rotatedAircraftBitmap(
-            ctx,
-            headingDeg = coneRotation,
-            sizeScale = 1.5f,  // user asked for a bigger cone — easier to see
-            drawableRes = R.drawable.ic_user_heading,
-        )
-        headingMarker = m.addMarker(
-            MarkerOptions()
-                .position(LatLng(centreLat, centreLon))
-                .icon(iconFactory.fromBitmap(coneBmp)),
-        )
-        // 2) user pin on top → always visible regardless of fan direction.
-        // sizeScale 0.65 keeps it visibly smaller than aircraft markers so
-        // it doesn't dominate the map.
-        val userBmp = rotatedAircraftBitmap(
-            ctx,
-            headingDeg = 0f,
-            sizeScale = 0.65f,
-            drawableRes = R.drawable.ic_user_marker,
-        )
-        userMarker = m.addMarker(
-            MarkerOptions()
-                .position(LatLng(centreLat, centreLon))
-                .title("You")
-                .icon(iconFactory.fromBitmap(userBmp)),
-        )
-    }
+    // Directional cone + user pin — Google-Maps-style stack: cone below,
+    // pin on top. Rendered by a SymbolLayer (the effect after the main
+    // rebuild effect). These are the unrotated source bitmaps registered as
+    // named style images; the cone is rotated at draw time via iconRotate.
+    val coneBmp = remember(ctx) { rotatedAircraftBitmap(ctx, 0f, 1.5f, R.drawable.ic_user_heading) }
+    val userPinBmp = remember(ctx) { rotatedAircraftBitmap(ctx, 0f, 0.65f, R.drawable.ic_user_marker) }
 
     // When the user picks Live mode, retick the marker layout at 1Hz
     // between real polls — dead-reckons each plane forward from its last
@@ -669,6 +633,49 @@ internal fun AircraftMap(
             style.getSourceAs<GeoJsonSource>(AC_SOURCE)
                 ?.setGeoJson(FeatureCollection.fromFeatures(features))
         }
+    }
+
+    // Heading cone + user pin → SymbolLayer. Declared AFTER the main rebuild
+    // effect so on (re)composition the data layers are created first and this
+    // user layer lands on TOP (always visible). Keyed on deviceAzimuth so a
+    // spin only updates this cheap 2-feature source, not the whole aircraft
+    // rebuild. Bearing-compensated rotation (deviceAzimuth - mapBearing) is
+    // applied per-feature via iconRotate on a viewport-aligned icon — exactly
+    // the value the old pre-rotated bitmap baked in, so on a heading-locked
+    // map the cone stays upright (map bearing == azimuth → rotate == 0) and
+    // off it points to the device azimuth, with no double-rotation.
+    LaunchedEffect(map, deviceAzimuth, styleEpoch) {
+        val m = map ?: return@LaunchedEffect
+        val style = m.style ?: return@LaunchedEffect
+        if (style.getImage(CONE_IMAGE) == null) style.addImage(CONE_IMAGE, coneBmp)
+        if (style.getImage(USER_PIN_IMAGE) == null) style.addImage(USER_PIN_IMAGE, userPinBmp)
+        if (style.getSourceAs<GeoJsonSource>(USER_SOURCE) == null) {
+            style.addSource(GeoJsonSource(USER_SOURCE))
+            style.addLayer(
+                SymbolLayer(USER_LAYER, USER_SOURCE).withProperties(
+                    PropertyFactory.iconImage(Expression.get("img")),
+                    PropertyFactory.iconRotate(Expression.get("rotate")),
+                    PropertyFactory.iconRotationAlignment(Property.ICON_ROTATION_ALIGNMENT_VIEWPORT),
+                    PropertyFactory.iconAllowOverlap(true),
+                    PropertyFactory.iconIgnorePlacement(true),
+                    // Draw in source order → pin (2nd feature) over cone (1st).
+                    PropertyFactory.symbolZOrder(Property.SYMBOL_Z_ORDER_SOURCE),
+                ),
+            )
+        }
+        val mapBearing = m.cameraPosition.bearing.toFloat()
+        val coneRotation = ((deviceAzimuth.toFloat() - mapBearing) + 360f) % 360f
+        val center = Point.fromLngLat(centreLon, centreLat)
+        val cone = Feature.fromGeometry(center).apply {
+            addStringProperty("img", CONE_IMAGE)
+            addNumberProperty("rotate", coneRotation)
+        }
+        val pin = Feature.fromGeometry(center).apply {
+            addStringProperty("img", USER_PIN_IMAGE)
+            addNumberProperty("rotate", 0f)
+        }
+        style.getSourceAs<GeoJsonSource>(USER_SOURCE)
+            ?.setGeoJson(FeatureCollection.fromFeatures(listOf(cone, pin)))
     }
 
     // Apply (and re-apply on toggle) the map style. street = vector
