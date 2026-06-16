@@ -140,6 +140,13 @@ private const val SUNMOON_LAYER = "sunmoon-layer"
 private const val SUN_IMAGE = "sunmoon-sun"
 private const val MOON_IMAGE = "sunmoon-moon"
 
+// Highlight ring around the selected aircraft → its own SymbolLayer
+// (non-deprecated), below the aircraft layer so the ring sits behind the
+// plane. The tinted ring image name carries the selection colour, so a
+// theme change registers a fresh image.
+private const val HILITE_SOURCE = "hilite-src"
+private const val HILITE_LAYER = "hilite-layer"
+
 /** Stable per-icon image name so the same (heading, size, tint, category)
  *  combination registers once and is re-fetched by name after a style swap. */
 private fun aircraftImageName(k: MarkerKey): String =
@@ -333,26 +340,9 @@ internal fun AircraftMap(
         }
     }
 
-    // Highlight ring around the user-selected aircraft. Separate marker
-    // tracked alongside the regular plane markers; rebuilt whenever the
-    // selection changes OR the underlying sighting moves (live tick).
-    var highlightMarker by remember { mutableStateOf<Marker?>(null) }
-    val highlightIcon = remember(ctx, pc) {
-        iconFactory.fromBitmap(
-            rotatedAircraftBitmap(
-                ctx,
-                headingDeg = 0f,
-                sizeScale = 1.5f,
-                drawableRes = R.drawable.ic_aircraft_highlight,
-                tintColor = android.graphics.Color.argb(
-                    200,
-                    (pc.selection.red * 255).toInt(),
-                    (pc.selection.green * 255).toInt(),
-                    (pc.selection.blue * 255).toInt(),
-                ),
-            ),
-        )
-    }
+    // Highlight ring around the user-selected aircraft — rendered as its own
+    // single-feature SymbolLayer below the planes; built in the rebuild
+    // effect below (image keyed by the selection colour).
 
     // Past + future trail history per aircraft (rendered as a LineLayer).
     val trailHistory = remember { mutableMapOf<String, MutableList<LatLng>>() }
@@ -392,8 +382,6 @@ internal fun AircraftMap(
     LaunchedEffect(sightings, map, liveTick, selectedIcao, sunMoonTick, showSunMoon, mapCenter, visibleRadiusKm, styleEpoch) {
         val m = map ?: return@LaunchedEffect
         val style = m.style
-        highlightMarker?.let { m.removeMarker(it) }
-        highlightMarker = null
 
         // Trail history bookkeeping — track every active sighting, drop
         // entries for aircraft that left the search radius.
@@ -487,35 +475,71 @@ internal fun AircraftMap(
                 ?.setGeoJson(FeatureCollection.fromFeatures(trailFeats))
         }
 
-        // Highlight ring + camera follow for the selected aircraft.
-        val sel = selectedIcao?.let { hex -> sightings.firstOrNull { it.icaoHex == hex } }
-        if (sel != null) {
-            val (selLat, selLon) =
-                if (liveMode) deadReckon(sel, liveTick) else sel.lat to sel.lon
-            highlightMarker = m.addMarker(
-                MarkerOptions()
-                    .position(LatLng(selLat, selLon))
-                    .icon(highlightIcon),
+        // Highlight ring + camera follow for the selected aircraft → a
+        // single-feature SymbolLayer below the planes (ring sits behind the
+        // selected plane). Source is emptied when nothing is selected.
+        if (style != null) {
+            val selTint = android.graphics.Color.argb(
+                200,
+                (pc.selection.red * 255).toInt(),
+                (pc.selection.green * 255).toInt(),
+                (pc.selection.blue * 255).toInt(),
             )
-            // Pan to keep the selection in view, but don't zoom (annoying
-            // when the user is exploring a wider area).
-            m.animateCamera(
-                org.maplibre.android.camera.CameraUpdateFactory.newLatLng(
-                    LatLng(selLat, selLon),
-                ),
-                400,
-            )
-        } else if (prevSelected != null) {
-            // selected → null transition: pan back to the user pin so the
-            // camera doesn't stay aimed at where the deselected aircraft was.
-            m.animateCamera(
-                org.maplibre.android.camera.CameraUpdateFactory.newLatLng(
-                    LatLng(centreLat, centreLon),
-                ),
-                400,
-            )
+            val hiliteName = "hilite_$selTint"
+            if (style.getImage(hiliteName) == null) {
+                style.addImage(
+                    hiliteName,
+                    rotatedAircraftBitmap(
+                        ctx,
+                        headingDeg = 0f,
+                        sizeScale = 1.5f,
+                        drawableRes = R.drawable.ic_aircraft_highlight,
+                        tintColor = selTint,
+                    ),
+                )
+            }
+            if (style.getSourceAs<GeoJsonSource>(HILITE_SOURCE) == null) {
+                style.addSource(GeoJsonSource(HILITE_SOURCE))
+                style.addLayer(
+                    SymbolLayer(HILITE_LAYER, HILITE_SOURCE).withProperties(
+                        PropertyFactory.iconImage(Expression.get("img")),
+                        PropertyFactory.iconAllowOverlap(true),
+                        PropertyFactory.iconIgnorePlacement(true),
+                    ),
+                )
+            }
+            val sel = selectedIcao?.let { hex -> sightings.firstOrNull { it.icaoHex == hex } }
+            if (sel != null) {
+                val (selLat, selLon) =
+                    if (liveMode) deadReckon(sel, liveTick) else sel.lat to sel.lon
+                style.getSourceAs<GeoJsonSource>(HILITE_SOURCE)?.setGeoJson(
+                    Feature.fromGeometry(Point.fromLngLat(selLon, selLat))
+                        .apply { addStringProperty("img", hiliteName) },
+                )
+                // Pan to keep the selection in view, but don't zoom (annoying
+                // when the user is exploring a wider area).
+                m.animateCamera(
+                    org.maplibre.android.camera.CameraUpdateFactory.newLatLng(
+                        LatLng(selLat, selLon),
+                    ),
+                    400,
+                )
+            } else {
+                style.getSourceAs<GeoJsonSource>(HILITE_SOURCE)
+                    ?.setGeoJson(FeatureCollection.fromFeatures(mutableListOf<Feature>()))
+                if (prevSelected != null) {
+                    // selected → null transition: pan back to the user pin so
+                    // the camera doesn't stay aimed at the deselected plane.
+                    m.animateCamera(
+                        org.maplibre.android.camera.CameraUpdateFactory.newLatLng(
+                            LatLng(centreLat, centreLon),
+                        ),
+                        400,
+                    )
+                }
+            }
+            prevSelected = selectedIcao
         }
-        prevSelected = selectedIcao
 
         // Sun + moon → SymbolLayer (non-deprecated), drawn below the aircraft
         // icons. computeSunMoonOnMap encodes the real altitude angle: a body

@@ -182,9 +182,19 @@ backoffs.
 >   below the aircraft layer. **Device checklist:** trails render *under* the
 >   planes, the selected plane's trail is bright/thick vs dim/thin for
 >   others, and they re-appear after a Hybrid toggle.
-> - **Slice 3 — sun/moon** markers → their own source + symbol layer.
-> - **Slice 4 — user pin + heading cone + highlight ring** → symbol layer(s);
->   keeps the pin-on-top-of-cone stack and the bearing-compensation.
+> - **Slice 3 — sun/moon (v0.469): DONE in code, awaiting device.** Own
+>   `SymbolLayer` (0-2 point features), below the aircraft layer; source
+>   emptied when below horizon / overlay off. **Device checklist:** enable
+>   the overlay, both bodies appear at the right spots under the planes,
+>   follow pan/zoom, vanish below horizon, survive a Hybrid toggle.
+> - **Slice 4 — user pin + heading cone + highlight ring.** Split for safety:
+>   - **4a — highlight ring:** own single-feature `SymbolLayer` below the
+>     planes (tinted ring image keyed by selection colour).
+>   - **4b — cone + pin:** `SymbolLayer` using data-driven `iconRotate`
+>     (keeps the bearing-compensation maths) + `symbol-z-order: source` for
+>     the pin-on-top-of-cone stack. Re-touches the heading-rotation path, so
+>     it gets its own bump to re-verify rotation. Finishing 4b makes the file
+>     fully deprecation-free (drops IconFactory/Marker/MarkerOptions).
 >
 > Each remaining slice still uses the (working but deprecated) annotation API
 > until its turn. The file isn't deprecation-free until slice 4 lands.
