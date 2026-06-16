@@ -159,12 +159,28 @@ backoffs.
 
 > **2026-06-16:** **MapLocationPicker migrated (v0.466)** to the
 > dependency-free `GeoJsonSource` + `SymbolLayer` path (new `ic_map_pin`
-> icon, tap moves the source point). It deliberately proves the pattern for
-> **2b — Aircraft Watch (34 sites: rotating gradient markers, trails,
-> sun/moon, the style-reload re-add)**, which is NOT a blind job: a green
-> build can't confirm map rendering, and that map is the hot real-time
-> feature. 2b waits for a dedicated device session. Both still need Eduardo
-> to confirm the picker pin renders/anchors/moves on-device.
+> icon, tap moves the source point). **Device-verified** by Eduardo —
+> "map looks good".
+>
+> **2b — Aircraft Watch** is being migrated **one subsystem per bump** (the
+> live map is unverifiable by build, so each slice gets its own device
+> check rather than a six-way blind rewrite):
+> - **Slice 1 — aircraft markers (v0.467): DONE in code, awaiting device.**
+>   Planes now render via a data-driven `SymbolLayer` (one GeoJSON source,
+>   a feature per plane naming a pre-rendered icon image; tap-to-select via
+>   `queryRenderedFeatures`). Proves the patterns the picker did not:
+>   data-driven `iconImage`, feature-tap query, and the source/layer/image
+>   re-add after a Hybrid style swap. **Device checklist:** planes appear at
+>   the right spots, rotate to world heading, carry the proximity colour,
+>   fade with altitude, select on tap, and re-appear after toggling Hybrid.
+> - **Slice 2 — trails** (past + future polylines) → `LineLayer` with
+>   data-driven colour/width/opacity from feature properties.
+> - **Slice 3 — sun/moon** markers → their own source + symbol layer.
+> - **Slice 4 — user pin + heading cone + highlight ring** → symbol layer(s);
+>   keeps the pin-on-top-of-cone stack and the bearing-compensation.
+>
+> Each remaining slice still uses the (working but deprecated) annotation API
+> until its turn. The file isn't deprecation-free until slice 4 lands.
 
 
 **Audit claim:** `Marker`, `MarkerOptions`, `removeMarker`, `addMarker`
