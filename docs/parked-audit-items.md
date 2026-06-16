@@ -176,8 +176,12 @@ backoffs.
 >   older build — unrelated to the markers, self-resolved. Still worth a
 >   glance that planes re-appear after a Hybrid toggle next time satellite is
 >   on.)
-> - **Slice 2 — trails** (past + future polylines) → `LineLayer` with
->   data-driven colour/width/opacity from feature properties.
+> - **Slice 2 — trails (v0.468): DONE in code, awaiting device.** Past +
+>   future tracks render via one data-driven `LineLayer` (a source of
+>   `LineString` features, each with its own colour/width/opacity), slotted
+>   below the aircraft layer. **Device checklist:** trails render *under* the
+>   planes, the selected plane's trail is bright/thick vs dim/thin for
+>   others, and they re-appear after a Hybrid toggle.
 > - **Slice 3 — sun/moon** markers → their own source + symbol layer.
 > - **Slice 4 — user pin + heading cone + highlight ring** → symbol layer(s);
 >   keeps the pin-on-top-of-cone stack and the bearing-compensation.
