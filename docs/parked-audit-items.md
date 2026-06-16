@@ -165,14 +165,17 @@ backoffs.
 > **2b — Aircraft Watch** is being migrated **one subsystem per bump** (the
 > live map is unverifiable by build, so each slice gets its own device
 > check rather than a six-way blind rewrite):
-> - **Slice 1 — aircraft markers (v0.467): DONE in code, awaiting device.**
->   Planes now render via a data-driven `SymbolLayer` (one GeoJSON source,
->   a feature per plane naming a pre-rendered icon image; tap-to-select via
->   `queryRenderedFeatures`). Proves the patterns the picker did not:
->   data-driven `iconImage`, feature-tap query, and the source/layer/image
->   re-add after a Hybrid style swap. **Device checklist:** planes appear at
->   the right spots, rotate to world heading, carry the proximity colour,
->   fade with altitude, select on tap, and re-appear after toggling Hybrid.
+> - **Slice 1 — aircraft markers (v0.467): DEVICE-VERIFIED.** Planes render
+>   via a data-driven `SymbolLayer` (one GeoJSON source, a feature per plane
+>   naming a pre-rendered icon image; tap-to-select via
+>   `queryRenderedFeatures`). Eduardo confirmed planes render correctly and
+>   rotate to true world heading with **no double-rotate** (the main risk).
+>   Proved the patterns the picker did not: data-driven `iconImage`,
+>   feature-tap query, source/layer/image re-add after a style swap. (A brief
+>   base-map *label* wobble he saw was a transient tile-settle glitch on an
+>   older build — unrelated to the markers, self-resolved. Still worth a
+>   glance that planes re-appear after a Hybrid toggle next time satellite is
+>   on.)
 > - **Slice 2 — trails** (past + future polylines) → `LineLayer` with
 >   data-driven colour/width/opacity from feature properties.
 > - **Slice 3 — sun/moon** markers → their own source + symbol layer.
