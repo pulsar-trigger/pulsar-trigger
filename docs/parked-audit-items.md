@@ -155,7 +155,17 @@ backoffs.
 
 ---
 
-## Mapbox Annotations API deprecation (`MapLocationPicker.kt`)
+## Map Annotations API deprecation — 🟡 Phase 2a done, 2b pending device
+
+> **2026-06-16:** **MapLocationPicker migrated (v0.466)** to the
+> dependency-free `GeoJsonSource` + `SymbolLayer` path (new `ic_map_pin`
+> icon, tap moves the source point). It deliberately proves the pattern for
+> **2b — Aircraft Watch (34 sites: rotating gradient markers, trails,
+> sun/moon, the style-reload re-add)**, which is NOT a blind job: a green
+> build can't confirm map rendering, and that map is the hot real-time
+> feature. 2b waits for a dedicated device session. Both still need Eduardo
+> to confirm the picker pin renders/anchors/moves on-device.
+
 
 **Audit claim:** `Marker`, `MarkerOptions`, `removeMarker`, `addMarker`
 all deprecated. Library may need a version bump.
