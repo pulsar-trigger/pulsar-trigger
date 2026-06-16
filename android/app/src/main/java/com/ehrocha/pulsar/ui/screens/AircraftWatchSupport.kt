@@ -132,6 +132,14 @@ private const val AC_LAYER = "aircraft-layer"
 private const val TRAIL_SOURCE = "trail-src"
 private const val TRAIL_LAYER = "trail-layer"
 
+// Sun + moon render via a small SymbolLayer (non-deprecated): a source with
+// 0-2 point features, each naming its registered body image. Replaces their
+// addMarker/removeMarker. Kept below the aircraft layer, like the trails.
+private const val SUNMOON_SOURCE = "sunmoon-src"
+private const val SUNMOON_LAYER = "sunmoon-layer"
+private const val SUN_IMAGE = "sunmoon-sun"
+private const val MOON_IMAGE = "sunmoon-moon"
+
 /** Stable per-icon image name so the same (heading, size, tint, category)
  *  combination registers once and is re-fetched by name after a style swap. */
 private fun aircraftImageName(k: MarkerKey): String =
@@ -355,16 +363,11 @@ internal fun AircraftMap(
     // user's manual pan when nothing's selected.
     var prevSelected by remember { mutableStateOf<String?>(null) }
 
-    // Sun + moon markers. Computed once per minute (their positions don't
-    // move fast at map zoom levels — daily motion is ~0.25°/min).
-    var sunMarker by remember { mutableStateOf<Marker?>(null) }
-    var moonMarker by remember { mutableStateOf<Marker?>(null) }
-    val sunIcon = remember(ctx) {
-        iconFactory.fromBitmap(rotatedAircraftBitmap(ctx, 0f, 1.6f, R.drawable.ic_sun_marker))
-    }
-    val moonIcon = remember(ctx) {
-        iconFactory.fromBitmap(rotatedAircraftBitmap(ctx, 0f, 1.6f, R.drawable.ic_moon_marker))
-    }
+    // Sun + moon bitmaps. Registered into the style as named images and
+    // placed by a SymbolLayer. Computed once per minute (their positions
+    // don't move fast at map zoom levels — daily motion is ~0.25°/min).
+    val sunBmp = remember(ctx) { rotatedAircraftBitmap(ctx, 0f, 1.6f, R.drawable.ic_sun_marker) }
+    val moonBmp = remember(ctx) { rotatedAircraftBitmap(ctx, 0f, 1.6f, R.drawable.ic_moon_marker) }
     var sunMoonTick by remember { mutableStateOf(0L) }
     // Tracks the map's current camera centre so we can place sun/moon
     // markers near the *visible* area as the user pans, rather than
@@ -391,10 +394,6 @@ internal fun AircraftMap(
         val style = m.style
         highlightMarker?.let { m.removeMarker(it) }
         highlightMarker = null
-        sunMarker?.let { m.removeMarker(it) }
-        sunMarker = null
-        moonMarker?.let { m.removeMarker(it) }
-        moonMarker = null
 
         // Trail history bookkeeping — track every active sighting, drop
         // entries for aircraft that left the search radius.
@@ -518,39 +517,55 @@ internal fun AircraftMap(
         }
         prevSelected = selectedIcao
 
-        // Sun + moon markers, drawn under aircraft markers but above
-        // highlight. Positioned at radiusKm × 0.85 from the user pin along
-        // each body's azimuth so they sit visibly inside the search circle
-        // edge. Hidden when the body is below the horizon.
-        if (showSunMoon) {
-            // Sun/moon position encodes the real altitude angle: a body
-            // on the horizon appears near the visible edge; one at the
-            // zenith sits at the centre; linear in between. The visible-
-            // area radius is the "edge" reference so the encoding stays
-            // legible at any zoom.
-            val anchorCenter = mapCenter ?: LatLng(centreLat, centreLon)
-            val areaRadiusKm = if (visibleRadiusKm > 0) visibleRadiusKm else radiusKm.toDouble()
-            val sm = computeSunMoonOnMap(
-                userLat = centreLat, userLon = centreLon,
-                anchorLat = anchorCenter.latitude, anchorLon = anchorCenter.longitude,
-                areaRadiusKm = areaRadiusKm,
-            )
-            android.util.Log.i(
-                "AircraftWatch",
-                "sun/moon: anchor=(${"%.4f,%.4f".format(anchorCenter.latitude, anchorCenter.longitude)}) " +
-                    "areaR=${"%.1f".format(areaRadiusKm)}km " +
-                    "sun=${sm.sun?.let { "%.4f,%.4f".format(it.latitude, it.longitude) } ?: "BELOW HORIZON"} " +
-                    "moon=${sm.moon?.let { "%.4f,%.4f".format(it.latitude, it.longitude) } ?: "BELOW HORIZON"}",
-            )
-            sm.sun?.let { latlng ->
-                sunMarker = m.addMarker(
-                    MarkerOptions().position(latlng).icon(sunIcon).title("Sun"),
+        // Sun + moon → SymbolLayer (non-deprecated), drawn below the aircraft
+        // icons. computeSunMoonOnMap encodes the real altitude angle: a body
+        // on the horizon sits near the visible edge, one at the zenith near
+        // the centre, linear in between (visible-area radius = the "edge"
+        // reference so it stays legible at any zoom). The source is emptied
+        // when a body is below the horizon or the overlay is off.
+        if (style != null) {
+            if (showSunMoon) {
+                if (style.getImage(SUN_IMAGE) == null) style.addImage(SUN_IMAGE, sunBmp)
+                if (style.getImage(MOON_IMAGE) == null) style.addImage(MOON_IMAGE, moonBmp)
+                if (style.getSourceAs<GeoJsonSource>(SUNMOON_SOURCE) == null) {
+                    style.addSource(GeoJsonSource(SUNMOON_SOURCE))
+                    val smLayer = SymbolLayer(SUNMOON_LAYER, SUNMOON_SOURCE).withProperties(
+                        PropertyFactory.iconImage(Expression.get("body")),
+                        PropertyFactory.iconAllowOverlap(true),
+                        PropertyFactory.iconIgnorePlacement(true),
+                    )
+                    if (style.getLayer(AC_LAYER) != null) style.addLayerBelow(smLayer, AC_LAYER)
+                    else style.addLayer(smLayer)
+                }
+                val anchorCenter = mapCenter ?: LatLng(centreLat, centreLon)
+                val areaRadiusKm = if (visibleRadiusKm > 0) visibleRadiusKm else radiusKm.toDouble()
+                val sm = computeSunMoonOnMap(
+                    userLat = centreLat, userLon = centreLon,
+                    anchorLat = anchorCenter.latitude, anchorLon = anchorCenter.longitude,
+                    areaRadiusKm = areaRadiusKm,
                 )
-            }
-            sm.moon?.let { latlng ->
-                moonMarker = m.addMarker(
-                    MarkerOptions().position(latlng).icon(moonIcon).title("Moon"),
+                android.util.Log.i(
+                    "AircraftWatch",
+                    "sun/moon: anchor=(${"%.4f,%.4f".format(anchorCenter.latitude, anchorCenter.longitude)}) " +
+                        "areaR=${"%.1f".format(areaRadiusKm)}km " +
+                        "sun=${sm.sun?.let { "%.4f,%.4f".format(it.latitude, it.longitude) } ?: "BELOW HORIZON"} " +
+                        "moon=${sm.moon?.let { "%.4f,%.4f".format(it.latitude, it.longitude) } ?: "BELOW HORIZON"}",
                 )
+                val feats = mutableListOf<Feature>()
+                sm.sun?.let { latlng ->
+                    feats += Feature.fromGeometry(Point.fromLngLat(latlng.longitude, latlng.latitude))
+                        .apply { addStringProperty("body", SUN_IMAGE) }
+                }
+                sm.moon?.let { latlng ->
+                    feats += Feature.fromGeometry(Point.fromLngLat(latlng.longitude, latlng.latitude))
+                        .apply { addStringProperty("body", MOON_IMAGE) }
+                }
+                style.getSourceAs<GeoJsonSource>(SUNMOON_SOURCE)
+                    ?.setGeoJson(FeatureCollection.fromFeatures(feats))
+            } else {
+                // Overlay off → clear any existing bodies.
+                style.getSourceAs<GeoJsonSource>(SUNMOON_SOURCE)
+                    ?.setGeoJson(FeatureCollection.fromFeatures(mutableListOf<Feature>()))
             }
         }
 
