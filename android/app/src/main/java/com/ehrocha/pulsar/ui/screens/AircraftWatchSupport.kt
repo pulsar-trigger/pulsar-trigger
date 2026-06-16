@@ -75,7 +75,6 @@ import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 import org.maplibre.android.annotations.IconFactory
-import org.maplibre.android.annotations.Icon
 import org.maplibre.android.annotations.Marker
 import org.maplibre.android.annotations.MarkerOptions
 import org.maplibre.android.annotations.Polyline
@@ -84,6 +83,14 @@ import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
+import org.maplibre.android.style.expressions.Expression
+import org.maplibre.android.style.layers.Property
+import org.maplibre.android.style.layers.PropertyFactory
+import org.maplibre.android.style.layers.SymbolLayer
+import org.maplibre.android.style.sources.GeoJsonSource
+import org.maplibre.geojson.Feature
+import org.maplibre.geojson.FeatureCollection
+import org.maplibre.geojson.Point
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -107,6 +114,21 @@ internal data class MarkerKey(
     val tint: Int,
     val category: com.ehrocha.pulsar.transport.aircraft.AircraftCategory,
 )
+
+// Aircraft markers render via a data-driven SymbolLayer (non-deprecated):
+// one GeoJSON source holding a point feature per plane, each feature naming
+// its pre-rendered icon image (rotation + proximity tint + size + category
+// baked in, registered into the style by name). Replaces the deprecated
+// per-marker addMarker/removeMarker. Trails, sun/moon, the user pin + cone,
+// and the highlight ring are still on the annotation API for now — this
+// slice proves the data-driven icon + tap-to-select query first.
+private const val AC_SOURCE = "aircraft-src"
+private const val AC_LAYER = "aircraft-layer"
+
+/** Stable per-icon image name so the same (heading, size, tint, category)
+ *  combination registers once and is re-fetched by name after a style swap. */
+private fun aircraftImageName(k: MarkerKey): String =
+    "ac_${k.bucket}_${k.size.name}_${k.tint}_${k.category.name}"
 
 /** Embedded MapLibre map showing the user's centre plus a marker per
  *  aircraft. Refreshes its marker layer every time [sightings] changes.
@@ -133,7 +155,6 @@ internal fun AircraftMap(
     }
     val mapViewRef = remember { mutableStateOf<MapView?>(null) }
     var map by remember { mutableStateOf<MapLibreMap?>(null) }
-    val markers = remember { mutableListOf<Marker>() }
     // Bumped each time a new style finishes loading. Changing the style
     // clears all annotations (markers/polylines belong to the style layer),
     // so every effect that adds markers keys on this to re-add them.
@@ -171,8 +192,8 @@ internal fun AircraftMap(
     // cap it as an access-ordered LRU — a busy session realistically uses a
     // few dozen, and 256 × 80 KB ≈ 20 MB worst case.
     val iconCache = remember {
-        object : LinkedHashMap<MarkerKey, Icon>(32, 0.75f, true) {
-            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<MarkerKey, Icon>) =
+        object : LinkedHashMap<MarkerKey, android.graphics.Bitmap>(32, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<MarkerKey, android.graphics.Bitmap>) =
                 size > 256
         }
     }
@@ -352,8 +373,6 @@ internal fun AircraftMap(
     // ICAO move or leave."
     LaunchedEffect(sightings, map, liveTick, selectedIcao, sunMoonTick, showSunMoon, mapCenter, visibleRadiusKm, styleEpoch) {
         val m = map ?: return@LaunchedEffect
-        markers.forEach { m.removeMarker(it) }
-        markers.clear()
         highlightMarker?.let { m.removeMarker(it) }
         highlightMarker = null
         trailPolylines.forEach { m.removePolyline(it) }
@@ -492,60 +511,82 @@ internal fun AircraftMap(
             }
         }
 
-        sightings.forEach { s ->
-            val (drawLat, drawLon) =
-                if (liveMode) deadReckon(s, liveTick) else s.lat to s.lon
-            val title = (s.callsign ?: s.icaoHex.uppercase()) +
-                String.format(Locale.US, " · %.1f km", s.distanceKm)
-            // Subtract current map bearing so the icon always shows the
-            // aircraft's WORLD direction even when the map is rotated.
-            // Without this, planes appear rotated by their heading +
-            // map bearing — visibly wrong on a heading-locked map and the
-            // second contributor to the "everything rotates twice" report.
-            val currentMapBearing = m.cameraPosition.bearing
-            val rawHeading = (s.headingDeg ?: 0.0) - currentMapBearing
-            val bucket = ((rawHeading / 15.0).toInt().mod(24)) * 15
-            val size = aircraftSizeFor(s.typeCode, s.model)
-            val category = com.ehrocha.pulsar.transport.aircraft
-                .aircraftCategoryFor(s.typeCode, s.model)
-            // Marker fill colour matches the row's proximity band so a
-            // plane that reads as "red" on the list also reads as red on
-            // the map. Opacity encodes ALTITUDE: low aircraft (the
-            // shootable subjects) are solid, high cruisers fade back into
-            // the sky. Hue = near/far, alpha = low/high — two orthogonal
-            // channels. Compose Color → Android Color int.
-            val op = altitudeOpacity(s.altitudeFt)
-            val tint = proximityColor(s.distanceKm, radiusKm, pc).let {
-                android.graphics.Color.argb(
-                    (it.alpha * op * 255).toInt().coerceIn(0, 255),
-                    (it.red * 255).toInt(),
-                    (it.green * 255).toInt(),
-                    (it.blue * 255).toInt(),
+        // ── Aircraft markers → data-driven SymbolLayer ───────────────
+        // A style swap drops the source/layer/images, so recreate the
+        // source + layer when missing (this effect re-runs on styleEpoch).
+        val style = m.style
+        if (style != null) {
+            if (style.getSourceAs<GeoJsonSource>(AC_SOURCE) == null) {
+                style.addSource(GeoJsonSource(AC_SOURCE))
+                style.addLayer(
+                    SymbolLayer(AC_LAYER, AC_SOURCE).withProperties(
+                        PropertyFactory.iconImage(Expression.get("icon")),
+                        PropertyFactory.iconAllowOverlap(true),
+                        PropertyFactory.iconIgnorePlacement(true),
+                        // Rotation is baked into each bitmap (screen-aligned,
+                        // exactly as the legacy Marker drew it), so keep the
+                        // icon viewport-aligned and don't use iconRotate.
+                        PropertyFactory.iconRotationAlignment(
+                            Property.ICON_ROTATION_ALIGNMENT_VIEWPORT,
+                        ),
+                    ),
                 )
             }
-            val markerDrawable = when (category) {
-                com.ehrocha.pulsar.transport.aircraft.AircraftCategory.HELICOPTER ->
-                    R.drawable.ic_helicopter_marker
-                else -> R.drawable.ic_aircraft_marker
-            }
-            val icon = iconCache.getOrPut(MarkerKey(bucket, size, tint, category)) {
-                iconFactory.fromBitmap(
+            val features = sightings.map { s ->
+                val (drawLat, drawLon) =
+                    if (liveMode) deadReckon(s, liveTick) else s.lat to s.lon
+                // Subtract current map bearing so the icon always shows the
+                // aircraft's WORLD direction even when the map is rotated.
+                // Without this, planes appear rotated by their heading +
+                // map bearing — visibly wrong on a heading-locked map and the
+                // second contributor to the "everything rotates twice" report.
+                val currentMapBearing = m.cameraPosition.bearing
+                val rawHeading = (s.headingDeg ?: 0.0) - currentMapBearing
+                val bucket = ((rawHeading / 15.0).toInt().mod(24)) * 15
+                val size = aircraftSizeFor(s.typeCode, s.model)
+                val category = com.ehrocha.pulsar.transport.aircraft
+                    .aircraftCategoryFor(s.typeCode, s.model)
+                // Marker fill colour matches the row's proximity band so a
+                // plane that reads as "red" on the list also reads as red on
+                // the map. Opacity encodes ALTITUDE: low aircraft (the
+                // shootable subjects) are solid, high cruisers fade back into
+                // the sky. Hue = near/far, alpha = low/high — two orthogonal
+                // channels. Compose Color → Android Color int.
+                val op = altitudeOpacity(s.altitudeFt)
+                val tint = proximityColor(s.distanceKm, radiusKm, pc).let {
+                    android.graphics.Color.argb(
+                        (it.alpha * op * 255).toInt().coerceIn(0, 255),
+                        (it.red * 255).toInt(),
+                        (it.green * 255).toInt(),
+                        (it.blue * 255).toInt(),
+                    )
+                }
+                val markerDrawable = when (category) {
+                    com.ehrocha.pulsar.transport.aircraft.AircraftCategory.HELICOPTER ->
+                        R.drawable.ic_helicopter_marker
+                    else -> R.drawable.ic_aircraft_marker
+                }
+                val key = MarkerKey(bucket, size, tint, category)
+                val name = aircraftImageName(key)
+                val bmp = iconCache.getOrPut(key) {
                     rotatedAircraftBitmap(
                         ctx,
                         headingDeg = bucket.toFloat(),
                         sizeScale = size.scale,
                         tintColor = tint,
                         drawableRes = markerDrawable,
-                    ),
-                )
+                    )
+                }
+                // Register on first use AND after a style swap (getImage
+                // returns null once the style that held it was replaced).
+                if (style.getImage(name) == null) style.addImage(name, bmp)
+                Feature.fromGeometry(Point.fromLngLat(drawLon, drawLat)).apply {
+                    addStringProperty("icon", name)
+                    addStringProperty("icao", s.icaoHex)
+                }
             }
-            markers += m.addMarker(
-                MarkerOptions()
-                    .position(LatLng(drawLat, drawLon))
-                    .title(title)
-                    .snippet(s.icaoHex)  // used by onMarkerClickListener to identify which plane was tapped
-                    .icon(icon),
-            )
+            style.getSourceAs<GeoJsonSource>(AC_SOURCE)
+                ?.setGeoJson(FeatureCollection.fromFeatures(features))
         }
     }
 
@@ -591,16 +632,20 @@ internal fun AircraftMap(
                             .zoom(zoom)
                             .build()
 
-                        // Tapping a plane marker selects the same way as
-                        // tapping its row in the list. Aircraft markers
-                        // carry their ICAO hex in `snippet`; the user pin
-                        // + heading cone + sun + moon have no snippet, so
-                        // we early-return for those.
-                        ml.setOnMarkerClickListener { marker ->
-                            val icao = marker.snippet
+                        // Tapping a plane selects the same way as tapping its
+                        // row in the list. Aircraft live in a SymbolLayer now,
+                        // so resolve the tap by querying rendered features at
+                        // the tap point and reading the feature's `icao`. The
+                        // user pin / cone / sun / moon are still annotations
+                        // (no feature on AC_LAYER), so an empty hit falls
+                        // through and the tap does nothing.
+                        ml.addOnMapClickListener { point ->
+                            val screen = ml.projection.toScreenLocation(point)
+                            val icao = ml.queryRenderedFeatures(screen, AC_LAYER)
+                                .firstOrNull()?.getStringProperty("icao")
                             if (!icao.isNullOrBlank()) {
                                 onMarkerSelect(icao)
-                                true   // consume — no info-window popup
+                                true   // consume the tap
                             } else {
                                 false
                             }
