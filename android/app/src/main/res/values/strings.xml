@@ -642,11 +642,11 @@
     <string name="tonight_signal_best">Best ~%1$s · %2$d%% cloud</string>
     <string name="run_complete_snack">Run complete · %1$d frames</string>
     <string name="tonight_signal_help_title">How to read the signal</string>
-    <string name="tonight_signal_help_body">Each line is one hour of tonight, top (soonest) to bottom (latest). Across a line, left to right is that hour\'s 60 minutes — and the height is how good the sky is at that moment. Taller is better.
+    <string name="tonight_signal_help_body">Each line is a half-hour of tonight, top (soonest) to bottom (latest). Across a line, left to right is that half-hour\'s 30 minutes — and the height is how good the sky is at that moment. Taller is better.
 
-So a line climbing to the right means conditions are improving through the hour (twilight deepening, clouds clearing); a line falling means they\'re getting worse (cloud, moonrise, or dawn).
+So a line climbing to the right means conditions are improving through the half-hour (twilight deepening, clouds clearing); a line falling means they\'re getting worse (cloud, moonrise, or dawn).
 
-Height comes from sky darkness (sun below the horizon) × clear sky × no bright moon × no rain. The glowing line holds tonight\'s single best moment — named under the chart. Vertical guides mark each quarter-hour (15, 30, 45 min); the bar beside each hour shows its overall level.</string>
+Height comes from sky darkness (sun below the horizon) × clear sky × no bright moon × no rain. The glowing line holds tonight\'s single best moment — named under the chart. A vertical guide marks each half-hour\'s midpoint; the bar beside each row shows its overall level.</string>
     <string name="location_north">N</string>
     <string name="location_south">S</string>
     <string name="location_east">E</string>

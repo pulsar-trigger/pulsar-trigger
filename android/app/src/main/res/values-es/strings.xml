@@ -425,11 +425,11 @@
     <string name="tonight_signal_best">Mejor ~%1$s · %2$d%% nubes</string>
     <string name="run_complete_snack">Sesión completa · %1$d tomas</string>
     <string name="tonight_signal_help_title">Cómo leer la señal</string>
-    <string name="tonight_signal_help_body">Cada línea es una hora de esta noche, de arriba (pronto) a abajo (tarde). A lo largo de una línea, de izquierda a derecha están los 60 minutos de esa hora, y la altura indica qué tan bueno está el cielo en ese momento. Más alto es mejor.
+    <string name="tonight_signal_help_body">Cada línea es media hora de esta noche, de arriba (pronto) a abajo (tarde). A lo largo de una línea, de izquierda a derecha están los 30 minutos de esa media hora, y la altura indica qué tan bueno está el cielo en ese momento. Más alto es mejor.
 
-Una línea que sube hacia la derecha significa que las condiciones mejoran durante la hora (el crepúsculo se profundiza, las nubes se despejan); una línea que baja significa que empeoran (nubes, salida de la luna o amanecer).
+Una línea que sube hacia la derecha significa que las condiciones mejoran durante la media hora (el crepúsculo se profundiza, las nubes se despejan); una línea que baja significa que empeoran (nubes, salida de la luna o amanecer).
 
-La altura proviene de la oscuridad del cielo × cielo despejado × sin luna brillante × sin lluvia. La línea brillante contiene el mejor momento de la noche, indicado bajo el gráfico. Las guías verticales marcan cada cuarto de hora (15, 30, 45 min); la barra junto a cada hora muestra su nivel general.</string>
+La altura proviene de la oscuridad del cielo × cielo despejado × sin luna brillante × sin lluvia. La línea brillante contiene el mejor momento de la noche, indicado bajo el gráfico. Una guía vertical marca el punto medio de cada media hora; la barra junto a cada línea muestra su nivel general.</string>
     <string name="location_north">N</string>
     <string name="location_south">S</string>
     <string name="location_east">E</string>

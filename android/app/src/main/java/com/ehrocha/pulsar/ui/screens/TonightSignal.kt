@@ -54,26 +54,28 @@ import kotlin.math.sin
 
 /**
  * SIGNAL's flagship moment: tonight rendered as a CP 1919-style stacked
- * ridgeline — the chart the app is named after. Each line is one hour;
- * within a line, **left→right is the 60 minutes of that hour** and the
- * height at each point is the actual shooting quality at that minute
- * (sky darkness × cloud × moonlight × rain). So a line that climbs through
- * the hour means the sky is improving (twilight deepening); a falling line
- * means it's degrading (cloud rolling in, moonrise, dawn). The row holding
- * the single best moment is drawn in the live gradient. Homage AND honest
- * chart — the horizontal axis carries real information, not decoration.
+ * ridgeline — the chart the app is named after. Each line is a **half-hour**
+ * (the v0.475 densify — twice the rows reads more like the original CP 1919
+ * plate); within a line, **left→right is that half-hour's 30 minutes** and
+ * the height at each point is the actual shooting quality at that minute
+ * (sky darkness × cloud × moonlight × rain). So a line that climbs means the
+ * sky is improving (twilight deepening); a falling line means it's degrading
+ * (cloud rolling in, moonrise, dawn). The row holding the single best moment
+ * is drawn in the live gradient. Homage AND honest chart — the horizontal
+ * axis carries real information, not decoration.
  */
-internal data class HourSignal(
-    val label: String,            // "19h"
+internal data class RowSignal(
+    val label: String,            // "19:00"
     val hour: Int,                // 0..23, for formatting the peak time
-    val samples: List<Float>,     // quality 0..1, left = :00, right = :59
+    val startMinute: Int,         // 0 or 30 — which half-hour this row covers
+    val samples: List<Float>,     // quality 0..1, left = start, right = start+30
     val cloudPct: Int,
     val best: Boolean = false,
 )
 
-/** Sub-samples per hour-row. Sun altitude is recomputed at each, so the
+/** Sub-samples per half-hour row. Sun altitude is recomputed at each, so the
  *  curve traces real minute-level darkness (every 2.5 min). */
-private const val SAMPLES_PER_HOUR = 25
+private const val SAMPLES_PER_ROW = 13
 
 /** Append a Catmull-Rom spline through [pts] (current point must be pts[0])
  *  as cubic béziers — graceful organic curves through the real samples,
@@ -94,7 +96,7 @@ private fun Path.catmullRomTo(pts: List<Offset>) {
 
 /** Quality model per forecast hour. Pure derivation from data the
  *  dashboard already fetched — no new network. */
-internal fun buildTonightSignal(state: DashboardState): List<HourSignal> {
+internal fun buildTonightSignal(state: DashboardState): List<RowSignal> {
     val loc = state.location ?: return emptyList()
     val hourlyRaw = state.weather?.hourlyForecast ?: return emptyList()
     if (hourlyRaw.isEmpty()) return emptyList()
@@ -131,30 +133,39 @@ internal fun buildTonightSignal(state: DashboardState): List<HourSignal> {
         }
     }
 
-    val out = mutableListOf<HourSignal>()
-    for ((idx, pt) in pts.withIndex()) {
+    val out = mutableListOf<RowSignal>()
+    outer@ for ((idx, pt) in pts.withIndex()) {
         val t = pt.t
         if (t.isBefore(now.minusMinutes(30)) || t.isAfter(now.plusHours(14))) continue
         val next = pts.getOrNull(idx + 1)
         val date = t.toLocalDate()
-        val samples = (0 until SAMPLES_PER_HOUR).map { k ->
-            val f = k.toDouble() / (SAMPLES_PER_HOUR - 1)   // 0..1 across the hour
-            val darkness = darknessAt(t.hour + f, date)
-            val cloud = if (next != null) pt.cloud + (next.cloud - pt.cloud) * f else pt.cloud.toDouble()
-            val precip = if (next != null) pt.precip + (next.precip - pt.precip) * f else pt.precip
-            val cloudFactor = 1.0 - (cloud / 100.0) * 0.9
-            val rainFactor = if (precip > 0.1) 0.25 else 1.0
-            (darkness * cloudFactor * rainFactor * moonFactor).toFloat().coerceIn(0.02f, 1f)
+        // Two half-hour rows per forecast hour: [HH:00, HH:30) and [HH:30, HH+1:00).
+        for (half in 0..1) {
+            val startMin = half * 30
+            // Drop a half-hour that has already fully elapsed.
+            if (t.plusMinutes((startMin + 30).toLong()).isBefore(now)) continue
+            val startFrac = half * 0.5   // 0.0 or 0.5 of the hour
+            val samples = (0 until SAMPLES_PER_ROW).map { k ->
+                // Fraction of the *hour* (0..1) for this sub-sample of the half.
+                val f = startFrac + (k.toDouble() / (SAMPLES_PER_ROW - 1)) * 0.5
+                val darkness = darknessAt(t.hour + f, date)
+                val cloud = if (next != null) pt.cloud + (next.cloud - pt.cloud) * f else pt.cloud.toDouble()
+                val precip = if (next != null) pt.precip + (next.precip - pt.precip) * f else pt.precip
+                val cloudFactor = 1.0 - (cloud / 100.0) * 0.9
+                val rainFactor = if (precip > 0.1) 0.25 else 1.0
+                (darkness * cloudFactor * rainFactor * moonFactor).toFloat().coerceIn(0.02f, 1f)
+            }
+            // Skip half-hours that are essentially daylight the whole way through.
+            if ((samples.maxOrNull() ?: 0f) < 0.08f) continue
+            out += RowSignal(
+                label = "%02d:%02d".format(t.hour, startMin),
+                hour = t.hour,
+                startMinute = startMin,
+                samples = samples,
+                cloudPct = pt.cloud,
+            )
+            if (out.size >= 18) break@outer
         }
-        // Skip hours that are essentially daylight the whole way through.
-        if ((samples.maxOrNull() ?: 0f) < 0.08f) continue
-        out += HourSignal(
-            label = "%02dh".format(t.hour),
-            hour = t.hour,
-            samples = samples,
-            cloudPct = pt.cloud,
-        )
-        if (out.size >= 10) break
     }
     if (out.isEmpty()) return out
     // Highlight the row holding the single best MOMENT tonight.
@@ -195,10 +206,10 @@ private fun QualityPip(level: Float, best: Boolean) {
 
 @Composable
 internal fun TonightSignalCard(state: DashboardState) {
-    val hours = remember(state.weather, state.moon, state.location) {
+    val rows = remember(state.weather, state.moon, state.location) {
         buildTonightSignal(state)
     }
-    if (hours.size < 3) return
+    if (rows.size < 3) return
 
     var showHelp by androidx.compose.runtime.remember {
         androidx.compose.runtime.mutableStateOf(false)
@@ -249,11 +260,13 @@ internal fun TonightSignalCard(state: DashboardState) {
             }
             Spacer(Modifier.height(8.dp))
 
-            val rowHeight = 26.dp
+            // Slimmer rows than the hourly version: twice as many (half-hour)
+            // rows, each thinner — the denser CP 1919 stack Eduardo asked for.
+            val rowHeight = 20.dp
             // Headroom above the top row: a peak rises up to 1.55× the row
-            // height above its baseline, so the topmost hour needs ~0.55×
-            // row of clearance or its tall pulses get cut flat at the edge.
-            val topPad = 18.dp
+            // height above its baseline, so the topmost row needs ~0.55× row
+            // of clearance or its tall pulses get cut flat at the edge.
+            val topPad = 14.dp
             val traceColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
             val fillColor = MaterialTheme.colorScheme.surfaceContainerHigh
             // onSurface (near-white in dark) at low alpha — visible on the
@@ -264,7 +277,7 @@ internal fun TonightSignalCard(state: DashboardState) {
                 Canvas(
                     modifier = Modifier
                         .weight(1f)
-                        .height(rowHeight * hours.size + topPad + 8.dp),
+                        .height(rowHeight * rows.size + topPad + 8.dp),
                 ) {
                     val rowPx = rowHeight.toPx()
                     val topPadPx = topPad.toPx()
@@ -275,7 +288,7 @@ internal fun TonightSignalCard(state: DashboardState) {
                     // the classic joyplot trick, and how the original
                     // CP 1919 plate reads.
                     val bloomStroke = Stroke(width = 3.5.dp.toPx(), cap = StrokeCap.Round)
-                    hours.forEachIndexed { i, h ->
+                    rows.forEachIndexed { i, h ->
                         val baseY = topPadPx + rowPx * (i + 1)
                         val maxAmp = rowPx * 1.55f
                         val n = h.samples.size
@@ -348,27 +361,25 @@ internal fun TonightSignalCard(state: DashboardState) {
                             drawPath(signal, traceColor, style = stroke)
                         }
                     }
-                    // Quarter-hour guides (15 / 30 / 45 min) on top, so the
-                    // within-hour time scale is always visible — read where
-                    // in the hour a peak falls. Faint enough not to fight the
+                    // A single guide at each row's 15-minute midpoint, so the
+                    // within-row time scale stays legible — read where in the
+                    // half-hour a peak falls. Faint enough not to fight the
                     // traces.
-                    for (qm in 1..3) {
-                        val gx = w * qm / 4f
-                        drawLine(guideColor, Offset(gx, 0f), Offset(gx, size.height), 0.8.dp.toPx())
-                    }
+                    val gx = w / 2f
+                    drawLine(guideColor, Offset(gx, 0f), Offset(gx, size.height), 0.8.dp.toPx())
                 }
                 Spacer(Modifier.width(12.dp))
                 Column {
                     // Match the canvas's top headroom so labels line up with
                     // their rows.
                     Spacer(Modifier.height(topPad))
-                    hours.forEach { h ->
+                    rows.forEach { h ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.height(rowHeight),
                         ) {
                             // Absolute level gauge — disambiguates a flat-high
-                            // (great) hour from a flat-low (poor) one, which
+                            // (great) row from a flat-low (poor) one, which
                             // the line shape alone can't.
                             QualityPip(level = h.samples.max(), best = h.best)
                             Spacer(Modifier.width(6.dp))
@@ -378,19 +389,20 @@ internal fun TonightSignalCard(state: DashboardState) {
                                 color = if (h.best) live.liveEnd
                                         else MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.End,
-                                modifier = Modifier.width(30.dp),
+                                modifier = Modifier.width(40.dp),
                             )
                         }
                     }
                 }
             }
             Spacer(Modifier.height(4.dp))
-            val best = hours.first { it.best }
-            // Pinpoint the single best moment: the peak sample's minute.
+            val best = rows.first { it.best }
+            // Pinpoint the single best moment: the peak sample's minute within
+            // this row's 30-minute span (offset by the row's start minute).
             val peakIdx = best.samples.indices.maxByOrNull { best.samples[it] } ?: 0
-            val peakMin = (peakIdx.toFloat() / (best.samples.size - 1) * 60f)
-                .roundToInt().coerceIn(0, 59)
-            val peakTime = "%02d:%02d".format(best.hour, peakMin)
+            val totalMin = best.startMinute +
+                (peakIdx.toFloat() / (best.samples.size - 1) * 30f).roundToInt()
+            val peakTime = "%02d:%02d".format((best.hour + totalMin / 60) % 24, totalMin % 60)
             Text(
                 stringResource(R.string.tonight_signal_best, peakTime, best.cloudPct),
                 style = MaterialTheme.typography.labelSmall.copy(fontFamily = Mono),

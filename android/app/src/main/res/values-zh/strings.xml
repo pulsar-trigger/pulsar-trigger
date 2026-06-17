@@ -427,11 +427,11 @@
     <string name="tonight_signal_best">最佳 ~%1$s · 云量 %2$d%%</string>
     <string name="run_complete_snack">拍摄完成 · %1$d 张</string>
     <string name="tonight_signal_help_title">如何读懂信号</string>
-    <string name="tonight_signal_help_body">每条线代表今晚的一个小时，从上（最近）到下（最晚）。沿着一条线，从左到右是该小时的 60 分钟——高度表示那一刻天空的好坏。越高越好。
+    <string name="tonight_signal_help_body">每条线代表今晚的半小时，从上（最近）到下（最晚）。沿着一条线，从左到右是该半小时的 30 分钟——高度表示那一刻天空的好坏。越高越好。
 
-向右上升的线表示该小时内条件在改善（暮光加深、云层散开）；下降的线表示在变差（云、月出或黎明）。
+向右上升的线表示该半小时内条件在改善（暮光加深、云层散开）；下降的线表示在变差（云、月出或黎明）。
 
-高度来自天空黑暗度 × 晴朗 × 无明亮月光 × 无降雨。发光的线包含今晚最佳的时刻——在图表下方标注。（竖向参考线标记每个一刻钟（15、30、45 分），每小时旁的小条显示其整体水平。）</string>
+高度来自天空黑暗度 × 晴朗 × 无明亮月光 × 无降雨。发光的线包含今晚最佳的时刻——在图表下方标注。（竖向参考线标记每个半小时的中点，每行旁的小条显示其整体水平。）</string>
     <string name="location_north">北</string>
     <string name="location_south">南</string>
     <string name="location_east">东</string>
