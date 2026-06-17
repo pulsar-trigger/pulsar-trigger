@@ -647,6 +647,11 @@
     <string name="sky_dial_poor">Poor</string>
     <string name="sky_dial_dusk">Dusk</string>
     <string name="sky_dial_dawn">Dawn</string>
+    <string name="dash_moon">Moon</string>
+    <string name="dash_light">Light</string>
+    <string name="dash_sky">Sky</string>
+    <string name="dash_targets">Targets</string>
+    <string name="dash_timeline">Tonight</string>
     <string name="tonight_signal_best">Best ~%1$s · %2$d%% cloud</string>
     <string name="run_complete_snack">Run complete · %1$d frames</string>
     <string name="tonight_signal_help_title">How to read the signal</string>

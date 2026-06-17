@@ -430,6 +430,11 @@
     <string name="sky_dial_poor">Schwach</string>
     <string name="sky_dial_dusk">Dämmerung</string>
     <string name="sky_dial_dawn">Morgengrauen</string>
+    <string name="dash_moon">Mond</string>
+    <string name="dash_light">Licht</string>
+    <string name="dash_sky">Himmel</string>
+    <string name="dash_targets">Ziele</string>
+    <string name="dash_timeline">Heute Nacht</string>
     <string name="tonight_signal_best">Beste ~%1$s · %2$d%% Wolken</string>
     <string name="run_complete_snack">Aufnahme abgeschlossen · %1$d Bilder</string>
     <string name="tonight_signal_help_title">So liest du das Signal</string>

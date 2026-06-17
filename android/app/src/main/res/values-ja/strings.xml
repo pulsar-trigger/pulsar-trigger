@@ -430,6 +430,11 @@
     <string name="sky_dial_poor">不良</string>
     <string name="sky_dial_dusk">日暮れ</string>
     <string name="sky_dial_dawn">夜明け</string>
+    <string name="dash_moon">月</string>
+    <string name="dash_light">光害</string>
+    <string name="dash_sky">空</string>
+    <string name="dash_targets">対象</string>
+    <string name="dash_timeline">今夜</string>
     <string name="tonight_signal_best">ベスト ~%1$s · 雲量 %2$d%%</string>
     <string name="run_complete_snack">撮影完了 · %1$d 枚</string>
     <string name="tonight_signal_help_title">シグナルの読み方</string>

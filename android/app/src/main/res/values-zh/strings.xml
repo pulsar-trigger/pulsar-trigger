@@ -432,6 +432,11 @@
     <string name="sky_dial_poor">较差</string>
     <string name="sky_dial_dusk">黄昏</string>
     <string name="sky_dial_dawn">黎明</string>
+    <string name="dash_moon">月亮</string>
+    <string name="dash_light">光污染</string>
+    <string name="dash_sky">天空</string>
+    <string name="dash_targets">目标</string>
+    <string name="dash_timeline">今夜</string>
     <string name="tonight_signal_best">最佳 ~%1$s · 云量 %2$d%%</string>
     <string name="run_complete_snack">拍摄完成 · %1$d 张</string>
     <string name="tonight_signal_help_title">如何读懂信号</string>

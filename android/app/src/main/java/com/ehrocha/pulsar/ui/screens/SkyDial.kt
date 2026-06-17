@@ -6,6 +6,7 @@
 package com.ehrocha.pulsar.ui.screens
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -95,7 +96,7 @@ private class DialModel(
 )
 
 @Composable
-internal fun SkyDial(state: DashboardState) {
+internal fun SkyDial(state: DashboardState, onTap: (() -> Unit)? = null) {
     val model = remember(state.weather, state.moon, state.sun, state.location, state.selectedDate) {
         buildDialModel(state)
     } ?: return
@@ -106,7 +107,9 @@ internal fun SkyDial(state: DashboardState) {
     Surface(
         shape = RoundedCornerShape(24.dp),
         color = scheme.surfaceContainerHigh,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onTap != null) Modifier.clickable { onTap() } else Modifier),
     ) {
         Box(modifier = Modifier.padding(8.dp)) {
             Box(

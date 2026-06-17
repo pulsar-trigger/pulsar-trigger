@@ -10,12 +10,16 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
+import com.ehrocha.pulsar.ui.theme.Display
+import com.ehrocha.pulsar.ui.theme.Mono
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -51,6 +55,10 @@ fun DashboardScreen(
     val scope = rememberCoroutineScope()
     var showDatePicker by remember { mutableStateOf(false) }
     var isRefreshing by remember { mutableStateOf(false) }
+    // Phase 2 of the redesign: which secondary domain page is open (null =
+    // the unified dial + readout-ring main view). Back closes it.
+    var openPage by remember { mutableStateOf<DashPage?>(null) }
+    BackHandler(enabled = openPage != null) { openPage = null }
     val context = androidx.compose.ui.platform.LocalContext.current
 
     LaunchedEffect(Unit) {
@@ -207,19 +215,40 @@ fun DashboardScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // ── THE SKY DIAL — the unified radial hero (Phase 1 of the
-            // dashboard redesign): tonight as a dusk→dawn night-clock, the
-            // arc's glow = shooting quality, best window blazing in the live
-            // gradient, moon + Milky-Way bands, verdict at centre. ───────
-            SkyDial(state)
-            // The CP 1919 ridgeline now reads as the dial's linear companion
-            // (and becomes the dial's tap-through in Phase 2). The redundant
-            // ConditionsStrip is gone — the dial + its pages replace it.
-            TonightSignalCard(state)
-            // ── Detail cards — collapsed by default: the hero + strip ARE
-            // the dashboard; the stack below is the drill-down. ──────
-            // ── Summary card ──────────────────────────────────────
-            state.location?.let { loc ->
+            // ── Secondary-page header (Phase 2) — replaces the dial when a
+            // domain page is open; the gated cards below show only that
+            // page's group. ─────────────────────────────────────────────
+            openPage?.let { page ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    IconButton(onClick = { openPage = null }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                    }
+                    Text(
+                        stringResource(dashPageTitle(page)).uppercase(),
+                        style = MaterialTheme.typography.titleMedium.copy(fontFamily = Display, letterSpacing = 1.sp),
+                    )
+                }
+            }
+
+            // ── THE SKY DIAL + readout ring — the unified hero (main view).
+            // Tonight as a dusk→dawn night-clock (arc glow = shooting quality,
+            // best window in the live gradient, moon + Milky-Way bands), then
+            // four tap-tiles into the domain pages. Tapping the dial opens the
+            // Tonight timeline. ─────────────────────────────────────────────
+            if (openPage == null) {
+                SkyDial(state, onTap = { openPage = DashPage.TIMELINE })
+                DashReadoutRow(state) { openPage = it }
+            }
+
+            // ── Domain pages: each detail card is gated to its page; hidden
+            // cards collapse to zero height, so an open page shows only its
+            // group. TIMELINE also carries the CP 1919 ridgeline. ───────────
+            if (openPage == DashPage.TIMELINE) TonightSignalCard(state)
+            // ── Summary card → Targets (best windows + location) ──────────
+            if (openPage == DashPage.TARGETS) state.location?.let { loc ->
                 DashCard(title = stringResource(R.string.card_summary), icon = Icons.Default.MyLocation) {
                     // City name + coordinates
                     loc.cityName?.let { city ->
@@ -448,7 +477,7 @@ fun DashboardScreen(
                 state.weatherError?.let { "☁️ $it" },
                 state.bortleError?.let { "💡 $it" },
             )
-            if (errors.isNotEmpty()) {
+            if (openPage == null && errors.isNotEmpty()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -469,8 +498,8 @@ fun DashboardScreen(
                 }
             }
 
-            // ── Sun card ─────────────────────────────────────────────
-            state.sun?.let { sun ->
+            // ── Sun card → Timeline ──────────────────────────────────
+            if (openPage == DashPage.TIMELINE) state.sun?.let { sun ->
                 DashCard(title = stringResource(R.string.card_sun), icon = Icons.Default.WbSunny, initiallyExpanded = false) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -494,8 +523,8 @@ fun DashboardScreen(
                 }
             }
 
-            // ── Moon card ────────────────────────────────────────────
-            state.moon?.let { moon ->
+            // ── Moon card → Moon page ────────────────────────────────
+            if (openPage == DashPage.MOON) state.moon?.let { moon ->
                 DashCard(title = stringResource(R.string.card_moon), icon = Icons.Default.NightsStay, initiallyExpanded = false) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(moon.emoji, fontSize = 48.sp)
@@ -552,8 +581,8 @@ fun DashboardScreen(
                 }
             }
 
-            // ── Milky Way card ───────────────────────────────────────
-            state.milkyWay?.let { mw ->
+            // ── Milky Way card → Light page ──────────────────────────
+            if (openPage == DashPage.LIGHT) state.milkyWay?.let { mw ->
                 DashCard(title = stringResource(R.string.card_milky_way), icon = Icons.Default.AutoAwesome, initiallyExpanded = false) {
                     Surface(
                         color = if (mw.visible) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive.copy(alpha = 0.15f)
@@ -602,8 +631,8 @@ fun DashboardScreen(
                 }
             }
 
-            // ── Bortle / Light Pollution card ────────────────────────
-            state.bortle?.let { b ->
+            // ── Bortle / Light Pollution card → Light page ───────────
+            if (openPage == DashPage.LIGHT) state.bortle?.let { b ->
                 val bInt = b.bortleClass.toInt().coerceIn(1, 9)
                 val good = bInt <= 4
                 DashCard(title = stringResource(R.string.card_bortle), icon = Icons.Default.Lightbulb, initiallyExpanded = false) {
@@ -651,8 +680,8 @@ fun DashboardScreen(
                 }
             }
 
-            // ── Weather card ─────────────────────────────────────────
-            state.weather?.let { weather ->
+            // ── Weather card → Sky page ──────────────────────────────
+            if (openPage == DashPage.SKY) state.weather?.let { weather ->
                 DashCard(title = stringResource(R.string.card_weather), icon = Icons.Default.Cloud, initiallyExpanded = false) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -720,10 +749,10 @@ fun DashboardScreen(
                 }
             }
 
-            // ── Dew point card ───────────────────────────────────────
+            // ── Dew point card → Sky page ────────────────────────────
             // Risk is wind- and sky-aware when weather is available: clear,
             // calm nights raise the risk the raw spread alone would miss.
-            state.dewPoint?.let { dew ->
+            if (openPage == DashPage.SKY) state.dewPoint?.let { dew ->
                 val detail = state.weather?.let { w ->
                     com.ehrocha.pulsar.astro.AstroCalculator.dewRiskDetail(
                         dew, w.windSpeedKmh, w.cloudCoverPct,
@@ -789,8 +818,8 @@ fun DashboardScreen(
                 }
             }
 
-            // ── Twilight timeline card ───────────────────────────────
-            state.twilight?.let { tw ->
+            // ── Twilight timeline card → Timeline ────────────────────
+            if (openPage == DashPage.TIMELINE) state.twilight?.let { tw ->
                 DashCard(
                     title = stringResource(R.string.card_twilight),
                     icon = Icons.Default.Gradient,
@@ -850,8 +879,8 @@ fun DashboardScreen(
                 }
             }
 
-            // ── Golden & blue hour card ──────────────────────────────
-            state.goldenBlue?.let { gb ->
+            // ── Golden & blue hour card → Timeline ───────────────────
+            if (openPage == DashPage.TIMELINE) state.goldenBlue?.let { gb ->
                 val hasAny = listOf(
                     gb.morningGolden, gb.eveningGolden,
                     gb.morningBlue, gb.eveningBlue,
@@ -879,8 +908,8 @@ fun DashboardScreen(
                 }
             }
 
-            // ── Planets card ─────────────────────────────────────────
-            if (state.planets.isNotEmpty()) {
+            // ── Planets card → Targets page ──────────────────────────
+            if (openPage == DashPage.TARGETS && state.planets.isNotEmpty()) {
                 DashCard(
                     title = stringResource(R.string.card_planets),
                     icon = Icons.Default.Public,
@@ -942,11 +971,11 @@ fun DashboardScreen(
                 }
             }
 
-            // ── Suggested DSO targets ────────────────────────────────
+            // ── Suggested DSO targets → Targets page ─────────────────
             // Surfaces 3–5 deep-sky targets that peak in tonight's dark
             // window above the minimum altitude. Source catalog +
             // recommender live in [com.ehrocha.pulsar.astro.DsoRecommender].
-            run {
+            if (openPage == DashPage.TARGETS) run {
                 val loc = state.location ?: return@run
                 val tw = state.twilight ?: return@run
                 // Twilight times come from AstroCalculator.fmtHour() as
@@ -988,8 +1017,8 @@ fun DashboardScreen(
                 }
             }
 
-            // ── Hourly forecast ──────────────────────────────────────
-            state.weather?.hourlyForecast?.takeIf { it.isNotEmpty() }?.let { hours ->
+            // ── Hourly forecast → Sky page ───────────────────────────
+            if (openPage == DashPage.SKY) state.weather?.hourlyForecast?.takeIf { it.isNotEmpty() }?.let { hours ->
                 val isToday2 = state.selectedDate == LocalDate.now()
                 DashCard(
                     title = if (isToday2) stringResource(R.string.card_forecast)
@@ -1062,6 +1091,67 @@ fun DashboardScreen(
             Spacer(Modifier.height(16.dp))
         }
         } // PullToRefreshBox
+    }
+}
+
+// ── Unified dashboard: domain pages + readout ring (Phase 2) ─────────────────
+
+/** The secondary domain pages the dial's readout ring + tap open. */
+enum class DashPage { MOON, LIGHT, SKY, TARGETS, TIMELINE }
+
+private fun dashPageTitle(p: DashPage): Int = when (p) {
+    DashPage.MOON -> R.string.dash_moon
+    DashPage.LIGHT -> R.string.dash_light
+    DashPage.SKY -> R.string.dash_sky
+    DashPage.TARGETS -> R.string.dash_targets
+    DashPage.TIMELINE -> R.string.dash_timeline
+}
+
+/** The four domain tap-tiles under the dial — each a one-figure readout that
+ *  opens its secondary page. */
+@Composable
+private fun DashReadoutRow(
+    state: com.ehrocha.pulsar.astro.DashboardState,
+    onOpen: (DashPage) -> Unit,
+) {
+    val moon = state.moon?.let { "${it.emoji} ${it.illuminationPct.toInt()}%" } ?: "—"
+    val light = state.bortle?.let { "B${it.bortleClass.toInt()}" } ?: "—"
+    val sky = state.weather?.let { "${it.cloudCoverPct}%" } ?: "—"
+    val targets = (state.planets.size + state.bestWindows.size)
+        .let { if (it > 0) it.toString() else "—" }
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        ReadoutTile(R.string.dash_moon, moon, Modifier.weight(1f)) { onOpen(DashPage.MOON) }
+        ReadoutTile(R.string.dash_light, light, Modifier.weight(1f)) { onOpen(DashPage.LIGHT) }
+        ReadoutTile(R.string.dash_sky, sky, Modifier.weight(1f)) { onOpen(DashPage.SKY) }
+        ReadoutTile(R.string.dash_targets, targets, Modifier.weight(1f)) { onOpen(DashPage.TARGETS) }
+    }
+}
+
+@Composable
+private fun ReadoutTile(labelRes: Int, value: String, modifier: Modifier, onClick: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = modifier.clickable { onClick() },
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp)) {
+            Text(
+                stringResource(labelRes).uppercase(),
+                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                value,
+                style = MaterialTheme.typography.titleMedium.copy(fontFamily = Mono),
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+            )
+        }
     }
 }
 

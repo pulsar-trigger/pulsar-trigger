@@ -430,6 +430,11 @@
     <string name="sky_dial_poor">Faible</string>
     <string name="sky_dial_dusk">Crépuscule</string>
     <string name="sky_dial_dawn">Aube</string>
+    <string name="dash_moon">Lune</string>
+    <string name="dash_light">Lumière</string>
+    <string name="dash_sky">Ciel</string>
+    <string name="dash_targets">Cibles</string>
+    <string name="dash_timeline">Cette nuit</string>
     <string name="tonight_signal_best">Meilleur ~%1$s · %2$d%% nuages</string>
     <string name="run_complete_snack">Session terminée · %1$d images</string>
     <string name="tonight_signal_help_title">Lire le signal</string>

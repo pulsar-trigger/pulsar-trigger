@@ -430,6 +430,11 @@
     <string name="sky_dial_poor">Pobre</string>
     <string name="sky_dial_dusk">Anochecer</string>
     <string name="sky_dial_dawn">Amanecer</string>
+    <string name="dash_moon">Luna</string>
+    <string name="dash_light">Luz</string>
+    <string name="dash_sky">Cielo</string>
+    <string name="dash_targets">Objetivos</string>
+    <string name="dash_timeline">Esta noche</string>
     <string name="tonight_signal_best">Mejor ~%1$s · %2$d%% nubes</string>
     <string name="run_complete_snack">Sesión completa · %1$d tomas</string>
     <string name="tonight_signal_help_title">Cómo leer la señal</string>
