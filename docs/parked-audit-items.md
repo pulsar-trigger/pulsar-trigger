@@ -155,7 +155,7 @@ backoffs.
 
 ---
 
-## Map Annotations API deprecation — 🟡 Phase 2a done, 2b pending device
+## Map Annotations API deprecation — ✅ CODE-COMPLETE (v0.466–0.471), device-verify pending
 
 > **2026-06-16:** **MapLocationPicker migrated (v0.466)** to the
 > dependency-free `GeoJsonSource` + `SymbolLayer` path (new `ic_map_pin`
@@ -188,13 +188,26 @@ backoffs.
 >   the overlay, both bodies appear at the right spots under the planes,
 >   follow pan/zoom, vanish below horizon, survive a Hybrid toggle.
 > - **Slice 4 — user pin + heading cone + highlight ring.** Split for safety:
->   - **4a — highlight ring:** own single-feature `SymbolLayer` below the
->     planes (tinted ring image keyed by selection colour).
->   - **4b — cone + pin:** `SymbolLayer` using data-driven `iconRotate`
->     (keeps the bearing-compensation maths) + `symbol-z-order: source` for
->     the pin-on-top-of-cone stack. Re-touches the heading-rotation path, so
->     it gets its own bump to re-verify rotation. Finishing 4b makes the file
->     fully deprecation-free (drops IconFactory/Marker/MarkerOptions).
+>   - **4a — highlight ring (v0.470): DONE in code, awaiting device.** Own
+>     single-feature `SymbolLayer` below the planes (tinted ring image keyed
+>     by selection colour). Check: tap a plane → ring appears around it,
+>     follows in live mode, clears on deselect.
+>   - **4b — cone + pin (v0.471): DONE in code, awaiting device.**
+>     `SymbolLayer` using data-driven `iconRotate` (same bearing-compensation
+>     maths) + `symbol-z-order: source` for the pin-on-top-of-cone stack.
+>     Check the rotation path: cone points right, stays upright under
+>     heading-lock with NO double-rotate during a spin, pin sits on the cone.
+>
+> **Migration complete in code (v0.471):** `AircraftWatchSupport.kt` is fully
+> off the legacy annotation API — `IconFactory`/`Marker`/`MarkerOptions`/
+> `Polyline` imports + `iconFactory` all removed. Layer stack (bottom→top):
+> trails, sun/moon, highlight, aircraft, user pin/cone. Also swept the
+> unrelated `LocalLifecycleOwner` deprecation (moved to the
+> `androidx.lifecycle.compose` package) across the 4 map files — the
+> `lifecycle-runtime-compose` dep was already present. **Remaining:** Eduardo
+> to device-verify slices 2–4b together (trails under planes, sun/moon,
+> selection ring, cone/pin rotation, and that everything survives a Hybrid
+> toggle).
 >
 > Each remaining slice still uses the (working but deprecated) annotation API
 > until its turn. The file isn't deprecation-free until slice 4 lands.
