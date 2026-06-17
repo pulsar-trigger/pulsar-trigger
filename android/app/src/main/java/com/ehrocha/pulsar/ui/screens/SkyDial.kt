@@ -248,10 +248,10 @@ internal fun SkyDial(state: DashboardState) {
 
                 // ── Dusk / dawn captions in the bottom gap ──────────────
                 state.sun?.sunset?.let {
-                    DialEndLabel(stringResource(R.string.sky_dial_dusk), it, Alignment.BottomStart)
+                    DialEndLabel(stringResource(R.string.sky_dial_dusk), formatTime(it), Alignment.BottomStart)
                 }
                 state.sun?.sunrise?.let {
-                    DialEndLabel(stringResource(R.string.sky_dial_dawn), it, Alignment.BottomEnd)
+                    DialEndLabel(stringResource(R.string.sky_dial_dawn), formatTime(it), Alignment.BottomEnd)
                 }
             }
         }
@@ -299,13 +299,23 @@ private inline fun drawRunBands(flags: List<Boolean>, draw: (Float, Float) -> Un
 
 // ── Model derivation ────────────────────────────────────────────────────────
 
-private fun parseTime(s: String?): LocalTime? =
-    s?.let { runCatching { LocalTime.parse(it) }.getOrNull() }
+/** Open-Meteo (timezone=auto) returns LOCAL ISO times like
+ *  "2026-06-17T19:27"; twilight strings are already "HH:mm". Extract the
+ *  HH:mm either way — the same slice the Sun card's formatTime uses. */
+private fun parseTime(s: String?): LocalTime? {
+    if (s.isNullOrEmpty()) return null
+    val hhmm = s.substringAfter("T", s).take(5)
+    return runCatching { LocalTime.parse(hhmm) }.getOrNull()
+}
 
 private fun buildDialModel(state: DashboardState): DialModel? {
     val loc = state.location ?: return null
-    val sunsetT = parseTime(state.sun?.sunset) ?: return null
-    val sunriseT = parseTime(state.sun?.sunrise) ?: return null
+    // Sun times preferred; fall back to civil twilight so a missing sun
+    // field doesn't blank the hero.
+    val sunsetT = parseTime(state.sun?.sunset)
+        ?: parseTime(state.twilight?.civilEnd) ?: return null
+    val sunriseT = parseTime(state.sun?.sunrise)
+        ?: parseTime(state.twilight?.civilStart) ?: return null
 
     val date = state.selectedDate
     val start = date.atTime(sunsetT)
