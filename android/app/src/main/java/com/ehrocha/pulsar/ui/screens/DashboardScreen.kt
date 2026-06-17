@@ -267,11 +267,13 @@ fun DashboardScreen(
             // cards collapse to zero height, so an open page shows only its
             // group. TIMELINE also carries the CP 1919 ridgeline. ───────────
             if (openPage == DashPage.TIMELINE) TonightSignalCard(state)
-            // ── Best photo windows → Targets page. Trimmed from the old
-            // Summary "overview" mega-card: the dial + readout ring now carry
-            // the location header, verdict chips and rise/set it used to show,
-            // so only the windows (its unique content) remain. ──────────────
-            if (openPage == DashPage.TARGETS) state.location?.let {
+            // ── Best photo windows → Tonight (timeline) page. The headline
+            // window is on the dial face; here's the full ranked list, sitting
+            // with the ridgeline + twilight as the complete "tonight's plan".
+            // (Trimmed from the old Summary mega-card — its location header +
+            // verdict chips + rise/set are carried by the dial, complications
+            // and the domain pages.) ────────────────────────────────────────
+            if (openPage == DashPage.TIMELINE) state.location?.let {
                 DashCard(title = stringResource(R.string.card_best_windows), icon = Icons.Default.Schedule) {
 
                     // Best photo windows
@@ -1023,22 +1025,25 @@ private fun ReadoutTile(labelRes: Int, value: String, modifier: Modifier, onClic
 internal fun DashCard(
     title: String,
     icon: ImageVector,
-    initiallyExpanded: Boolean = false,
+    @Suppress("UNUSED_PARAMETER") initiallyExpanded: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(initiallyExpanded) }
-    val rotation by animateFloatAsState(
-        targetValue = if (expanded) 180f else 0f,
-        label = "chevron",
-    )
-
+    // Cards now live on dedicated secondary pages with only a few per screen,
+    // so they no longer collapse — the header is a static label + icon and the
+    // content is always shown.
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { expanded = !expanded }
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(18.dp),
+        )
+        Spacer(Modifier.width(8.dp))
         Text(
             title.uppercase(),
             style = MaterialTheme.typography.labelLarge.copy(
@@ -1049,40 +1054,20 @@ internal fun DashCard(
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.weight(1f),
         )
-        Icon(
-            Icons.Default.ExpandMore,
-            contentDescription = if (expanded) stringResource(R.string.cd_collapse)
-            else stringResource(R.string.cd_expand),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier
-                .size(20.dp)
-                .rotate(rotation),
-        )
     }
     // SIGNAL: dashboard section rules carry the pulse, same as the
     // launcher pages' SectionContainer.
     com.ehrocha.pulsar.ui.components.PulseDivider()
-    AnimatedVisibility(
-        visible = expanded,
-        enter = expandVertically(
-            animationSpec = androidx.compose.animation.core.spring(
-                dampingRatio = androidx.compose.animation.core.Spring.DampingRatioLowBouncy,
-                stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
-            ),
-        ) + androidx.compose.animation.fadeIn(),
-        exit = shrinkVertically() + androidx.compose.animation.fadeOut(),
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 2.dp,
+        modifier = Modifier.fillMaxWidth(),
     ) {
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            tonalElevation = 2.dp,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                content = content,
-            )
-        }
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            content = content,
+        )
     }
 }
 
