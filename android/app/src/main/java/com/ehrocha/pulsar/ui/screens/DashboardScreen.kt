@@ -267,13 +267,11 @@ fun DashboardScreen(
             // cards collapse to zero height, so an open page shows only its
             // group. TIMELINE also carries the CP 1919 ridgeline. ───────────
             if (openPage == DashPage.TIMELINE) TonightSignalCard(state)
-            // ── Best photo windows → Tonight (timeline) page. The headline
-            // window is on the dial face; here's the full ranked list, sitting
-            // with the ridgeline + twilight as the complete "tonight's plan".
-            // (Trimmed from the old Summary mega-card — its location header +
-            // verdict chips + rise/set are carried by the dial, complications
-            // and the domain pages.) ────────────────────────────────────────
-            if (openPage == DashPage.TIMELINE) state.location?.let {
+            // ── Best photo windows → MAIN dashboard, right under the dial.
+            // It's tonight's key actionable output, so it's shown directly,
+            // no tap required (the dial face shows the single headline window;
+            // this is the full ranked list). ───────────────────────────────
+            if (openPage == null) state.location?.let {
                 DashCard(title = stringResource(R.string.card_best_windows), icon = Icons.Default.Schedule) {
 
                     // Best photo windows
