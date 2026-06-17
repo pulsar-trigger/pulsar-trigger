@@ -116,6 +116,20 @@ fun DashboardScreen(
             .fillMaxSize()
             .padding(horizontal = 16.dp),
     ) {
+        // ── Location header — the place the dial is computed for (keeps
+        // the city name the retired Summary card used to show). ──────────
+        state.location?.cityName?.let { city ->
+            Text(
+                city.uppercase(),
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontFamily = Display,
+                    letterSpacing = 1.5.sp,
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
+
         // ── Date selector + refresh on a single row ─────────────────
         // Date chip + (when not today) "Today" shortcut stretch across the
         // left; refresh sits on the right. Previously these were on two
@@ -247,170 +261,12 @@ fun DashboardScreen(
             // cards collapse to zero height, so an open page shows only its
             // group. TIMELINE also carries the CP 1919 ridgeline. ───────────
             if (openPage == DashPage.TIMELINE) TonightSignalCard(state)
-            // ── Summary card → Targets (best windows + location) ──────────
-            if (openPage == DashPage.TARGETS) state.location?.let { loc ->
-                DashCard(title = stringResource(R.string.card_summary), icon = Icons.Default.MyLocation) {
-                    // City name + coordinates
-                    loc.cityName?.let { city ->
-                        Text(
-                            city,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                    Text(
-                        String.format(Locale.US, "%.4f° %s, %.4f° %s",
-                            abs(loc.latitude),
-                            if (loc.latitude >= 0) stringResource(R.string.location_north) else stringResource(R.string.location_south),
-                            abs(loc.longitude),
-                            if (loc.longitude >= 0) stringResource(R.string.location_east) else stringResource(R.string.location_west),
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-
-                    Spacer(Modifier.height(12.dp))
-
-                    // Verdict rows — one per line with rise/set times
-                    @Composable
-                    fun VerdictRow(emoji: String, label: String, good: Boolean, extra: String? = null) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Surface(
-                                color = if (good) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive.copy(alpha = 0.12f)
-                                        else com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative.copy(alpha = 0.12f),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                ) {
-                                    Text(emoji, fontSize = 14.sp)
-                                    Text(
-                                        label,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.Medium,
-                                        color = if (good) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.positive else com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative,
-                                    )
-                                }
-                            }
-                            if (extra != null) {
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    extra,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
-
-                    // Sun
-                    state.sun?.let { sun ->
-                        VerdictRow("☀️", stringResource(R.string.label_sunrise) + " / " + stringResource(R.string.label_sunset), true)
-                    }
-
-                    // Moon
-                    state.moon?.let { moon ->
-                        VerdictRow(
-                            moon.emoji,
-                            if (moon.goodForAstro) stringResource(R.string.verdict_moon_good)
-                            else stringResource(R.string.verdict_moon_bright),
-                            moon.goodForAstro,
-                        )
-                    }
-
-                    // Weather
-                    state.weather?.let { weather ->
-                        val hasRain = weather.precipitationMm > 0.1
-                        val good = weather.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD && !hasRain
-                        VerdictRow(
-                            weatherEmoji(weather.weatherCode),
-                            when {
-                                hasRain -> stringResource(R.string.verdict_rain)
-                                weather.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD -> stringResource(R.string.verdict_clear)
-                                weather.cloudCoverPct <= AppConfig.CLOUD_COVER_PARTLY_THRESHOLD -> stringResource(R.string.verdict_partly)
-                                else -> stringResource(R.string.verdict_cloudy)
-                            },
-                            good,
-                        )
-                    }
-
-                    // Milky Way
-                    state.milkyWay?.let { mw ->
-                        VerdictRow(
-                            "🌌",
-                            if (mw.visible) stringResource(R.string.verdict_mw_visible)
-                            else stringResource(R.string.verdict_mw_not_visible),
-                            mw.visible,
-                        )
-                    }
-
-                    // Bortle / Light Pollution
-                    state.bortle?.let { b ->
-                        val bInt = b.bortleClass.toInt().coerceIn(1, 9)
-                        val good = bInt <= 4
-                        VerdictRow(
-                            "💡",
-                            stringResource(R.string.verdict_bortle, bInt),
-                            good,
-                        )
-                    }
-
-                    // Rise / Set times
-                    val riseSetRows = buildList {
-                        state.sun?.let { sun ->
-                            val t = listOfNotNull(
-                                sun.sunrise?.let { "↑${formatTime(it)}" },
-                                sun.sunset?.let { "↓${formatTime(it)}" },
-                            ).joinToString("  ")
-                            if (t.isNotEmpty()) add("☀️" to t)
-                        }
-                        state.moon?.let { moon ->
-                            val t = listOfNotNull(
-                                moon.rise?.let { "↑${formatTime(it)}" },
-                                moon.set?.let { "↓${formatTime(it)}" },
-                            ).joinToString("  ")
-                            if (t.isNotEmpty()) add(moon.emoji to t)
-                        }
-                        state.milkyWay?.let { mw ->
-                            val t = listOfNotNull(
-                                mw.coreRise?.let { "↑$it" },
-                                mw.coreSet?.let { "↓$it" },
-                            ).joinToString("  ")
-                            if (t.isNotEmpty()) add("🌌" to t)
-                        }
-                    }
-                    if (riseSetRows.isNotEmpty()) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            stringResource(R.string.label_rise_set),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        riseSetRows.forEach { (emoji, times) ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(emoji, fontSize = 14.sp, modifier = Modifier.width(24.dp))
-                                Text(
-                                    times,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
-                    }
+            // ── Best photo windows → Targets page. Trimmed from the old
+            // Summary "overview" mega-card: the dial + readout ring now carry
+            // the location header, verdict chips and rise/set it used to show,
+            // so only the windows (its unique content) remain. ──────────────
+            if (openPage == DashPage.TARGETS) state.location?.let {
+                DashCard(title = stringResource(R.string.card_best_windows), icon = Icons.Default.Schedule) {
 
                     // Best photo windows
                     if (state.bestWindows.isNotEmpty()) {
