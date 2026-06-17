@@ -32,6 +32,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -192,6 +194,36 @@ internal fun SkyDial(
                         val p1 = Offset(cx + (r + qWidth) * cos(a).toFloat(), cy + (r + qWidth) * sin(a).toFloat())
                         drawLine(scheme.onSurface.copy(alpha = 0.35f), p0, p1, 1.5.dp.toPx())
                     }
+
+                    // Hour hints (every 3h that falls in the night): a short
+                    // tick crossing the ring + a small clock-hour label just
+                    // inside it, so 21 / 00 / 03 are findable on the arc.
+                    if (model.hourMarks.isNotEmpty()) {
+                        val labelPaint = android.graphics.Paint().apply {
+                            color = scheme.onSurfaceVariant.toArgb()
+                            textSize = 9.sp.toPx()
+                            textAlign = android.graphics.Paint.Align.CENTER
+                            isAntiAlias = true
+                        }
+                        model.hourMarks.forEach { mark ->
+                            val a = Math.toRadians((ARC_START + ARC_SWEEP * mark.fraction).toDouble())
+                            val ca = cos(a).toFloat()
+                            val sa = sin(a).toFloat()
+                            drawLine(
+                                scheme.onSurface.copy(alpha = 0.30f),
+                                Offset(cx + (r - qWidth * 0.6f) * ca, cy + (r - qWidth * 0.6f) * sa),
+                                Offset(cx + (r + qWidth * 0.6f) * ca, cy + (r + qWidth * 0.6f) * sa),
+                                1.dp.toPx(),
+                            )
+                            val lr = r - qWidth * 1.7f
+                            drawContext.canvas.nativeCanvas.drawText(
+                                mark.label,
+                                cx + lr * ca,
+                                cy + lr * sa + labelPaint.textSize * 0.35f,
+                                labelPaint,
+                            )
+                        }
+                    }
                 }
 
                 // ── Centre readout ──────────────────────────────────────
@@ -228,11 +260,8 @@ internal fun SkyDial(
                             color = pc.liveEnd,
                         )
                     }
-                    Text(
-                        "${model.moonEmoji} ${model.moonIllumPct}%",
-                        style = MaterialTheme.typography.labelMedium.copy(fontFamily = Mono),
-                        color = scheme.onSurfaceVariant,
-                    )
+                    // (Moon lives in the upper-left complication — no need to
+                    // repeat it here.)
                 }
 
                 // ── Dusk / dawn — centred in the bottom gap. ──────────────

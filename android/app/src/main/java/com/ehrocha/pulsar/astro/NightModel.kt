@@ -40,6 +40,10 @@ class NightSample(
     val coreUp: Boolean,
 )
 
+/** A clock-hour hint on the ring: where it falls (0..1 across the night) and
+ *  its label ("21", "00", "03"). */
+class HourMark(val fraction: Float, val label: String)
+
 class NightModel(
     val samples: List<NightSample>,
     val verdict: NightVerdict,
@@ -51,6 +55,8 @@ class NightModel(
     /** Where "now" falls along the night (0..1), or null if it's not tonight
      *  or the sun is up. Drives the live "now" marker. */
     val nowFraction: Float?,
+    /** Every-3-hour clock hint that falls within the night, for the ring. */
+    val hourMarks: List<HourMark>,
 )
 
 /** Open-Meteo (timezone=auto) returns LOCAL ISO times like "2026-06-17T19:27";
@@ -83,6 +89,18 @@ fun buildNightModel(state: DashboardState): NightModel? {
     val nowFraction = if (date == LocalDate.now() && !now.isBefore(start) && now.isBefore(end)) {
         (Duration.between(start, now).toMinutes() / spanMin).toFloat().coerceIn(0f, 1f)
     } else null
+
+    // Clock-hour hints every 3h (… 18, 21, 00, 03, 06 …) that land in the night.
+    val hourMarks = buildList {
+        for (h in 0..21 step 3) {
+            var dt = start.toLocalDate().atTime(h, 0)
+            if (dt.isBefore(start)) dt = dt.plusDays(1)
+            if (dt.isBefore(end)) {
+                val f = (Duration.between(start, dt).toMinutes() / spanMin).toFloat()
+                if (f in 0f..1f) add(HourMark(f, "%02d".format(h)))
+            }
+        }
+    }
 
     val n = 90
     val moonFactor = if (state.moon?.goodForAstro == false) 0.6 else 1.0
@@ -159,6 +177,7 @@ fun buildNightModel(state: DashboardState): NightModel? {
         moonIllumPct = state.moon?.illuminationPct?.toInt() ?: 0,
         moonEmoji = state.moon?.emoji ?: "",
         nowFraction = nowFraction,
+        hourMarks = hourMarks,
     )
 }
 
