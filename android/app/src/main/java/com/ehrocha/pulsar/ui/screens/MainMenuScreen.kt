@@ -77,6 +77,7 @@ fun MainMenuScreen(
     onPlannerSelected: () -> Unit = {},
     onAlignmentSelected: () -> Unit = {},
     onWhatsUpSelected: () -> Unit = {},
+    onMeteorCalendarSelected: () -> Unit = {},
     onStarFocusSelected: () -> Unit = {},
     onTestCameraSelected: () -> Unit = {},
     onAircraftWatchSelected: () -> Unit = {},
@@ -207,6 +208,7 @@ fun MainMenuScreen(
             onPlannerSelected = onPlannerSelected,
             onAlignmentSelected = onAlignmentSelected,
             onWhatsUpSelected = onWhatsUpSelected,
+            onMeteorCalendarSelected = onMeteorCalendarSelected,
             onStarFocusSelected = onStarFocusSelected,
             onTestCameraSelected = onTestCameraSelected,
             onAircraftWatchSelected = onAircraftWatchSelected,
@@ -326,6 +328,7 @@ private fun MenuPageContent(
     onPlannerSelected: () -> Unit,
     onAlignmentSelected: () -> Unit,
     onWhatsUpSelected: () -> Unit,
+    onMeteorCalendarSelected: () -> Unit,
     onStarFocusSelected: () -> Unit,
     onTestCameraSelected: () -> Unit,
     onAircraftWatchSelected: () -> Unit,
@@ -471,6 +474,9 @@ private fun MenuPageContent(
                         },
                         launcherItem(R.string.mode_whats_up, Icons.Default.Visibility) {
                             onWhatsUpSelected()
+                        },
+                        launcherItem(R.string.mode_meteor_calendar, Icons.Default.AutoAwesome) {
+                            onMeteorCalendarSelected()
                         },
                         // CCAPI or PTP only; greyed out when on BLE / simulator
                         // so its absence is discoverable without breaking layout.

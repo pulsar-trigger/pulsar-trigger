@@ -950,6 +950,26 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <!-- Astro settings update for NPF -->
     <!-- What's Up Tonight -->
     <string name="mode_whats_up">What\'s Up Tonight</string>
+    <string name="mode_meteor_calendar">Meteor Showers</string>
+    <string name="meteor_title">Meteor Showers</string>
+    <string name="meteor_help">Major meteor showers ranked for your location — how high the radiant climbs, when it peaks, and how much the Moon interferes. Best after midnight under dark skies.</string>
+    <string name="meteor_count">%1$d showers in the year ahead</string>
+    <string name="meteor_active">active now</string>
+    <string name="meteor_peak_tonight">Peaks tonight</string>
+    <string name="meteor_peak_in">Peak in %1$d days</string>
+    <string name="meteor_peaked_ago">Peaked %1$d days ago</string>
+    <string name="meteor_radiant_label">radiant</string>
+    <string name="meteor_rate_line">Peak ~%1$d/hr · Moon %2$s %3$d%%</string>
+    <string name="meteor_parent">Parent: %1$s</string>
+    <string name="meteor_rate_excellent">Excellent</string>
+    <string name="meteor_rate_good">Good</string>
+    <string name="meteor_rate_fair">Fair</string>
+    <string name="meteor_rate_poor">Poor</string>
+    <string name="meteor_rate_hidden">Not visible</string>
+    <string name="meteor_reason_horizon">Radiant stays below your horizon</string>
+    <string name="meteor_reason_moon">Bright Moon washes out the faint streaks</string>
+    <string name="meteor_reason_low">Radiant stays low — fewer meteors</string>
+    <string name="meteor_reason_good">Dark window and a high radiant</string>
     <string name="whats_up_title">What\'s Up Tonight</string>
     <string name="whats_up_help">Shows deep-sky objects (nebulae, galaxies, clusters) that are currently above the horizon at your location.\n\n• Objects are sorted by altitude — higher = better positioned\n• Green icon: well-placed (above 30°), ideal for imaging\n• Grey icon: low in the sky (10–30°), possible but less ideal\n• Best results when used during astronomical darkness\n\nThis catalog includes ~27 popular astrophotography targets.</string>
     <string name="whats_up_visible_count">%1$d targets above the horizon</string>

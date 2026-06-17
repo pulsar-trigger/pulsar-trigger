@@ -593,6 +593,7 @@ fun PulsarNavHost(
                     onPlannerSelected = { currentScreen = AppScreen.Planner },
                     onAlignmentSelected = { currentScreen = AppScreen.Alignment },
                     onWhatsUpSelected = { currentScreen = AppScreen.WhatsUp },
+                    onMeteorCalendarSelected = { currentScreen = AppScreen.MeteorCalendar },
                     onStarFocusSelected = { currentScreen = AppScreen.StarFocus },
                     onTestCameraSelected = { currentScreen = AppScreen.TestCamera },
                     onAircraftWatchSelected = { currentScreen = AppScreen.AircraftWatch },
@@ -691,6 +692,12 @@ fun PulsarNavHost(
             AppScreen.WhatsUp -> {
                 BackHandler { currentScreen = AppScreen.Menu }
                 WhatsUpScreen(
+                    onBack = { currentScreen = AppScreen.Menu },
+                )
+            }
+            AppScreen.MeteorCalendar -> {
+                BackHandler { currentScreen = AppScreen.Menu }
+                com.ehrocha.pulsar.ui.screens.MeteorCalendarScreen(
                     onBack = { currentScreen = AppScreen.Menu },
                 )
             }
@@ -872,6 +879,7 @@ private sealed class AppScreen {
     data class SessionDetail(val session: PlannerSession, val event: PlannerEvent) : AppScreen()
     data object Alignment : AppScreen()
     data object WhatsUp : AppScreen()
+    data object MeteorCalendar : AppScreen()
     data object ShotLog : AppScreen()
     data object StarFocus : AppScreen()
     data object TestCamera : AppScreen()
