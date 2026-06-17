@@ -586,6 +586,9 @@
     <string name="dew_warning">结露风险 — 镜头可能起雾</string>
     <string name="dew_critical">高结露风险 — 镜头很可能起雾！</string>
     <string name="dew_detail">温度 %1$s°C，露点 %2$s°C，差值 %3$s°C</string>
+    <string name="dew_factors">天空 %1$d%% 云量 · 风 %2$d km/h</string>
+    <string name="dew_hint_heater">带上镜头加热器——很可能起雾。</string>
+    <string name="dew_hint_watch">留意前镜片；遮光罩可减缓起雾。</string>
     <string name="mode_star_trails">星轨</string>
     <string name="star_trails_frames">帧数</string>
     <string name="star_trails_total">总时长</string>

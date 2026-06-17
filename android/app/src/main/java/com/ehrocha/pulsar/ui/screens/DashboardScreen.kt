@@ -716,16 +716,26 @@ fun DashboardScreen(
             }
 
             // ── Dew point card ───────────────────────────────────────
+            // Risk is wind- and sky-aware when weather is available: clear,
+            // calm nights raise the risk the raw spread alone would miss.
             state.dewPoint?.let { dew ->
-                if (dew.risk != DewRisk.NONE) {
-                    val isCritical = dew.risk == DewRisk.CRITICAL
+                val detail = state.weather?.let { w ->
+                    com.ehrocha.pulsar.astro.AstroCalculator.dewRiskDetail(
+                        dew, w.windSpeedKmh, w.cloudCoverPct,
+                    )
+                }
+                val risk = detail?.risk ?: dew.risk
+                if (risk != DewRisk.NONE) {
+                    val isCritical = risk == DewRisk.CRITICAL
+                    val accent = if (isCritical) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative
+                                 else com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.caution
                     DashCard(
                         title = stringResource(R.string.card_dew_point),
                         icon = Icons.Default.WaterDrop,
                         initiallyExpanded = false,
                     ) {
                         Surface(
-                            color = (if (isCritical) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative else com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.caution).copy(alpha = 0.15f),
+                            color = accent.copy(alpha = 0.15f),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.fillMaxWidth(),
                         ) {
@@ -735,7 +745,7 @@ fun DashboardScreen(
                                            else stringResource(R.string.dew_warning),
                                     style = MaterialTheme.typography.bodySmall,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (isCritical) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.negative else com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.caution,
+                                    color = accent,
                                 )
                                 Spacer(Modifier.height(4.dp))
                                 Text(
@@ -747,6 +757,26 @@ fun DashboardScreen(
                                     ),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                // Why — the sky/wind drivers behind the rating.
+                                detail?.let { d ->
+                                    Text(
+                                        stringResource(
+                                            R.string.dew_factors,
+                                            d.cloudCoverPct,
+                                            d.windSpeedKmh.toInt(),
+                                        ),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = if (isCritical) stringResource(R.string.dew_hint_heater)
+                                           else stringResource(R.string.dew_hint_watch),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = accent,
                                 )
                             }
                         }

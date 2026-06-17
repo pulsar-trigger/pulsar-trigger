@@ -845,6 +845,9 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <string name="dew_warning">Dew risk — lens fogging possible</string>
     <string name="dew_critical">High dew risk — lens fogging likely!</string>
     <string name="dew_detail">Temp %1$s°C, Dew point %2$s°C, Spread %3$s°C</string>
+    <string name="dew_factors">Sky %1$d%% cloud · Wind %2$d km/h</string>
+    <string name="dew_hint_heater">Bring a lens warmer — fogging likely.</string>
+    <string name="dew_hint_watch">Watch the front element; a lens hood slows fogging.</string>
 
     <!-- Twilight card -->
     <string name="mode_star_trails">Star Trails</string>

@@ -584,6 +584,9 @@ La altura proviene de la oscuridad del cielo × cielo despejado × sin luna bril
     <string name="dew_warning">Riesgo de rocío — posible empañamiento del lente</string>
     <string name="dew_critical">Alto riesgo de rocío — ¡empañamiento probable!</string>
     <string name="dew_detail">Temp %1$s°C, Punto de rocío %2$s°C, Diferencia %3$s°C</string>
+    <string name="dew_factors">Cielo %1$d%% nubes · Viento %2$d km/h</string>
+    <string name="dew_hint_heater">Lleva un calentador de lente — empañamiento probable.</string>
+    <string name="dew_hint_watch">Vigila la lente; un parasol retrasa el empañamiento.</string>
     <string name="mode_star_trails">Estelas estelares</string>
     <string name="star_trails_frames">Fotogramas</string>
     <string name="star_trails_total">Tiempo total</string>

@@ -586,6 +586,9 @@ La hauteur vient de l\'obscurité du ciel × ciel dégagé × pas de lune brilla
     <string name="dew_warning">Risque de rosée — buée possible sur l\&#039;objectif</string>
     <string name="dew_critical">Haut risque de rosée — buée probable !</string>
     <string name="dew_detail">Temp %1$s°C, Point de rosée %2$s°C, Écart %3$s°C</string>
+    <string name="dew_factors">Ciel %1$d%% nuages · Vent %2$d km/h</string>
+    <string name="dew_hint_heater">Prenez un chauffe-objectif — buée probable.</string>
+    <string name="dew_hint_watch">Surveillez la lentille frontale ; un pare-soleil ralentit la buée.</string>
     <string name="mode_star_trails">Filés d\'étoiles</string>
     <string name="star_trails_frames">Images</string>
     <string name="star_trails_total">Durée totale</string>

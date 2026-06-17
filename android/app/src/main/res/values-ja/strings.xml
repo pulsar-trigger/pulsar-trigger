@@ -586,6 +586,9 @@
     <string name="dew_warning">結露リスク — レンズの曇りの可能性</string>
     <string name="dew_critical">高結露リスク — レンズの曇りの可能性大！</string>
     <string name="dew_detail">気温 %1$s°C、露点 %2$s°C、差 %3$s°C</string>
+    <string name="dew_factors">空 %1$d%% 雲 · 風 %2$d km/h</string>
+    <string name="dew_hint_heater">レンズヒーターを — 結露の可能性大。</string>
+    <string name="dew_hint_watch">前玉に注意。フードで結露を遅らせられます。</string>
     <string name="mode_star_trails">星の軌跡</string>
     <string name="star_trails_frames">フレーム数</string>
     <string name="star_trails_total">合計時間</string>

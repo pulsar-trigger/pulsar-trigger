@@ -586,6 +586,9 @@ A altura vem da escuridão do céu × céu limpo × sem lua brilhante × sem chu
     <string name="dew_warning">Risco de orvalho — possível embaçamento da lente</string>
     <string name="dew_critical">Alto risco de orvalho — embaçamento provável!</string>
     <string name="dew_detail">Temp %1$s°C, Ponto de orvalho %2$s°C, Diferença %3$s°C</string>
+    <string name="dew_factors">Céu %1$d%% nuvens · Vento %2$d km/h</string>
+    <string name="dew_hint_heater">Leve um aquecedor de lente — embaçamento provável.</string>
+    <string name="dew_hint_watch">Fique de olho na lente; um para-sol retarda o embaçamento.</string>
     <string name="mode_star_trails">Rastros de estrelas</string>
     <string name="star_trails_frames">Quadros</string>
     <string name="star_trails_total">Tempo total</string>

@@ -119,6 +119,21 @@ data class DewPointInfo(
 
 enum class DewRisk { NONE, WARNING, CRITICAL }
 
+/** Wind- and sky-aware refinement of [DewPointInfo] for the planner's dew
+ *  card. Clear skies let surfaces radiate to space and cool below air temp
+ *  (more dew); wind mixes the boundary layer and keeps surfaces near air
+ *  temp (less dew). [effectiveSpreadC] is the air spread adjusted for both —
+ *  the value the [risk] tier is taken from. */
+data class DewRiskDetail(
+    val temperatureC: Double,
+    val dewPointC: Double,
+    val spreadC: Double,
+    val effectiveSpreadC: Double,
+    val windSpeedKmh: Double,
+    val cloudCoverPct: Int,
+    val risk: DewRisk,
+)
+
 data class TwilightInfo(
     val civilEnd: String?,      // time civil twilight ends (evening)
     val nauticalEnd: String?,   // time nautical twilight ends (evening)
@@ -459,6 +474,34 @@ object AstroCalculator {
             else -> DewRisk.NONE
         }
         return DewPointInfo(dp, temperatureC, spread, risk)
+    }
+
+    /** Refine a base [dewPoint] result with sky-cooling and wind effects to
+     *  catch the dew the raw temp/dew-point spread misses on clear, calm
+     *  nights. */
+    fun dewRiskDetail(base: DewPointInfo, windSpeedKmh: Double, cloudCoverPct: Int): DewRiskDetail {
+        // Clear skies let surfaces radiate to space and cool below air temp —
+        // up to ~3.5°C on a fully clear night, tapering to 0 under full cloud.
+        val clearFactor = 1.0 - cloudCoverPct.coerceIn(0, 100) / 100.0
+        val radiativeCooling = 3.5 * clearFactor
+        // Wind stirs the boundary layer and holds surfaces near air temp —
+        // near-full suppression by ~15 km/h, capped at +3°C of effective spread.
+        val windSuppression = (windSpeedKmh / 15.0).coerceIn(0.0, 1.0) * 3.0
+        val effective = base.spreadC - radiativeCooling + windSuppression
+        val risk = when {
+            effective <= AppConfig.DEW_POINT_CRITICAL_SPREAD_C -> DewRisk.CRITICAL
+            effective <= AppConfig.DEW_POINT_WARN_SPREAD_C -> DewRisk.WARNING
+            else -> DewRisk.NONE
+        }
+        return DewRiskDetail(
+            temperatureC = base.temperatureC,
+            dewPointC = base.dewPointC,
+            spreadC = base.spreadC,
+            effectiveSpreadC = effective,
+            windSpeedKmh = windSpeedKmh,
+            cloudCoverPct = cloudCoverPct,
+            risk = risk,
+        )
     }
 
     // ── Twilight phase boundaries ────────────────────────────────
