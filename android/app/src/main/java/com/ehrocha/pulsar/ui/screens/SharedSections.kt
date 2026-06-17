@@ -1676,11 +1676,23 @@ private fun UpdatesSection(vm: PulsarViewModel, showFirmware: Boolean = true) {
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
-                                Text(
-                                    stringResource(R.string.update_whats_new).uppercase(),
-                                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.2.sp),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        stringResource(R.string.update_whats_new).uppercase(),
+                                        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.2.sp),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    // Release notes are authored in English; cue
+                                    // non-English users so it reads as intentional.
+                                    if (java.util.Locale.getDefault().language != "en") {
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(
+                                            "· " + stringResource(R.string.update_notes_lang),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                        )
+                                    }
+                                }
                                 Spacer(Modifier.height(6.dp))
                                 Text(
                                     notes,

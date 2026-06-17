@@ -579,6 +579,7 @@
     <string name="btn_open_release_page">Open Release Page</string>
     <string name="btn_download_install">Download &amp; Install</string>
     <string name="update_whats_new">What\'s new</string>
+    <string name="update_notes_lang">in English</string>
     <string name="btn_install_now">Install Now</string>
     <string name="btn_pick_previous_version">Pick a previous version…</string>
     <string name="dialog_pick_previous_title">Previous releases</string>

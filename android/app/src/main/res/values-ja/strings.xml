@@ -30,6 +30,7 @@
     <string name="canon_manual_add_subtitle">SSDP でカメラが見つからないとき (AP がマルチキャストをブロック / 機体が UPnP を出さない) は、カメラの IP (および 8080 以外のポート) を入力してください。Pulsar は /ccapi に直接問い合わせます — ブラウザで開ける URL と同じです。</string>
     <string name="btn_download_install">ダウンロードしてインストール</string>
     <string name="update_whats_new">新着情報</string>
+    <string name="update_notes_lang">英語</string>
     <string name="btn_install_now">今すぐインストール</string>
     <string name="btn_pick_previous_version">以前のバージョンを選択…</string>
     <string name="dialog_pick_previous_title">以前のリリース</string>
