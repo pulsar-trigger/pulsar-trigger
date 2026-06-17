@@ -422,6 +422,12 @@
     <string name="status_fetching_data">Récupération de la position &amp; des données…</string>
     <string name="card_summary">Résumé</string>
     <string name="tonight_signal_title">Signal de la nuit</string>
+    <string name="sky_dial_excellent">Excellent</string>
+    <string name="sky_dial_good">Bon</string>
+    <string name="sky_dial_fair">Moyen</string>
+    <string name="sky_dial_poor">Faible</string>
+    <string name="sky_dial_dusk">Crépuscule</string>
+    <string name="sky_dial_dawn">Aube</string>
     <string name="tonight_signal_best">Meilleur ~%1$s · %2$d%% nuages</string>
     <string name="run_complete_snack">Session terminée · %1$d images</string>
     <string name="tonight_signal_help_title">Lire le signal</string>

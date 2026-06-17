@@ -207,10 +207,15 @@ fun DashboardScreen(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // ── Tonight's Signal — the SIGNAL hero. CP 1919 ridgeline of
-            // tonight's hours; amplitude = shooting quality. ─────────
+            // ── THE SKY DIAL — the unified radial hero (Phase 1 of the
+            // dashboard redesign): tonight as a dusk→dawn night-clock, the
+            // arc's glow = shooting quality, best window blazing in the live
+            // gradient, moon + Milky-Way bands, verdict at centre. ───────
+            SkyDial(state)
+            // The CP 1919 ridgeline now reads as the dial's linear companion
+            // (and becomes the dial's tap-through in Phase 2). The redundant
+            // ConditionsStrip is gone — the dial + its pages replace it.
             TonightSignalCard(state)
-            ConditionsStrip(state)
             // ── Detail cards — collapsed by default: the hero + strip ARE
             // the dashboard; the stack below is the drill-down. ──────
             // ── Summary card ──────────────────────────────────────

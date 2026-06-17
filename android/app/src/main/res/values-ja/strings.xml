@@ -422,6 +422,12 @@
     <string name="status_fetching_data">位置情報＆データを取得中…</string>
     <string name="card_summary">サマリー</string>
     <string name="tonight_signal_title">今夜のシグナル</string>
+    <string name="sky_dial_excellent">最高</string>
+    <string name="sky_dial_good">良好</string>
+    <string name="sky_dial_fair">まずまず</string>
+    <string name="sky_dial_poor">不良</string>
+    <string name="sky_dial_dusk">日暮れ</string>
+    <string name="sky_dial_dawn">夜明け</string>
     <string name="tonight_signal_best">ベスト ~%1$s · 雲量 %2$d%%</string>
     <string name="run_complete_snack">撮影完了 · %1$d 枚</string>
     <string name="tonight_signal_help_title">シグナルの読み方</string>
