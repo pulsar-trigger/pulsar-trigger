@@ -432,6 +432,16 @@
     <string name="sky_dial_poor">较差</string>
     <string name="sky_dial_dusk">黄昏</string>
     <string name="sky_dial_dawn">黎明</string>
+    <string name="sky_dial_help_title">如何看懂表盘</string>
+    <string name="sky_dial_help_body">表盘是今晚的写照，像时钟一样绘制：从左下角的黄昏开始，经由顶部——午夜前后最暗——再下行到右下角的黎明。
+
+弧线随整夜的拍摄质量发光：越亮越好（天空黑暗 × 晴朗 × 无明亮月光 × 无降雨）。鲜亮的紫到粉色区段是今晚最佳的时段，中央也会标注。
+
+外环在月亮位于地平线以上时点亮——越亮表示月光干扰越强。内环标记银河核心升起的时段。
+
+中央显示今晚的总体评价、最佳时段以及月相。
+
+四角是实时读数——月亮、目标、天空、光害——按各自的好坏用绿／黄／红着色。点按某个角查看详情；点按表盘查看整夜的时间线。</string>
     <string name="dash_moon">月亮</string>
     <string name="dash_light">光污染</string>
     <string name="dash_sky">天空</string>

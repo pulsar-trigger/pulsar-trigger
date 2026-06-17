@@ -430,6 +430,16 @@
     <string name="sky_dial_poor">Faible</string>
     <string name="sky_dial_dusk">Crépuscule</string>
     <string name="sky_dial_dawn">Aube</string>
+    <string name="sky_dial_help_title">Lire le cadran</string>
+    <string name="sky_dial_help_body">Le cadran représente la nuit, dessinée comme une horloge : il part du crépuscule, en bas à gauche, monte par le haut — obscurité maximale vers minuit — et redescend vers l\'aube, en bas à droite.
+
+L\'arc s\'illumine selon la qualité pour photographier au fil de la nuit : plus c\'est lumineux, mieux c\'est (ciel sombre × dégagé × pas de lune brillante × pas de pluie). La portion violet-rose vive est la meilleure fenêtre de la nuit, aussi nommée au centre.
+
+L\'anneau extérieur s\'allume tant que la Lune est au-dessus de l\'horizon — plus c\'est lumineux, plus il y a de clarté lunaire à combattre. L\'anneau intérieur indique quand le cœur de la Voie lactée est levé.
+
+Le centre affiche le verdict global de la nuit, l\'heure de la meilleure fenêtre et la phase de la lune.
+
+Les quatre coins sont des lectures en direct — Lune, Cibles, Ciel et Lumière — colorées en vert / ambre / rouge selon leur qualité. Touchez un coin pour ses détails ; touchez le cadran pour la chronologie complète de la nuit.</string>
     <string name="dash_moon">Lune</string>
     <string name="dash_light">Lumière</string>
     <string name="dash_sky">Ciel</string>

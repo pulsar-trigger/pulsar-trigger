@@ -430,6 +430,16 @@
     <string name="sky_dial_poor">Schwach</string>
     <string name="sky_dial_dusk">Dämmerung</string>
     <string name="sky_dial_dawn">Morgengrauen</string>
+    <string name="sky_dial_help_title">Das Zifferblatt lesen</string>
+    <string name="sky_dial_help_body">Das Zifferblatt ist die heutige Nacht, als Uhr gezeichnet: es verläuft von der Abenddämmerung unten links, oben herum — tiefste Dunkelheit gegen Mitternacht — und hinunter zur Morgendämmerung unten rechts.
+
+Der Bogen leuchtet je nach Aufnahmequalität durch die Nacht: heller ist besser (dunkler Himmel × klar × kein heller Mond × kein Regen). Der leuchtend violett-rosa Abschnitt ist das beste Fenster der Nacht, auch in der Mitte benannt.
+
+Der äußere Ring leuchtet, solange der Mond über dem Horizont steht — heller bedeutet mehr Mondlicht. Der innere Ring markiert, wann das Zentrum der Milchstraße aufgegangen ist.
+
+Die Mitte zeigt das Gesamturteil der Nacht, die Zeit des besten Fensters und die Mondphase.
+
+Die vier Ecken sind Live-Anzeigen — Mond, Ziele, Himmel und Licht — grün / gelb / rot je nach Qualität gefärbt. Tippe auf eine Ecke für Details; tippe auf das Zifferblatt für die vollständige Zeitleiste der Nacht.</string>
     <string name="dash_moon">Mond</string>
     <string name="dash_light">Licht</string>
     <string name="dash_sky">Himmel</string>

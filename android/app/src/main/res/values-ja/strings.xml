@@ -430,6 +430,16 @@
     <string name="sky_dial_poor">不良</string>
     <string name="sky_dial_dusk">日暮れ</string>
     <string name="sky_dial_dawn">夜明け</string>
+    <string name="sky_dial_help_title">ダイヤルの見方</string>
+    <string name="sky_dial_help_body">ダイヤルは今夜を時計のように描いたものです。左下の日暮れから始まり、上を通って — 真夜中ごろが最も暗い — 右下の夜明けへと下りていきます。
+
+弧は夜を通した撮影の好条件で光ります。明るいほど良好です（空の暗さ × 晴天 × 明るい月がない × 雨がない）。鮮やかな紫～ピンクの区間が今夜の最良の時間帯で、中央にも表示されます。
+
+外側のリングは月が地平線より上にある間点灯します — 明るいほど月明かりの影響が大きいことを示します。内側のリングは天の川の中心が昇っている時間帯を表します。
+
+中央には今夜の総合評価、最良の時間帯、月相が表示されます。
+
+四隅はライブ表示です — 月・対象・空・光害 — それぞれの良さに応じて緑／黄／赤で色分けされます。隅をタップすると詳細が、ダイヤルをタップすると夜全体のタイムラインが開きます。</string>
     <string name="dash_moon">月</string>
     <string name="dash_light">光害</string>
     <string name="dash_sky">空</string>

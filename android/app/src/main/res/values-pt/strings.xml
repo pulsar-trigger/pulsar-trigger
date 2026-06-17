@@ -430,6 +430,16 @@
     <string name="sky_dial_poor">Fraca</string>
     <string name="sky_dial_dusk">Anoitecer</string>
     <string name="sky_dial_dawn">Amanhecer</string>
+    <string name="sky_dial_help_title">Como ler o disco</string>
+    <string name="sky_dial_help_body">O disco é a noite de hoje, desenhada como um relógio: vai do anoitecer, no canto inferior esquerdo, subindo por cima — escuridão máxima por volta da meia-noite — e descendo até o amanhecer, no canto inferior direito.
+
+O arco brilha conforme a qualidade para fotografar ao longo da noite: mais brilhante é melhor (céu escuro × limpo × sem lua brilhante × sem chuva). O trecho violeta-rosa intenso é a melhor janela da noite, também indicada no centro.
+
+O anel externo acende enquanto a Lua está acima do horizonte — mais brilho significa mais luar para enfrentar. O anel interno marca quando o centro da Via Láctea está acima do horizonte.
+
+O centro mostra o veredito geral da noite, o horário da melhor janela e a fase da lua.
+
+Os quatro cantos são leituras ao vivo — Lua, Alvos, Céu e Luz — coloridas em verde / âmbar / vermelho conforme a qualidade de cada uma. Toque num canto para ver os detalhes; toque no disco para ver a linha do tempo completa da noite.</string>
     <string name="dash_moon">Lua</string>
     <string name="dash_light">Luz</string>
     <string name="dash_sky">Céu</string>

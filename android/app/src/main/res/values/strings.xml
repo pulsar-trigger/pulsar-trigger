@@ -647,6 +647,16 @@
     <string name="sky_dial_poor">Poor</string>
     <string name="sky_dial_dusk">Dusk</string>
     <string name="sky_dial_dawn">Dawn</string>
+    <string name="sky_dial_help_title">Reading the Sky Dial</string>
+    <string name="sky_dial_help_body">The dial is tonight, drawn as a clock: it sweeps from dusk at the lower-left, up over the top — deepest dark around midnight — and down to dawn at the lower-right.
+
+The arc glows with shooting quality through the night: brighter is better (dark sky × clear × no bright moon × no rain). The bright violet-to-pink stretch is tonight\'s single best window, also named in the centre.
+
+The outer ring lights up while the Moon is above the horizon — brighter means more moonlight to fight. The inner ring marks when the Milky-Way core is up.
+
+The centre shows the night\'s overall verdict, the best window time, and the moon phase.
+
+The four corners are live readouts — Moon, Targets, Sky and Light — coloured green / amber / red by how good each is. Tap a corner for its details; tap the dial for the full night timeline.</string>
     <string name="dash_moon">Moon</string>
     <string name="dash_light">Light</string>
     <string name="dash_sky">Sky</string>

@@ -54,6 +54,7 @@ fun DashboardScreen(
     val state by dashboardManager.state.collectAsState()
     val scope = rememberCoroutineScope()
     var showDatePicker by remember { mutableStateOf(false) }
+    var showDialHelp by remember { mutableStateOf(false) }
     var isRefreshing by remember { mutableStateOf(false) }
     // Phase 2 of the redesign: which secondary domain page is open (null =
     // the unified dial + readout-ring main view). Back closes it.
@@ -108,6 +109,24 @@ fun DashboardScreen(
             },
         ) {
             DatePicker(state = datePickerState)
+        }
+    }
+
+    // ── How to read the dashboard / Sky Dial ─────────────────────────
+    if (showDialHelp) {
+        com.ehrocha.pulsar.ui.components.DetailSheet(
+            onDismiss = { showDialHelp = false },
+            title = {
+                Text(
+                    stringResource(R.string.sky_dial_help_title),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            },
+        ) {
+            Text(
+                stringResource(R.string.sky_dial_help_body),
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
     }
 
@@ -176,6 +195,12 @@ fun DashboardScreen(
                 }
             }
             Spacer(Modifier.weight(1f))
+            IconButton(onClick = { showDialHelp = true }) {
+                Icon(
+                    Icons.Default.HelpOutline,
+                    contentDescription = stringResource(R.string.sky_dial_help_title),
+                )
+            }
             IconButton(onClick = { scope.launch { dashboardManager.refresh(state.selectedDate) } }) {
                 Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.refresh))
             }
