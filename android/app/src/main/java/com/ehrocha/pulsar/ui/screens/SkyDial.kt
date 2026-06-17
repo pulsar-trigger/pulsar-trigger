@@ -243,13 +243,6 @@ internal fun SkyDial(
                             else -> Color.Unspecified
                         },
                     )
-                    if (model.windowLabel.isNotEmpty()) {
-                        Text(
-                            model.windowLabel,
-                            style = MaterialTheme.typography.titleMedium.copy(fontFamily = Mono),
-                            color = scheme.onSurface,
-                        )
-                    }
                     Text(
                         "${model.moonEmoji} ${model.moonIllumPct}%",
                         style = MaterialTheme.typography.labelMedium.copy(fontFamily = Mono),
@@ -257,14 +250,34 @@ internal fun SkyDial(
                     )
                 }
 
-                // ── Dusk / dawn — centred in the bottom gap (the corners now
-                // carry the complications). ─────────────────────────────────
-                Row(
+                // ── Bottom gap: dusk / dawn, with the best-window complication
+                // below them — in the live magenta, echoing the best-window
+                // blaze on the arc. ─────────────────────────────────────────
+                Column(
                     modifier = Modifier.align(Alignment.BottomCenter),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    state.sun?.sunset?.let { DialEndCaption(stringResource(R.string.sky_dial_dusk), formatTime(it)) }
-                    state.sun?.sunrise?.let { DialEndCaption(stringResource(R.string.sky_dial_dawn), formatTime(it)) }
+                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        state.sun?.sunset?.let { DialEndCaption(stringResource(R.string.sky_dial_dusk), formatTime(it)) }
+                        state.sun?.sunrise?.let { DialEndCaption(stringResource(R.string.sky_dial_dawn), formatTime(it)) }
+                    }
+                    if (model.windowLabel.isNotEmpty()) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(top = 3.dp),
+                        ) {
+                            Text(
+                                stringResource(R.string.sky_dial_best_label).uppercase(),
+                                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.2.sp),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                model.windowLabel,
+                                style = MaterialTheme.typography.labelMedium.copy(fontFamily = Mono),
+                                color = pc.liveEnd,
+                            )
+                        }
+                    }
                 }
 
                 // ── Wear-OS-style complications at the four corners: the

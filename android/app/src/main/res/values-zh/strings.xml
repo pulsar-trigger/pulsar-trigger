@@ -432,6 +432,7 @@
     <string name="sky_dial_poor">较差</string>
     <string name="sky_dial_dusk">黄昏</string>
     <string name="sky_dial_dawn">黎明</string>
+    <string name="sky_dial_best_label">最佳</string>
     <string name="sky_dial_help_title">如何看懂表盘</string>
     <string name="sky_dial_help_body">表盘是今晚的写照，像时钟一样绘制：从左下角的黄昏开始，经由顶部——午夜前后最暗——再下行到右下角的黎明。
 

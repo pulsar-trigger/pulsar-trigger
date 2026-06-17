@@ -430,6 +430,7 @@
     <string name="sky_dial_poor">不良</string>
     <string name="sky_dial_dusk">日暮れ</string>
     <string name="sky_dial_dawn">夜明け</string>
+    <string name="sky_dial_best_label">最良</string>
     <string name="sky_dial_help_title">ダイヤルの見方</string>
     <string name="sky_dial_help_body">ダイヤルは今夜を時計のように描いたものです。左下の日暮れから始まり、上を通って — 真夜中ごろが最も暗い — 右下の夜明けへと下りていきます。
 

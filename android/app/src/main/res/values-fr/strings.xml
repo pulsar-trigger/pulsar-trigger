@@ -430,6 +430,7 @@
     <string name="sky_dial_poor">Faible</string>
     <string name="sky_dial_dusk">Crépuscule</string>
     <string name="sky_dial_dawn">Aube</string>
+    <string name="sky_dial_best_label">Meilleur</string>
     <string name="sky_dial_help_title">Lire le cadran</string>
     <string name="sky_dial_help_body">Le cadran représente la nuit, dessinée comme une horloge : il part du crépuscule, en bas à gauche, monte par le haut — obscurité maximale vers minuit — et redescend vers l\'aube, en bas à droite.
 

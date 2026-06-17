@@ -430,6 +430,7 @@
     <string name="sky_dial_poor">Fraca</string>
     <string name="sky_dial_dusk">Anoitecer</string>
     <string name="sky_dial_dawn">Amanhecer</string>
+    <string name="sky_dial_best_label">Melhor</string>
     <string name="sky_dial_help_title">Como ler o disco</string>
     <string name="sky_dial_help_body">O disco é a noite de hoje, desenhada como um relógio: vai do anoitecer, no canto inferior esquerdo, subindo por cima — escuridão máxima por volta da meia-noite — e descendo até o amanhecer, no canto inferior direito.
 

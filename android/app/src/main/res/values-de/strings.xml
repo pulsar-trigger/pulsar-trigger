@@ -430,6 +430,7 @@
     <string name="sky_dial_poor">Schwach</string>
     <string name="sky_dial_dusk">Dämmerung</string>
     <string name="sky_dial_dawn">Morgengrauen</string>
+    <string name="sky_dial_best_label">Beste</string>
     <string name="sky_dial_help_title">Das Zifferblatt lesen</string>
     <string name="sky_dial_help_body">Das Zifferblatt ist die heutige Nacht, als Uhr gezeichnet: es verläuft von der Abenddämmerung unten links, oben herum — tiefste Dunkelheit gegen Mitternacht — und hinunter zur Morgendämmerung unten rechts.
 
