@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.ColorFilter
@@ -29,9 +30,11 @@ import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Alignment
+import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
@@ -49,8 +52,12 @@ import com.ehrocha.pulsar.astro.AstroDashboardManager
 import com.ehrocha.pulsar.astro.DashboardState
 import com.ehrocha.pulsar.astro.LocationInfo
 import com.ehrocha.pulsar.astro.MoonInfo
+import com.ehrocha.pulsar.astro.NightModel
+import com.ehrocha.pulsar.astro.NightSample
+import com.ehrocha.pulsar.astro.NightVerdict
 import com.ehrocha.pulsar.astro.PhotoWindow
 import com.ehrocha.pulsar.astro.WeatherInfo
+import com.ehrocha.pulsar.astro.buildNightModel
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -72,6 +79,18 @@ private val VERDICT_BAD = Color(0xFFE65100)
 private val WINDOW_EXCELLENT = Color(0xFF2E7D32)
 private val WINDOW_GOOD = Color(0xFF558B2F)
 private val WINDOW_FAIR = Color(0xFFF9A825)
+
+// ── Sky Dial widget palette — the live night bar + readouts ──────────────────
+// The dial's arc can't be drawn in Glance (no canvas), so it's reinterpreted
+// as a horizontal bar of real coloured Boxes — live views, not a bitmap.
+private val BAR_DIM = Color(0xFF3A3D44)      // low quality (near dusk/dawn)
+private val BAR_BRIGHT = Color(0xFF4ADE80)   // high quality (deep dark)
+private val BAR_BEST = Color(0xFFFF4FA3)     // best window (live magenta)
+private val BAR_NOW = Color(0xFFE8EAED)      // the live "now" marker
+private val BAR_GOOD = Color(0xFF36D399)     // readout / verdict: good
+private val BAR_AMBER = Color(0xFFF9A825)    // readout / verdict: middling
+private val BAR_BAD = Color(0xFFE65100)      // readout / verdict: poor
+private val BAR_NEUTRAL = Color(0xFF9AA0A6)  // no data
 
 // Glance's RemoteViews-backed Text path can silently drop fractional sp
 // (e.g. 15.6.sp from `15 * 1.2`), so we round to integer sp before handing
