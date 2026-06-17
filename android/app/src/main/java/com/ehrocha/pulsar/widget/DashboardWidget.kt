@@ -110,14 +110,16 @@ class DashboardWidget : GlanceAppWidget() {
             val m = AstroDashboardManager(context)
             if (m.restoreState(snap.json)) m.state.value else null
         }
+        val model = state?.let { buildNightModel(it) }
+        val updatedAt = snapshot?.updatedAtMs ?: 0L
         val bgAlpha = DashboardSnapshotStore.backgroundAlpha(context)
         val textScale = DashboardSnapshotStore.textScale(context)
         provideContent {
             GlanceTheme(colors = PulsarWidgetColors) {
-                if (state == null) {
+                if (state == null || model == null) {
                     EmptyState(bgAlpha, textScale)
                 } else {
-                    SummaryCard(state, snapshot.updatedAtMs, bgAlpha, textScale)
+                    TonightWidget(state, model, updatedAt, bgAlpha, textScale)
                 }
             }
         }
@@ -176,61 +178,209 @@ private fun EmptyState(bgAlpha: Float, scale: Float) {
 }
 
 /**
- * Mirrors the Summary card on the in-app Dashboard tab:
- * city + lat/lon header, then verdict chips for Sun / Moon / Weather /
- * Milky Way / Bortle (green for good, orange for bad), rise/set times,
- * and the best photo windows of the night with rating chips.
- *
- * Lives in a [LazyColumn] so the widget content scrolls when the user
- * resizes it small enough that everything doesn't fit.
+ * "Tonight" — the live night-bar reinterpretation of the in-app Sky Dial.
+ * Glance has no canvas, so the dial's arc becomes a horizontal bar of real
+ * coloured Boxes (live views, NOT a rendered image): dusk → dawn, each slice
+ * tinted by that part of the night's shooting quality, the best window lit in
+ * magenta, and a white "now" tick riding along it. Verdict above; dusk · best
+ * window · dawn and the four tinted readouts below.
  */
 @Composable
-private fun SummaryCard(state: DashboardState, updatedAtMs: Long, bgAlpha: Float, scale: Float) {
+private fun TonightWidget(
+    state: DashboardState,
+    model: NightModel,
+    updatedAtMs: Long,
+    bgAlpha: Float,
+    scale: Float,
+) {
     val ctx = androidx.glance.LocalContext.current
-    LazyColumn(
+    val verdictColor = when (model.verdict) {
+        NightVerdict.EXCELLENT, NightVerdict.GOOD -> BAR_GOOD
+        NightVerdict.FAIR -> BAR_AMBER
+        NightVerdict.POOR -> BAR_BAD
+    }
+    Column(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(widgetBgWithAlpha(bgAlpha))
             .padding(14.dp)
             .clickable(actionStartActivity(openAppIntent(ctx))),
     ) {
-        item { CardHeader(state, updatedAtMs, scale) }
-        item { Spacer(GlanceModifier.height(10.dp)) }
-        state.sun?.let {
-            item { VerdictRow("☀️", ctx.getString(R.string.widget_verdict_sun), true, scale) }
+        // Header: city + verdict + refresh.
+        Row(
+            modifier = GlanceModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                state.location?.cityName ?: "—",
+                style = TextStyle(
+                    color = GlanceTheme.colors.onSurface,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = scaledSp(18, scale),
+                ),
+                maxLines = 1,
+                modifier = GlanceModifier.defaultWeight(),
+            )
+            Text(
+                ctx.getString(model.verdict.labelRes).uppercase(),
+                style = TextStyle(
+                    color = ColorProvider(verdictColor),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = scaledSp(15, scale),
+                ),
+                maxLines = 1,
+            )
+            Spacer(GlanceModifier.width(6.dp))
+            RefreshButton()
         }
-        state.moon?.let { moon -> item { MoonVerdict(moon, scale) } }
-        state.weather?.let { w -> item { WeatherVerdict(w, scale) } }
-        state.milkyWay?.let { mw ->
-            item {
-                VerdictRow(
-                    "🌌",
-                    ctx.getString(if (mw.visible) R.string.verdict_mw_visible
-                                  else R.string.verdict_mw_not_visible),
-                    mw.visible,
-                    scale,
+        Spacer(GlanceModifier.height(9.dp))
+
+        NightBar(model)
+        Spacer(GlanceModifier.height(5.dp))
+
+        // dusk · best window · dawn.
+        Row(
+            modifier = GlanceModifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                hm(state.sun?.sunset),
+                style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = scaledSp(13, scale)),
+            )
+            Spacer(GlanceModifier.defaultWeight())
+            if (model.windowLabel.isNotEmpty()) {
+                Text(
+                    "✦ ${model.windowLabel}",
+                    style = TextStyle(
+                        color = ColorProvider(BAR_BEST),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = scaledSp(14, scale),
+                    ),
+                    maxLines = 1,
                 )
             }
+            Spacer(GlanceModifier.defaultWeight())
+            Text(
+                hm(state.sun?.sunrise),
+                style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = scaledSp(13, scale)),
+            )
         }
-        state.bortle?.let { b ->
-            val bInt = b.bortleClass.toInt().coerceIn(1, 9)
-            item { VerdictRow("💡", ctx.getString(R.string.verdict_bortle, bInt), bInt <= 4, scale) }
+        Spacer(GlanceModifier.height(10.dp))
+
+        // Four tinted readouts — Moon · Light · Sky · Targets. defaultWeight()
+        // is resolved here (in RowScope) and handed to each Readout.
+        Row(modifier = GlanceModifier.fillMaxWidth()) {
+            Readout(GlanceModifier.defaultWeight(), ctx.getString(R.string.dash_moon), moonReadout(state), moonReadoutTint(state), scale)
+            Readout(GlanceModifier.defaultWeight(), ctx.getString(R.string.dash_light), lightReadout(state), lightReadoutTint(state), scale)
+            Readout(GlanceModifier.defaultWeight(), ctx.getString(R.string.dash_sky), skyReadout(state), skyReadoutTint(state), scale)
+            Readout(GlanceModifier.defaultWeight(), ctx.getString(R.string.dash_targets), targetsReadout(state), targetsReadoutTint(state), scale)
         }
 
-        val riseSetRows = buildRiseSetRows(state)
-        if (riseSetRows.isNotEmpty()) {
-            item { Spacer(GlanceModifier.height(10.dp)) }
-            item { SectionLabel(ctx.getString(R.string.label_rise_set), scale) }
-            items(riseSetRows) { (emoji, times) -> RiseSetRow(emoji, times, scale) }
-        }
-
-        if (state.bestWindows.isNotEmpty()) {
-            item { Spacer(GlanceModifier.height(10.dp)) }
-            item { SectionLabel(ctx.getString(R.string.card_best_windows), scale) }
-            items(state.bestWindows) { w -> WindowRow(w, scale) }
+        if (isStale(updatedAtMs)) {
+            Spacer(GlanceModifier.height(6.dp))
+            Text(
+                "${ctx.getString(R.string.widget_stale_prefix)} ${formatTime(updatedAtMs)}",
+                style = TextStyle(color = GlanceTheme.colors.error, fontSize = scaledSp(11, scale)),
+            )
         }
     }
 }
+
+/** The live night bar: [k] adjacent coloured Boxes, dusk → dawn. */
+@Composable
+private fun NightBar(model: NightModel) {
+    val n = 24
+    val seg = downsampleQuality(model.samples, n)
+    val nowIdx = model.nowFraction?.let { (it * n).toInt().coerceIn(0, n - 1) }
+    Row(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .height(16.dp)
+            .cornerRadius(5.dp),
+    ) {
+        // A `for` loop (not forEach) keeps the RowScope receiver so
+        // defaultWeight() resolves on each segment.
+        for (i in seg.indices) {
+            val q = seg[i]
+            val f = i / n.toFloat()
+            val inWindow = model.windowEndF > model.windowStartF &&
+                f >= model.windowStartF && f < model.windowEndF
+            val color = if (inWindow) BAR_BEST else lerp(BAR_DIM, BAR_BRIGHT, q.coerceIn(0f, 1f))
+            Box(
+                modifier = GlanceModifier
+                    .defaultWeight()
+                    .fillMaxHeight()
+                    .background(color),
+            ) {}
+            if (nowIdx != null && i == nowIdx) {
+                Box(
+                    modifier = GlanceModifier
+                        .width(3.dp)
+                        .fillMaxHeight()
+                        .background(BAR_NOW),
+                ) {}
+            }
+        }
+    }
+}
+
+/** One tinted readout chip, equal-weighted in the bottom row. The weight
+ *  modifier is passed in from the (RowScope) call site. */
+@Composable
+private fun Readout(modifier: GlanceModifier, label: String, value: String, tint: Color, scale: Float) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            label.uppercase(),
+            style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = scaledSp(11, scale)),
+            maxLines = 1,
+        )
+        Text(
+            value,
+            style = TextStyle(color = ColorProvider(tint), fontWeight = FontWeight.Bold, fontSize = scaledSp(15, scale)),
+            maxLines = 1,
+        )
+    }
+}
+
+// ── Readout values + tints (mirror the in-app dial complications) ────────────
+
+private fun moonReadout(s: DashboardState) =
+    s.moon?.let { "${it.emoji} ${it.illuminationPct.toInt()}%" } ?: "—"
+private fun moonReadoutTint(s: DashboardState) = s.moon?.let {
+    when { it.illuminationPct <= 25 -> BAR_GOOD; it.illuminationPct <= 55 -> BAR_AMBER; else -> BAR_BAD }
+} ?: BAR_NEUTRAL
+
+private fun lightReadout(s: DashboardState) = s.bortle?.let { "B${it.bortleClass.toInt()}" } ?: "—"
+private fun lightReadoutTint(s: DashboardState) = s.bortle?.let {
+    when (it.bortleClass.toInt()) { in 1..4 -> BAR_GOOD; in 5..6 -> BAR_AMBER; else -> BAR_BAD }
+} ?: BAR_NEUTRAL
+
+private fun skyReadout(s: DashboardState) = s.weather?.let { "${it.cloudCoverPct}%" } ?: "—"
+private fun skyReadoutTint(s: DashboardState) = s.weather?.let {
+    when { it.cloudCoverPct <= 25 -> BAR_GOOD; it.cloudCoverPct <= 60 -> BAR_AMBER; else -> BAR_BAD }
+} ?: BAR_NEUTRAL
+
+private fun targetsReadout(s: DashboardState) =
+    (s.planets.size + s.bestWindows.size).let { if (it > 0) it.toString() else "—" }
+private fun targetsReadoutTint(s: DashboardState) =
+    if (s.planets.size + s.bestWindows.size > 0) BAR_GOOD else BAR_NEUTRAL
+
+/** Downsample the per-minute quality samples to [k] bar segments by averaging. */
+private fun downsampleQuality(samples: List<NightSample>, k: Int): List<Float> {
+    if (samples.isEmpty()) return List(k) { 0f }
+    return (0 until k).map { i ->
+        val a = i * samples.size / k
+        val b = (((i + 1) * samples.size / k).coerceAtLeast(a + 1)).coerceAtMost(samples.size)
+        samples.subList(a, b).map { it.quality }.average().toFloat()
+    }
+}
+
+/** "2026-06-17T19:27" or "19:27:00" → "19:27". */
+private fun hm(iso: String?): String =
+    iso?.let { it.substringAfter("T", it).take(5) } ?: "—"
 
 @Composable
 private fun CardHeader(state: DashboardState, updatedAtMs: Long, scale: Float) {
