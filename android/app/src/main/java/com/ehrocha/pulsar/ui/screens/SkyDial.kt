@@ -271,25 +271,53 @@ internal fun SkyDial(
                 // domain readouts, each tappable to its page (they replace the
                 // row that used to sit below the dial). ─────────────────────
                 if (onOpenPage != null) {
+                    // Each figure is tinted by its quality — the per-domain
+                    // green/amber/red verdict the old Summary chips carried,
+                    // now right on the dial face.
+                    val onSurf = scheme.onSurface
+                    val moonTint = state.moon?.let {
+                        when {
+                            it.illuminationPct <= 25 -> pc.positive
+                            it.illuminationPct <= 55 -> pc.caution
+                            else -> pc.negative
+                        }
+                    } ?: onSurf
+                    val lightTint = state.bortle?.let {
+                        when (it.bortleClass.toInt()) {
+                            in 1..4 -> pc.positive
+                            in 5..6 -> pc.caution
+                            else -> pc.negative
+                        }
+                    } ?: onSurf
+                    val skyTint = state.weather?.let {
+                        when {
+                            it.cloudCoverPct <= 25 -> pc.positive
+                            it.cloudCoverPct <= 60 -> pc.caution
+                            else -> pc.negative
+                        }
+                    } ?: onSurf
+                    val targetsTint =
+                        if (state.planets.size + state.bestWindows.size > 0) pc.positive
+                        else scheme.onSurfaceVariant
                     DialComplication(
                         stringResource(R.string.dash_moon),
                         state.moon?.let { "${it.emoji} ${it.illuminationPct.toInt()}%" } ?: "—",
-                        Alignment.TopStart,
+                        Alignment.TopStart, moonTint,
                     ) { onOpenPage(DashPage.MOON) }
                     DialComplication(
                         stringResource(R.string.dash_targets),
                         (state.planets.size + state.bestWindows.size).let { if (it > 0) it.toString() else "—" },
-                        Alignment.TopEnd,
+                        Alignment.TopEnd, targetsTint,
                     ) { onOpenPage(DashPage.TARGETS) }
                     DialComplication(
                         stringResource(R.string.dash_sky),
                         state.weather?.let { "${it.cloudCoverPct}%" } ?: "—",
-                        Alignment.BottomStart,
+                        Alignment.BottomStart, skyTint,
                     ) { onOpenPage(DashPage.SKY) }
                     DialComplication(
                         stringResource(R.string.dash_light),
                         state.bortle?.let { "B${it.bortleClass.toInt()}" } ?: "—",
-                        Alignment.BottomEnd,
+                        Alignment.BottomEnd, lightTint,
                     ) { onOpenPage(DashPage.LIGHT) }
                 }
             }
@@ -303,6 +331,7 @@ private fun BoxScope.DialComplication(
     label: String,
     value: String,
     align: Alignment,
+    valueColor: Color,
     onClick: () -> Unit,
 ) {
     val end = align == Alignment.TopEnd || align == Alignment.BottomEnd
@@ -324,7 +353,7 @@ private fun BoxScope.DialComplication(
         Text(
             value,
             style = MaterialTheme.typography.titleMedium.copy(fontFamily = Mono),
-            color = MaterialTheme.colorScheme.onSurface,
+            color = valueColor,
             maxLines = 1,
         )
     }
