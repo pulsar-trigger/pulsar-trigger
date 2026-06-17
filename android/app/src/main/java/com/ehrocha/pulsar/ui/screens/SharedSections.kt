@@ -54,6 +54,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.ble.OtaState
 import com.ehrocha.pulsar.update.AppUpdateState
@@ -1417,6 +1418,21 @@ private fun RenameDeviceDialog(
     )
 }
 
+/** Turn a GitHub release body into readable "what's new" notes: drop the
+ *  install boilerplate (new + legacy bodies) and strip markdown emphasis. */
+private fun cleanReleaseNotes(raw: String): String =
+    raw.lines()
+        .filterNot {
+            val t = it.trim()
+            t.startsWith("Install via") ||
+                t.startsWith("Automated Android app build") ||
+                t.startsWith("**Version:") || t.startsWith("**Commit:") ||
+                t == "—" || t == "---"
+        }
+        .joinToString("\n")
+        .replace("**", "")
+        .trim()
+
 @Composable
 private fun UpdatesSection(vm: PulsarViewModel, showFirmware: Boolean = true) {
     val connected = LocalDeviceConnected.current
@@ -1652,12 +1668,30 @@ private fun UpdatesSection(vm: PulsarViewModel, showFirmware: Boolean = true) {
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                     )
-                    if (release.body.isNotBlank()) {
-                        Text(
-                            release.body.take(200),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                    val notes = cleanReleaseNotes(release.body)
+                    if (notes.isNotBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(
+                                    stringResource(R.string.update_whats_new).uppercase(),
+                                    style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.2.sp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    notes,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier
+                                        .heightIn(max = 220.dp)
+                                        .verticalScroll(rememberScrollState()),
+                                )
+                            }
+                        }
                     }
                     Button(
                         onClick = { updateManager.downloadAndInstall() },

@@ -29,6 +29,7 @@
     <string name="canon_manual_add_title">Añadir cámara por IP</string>
     <string name="canon_manual_add_subtitle">Cuando SSDP no encuentra la cámara (el AP bloquea multicast o el cuerpo no anuncia UPnP), introduce la IP (y el puerto si no es 8080). Pulsar consulta /ccapi directamente — la misma URL que abre en el navegador.</string>
     <string name="btn_download_install">Descargar e Instalar</string>
+    <string name="update_whats_new">Novedades</string>
     <string name="btn_install_now">Instalar Ahora</string>
     <string name="btn_pick_previous_version">Elegir versión anterior…</string>
     <string name="dialog_pick_previous_title">Versiones anteriores</string>

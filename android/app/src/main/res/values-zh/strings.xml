@@ -29,6 +29,7 @@
     <string name="canon_manual_add_title">按 IP 添加相机</string>
     <string name="canon_manual_add_subtitle">当 SSDP 未能发现相机（AP 屏蔽多播或机身未广播 UPnP）时，请输入相机的 IP（端口不是 8080 时也需指定）。Pulsar 会直接探测 /ccapi，与浏览器中打开的 URL 一致。</string>
     <string name="btn_download_install">下载并安装</string>
+    <string name="update_whats_new">更新内容</string>
     <string name="btn_install_now">立即安装</string>
     <string name="btn_pick_previous_version">选择以前的版本…</string>
     <string name="dialog_pick_previous_title">以前的版本</string>

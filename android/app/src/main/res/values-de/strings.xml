@@ -29,6 +29,7 @@
     <string name="canon_manual_add_title">Kamera per IP hinzufügen</string>
     <string name="canon_manual_add_subtitle">Wenn SSDP die Kamera nicht findet (AP blockiert Multicast oder der Body bietet kein UPnP), gib die IP ein (und den Port, falls nicht 8080). Pulsar fragt /ccapi direkt ab — dieselbe URL, die im Browser lädt.</string>
     <string name="btn_download_install">Herunterladen und Installieren</string>
+    <string name="update_whats_new">Neuigkeiten</string>
     <string name="btn_install_now">Jetzt installieren</string>
     <string name="btn_pick_previous_version">Vorherige Version wählen…</string>
     <string name="dialog_pick_previous_title">Vorherige Releases</string>
