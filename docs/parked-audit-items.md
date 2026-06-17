@@ -155,7 +155,14 @@ backoffs.
 
 ---
 
-## Map Annotations API deprecation — ✅ CODE-COMPLETE (v0.466–0.471), device-verify pending
+## Map Annotations API deprecation — ✅ DONE + DEVICE-VERIFIED (v0.466–0.471)
+
+> **2026-06-17:** Eduardo device-verified the whole migration — "map
+> migration looks good". All five Aircraft Watch marker types (aircraft,
+> trails, sun/moon, highlight ring, user pin/cone) render correctly on the
+> data-driven layers, rotation is clean (no double-rotate), and everything
+> survives a Hybrid style swap. The picker (2a) was verified earlier. The
+> file is fully off the legacy annotation API. **Item closed.**
 
 > **2026-06-16:** **MapLocationPicker migrated (v0.466)** to the
 > dependency-free `GeoJsonSource` + `SymbolLayer` path (new `ic_map_pin`
