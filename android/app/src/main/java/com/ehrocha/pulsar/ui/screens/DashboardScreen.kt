@@ -253,8 +253,14 @@ fun DashboardScreen(
             // four tap-tiles into the domain pages. Tapping the dial opens the
             // Tonight timeline. ─────────────────────────────────────────────
             if (openPage == null) {
-                SkyDial(state, onTap = { openPage = DashPage.TIMELINE })
-                DashReadoutRow(state) { openPage = it }
+                // Readouts now live on the dial itself as corner complications
+                // (Moon · Targets · Sky · Light), each tapping to its page;
+                // tapping the dial body opens the Tonight timeline.
+                SkyDial(
+                    state,
+                    onTap = { openPage = DashPage.TIMELINE },
+                    onOpenPage = { openPage = it },
+                )
             }
 
             // ── Domain pages: each detail card is gated to its page; hidden

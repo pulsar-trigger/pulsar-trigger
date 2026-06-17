@@ -9,10 +9,14 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -96,7 +100,11 @@ private class DialModel(
 )
 
 @Composable
-internal fun SkyDial(state: DashboardState, onTap: (() -> Unit)? = null) {
+internal fun SkyDial(
+    state: DashboardState,
+    onTap: (() -> Unit)? = null,
+    onOpenPage: ((DashPage) -> Unit)? = null,
+) {
     val model = remember(state.weather, state.moon, state.sun, state.location, state.selectedDate) {
         buildDialModel(state)
     } ?: return
@@ -249,28 +257,83 @@ internal fun SkyDial(state: DashboardState, onTap: (() -> Unit)? = null) {
                     )
                 }
 
-                // ── Dusk / dawn captions in the bottom gap ──────────────
-                state.sun?.sunset?.let {
-                    DialEndLabel(stringResource(R.string.sky_dial_dusk), formatTime(it), Alignment.BottomStart)
+                // ── Dusk / dawn — centred in the bottom gap (the corners now
+                // carry the complications). ─────────────────────────────────
+                Row(
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    state.sun?.sunset?.let { DialEndCaption(stringResource(R.string.sky_dial_dusk), formatTime(it)) }
+                    state.sun?.sunrise?.let { DialEndCaption(stringResource(R.string.sky_dial_dawn), formatTime(it)) }
                 }
-                state.sun?.sunrise?.let {
-                    DialEndLabel(stringResource(R.string.sky_dial_dawn), formatTime(it), Alignment.BottomEnd)
+
+                // ── Wear-OS-style complications at the four corners: the
+                // domain readouts, each tappable to its page (they replace the
+                // row that used to sit below the dial). ─────────────────────
+                if (onOpenPage != null) {
+                    DialComplication(
+                        stringResource(R.string.dash_moon),
+                        state.moon?.let { "${it.emoji} ${it.illuminationPct.toInt()}%" } ?: "—",
+                        Alignment.TopStart,
+                    ) { onOpenPage(DashPage.MOON) }
+                    DialComplication(
+                        stringResource(R.string.dash_targets),
+                        (state.planets.size + state.bestWindows.size).let { if (it > 0) it.toString() else "—" },
+                        Alignment.TopEnd,
+                    ) { onOpenPage(DashPage.TARGETS) }
+                    DialComplication(
+                        stringResource(R.string.dash_sky),
+                        state.weather?.let { "${it.cloudCoverPct}%" } ?: "—",
+                        Alignment.BottomStart,
+                    ) { onOpenPage(DashPage.SKY) }
+                    DialComplication(
+                        stringResource(R.string.dash_light),
+                        state.bortle?.let { "B${it.bortleClass.toInt()}" } ?: "—",
+                        Alignment.BottomEnd,
+                    ) { onOpenPage(DashPage.LIGHT) }
                 }
             }
         }
     }
 }
 
+/** A corner complication: tiny label + figure, tappable to its page. */
 @Composable
-private fun androidx.compose.foundation.layout.BoxScope.DialEndLabel(
-    caption: String,
-    time: String,
+private fun BoxScope.DialComplication(
+    label: String,
+    value: String,
     align: Alignment,
+    onClick: () -> Unit,
 ) {
+    val end = align == Alignment.TopEnd || align == Alignment.BottomEnd
     Column(
-        modifier = Modifier.align(align).padding(horizontal = 4.dp, vertical = 2.dp),
-        horizontalAlignment = if (align == Alignment.BottomStart) Alignment.Start else Alignment.End,
+        modifier = Modifier
+            .align(align)
+            .widthIn(max = 84.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 6.dp, vertical = 4.dp),
+        horizontalAlignment = if (end) Alignment.End else Alignment.Start,
     ) {
+        Text(
+            label.uppercase(),
+            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.titleMedium.copy(fontFamily = Mono),
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+        )
+    }
+}
+
+/** Dusk / dawn caption stacked under its time, centred in the bottom gap. */
+@Composable
+private fun DialEndCaption(caption: String, time: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             caption.uppercase(),
             style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.2.sp),
