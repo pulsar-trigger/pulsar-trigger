@@ -205,6 +205,40 @@ interface CameraTransport {
      *  when the switch is set to MF). No-op if the transport doesn't
      *  support live view. */
     suspend fun driveFocus(action: String) {}
+
+    // ── Content transfer (photo-transfer gallery) ───────────────────────
+    // Enumerate / preview / download images off the camera's card. Only the
+    // transports that can actually move image data implement these: CCAPI
+    // (/contents) and the two PTP wires (USB + Wi-Fi, via standard PTP object
+    // ops). The BLE transports (Pulsar ESP32, Canon BR-E1) physically can't
+    // carry image payloads and keep the no-op defaults, so the UI dims the
+    // transfer tool for them via [supportsContentTransfer].
+
+    /** Transport can enumerate + download images from the camera's storage.
+     *  Gates the photo-transfer tool in the UI. */
+    val supportsContentTransfer: Boolean get() = false
+
+    /** Enumerate images on the camera (newest-first where the protocol
+     *  allows). Empty list when unsupported or the card has no images.
+     *  May be slow on a full card — callers run it off the main thread and
+     *  show progress. */
+    suspend fun listContents(): List<CameraImage> = emptyList()
+
+    /** Fetch a small thumbnail JPEG for [image] to populate the preview grid,
+     *  or null on failure. Never returns the full-resolution file. */
+    suspend fun getThumbnail(image: CameraImage): ByteArray? = null
+
+    /** Stream the full-resolution file for [image] into [sink], reporting
+     *  `(bytesWritten, totalBytes)` via [onProgress] (totalBytes may be 0 if
+     *  the protocol didn't declare a size up front). Returns true on success.
+     *  Streams rather than buffering so multi-MB RAW files don't sit in
+     *  memory. The caller owns [sink] (a MediaStore OutputStream) and closes
+     *  it. */
+    suspend fun downloadImage(
+        image: CameraImage,
+        sink: java.io.OutputStream,
+        onProgress: (Long, Long) -> Unit = { _, _ -> },
+    ): Boolean = false
 }
 
 enum class TransportKind { BLE_ESP, CCAPI, PTP_USB, CANON_BLE, PTP_IP }

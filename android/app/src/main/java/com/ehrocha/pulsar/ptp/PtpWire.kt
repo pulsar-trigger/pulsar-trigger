@@ -39,6 +39,28 @@ interface PtpWire {
         expectDataIn: Boolean = false,
     ): PtpClient.Response
 
+    /**
+     * Like [transact] but for a **large data-in** response (a full image): the
+     * data phase is streamed to [sink] in chunks instead of being buffered
+     * into a ByteArray, so a 30–60 MB RAW never sits in memory (and isn't
+     * subject to [MAX_PTP_DATA_BYTES], which guards fixed buffers). [onProgress]
+     * reports `(bytesWritten, totalBytes)`; `totalBytes` is the
+     * protocol-declared payload size, or 0 if it wasn't declared up front.
+     *
+     * The returned [PtpClient.Response] carries the response code + params but
+     * a **null** `data` — the payload went to [sink]. The caller owns [sink]
+     * and is responsible for flushing/closing it.
+     *
+     * Only used for `GetObject`. Implementations may assume there's no data-out
+     * phase for the streamed op.
+     */
+    suspend fun transactStream(
+        opCode: Int,
+        params: IntArray,
+        sink: java.io.OutputStream,
+        onProgress: (Long, Long) -> Unit = { _, _ -> },
+    ): PtpClient.Response
+
     /** Release any underlying resources. Idempotent. After [close] the wire
      *  is not reusable — discard it. The owner of the underlying transport
      *  handle (USB connection, TCP sockets) is responsible for the actual

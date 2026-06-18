@@ -7,6 +7,7 @@ package com.ehrocha.pulsar.ptp
 
 import android.util.Log
 import com.ehrocha.pulsar.canonble.CanonBleLog
+import com.ehrocha.pulsar.transport.CameraImage
 import com.ehrocha.pulsar.transport.CameraTransport
 import com.ehrocha.pulsar.transport.TransportKind
 import kotlinx.coroutines.Dispatchers
@@ -617,6 +618,22 @@ class PtpIpTransport private constructor(
         }
     }
 
+    // ── Photo transfer ──────────────────────────────────────────────────
+    // Shares PtpContent.kt with USB PTP; wireMutex held across each call so a
+    // battery poll can't interleave the GetObject data phase over TCP.
+    override val supportsContentTransfer: Boolean = true
+
+    override suspend fun listContents(): List<CameraImage> =
+        wireMutex.withLock { client.listImageContents() }
+
+    override suspend fun getThumbnail(image: CameraImage): ByteArray? =
+        wireMutex.withLock { client.thumbnailFor(image) }
+
+    override suspend fun downloadImage(
+        image: CameraImage,
+        sink: java.io.OutputStream,
+        onProgress: (Long, Long) -> Unit,
+    ): Boolean = wireMutex.withLock { client.downloadObject(image, sink, onProgress) }
 }
 
 /** Outcome of [PtpIpTransport.openOn] — distinguishes user-rejection on the

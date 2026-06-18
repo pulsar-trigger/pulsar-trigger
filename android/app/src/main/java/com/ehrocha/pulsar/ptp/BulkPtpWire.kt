@@ -46,6 +46,65 @@ class BulkPtpWire(
         return readResponse(txId).copy(data = data)
     }
 
+    override suspend fun transactStream(
+        opCode: Int,
+        params: IntArray,
+        sink: java.io.OutputStream,
+        onProgress: (Long, Long) -> Unit,
+    ): PtpClient.Response {
+        val txId = ++transactionId
+        sendCommand(opCode, params, txId)
+        streamData(txId, sink, onProgress)
+        return readResponse(txId)
+    }
+
+    /** Read a DATA container, streaming its payload to [sink] in chunks
+     *  instead of buffering it (GetObject — multi-MB). Mirrors [readData]'s
+     *  framing; the only difference is the payload destination. */
+    private fun streamData(
+        expectedTxId: Int,
+        sink: java.io.OutputStream,
+        onProgress: (Long, Long) -> Unit,
+    ) {
+        val buf = ByteArray(STREAM_CHUNK)
+        val firstLen = connection.bulkTransfer(bulkIn, buf, buf.size, TIMEOUT_LONG)
+        if (firstLen < 12) throw PtpProtocolException("recv-object", "short read: $firstLen")
+        val header = ByteBuffer.wrap(buf, 0, 12).order(ByteOrder.LITTLE_ENDIAN)
+        val declared = header.int.toLong() and 0xFFFFFFFFL
+        val type = header.short.toInt() and 0xFFFF
+        header.short // opCode echo
+        val txId = header.int
+        if (type != PtpClient.CONTAINER_DATA) {
+            throw PtpProtocolException("recv-object", "expected DATA container, got $type")
+        }
+        if (txId != expectedTxId) {
+            throw PtpProtocolException(
+                "recv-object",
+                "transaction id mismatch: expected $expectedTxId, got $txId",
+            )
+        }
+        val total = (declared - 12).coerceAtLeast(0)  // payload bytes (no header)
+        var written = 0L
+        val firstPayload = firstLen - 12
+        if (firstPayload > 0) {
+            val take = minOf(firstPayload.toLong(), total).toInt()
+            sink.write(buf, 12, take)
+            written += take
+            onProgress(written, total)
+        }
+        while (written < total) {
+            val n = connection.bulkTransfer(bulkIn, buf, buf.size, TIMEOUT_DEFAULT)
+            if (n <= 0) break
+            val take = minOf(n.toLong(), total - written).toInt()
+            sink.write(buf, 0, take)
+            written += take
+            onProgress(written, total)
+        }
+        if (written < total) {
+            throw PtpProtocolException("recv-object", "truncated: $written / $total bytes")
+        }
+    }
+
     override fun close() { /* connection ownership is the transport's */ }
 
     private fun sendCommand(opCode: Int, params: IntArray, txId: Int) {
@@ -145,5 +204,9 @@ class BulkPtpWire(
         /** First-chunk buffer for a data-in read. 4 KB is enough to swallow
          *  most DeviceInfo + standard property reads in one bulk transfer. */
         private const val BULK_READ_CHUNK = 4096
+        /** Chunk buffer for streaming a full image off the card. Bigger than
+         *  [BULK_READ_CHUNK] for throughput on multi-MB JPEG/RAW transfers;
+         *  bounds the in-memory footprint regardless of file size. */
+        private const val STREAM_CHUNK = 64 * 1024
     }
 }

@@ -143,6 +143,93 @@ class PtpIpWire private constructor(
         throw PtpProtocolException("recv-response", "exited transact loop without OP_RESPONSE")
     }
 
+    override suspend fun transactStream(
+        opCode: Int,
+        params: IntArray,
+        sink: java.io.OutputStream,
+        onProgress: (Long, Long) -> Unit,
+    ): PtpClient.Response = withContext(Dispatchers.IO) {
+        val txId = ++transactionId
+        val reqBody = ByteBuffer
+            .allocate(10 + params.size * 4)
+            .order(ByteOrder.LITTLE_ENDIAN)
+            .putInt(DPH_NO_DATA_OR_IN)
+            .putShort(opCode.toShort())
+            .putInt(txId)
+            .also { for (p in params) it.putInt(p) }
+            .array()
+        sendPacket(PKT_OP_REQUEST, reqBody)
+
+        var total = 0L      // declared payload length from START_DATA
+        var written = 0L    // bytes streamed to the sink so far
+        val chunk = ByteArray(STREAM_CHUNK)
+        while (true) {
+            val length = readU32LE(cmdIn).toLong() and 0xFFFFFFFFL
+            val ptype = readU32LE(cmdIn)
+            val bodyLen = length - 8
+            if (bodyLen < 0) throw PtpProtocolException("recv-object", "bad packet length: $length")
+            when (ptype) {
+                PKT_START_DATA -> {
+                    // body: transactionId(4) + totalDataLength(8, u64 LE)
+                    val b = readExact(bodyLen.toInt().coerceAtMost(64))
+                    if (bodyLen > b.size) skipBytes(bodyLen - b.size)
+                    if (b.size >= 12) total = ByteBuffer.wrap(b, 4, 8).order(ByteOrder.LITTLE_ENDIAN).long
+                }
+                PKT_DATA, PKT_END_DATA -> {
+                    // body: transactionId(4) + payload — stream the payload out
+                    if (bodyLen < 4) throw PtpProtocolException("recv-object", "short data packet")
+                    readExact(4) // transactionId header, discarded
+                    var remaining = bodyLen - 4
+                    while (remaining > 0) {
+                        val want = minOf(remaining, chunk.size.toLong()).toInt()
+                        cmdIn.readFully(chunk, 0, want)
+                        sink.write(chunk, 0, want)
+                        written += want
+                        remaining -= want
+                        onProgress(written, total)
+                    }
+                }
+                PKT_OP_RESPONSE -> {
+                    val b = readExact(bodyLen.toInt())
+                    if (b.size < 6) throw PtpProtocolException("recv-object", "short response: ${b.size}")
+                    val rb = ByteBuffer.wrap(b).order(ByteOrder.LITTLE_ENDIAN)
+                    val rc = rb.short.toInt() and 0xFFFF
+                    val gotTxId = rb.int
+                    if (gotTxId != txId) {
+                        throw PtpProtocolException("recv-object", "txid mismatch: expected $txId, got $gotTxId")
+                    }
+                    val paramCount = ((b.size - 6) / 4).coerceIn(0, 5)
+                    val rparams = IntArray(paramCount) { rb.int }
+                    CanonBleLog.d(TAG, "stream op 0x${"%04X".format(opCode)} rc=0x${"%04X".format(rc)} wrote=${written}B")
+                    return@withContext PtpClient.Response(rc, rparams, null)
+                }
+                PKT_EVENT -> skipBytes(bodyLen)
+                else -> skipBytes(bodyLen)
+            }
+        }
+        @Suppress("UNREACHABLE_CODE")
+        throw PtpProtocolException("recv-object", "exited stream loop without OP_RESPONSE")
+    }
+
+    /** Read exactly [n] bytes off the command socket. */
+    private fun readExact(n: Int): ByteArray {
+        val b = ByteArray(n)
+        if (n > 0) cmdIn.readFully(b)
+        return b
+    }
+
+    /** Discard [count] bytes off the command socket (unknown / stray packet
+     *  bodies). */
+    private fun skipBytes(count: Long) {
+        var remaining = count
+        val tmp = ByteArray(8192)
+        while (remaining > 0) {
+            val want = minOf(remaining, tmp.size.toLong()).toInt()
+            cmdIn.readFully(tmp, 0, want)
+            remaining -= want
+        }
+    }
+
     override fun close() {
         runCatching { cmdSocket.close() }
         runCatching { evtSocket.close() }
@@ -286,6 +373,10 @@ class PtpIpWire private constructor(
         /** Working-session read timeout. Generous: live view reads can take
          *  hundreds of ms, GetEvent polling can take seconds. */
         private const val SESSION_READ_TIMEOUT_MS = 15_000
+
+        /** Chunk buffer for streaming a full image off the card (GetObject).
+         *  Bounds the in-memory footprint regardless of file size. */
+        private const val STREAM_CHUNK = 64 * 1024
 
         // ── Wire helpers (used by [connect] only — [transact] uses the
         //    instance-bound cmdIn/cmdOut for performance + thread safety). ──

@@ -145,6 +145,52 @@ class PtpClient(
         wire.transact(OP_SET_DEVICE_PROP_VALUE, intArrayOf(propCode),
                  dataOut = valueBytes, expectDataIn = false)
 
+    // ── Object enumeration / transfer (photo-transfer gallery) ──────────
+    // Standard PTP object ops (PIMA 15740 §5.5). Transport-agnostic, so the
+    // same calls drive USB and Wi-Fi PTP image transfer.
+
+    /** PTP `GetStorageIDs` — IDs of the stores (cards) present. */
+    suspend fun getStorageIds(): List<Int> {
+        val r = wire.transact(OP_GET_STORAGE_IDS, expectDataIn = true)
+        return if (r.ok && r.data != null) parsePtpU32Array(r.data) else emptyList()
+    }
+
+    /** PTP `GetObjectHandles` — handles of objects matching the filter. The
+     *  defaults enumerate every object on every store (flat list). */
+    suspend fun getObjectHandles(
+        storageId: Int = STORAGE_ALL,
+        objectFormat: Int = 0,
+        parent: Int = HANDLE_ALL,
+    ): List<Int> {
+        val r = wire.transact(
+            OP_GET_OBJECT_HANDLES, intArrayOf(storageId, objectFormat, parent),
+            expectDataIn = true,
+        )
+        return if (r.ok && r.data != null) parsePtpU32Array(r.data) else emptyList()
+    }
+
+    /** PTP `GetObjectInfo` — metadata (format, size, filename, capture date)
+     *  for one handle. Null on protocol failure / unparseable dataset. */
+    suspend fun getObjectInfo(handle: Int): PtpObjectInfo? {
+        val r = wire.transact(OP_GET_OBJECT_INFO, intArrayOf(handle), expectDataIn = true)
+        return if (r.ok && r.data != null) runCatching { parsePtpObjectInfo(r.data) }.getOrNull() else null
+    }
+
+    /** PTP `GetThumb` — the embedded thumbnail JPEG for one handle, or null.
+     *  Small enough to buffer (the gallery grid uses these). */
+    suspend fun getThumb(handle: Int): ByteArray? {
+        val r = wire.transact(OP_GET_THUMB, intArrayOf(handle), expectDataIn = true)
+        return if (r.ok) r.data else null
+    }
+
+    /** PTP `GetObject` — stream the full file for one handle into [sink]
+     *  (never buffered — RAWs are tens of MB). Returns true on `RC_OK`. */
+    suspend fun getObject(
+        handle: Int,
+        sink: java.io.OutputStream,
+        onProgress: (Long, Long) -> Unit = { _, _ -> },
+    ): Boolean = wire.transactStream(OP_GET_OBJECT, intArrayOf(handle), sink, onProgress).ok
+
     // ── Result types ────────────────────────────────────────────────────
 
     /** A complete transaction's outcome: response code, any returned params,
@@ -238,6 +284,16 @@ class PtpClient(
         const val OP_INITIATE_CAPTURE = 0x100E
         const val OP_GET_DEVICE_PROP_VALUE = 0x1015
         const val OP_SET_DEVICE_PROP_VALUE = 0x1016
+        // Object enumeration / transfer (photo-transfer gallery).
+        const val OP_GET_STORAGE_IDS = 0x1004
+        const val OP_GET_OBJECT_HANDLES = 0x1007
+        const val OP_GET_OBJECT_INFO = 0x1008
+        const val OP_GET_OBJECT = 0x1009
+        const val OP_GET_THUMB = 0x100A
+        /** GetObjectHandles wildcards: all stores / all objects (flat list).
+         *  0xFFFFFFFF as a signed Int. */
+        const val STORAGE_ALL = -1
+        const val HANDLE_ALL = -1
 
         // ── PTP standard device properties (subset) ──────────────────────
         const val PROP_BATTERY_LEVEL = 0x5001  // UINT8 percentage 0-100

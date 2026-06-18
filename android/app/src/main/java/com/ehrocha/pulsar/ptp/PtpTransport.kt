@@ -13,6 +13,7 @@ import android.hardware.usb.UsbEndpoint
 import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
 import android.util.Log
+import com.ehrocha.pulsar.transport.CameraImage
 import com.ehrocha.pulsar.transport.CameraTransport
 import com.ehrocha.pulsar.transport.TransportKind
 import kotlinx.coroutines.Dispatchers
@@ -639,4 +640,22 @@ class PtpTransport private constructor(
         // PTP has no cheap "abort" primitive. Bulb mode would call stopBulb
         // here; Timelapse mode has no in-flight state to abort.
     }
+
+    // ── Photo transfer ──────────────────────────────────────────────────
+    // Hold wireMutex across each call so an interleaving battery poll can't
+    // corrupt the in-flight data phase (critical for the multi-MB GetObject
+    // stream). The actual ops live in PtpContent.kt, shared with PTP/IP.
+    override val supportsContentTransfer: Boolean = true
+
+    override suspend fun listContents(): List<CameraImage> =
+        wireMutex.withLock { client.listImageContents() }
+
+    override suspend fun getThumbnail(image: CameraImage): ByteArray? =
+        wireMutex.withLock { client.thumbnailFor(image) }
+
+    override suspend fun downloadImage(
+        image: CameraImage,
+        sink: java.io.OutputStream,
+        onProgress: (Long, Long) -> Unit,
+    ): Boolean = wireMutex.withLock { client.downloadObject(image, sink, onProgress) }
 }
