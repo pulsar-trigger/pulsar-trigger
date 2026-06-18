@@ -2372,6 +2372,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         return cc ?: pu ?: cb ?: pi
     }
 
+    /** The active transport iff it can enumerate + download images (CCAPI /
+     *  USB-PTP / PTP-IP). Null for the BLE transports and the simulator —
+     *  the photo-transfer tool is gated on this being non-null. */
+    fun contentTransport(): com.ehrocha.pulsar.transport.CameraTransport? =
+        activeCameraTransport()?.takeIf { it.supportsContentTransfer }
+
     private suspend fun probeCameraSettings(transport: com.ehrocha.pulsar.transport.CameraTransport) {
         val log = com.ehrocha.pulsar.canonble.CanonBleLog
         try {

@@ -1052,4 +1052,19 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="gatt_explorer_last_notify">Letzte Benachrichtigung: %1$s</string>
     <string name="gatt_explorer_write_hex_label">Bytes (hex)</string>
     <string name="gatt_explorer_write_response_label">WRITE verwenden (mit Antwort)</string>
+    <!-- Photo transfer gallery -->
+    <string name="photo_transfer_title">Fotos übertragen</string>
+    <string name="photo_transfer_help">Sieh dir die Fotos auf der Kamerakarte an und kopiere ausgewählte (oder alle) in die Galerie des Telefons unter Pictures/Pulsar. Verfügbar bei USB-, Wi-Fi-PTP- und Canon-Wi-Fi-Verbindungen.</string>
+    <string name="photo_transfer_loading">Karte wird gelesen…</string>
+    <string name="photo_transfer_empty">Keine Fotos auf der Kamera</string>
+    <string name="photo_transfer_error">Kamerakarte konnte nicht gelesen werden</string>
+    <string name="photo_transfer_unavailable">Verbinde eine USB-, Wi-Fi-PTP- oder Canon-Wi-Fi-Kamera, um Fotos zu übertragen.</string>
+    <string name="photo_transfer_select_all">Alle auswählen</string>
+    <string name="photo_transfer_clear">Löschen</string>
+    <string name="photo_transfer_transfer_all">Alle übertragen</string>
+    <string name="photo_transfer_transfer_selected">%1$d übertragen</string>
+    <string name="photo_transfer_progress">%1$d / %2$d · %3$s</string>
+    <string name="photo_transfer_done">%1$d in der Galerie gespeichert</string>
+    <string name="photo_transfer_done_failed">%1$d gespeichert · %2$d fehlgeschlagen</string>
+    <string name="photo_transfer_raw_badge">RAW</string>
 </resources>

@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.FilterBAndW
 import androidx.compose.material.icons.filled.FlightTakeoff
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.LensBlur
 import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.automirrored.filled.ListAlt
@@ -79,6 +80,7 @@ fun MainMenuScreen(
     onWhatsUpSelected: () -> Unit = {},
     onMeteorCalendarSelected: () -> Unit = {},
     onStarFocusSelected: () -> Unit = {},
+    onPhotoTransferSelected: () -> Unit = {},
     onTestCameraSelected: () -> Unit = {},
     onAircraftWatchSelected: () -> Unit = {},
     onNdCalcSelected: () -> Unit = {},
@@ -210,6 +212,7 @@ fun MainMenuScreen(
             onWhatsUpSelected = onWhatsUpSelected,
             onMeteorCalendarSelected = onMeteorCalendarSelected,
             onStarFocusSelected = onStarFocusSelected,
+            onPhotoTransferSelected = onPhotoTransferSelected,
             onTestCameraSelected = onTestCameraSelected,
             onAircraftWatchSelected = onAircraftWatchSelected,
             onNdCalcSelected = onNdCalcSelected,
@@ -330,6 +333,7 @@ private fun MenuPageContent(
     onWhatsUpSelected: () -> Unit,
     onMeteorCalendarSelected: () -> Unit,
     onStarFocusSelected: () -> Unit,
+    onPhotoTransferSelected: () -> Unit,
     onTestCameraSelected: () -> Unit,
     onAircraftWatchSelected: () -> Unit,
     onNdCalcSelected: () -> Unit,
@@ -461,6 +465,12 @@ private fun MenuPageContent(
                     val ptpIpLive = ptpIpTx?.liveViewSupportedFlow
                         ?.collectAsState(initial = false)?.value == true
                     val starFocusEnabled = canonOn || ptpLive || ptpIpLive
+                    // Photo transfer needs a content-capable transport: CCAPI
+                    // (always), or a PTP wire that advertises object ops. BLE /
+                    // simulator can't move image data, so the tile greys out.
+                    val photoTransferEnabled = canonOn ||
+                        ptpTx?.supportsContentTransfer == true ||
+                        ptpIpTx?.supportsContentTransfer == true
                     // Grouped like the Trigger page — the flat grid had
                     // become a junk drawer (audit P1-8). Astro planning,
                     // pure-math field calculators, and spotting are
@@ -485,6 +495,12 @@ private fun MenuPageContent(
                             Icons.Default.Star,
                             enabled = starFocusEnabled,
                         ) { onStarFocusSelected() },
+                        // Pull photos off the card — CCAPI / USB-PTP / PTP-IP.
+                        launcherItem(
+                            R.string.photo_transfer_title,
+                            Icons.Default.PhotoLibrary,
+                            enabled = photoTransferEnabled,
+                        ) { onPhotoTransferSelected() },
                     )
                     // Pure-math field calculators — no transport needed.
                     val fieldTools = listOf(

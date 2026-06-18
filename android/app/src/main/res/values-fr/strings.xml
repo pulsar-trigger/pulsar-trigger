@@ -1052,4 +1052,19 @@ La hauteur vient de l\'obscurité du ciel × ciel dégagé × pas de lune brilla
     <string name="gatt_explorer_last_notify">Dernière notification : %1$s</string>
     <string name="gatt_explorer_write_hex_label">Octets (hex)</string>
     <string name="gatt_explorer_write_response_label">Utiliser WRITE (avec réponse)</string>
+    <!-- Photo transfer gallery -->
+    <string name="photo_transfer_title">Transférer des photos</string>
+    <string name="photo_transfer_help">Prévisualisez les photos de la carte de l\'appareil et copiez les photos sélectionnées (ou toutes) dans la galerie du téléphone, sous Pictures/Pulsar. Disponible sur les connexions USB, Wi-Fi PTP et Canon Wi-Fi.</string>
+    <string name="photo_transfer_loading">Lecture de la carte…</string>
+    <string name="photo_transfer_empty">Aucune photo sur l\'appareil</string>
+    <string name="photo_transfer_error">Impossible de lire la carte de l\'appareil</string>
+    <string name="photo_transfer_unavailable">Connectez un appareil USB, Wi-Fi PTP ou Canon Wi-Fi pour transférer des photos.</string>
+    <string name="photo_transfer_select_all">Tout sélectionner</string>
+    <string name="photo_transfer_clear">Effacer</string>
+    <string name="photo_transfer_transfer_all">Tout transférer</string>
+    <string name="photo_transfer_transfer_selected">Transférer %1$d</string>
+    <string name="photo_transfer_progress">%1$d / %2$d · %3$s</string>
+    <string name="photo_transfer_done">%1$d enregistrée(s) dans la galerie</string>
+    <string name="photo_transfer_done_failed">%1$d enregistrée(s) · %2$d échouée(s)</string>
+    <string name="photo_transfer_raw_badge">RAW</string>
 </resources>

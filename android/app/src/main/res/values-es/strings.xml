@@ -1050,4 +1050,19 @@ La altura proviene de la oscuridad del cielo × cielo despejado × sin luna bril
     <string name="gatt_explorer_last_notify">Última notificación: %1$s</string>
     <string name="gatt_explorer_write_hex_label">Bytes (hex)</string>
     <string name="gatt_explorer_write_response_label">Usar WRITE (con respuesta)</string>
+    <!-- Photo transfer gallery -->
+    <string name="photo_transfer_title">Transferir fotos</string>
+    <string name="photo_transfer_help">Previsualiza las fotos de la tarjeta de la cámara y copia las seleccionadas (o todas) a la galería del teléfono, en Pictures/Pulsar. Disponible en conexiones USB, Wi-Fi PTP y Canon Wi-Fi.</string>
+    <string name="photo_transfer_loading">Leyendo la tarjeta…</string>
+    <string name="photo_transfer_empty">No hay fotos en la cámara</string>
+    <string name="photo_transfer_error">No se pudo leer la tarjeta de la cámara</string>
+    <string name="photo_transfer_unavailable">Conecta una cámara USB, Wi-Fi PTP o Canon Wi-Fi para transferir fotos.</string>
+    <string name="photo_transfer_select_all">Seleccionar todo</string>
+    <string name="photo_transfer_clear">Borrar</string>
+    <string name="photo_transfer_transfer_all">Transferir todo</string>
+    <string name="photo_transfer_transfer_selected">Transferir %1$d</string>
+    <string name="photo_transfer_progress">%1$d / %2$d · %3$s</string>
+    <string name="photo_transfer_done">Guardadas %1$d en la galería</string>
+    <string name="photo_transfer_done_failed">Guardadas %1$d · %2$d fallaron</string>
+    <string name="photo_transfer_raw_badge">RAW</string>
 </resources>

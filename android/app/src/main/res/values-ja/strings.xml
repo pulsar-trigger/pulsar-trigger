@@ -1052,4 +1052,19 @@
     <string name="gatt_explorer_last_notify">最後の通知: %1$s</string>
     <string name="gatt_explorer_write_hex_label">バイト（16進数）</string>
     <string name="gatt_explorer_write_response_label">WRITE を使用（応答あり）</string>
+    <!-- Photo transfer gallery -->
+    <string name="photo_transfer_title">写真を転送</string>
+    <string name="photo_transfer_help">カメラのカードの写真をプレビューし、選択した（またはすべての）写真を電話のギャラリー（Pictures/Pulsar）にコピーします。USB、Wi-Fi PTP、Canon Wi-Fi 接続で利用できます。</string>
+    <string name="photo_transfer_loading">カードを読み込み中…</string>
+    <string name="photo_transfer_empty">カメラに写真がありません</string>
+    <string name="photo_transfer_error">カメラのカードを読み取れませんでした</string>
+    <string name="photo_transfer_unavailable">写真を転送するには、USB、Wi-Fi PTP、または Canon Wi-Fi のカメラを接続してください。</string>
+    <string name="photo_transfer_select_all">すべて選択</string>
+    <string name="photo_transfer_clear">クリア</string>
+    <string name="photo_transfer_transfer_all">すべて転送</string>
+    <string name="photo_transfer_transfer_selected">%1$d 件を転送</string>
+    <string name="photo_transfer_progress">%1$d / %2$d · %3$s</string>
+    <string name="photo_transfer_done">%1$d 件をギャラリーに保存しました</string>
+    <string name="photo_transfer_done_failed">%1$d 件保存 · %2$d 件失敗</string>
+    <string name="photo_transfer_raw_badge">RAW</string>
 </resources>

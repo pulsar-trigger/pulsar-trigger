@@ -1141,4 +1141,19 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <string name="warning_interval_too_short">Interval below 1 s — your camera may not have time to write the frame</string>
     <string name="status_hold_to_start">Hold to start</string>
     <string name="warning_battery_low">Battery low (%1$d%%) — may not finish the sequence</string>
+    <!-- Photo transfer gallery -->
+    <string name="photo_transfer_title">Transfer photos</string>
+    <string name="photo_transfer_help">Preview the camera\'s card and copy selected (or all) photos to your phone\'s gallery under Pictures/Pulsar. Available on USB, Wi-Fi PTP and Canon Wi-Fi connections.</string>
+    <string name="photo_transfer_loading">Reading the card…</string>
+    <string name="photo_transfer_empty">No photos on the camera</string>
+    <string name="photo_transfer_error">Couldn\'t read the camera\'s card</string>
+    <string name="photo_transfer_unavailable">Connect a USB, Wi-Fi PTP or Canon Wi-Fi camera to transfer photos.</string>
+    <string name="photo_transfer_select_all">Select all</string>
+    <string name="photo_transfer_clear">Clear</string>
+    <string name="photo_transfer_transfer_all">Transfer all</string>
+    <string name="photo_transfer_transfer_selected">Transfer %1$d</string>
+    <string name="photo_transfer_progress">%1$d / %2$d · %3$s</string>
+    <string name="photo_transfer_done">Saved %1$d to the gallery</string>
+    <string name="photo_transfer_done_failed">Saved %1$d · %2$d failed</string>
+    <string name="photo_transfer_raw_badge">RAW</string>
 </resources>

@@ -1046,4 +1046,19 @@
     <string name="gatt_explorer_last_notify">最后通知：%1$s</string>
     <string name="gatt_explorer_write_hex_label">字节（十六进制）</string>
     <string name="gatt_explorer_write_response_label">使用 WRITE（带响应）</string>
+    <!-- Photo transfer gallery -->
+    <string name="photo_transfer_title">传输照片</string>
+    <string name="photo_transfer_help">预览相机存储卡中的照片，并将所选（或全部）照片复制到手机图库的 Pictures/Pulsar 下。支持 USB、Wi-Fi PTP 和 Canon Wi-Fi 连接。</string>
+    <string name="photo_transfer_loading">正在读取存储卡…</string>
+    <string name="photo_transfer_empty">相机中没有照片</string>
+    <string name="photo_transfer_error">无法读取相机存储卡</string>
+    <string name="photo_transfer_unavailable">请连接 USB、Wi-Fi PTP 或 Canon Wi-Fi 相机以传输照片。</string>
+    <string name="photo_transfer_select_all">全选</string>
+    <string name="photo_transfer_clear">清除</string>
+    <string name="photo_transfer_transfer_all">全部传输</string>
+    <string name="photo_transfer_transfer_selected">传输 %1$d</string>
+    <string name="photo_transfer_progress">%1$d / %2$d · %3$s</string>
+    <string name="photo_transfer_done">已保存 %1$d 张到图库</string>
+    <string name="photo_transfer_done_failed">已保存 %1$d 张 · %2$d 张失败</string>
+    <string name="photo_transfer_raw_badge">RAW</string>
 </resources>
