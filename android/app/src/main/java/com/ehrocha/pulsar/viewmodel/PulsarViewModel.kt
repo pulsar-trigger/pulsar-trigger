@@ -587,9 +587,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             viewModelScope.launch { transport.release() }
             _ptpIpTransport.value = null
         }
-        if (!bleController.connected.value && !_simulatorActive.value &&
-            _canonCcapiTransport.value == null && _ptpTransport.value == null &&
-            _canonBleTransport.value == null) {
+        if (noTransportActive()) {
             _connected.value = false
             _status.value = null
         }
@@ -753,7 +751,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         Log.i(TAG, "USB camera reappeared mid-flow — reopen()-ing in place")
                         viewModelScope.launch { attemptPtpReopen(active, match) }
                     }
-                } else if (active == null && want != null && idleAcrossOtherTransports()) {
+                } else if (active == null && want != null && noTransportActive()) {
                     val match = attached.firstOrNull {
                         it.vendorId == want.first && it.productId == want.second
                     }
@@ -770,14 +768,24 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     // PulsarViewModel. Keeps the per-transport reopen logic next to the
     // PtpTransport class it operates on.
 
-    /** True iff no other transport is currently in use — gates auto-reconnect
-     *  so we don't snatch the user away from a deliberate BLE / CCAPI /
-     *  simulator session. */
-    private fun idleAcrossOtherTransports(): Boolean =
-        _canonCcapiTransport.value == null &&
+    /** True iff *no* transport is currently in use — no Pulsar-BLE link, no
+     *  simulator, and none of the four camera transports (CCAPI / USB-PTP /
+     *  Canon-BLE / PTP-IP). Single source of truth for two questions that were
+     *  previously open-coded at ~7 sites and kept missing newly-added
+     *  transports (audit 2026-06-18 M1 — PTP/IP, the 5th, was absent
+     *  everywhere; USB-PTP from the auto-reconnect gate too):
+     *   - a `disconnectX` deciding whether it was the *last* transport down, so
+     *     it should release the shared `_connected` / `_status` state; and
+     *   - an auto-reconnect collector deciding it's safe to re-dial without
+     *     snatching the user away from a deliberate session.
+     *  Add any future transport here once and every caller stays correct. */
+    private fun noTransportActive(): Boolean =
+        !bleController.connected.value &&
+            !_simulatorActive.value &&
+            _canonCcapiTransport.value == null &&
+            _ptpTransport.value == null &&
             _canonBleTransport.value == null &&
-            !bleController.connected.value &&
-            !_simulatorActive.value
+            _ptpIpTransport.value == null
 
     /** Per-UDN digest credentials. Each entry lets the next connect to the
      *  same camera skip the auth prompt entirely. */
@@ -1045,9 +1053,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 // Phone-driven transports (CCAPI / PTP / Canon BLE) take
                 // priority — don't let an ESP32 BLE state change kick the
                 // user out of an active phone-driven camera session.
-                if (_canonCcapiTransport.value != null ||
-                    _ptpTransport.value != null ||
-                    _canonBleTransport.value != null) return@collect
+                if (activeCameraTransport() != null) return@collect
                 _connected.value = it
                 if (it) {
                     sendAutoOff()
@@ -1067,8 +1073,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
         viewModelScope.launch {
             bleController.status.collect {
-                if (!_simulatorActive.value && _canonCcapiTransport.value == null &&
-                    _ptpTransport.value == null && _canonBleTransport.value == null) {
+                if (!_simulatorActive.value && activeCameraTransport() == null) {
                     _status.value = it
                 }
             }
@@ -1556,8 +1561,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         _canonCcapiReconnecting.value = false
         viewModelScope.launch { transport.release() }
         _canonCcapiTransport.value = null
-        if (!bleController.connected.value && !_simulatorActive.value &&
-            _ptpTransport.value == null) {
+        if (noTransportActive()) {
             _connected.value = false
             _status.value = null
         }
@@ -1671,7 +1675,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 // in-flight (started by onCanonBleLinkDropped) — restarting
                 // with autoConnect=false would churn the connect attempt.
                 if (_canonBleConnecting.value) return@collect
-                if (!idleAcrossOtherTransports()) return@collect
+                if (!noTransportActive()) return@collect
                 val match = cameras.firstOrNull { it.address == want } ?: return@collect
                 Log.i(TAG, "Canon BLE re-advertise from $want — auto-reconnecting")
                 connectCanonBle(match, auto = true)
@@ -1826,8 +1830,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             lastCanonBleDevice = null
             _canonBleReconnecting.value = false
         }
-        if (!bleController.connected.value && !_simulatorActive.value &&
-            _canonCcapiTransport.value == null && _ptpTransport.value == null) {
+        if (noTransportActive()) {
             _connected.value = false
             _status.value = null
         }
@@ -1845,8 +1848,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             lastPtpAutoReconnect = null
             _ptpReconnecting.value = false
         }
-        if (!bleController.connected.value && !_simulatorActive.value &&
-            _canonCcapiTransport.value == null) {
+        if (noTransportActive()) {
             _connected.value = false
             _status.value = null
         }
@@ -2404,8 +2406,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         // Hand the BLE stop off immediately (don't wait on cancellation) so
         // the firmware halts ASAP; then await the flow's own finally to settle
         // _flowRunning / _flowCurrentStep before we stomp _status.
-        if (!_simulatorActive.value && _canonCcapiTransport.value == null &&
-            _ptpTransport.value == null && _canonBleTransport.value == null) {
+        if (!_simulatorActive.value && activeCameraTransport() == null) {
             bleController.sendCommand(CommandBuilder.stop())
         }
         viewModelScope.launch {
