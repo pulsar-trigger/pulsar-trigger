@@ -9,13 +9,11 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -100,7 +98,7 @@ internal fun SkyDial(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1.12f),
+                    .aspectRatio(1.2f),
             ) {
                 val trackColor = scheme.onSurface.copy(alpha = 0.10f)
                 val dimQuality = scheme.onSurfaceVariant.copy(alpha = 0.40f)
@@ -108,7 +106,7 @@ internal fun SkyDial(
                 val moonColor = pc.caution
                 val coreColor = pc.trail
 
-                Canvas(modifier = Modifier.fillMaxWidth().aspectRatio(1.12f)) {
+                Canvas(modifier = Modifier.fillMaxWidth().aspectRatio(1.2f)) {
                     val cx = size.width / 2f
                     val cy = size.height / 2f
                     val pad = 18.dp.toPx()
@@ -264,91 +262,96 @@ internal fun SkyDial(
                     // repeat it here.)
                 }
 
-                // ── Dusk / dawn — centred in the bottom gap. ──────────────
-                Row(
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                // ── Bottom: dusk/dawn, then the four readout complications in
+                // a single finger-friendly row (Moon · Sky · Light · Targets) —
+                // all tap targets gathered at the thumb-reachable base. ──────
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    state.sun?.sunset?.let { DialEndCaption(stringResource(R.string.sky_dial_dusk), formatTime(it)) }
-                    state.sun?.sunrise?.let { DialEndCaption(stringResource(R.string.sky_dial_dawn), formatTime(it)) }
-                }
-
-                // ── Wear-OS-style complications at the four corners: the
-                // domain readouts, each tappable to its page (they replace the
-                // row that used to sit below the dial). ─────────────────────
-                if (onOpenPage != null) {
-                    // Each figure is tinted by its quality — the per-domain
-                    // green/amber/red verdict the old Summary chips carried,
-                    // now right on the dial face.
-                    val onSurf = scheme.onSurface
-                    val moonTint = state.moon?.let {
-                        when {
-                            it.illuminationPct <= 25 -> pc.positive
-                            it.illuminationPct <= 55 -> pc.caution
-                            else -> pc.negative
+                    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        state.sun?.sunset?.let { DialEndCaption(stringResource(R.string.sky_dial_dusk), formatTime(it)) }
+                        state.sun?.sunrise?.let { DialEndCaption(stringResource(R.string.sky_dial_dawn), formatTime(it)) }
+                    }
+                    if (onOpenPage != null) {
+                        // Each figure tinted by its quality — the per-domain
+                        // green/amber/red verdict, on the dial face.
+                        val onSurf = scheme.onSurface
+                        val moonTint = state.moon?.let {
+                            when {
+                                it.illuminationPct <= 25 -> pc.positive
+                                it.illuminationPct <= 55 -> pc.caution
+                                else -> pc.negative
+                            }
+                        } ?: onSurf
+                        val lightTint = state.bortle?.let {
+                            when (it.bortleClass.toInt()) {
+                                in 1..4 -> pc.positive
+                                in 5..6 -> pc.caution
+                                else -> pc.negative
+                            }
+                        } ?: onSurf
+                        val skyTint = state.weather?.let {
+                            when {
+                                it.cloudCoverPct <= 25 -> pc.positive
+                                it.cloudCoverPct <= 60 -> pc.caution
+                                else -> pc.negative
+                            }
+                        } ?: onSurf
+                        val targetsTint =
+                            if (state.planets.size + state.bestWindows.size > 0) pc.positive
+                            else scheme.onSurfaceVariant
+                        Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp)) {
+                            DialComplication(
+                                Modifier.weight(1f),
+                                stringResource(R.string.dash_moon),
+                                state.moon?.let { "${it.emoji} ${it.illuminationPct.toInt()}%" } ?: "—",
+                                moonTint,
+                            ) { onOpenPage(DashPage.MOON) }
+                            DialComplication(
+                                Modifier.weight(1f),
+                                stringResource(R.string.dash_sky),
+                                state.weather?.let { "${it.cloudCoverPct}%" } ?: "—",
+                                skyTint,
+                            ) { onOpenPage(DashPage.SKY) }
+                            DialComplication(
+                                Modifier.weight(1f),
+                                stringResource(R.string.dash_light),
+                                state.bortle?.let { "B${it.bortleClass.toInt()}" } ?: "—",
+                                lightTint,
+                            ) { onOpenPage(DashPage.LIGHT) }
+                            DialComplication(
+                                Modifier.weight(1f),
+                                stringResource(R.string.dash_targets),
+                                (state.planets.size + state.bestWindows.size).let { if (it > 0) it.toString() else "—" },
+                                targetsTint,
+                            ) { onOpenPage(DashPage.TARGETS) }
                         }
-                    } ?: onSurf
-                    val lightTint = state.bortle?.let {
-                        when (it.bortleClass.toInt()) {
-                            in 1..4 -> pc.positive
-                            in 5..6 -> pc.caution
-                            else -> pc.negative
-                        }
-                    } ?: onSurf
-                    val skyTint = state.weather?.let {
-                        when {
-                            it.cloudCoverPct <= 25 -> pc.positive
-                            it.cloudCoverPct <= 60 -> pc.caution
-                            else -> pc.negative
-                        }
-                    } ?: onSurf
-                    val targetsTint =
-                        if (state.planets.size + state.bestWindows.size > 0) pc.positive
-                        else scheme.onSurfaceVariant
-                    DialComplication(
-                        stringResource(R.string.dash_moon),
-                        state.moon?.let { "${it.emoji} ${it.illuminationPct.toInt()}%" } ?: "—",
-                        Alignment.TopStart, moonTint,
-                    ) { onOpenPage(DashPage.MOON) }
-                    DialComplication(
-                        stringResource(R.string.dash_targets),
-                        (state.planets.size + state.bestWindows.size).let { if (it > 0) it.toString() else "—" },
-                        Alignment.TopEnd, targetsTint,
-                    ) { onOpenPage(DashPage.TARGETS) }
-                    DialComplication(
-                        stringResource(R.string.dash_sky),
-                        state.weather?.let { "${it.cloudCoverPct}%" } ?: "—",
-                        Alignment.BottomStart, skyTint,
-                    ) { onOpenPage(DashPage.SKY) }
-                    DialComplication(
-                        stringResource(R.string.dash_light),
-                        state.bortle?.let { "B${it.bortleClass.toInt()}" } ?: "—",
-                        Alignment.BottomEnd, lightTint,
-                    ) { onOpenPage(DashPage.LIGHT) }
+                    }
                 }
             }
         }
     }
 }
 
-/** A corner complication: tiny label + figure, tappable to its page. */
+/** A readout complication: tiny label + figure, tappable to its page.
+ *  Weighted into the finger-friendly bottom row via [modifier]. */
 @Composable
-private fun BoxScope.DialComplication(
+private fun DialComplication(
+    modifier: Modifier,
     label: String,
     value: String,
-    align: Alignment,
     valueColor: Color,
     onClick: () -> Unit,
 ) {
-    val end = align == Alignment.TopEnd || align == Alignment.BottomEnd
     Column(
-        modifier = Modifier
-            .align(align)
-            .widthIn(max = 84.dp)
+        modifier = modifier
             .clip(RoundedCornerShape(10.dp))
             .clickable { onClick() }
-            .padding(horizontal = 6.dp, vertical = 4.dp),
-        horizontalAlignment = if (end) Alignment.End else Alignment.Start,
+            .padding(horizontal = 4.dp, vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             label.uppercase(),

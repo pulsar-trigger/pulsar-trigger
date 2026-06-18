@@ -432,7 +432,7 @@
     <string name="sky_dial_help_title">Lire le cadran</string>
     <string name="sky_dial_help_body">Le cadran représente la nuit, dessinée comme une horloge : il part du crépuscule, en bas à gauche, monte par le haut — obscurité maximale vers minuit — et redescend vers l\'aube, en bas à droite.
 
-L\'arc s\'illumine selon la qualité pour photographier au fil de la nuit : plus c\'est lumineux, mieux c\'est (ciel sombre × dégagé × pas de lune brillante × pas de pluie). La portion violet-rose vive est la meilleure fenêtre de la nuit, aussi nommée au centre.
+L\'arc s\'illumine du vert pâle au vert vif selon la qualité au fil de la nuit : plus c\'est vert, mieux c\'est (ciel sombre × dégagé × pas de lune brillante × pas de pluie). La portion magenta-rose est la meilleure fenêtre de la nuit, aussi nommée au centre.
 
 L\'anneau extérieur s\'allume tant que la Lune est au-dessus de l\'horizon — plus c\'est lumineux, plus il y a de clarté lunaire à combattre. L\'anneau intérieur indique quand le cœur de la Voie lactée est levé.
 

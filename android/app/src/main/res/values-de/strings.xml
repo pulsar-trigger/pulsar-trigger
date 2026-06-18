@@ -432,7 +432,7 @@
     <string name="sky_dial_help_title">Das Zifferblatt lesen</string>
     <string name="sky_dial_help_body">Das Zifferblatt ist die heutige Nacht, als Uhr gezeichnet: es verläuft von der Abenddämmerung unten links, oben herum — tiefste Dunkelheit gegen Mitternacht — und hinunter zur Morgendämmerung unten rechts.
 
-Der Bogen leuchtet je nach Aufnahmequalität durch die Nacht: heller ist besser (dunkler Himmel × klar × kein heller Mond × kein Regen). Der leuchtend violett-rosa Abschnitt ist das beste Fenster der Nacht, auch in der Mitte benannt.
+Der Bogen leuchtet je nach Aufnahmequalität von blassem zu kräftigem Grün durch die Nacht — je grüner, desto besser (dunkler Himmel × klar × kein heller Mond × kein Regen). Der magenta-rosa Abschnitt ist das beste Fenster der Nacht, auch in der Mitte benannt.
 
 Der äußere Ring leuchtet, solange der Mond über dem Horizont steht — heller bedeutet mehr Mondlicht. Der innere Ring markiert, wann das Zentrum der Milchstraße aufgegangen ist.
 
