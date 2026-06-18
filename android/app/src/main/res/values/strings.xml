@@ -474,11 +474,8 @@
     <string name="gatt_explorer_connect_body">Make sure the camera is in any of its BLE pairing modes (Connect to smartphone, or Remote). Pulsar will list everything advertising — pick your camera by name.</string>
     <string name="gatt_explorer_tree_title">Service / characteristic tree</string>
     <string name="gatt_explorer_tree_body">Tap a characteristic to read, subscribe to notifications, or send arbitrary bytes to it.</string>
-    <string name="gatt_explorer_char_actions_title">Characteristic actions</string>
-    <string name="gatt_explorer_char_actions_body">Read returns the current value; Subscribe streams notify/indicate events; Write sends the bytes you type (hex). All actions are timestamped and logged.</string>
     <string name="gatt_explorer_share_title">Share the report</string>
     <string name="gatt_explorer_share_body">The capture includes the service tree + every interaction you ran. Send it as a PR or issue attachment to grow the body matrix.</string>
-    <string name="gatt_explorer_continue_stub">Continue (stub)</string>
     <string name="gatt_explorer_share_now">Share findings</string>
     <string name="gatt_explorer_back_to_tree">Back to tree</string>
     <string name="gatt_explorer_no_bonded">No bonded BLE devices found. Pair your camera in Android Settings → Bluetooth first, then come back.</string>
