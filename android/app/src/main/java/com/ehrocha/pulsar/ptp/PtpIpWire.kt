@@ -160,9 +160,9 @@ class PtpIpWire private constructor(
     }
 
     private fun recvPacket(): Pair<Int, ByteArray> {
-        val length = readU32LE(cmdIn)
+        val length = readU32LE(cmdIn).toLong() and 0xFFFFFFFFL
         val ptype = readU32LE(cmdIn)
-        val bodyLen = length - 8
+        val bodyLen = ptpReceiveBodyLength(length, 8, "recv-packet")
         val body = if (bodyLen > 0) {
             val out = ByteArray(bodyLen)
             cmdIn.readFully(out)
@@ -302,9 +302,9 @@ class PtpIpWire private constructor(
 
         private fun recvPacketRaw(sock: Socket): Pair<Int, ByteArray> {
             val input = DataInputStream(sock.getInputStream())
-            val length = readU32LE(input)
+            val length = readU32LE(input).toLong() and 0xFFFFFFFFL
             val ptype = readU32LE(input)
-            val bodyLen = length - 8
+            val bodyLen = ptpReceiveBodyLength(length, 8, "recv-packet")
             val body = if (bodyLen > 0) {
                 val b = ByteArray(bodyLen)
                 input.readFully(b)

@@ -102,7 +102,7 @@ class BulkPtpWire(
                 "transaction id mismatch: expected $expectedTxId, got $txId",
             )
         }
-        val out = ByteArray(declared - 12)
+        val out = ByteArray(ptpReceiveBodyLength(declared.toLong() and 0xFFFFFFFFL, 12, "recv-data"))
         val available = (firstLen - 12).coerceAtMost(out.size)
         System.arraycopy(first, 12, out, 0, available)
         var copied = available

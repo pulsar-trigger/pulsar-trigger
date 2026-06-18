@@ -53,3 +53,25 @@ class PtpProtocolException(
     val stage: String,
     msg: String,
 ) : Exception("[$stage] $msg")
+
+/** Upper bound (bytes) on a single PTP data-phase payload that a wire will
+ *  allocate a receive buffer for. Generous versus anything Pulsar actually
+ *  reads — DeviceInfo is a few KB; the largest read is a live-view JPEG, well
+ *  under a couple of MB — but bounded so a malformed or hostile
+ *  device-declared length can't drive an out-of-memory crash. */
+internal const val MAX_PTP_DATA_BYTES: Long = 16L * 1024 * 1024  // 16 MB
+
+/** Validate a device-declared container/packet length and return the payload
+ *  size (declared minus [headerBytes]) to allocate. The declared value is
+ *  attacker-controllable on PTP/IP — any host on the LAN we dial, and it's
+ *  read during the handshake *before* the camera's confirm prompt — so reject
+ *  anything that would under- or over-allocate rather than handing it straight
+ *  to `ByteArray(...)`. [rawLength] is the unsigned 32-bit wire length; pass it
+ *  as a Long so a high-bit value doesn't read back negative. */
+internal fun ptpReceiveBodyLength(rawLength: Long, headerBytes: Int, stage: String): Int {
+    val body = rawLength - headerBytes
+    if (body < 0 || body > MAX_PTP_DATA_BYTES) {
+        throw PtpProtocolException(stage, "declared length out of range: $rawLength")
+    }
+    return body.toInt()
+}
