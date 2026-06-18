@@ -5,12 +5,12 @@
     android:orientation="vertical"
     android:gravity="center"
     android:padding="12dp"
-    android:background="@android:color/system_neutral1_900">
+    android:background="@color/background_dark">
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Pulsar — Astro dashboard"
+        android:text="@string/widget_empty_state_title"
         android:textColor="@android:color/white"
         android:textStyle="bold"
         android:textSize="15sp" />
@@ -19,7 +19,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:text="Loading…"
+        android:text="@string/widget_loading"
         android:textColor="@android:color/darker_gray"
         android:textSize="13sp" />
 </LinearLayout>

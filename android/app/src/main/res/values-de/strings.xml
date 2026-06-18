@@ -107,6 +107,7 @@
     <string name="widget_dashboard_description">Mond, Sonne, Dämmerung, Wetter und heutige Fotofenster auf einen Blick.</string>
     <string name="widget_empty_state">Öffne die App, um das Widget zu befüllen</string>
     <string name="widget_empty_state_title">Pulsar — Astro-Dashboard</string>
+    <string name="widget_loading">Wird geladen…</string>
     <string name="widget_updated_prefix">Aktualisiert</string>
     <string name="widget_stale_prefix">Veraltet ·</string>
     <string name="widget_refresh_content_description">Aktualisieren</string>
