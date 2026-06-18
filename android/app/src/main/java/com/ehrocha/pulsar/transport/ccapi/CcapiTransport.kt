@@ -6,6 +6,7 @@
 package com.ehrocha.pulsar.transport.ccapi
 
 import android.util.Log
+import com.ehrocha.pulsar.transport.CameraImage
 import com.ehrocha.pulsar.transport.CameraTransport
 import com.ehrocha.pulsar.transport.TransportKind
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +35,9 @@ class CcapiTransport(
         private const val PATH_SHOOTING_MODE = "/shooting/settings/shootingmode"
         private const val PATH_DIAL_IGNORE = "/shooting/control/ignoreshootingmodedialmode"
         private const val PATH_POLL = "/event/polling"
+        private const val PATH_CONTENTS = "/contents"
+        /** Canon pages content listings at 100 entries; a short page is last. */
+        private const val CONTENTS_PAGE_SIZE = 100
         private const val PATH_LIVEVIEW = "/shooting/liveview"
         private const val PATH_LIVEVIEW_FLIP = "/shooting/liveview/flip"
         private const val PATH_DRIVE_FOCUS = "/shooting/control/drivefocus"
@@ -396,5 +400,51 @@ class CcapiTransport(
         logResult("PUT $path=$value", r)
         return r is CcapiClient.Result.Ok
     }
+
+    // ── Photo transfer ──────────────────────────────────────────────────
+    // Walk the contents tree (storages → directories → paginated file lists),
+    // keeping still images. Thumbnails via ?kind=thumbnail, full files
+    // streamed via ?kind=main. CCAPI lists oldest-first, so reverse for the
+    // newest-first gallery.
+    override val supportsContentTransfer: Boolean = true
+
+    override suspend fun listContents(): List<CameraImage> {
+        val out = mutableListOf<CameraImage>()
+        for (storage in client.getContentPaths(PATH_CONTENTS)) {
+            for (dir in client.getContentPaths(storage)) {
+                var page = 1
+                while (true) {
+                    val files = client.getContentPaths("$dir?kind=list&page=$page")
+                    if (files.isEmpty()) break
+                    for (f in files) {
+                        val name = f.substringAfterLast('/').substringBefore('?')
+                        if (CameraImage.isImageName(name)) {
+                            out += CameraImage(
+                                id = f,
+                                fileName = name,
+                                byteSize = 0L,           // CCAPI list omits size; fetched lazily if needed
+                                isRaw = CameraImage.isRawName(name),
+                            )
+                        }
+                    }
+                    if (files.size < CONTENTS_PAGE_SIZE) break
+                    page++
+                }
+            }
+        }
+        return out.asReversed()
+    }
+
+    override suspend fun getThumbnail(image: CameraImage): ByteArray? =
+        when (val r = client.getContentBytes(image.id, "?kind=thumbnail")) {
+            is CcapiClient.Result.Ok -> r.value
+            else -> null
+        }
+
+    override suspend fun downloadImage(
+        image: CameraImage,
+        sink: java.io.OutputStream,
+        onProgress: (Long, Long) -> Unit,
+    ): Boolean = client.streamContent(image.id, "?kind=main", sink, onProgress)
 }
 

@@ -41,6 +41,9 @@ class CcapiClient(
         private const val TAG = "CcapiClient"
         private const val CONNECT_TIMEOUT_MS = 3_000
         private const val READ_TIMEOUT_MS = 5_000
+        /** Per-read timeout while streaming a full image off the card — a
+         *  multi-MB JPEG/RAW over Wi-Fi can pause between chunks. */
+        private const val DOWNLOAD_READ_TIMEOUT_MS = 30_000
         /** Versions in descending preference. */
         private val PREFERRED_VERSIONS = listOf(
             "ver140", "ver130", "ver120", "ver110", "ver100",
@@ -65,6 +68,11 @@ class CcapiClient(
         private set
 
     private val rootUrl: String = baseAccessUrl.trimEnd('/')
+
+    /** Scheme + host + port, i.e. [rootUrl] without the trailing `/ccapi`.
+     *  Content listings return paths that already include `/ccapi/<ver>/…`,
+     *  so they're resolved against this origin, not [rootUrl]. */
+    private val origin: String = rootUrl.substringBefore("/ccapi")
 
     /** Cached digest challenge; populated on first 401 so subsequent requests
      *  can pre-authenticate. */
@@ -153,6 +161,123 @@ class CcapiClient(
                 IllegalStateException("CcapiClient not connected; call connect() first"))
             sendBytesWithDigest("$rootUrl/$ver$path", timeoutMs)
         }
+
+    // ── Contents (photo-transfer gallery) ───────────────────────────────
+    // Canon's contents tree: GET /contents → storages → directories →
+    // paginated file lists, each returning a JSON `{"path":[ "<url>", … ]}`.
+    // A file is fetched with ?kind=thumbnail / ?kind=main. Entries come back
+    // as absolute /ccapi paths, resolved against [origin].
+
+    /** Resolve a content path (absolute URL or `/ccapi/…` path) to a full URL. */
+    private fun absolutize(pathOrUrl: String): String =
+        if (pathOrUrl.startsWith("http")) pathOrUrl else origin + pathOrUrl
+
+    /** GET a contents endpoint and return the string entries of its `path`
+     *  array (storages, directories, or files depending on the level).
+     *  Empty on any failure / non-array body. */
+    suspend fun getContentPaths(pathOrUrl: String): List<String> =
+        withContext(Dispatchers.IO) {
+            when (val r = rawGet(absolutize(pathOrUrl))) {
+                is Result.Ok -> runCatching {
+                    val arr = JSONObject(r.value).optJSONArray("path") ?: JSONArray()
+                    (0 until arr.length()).mapNotNull {
+                        arr.optString(it).takeIf { s -> s.isNotBlank() }
+                    }
+                }.getOrDefault(emptyList())
+                else -> emptyList()
+            }
+        }
+
+    /** GET the bytes of a content (e.g. `?kind=thumbnail`). */
+    suspend fun getContentBytes(pathOrUrl: String, query: String = ""): Result<ByteArray> =
+        withContext(Dispatchers.IO) {
+            sendBytesWithDigest(absolutize(pathOrUrl) + query, READ_TIMEOUT_MS)
+        }
+
+    /** Stream a content (e.g. `?kind=main`) to [sink], reporting
+     *  `(bytesWritten, totalBytes)`. Returns true on a 2xx that streamed
+     *  cleanly. Never buffers the file. */
+    suspend fun streamContent(
+        pathOrUrl: String,
+        query: String,
+        sink: java.io.OutputStream,
+        onProgress: (Long, Long) -> Unit,
+    ): Boolean = withContext(Dispatchers.IO) {
+        streamWithDigest(absolutize(pathOrUrl) + query, sink, onProgress)
+    }
+
+    private enum class StreamResult { OK, NEEDS_AUTH, FAILED }
+
+    /** One-or-two attempt streaming GET, mirroring [sendWithDigest]'s digest
+     *  retry: a 401 caches the fresh challenge and the request is reissued
+     *  once with the computed Authorization. The sink is only written on a
+     *  2xx, so a 401 can't corrupt a partial file. */
+    private fun streamWithDigest(
+        url: String,
+        sink: java.io.OutputStream,
+        onProgress: (Long, Long) -> Unit,
+    ): Boolean = when (streamOnce(url, authHeader("GET", url), sink, onProgress)) {
+        StreamResult.OK -> true
+        StreamResult.FAILED -> false
+        StreamResult.NEEDS_AUTH ->
+            credentials != null &&
+                streamOnce(url, authHeader("GET", url), sink, onProgress) == StreamResult.OK
+    }
+
+    private fun streamOnce(
+        url: String,
+        authorization: String?,
+        sink: java.io.OutputStream,
+        onProgress: (Long, Long) -> Unit,
+    ): StreamResult {
+        val conn = try {
+            (URL(url).openConnection() as HttpURLConnection).apply {
+                connectTimeout = CONNECT_TIMEOUT_MS
+                readTimeout = DOWNLOAD_READ_TIMEOUT_MS
+                requestMethod = "GET"
+                doInput = true
+                if (authorization != null) setRequestProperty("Authorization", authorization)
+            }
+        } catch (e: Exception) {
+            return StreamResult.FAILED
+        }
+        return try {
+            val code = conn.responseCode
+            when {
+                code == 401 -> {
+                    conn.getHeaderField("WWW-Authenticate")?.let { parseDigestChallenge(it) }?.let {
+                        digestChallenge = it
+                        digestNonceCount = 0
+                    }
+                    StreamResult.NEEDS_AUTH
+                }
+                code in 200..299 -> {
+                    val total = conn.contentLengthLong.coerceAtLeast(0)
+                    conn.inputStream.use { input ->
+                        val buf = ByteArray(64 * 1024)
+                        var written = 0L
+                        while (true) {
+                            val n = input.read(buf)
+                            if (n < 0) break
+                            sink.write(buf, 0, n)
+                            written += n
+                            onProgress(written, total)
+                        }
+                    }
+                    StreamResult.OK
+                }
+                else -> {
+                    Log.w(TAG, "stream HTTP $code from $url")
+                    StreamResult.FAILED
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "stream failed: ${e.message}")
+            StreamResult.FAILED
+        } finally {
+            try { conn.disconnect() } catch (_: Exception) {}
+        }
+    }
 
     private fun rawGet(url: String): Result<String> = sendWithDigest("GET", url, null)
 
