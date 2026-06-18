@@ -231,7 +231,6 @@
     <string name="widget_updated_prefix">Updated</string>
     <string name="widget_stale_prefix">Stale ·</string>
     <string name="widget_refresh_content_description">Refresh</string>
-    <string name="widget_verdict_sun">Sun</string>
 
     <!-- Intervalometer 2 -->
     <string name="iv2_tab_interval">Interval</string>
@@ -647,7 +646,6 @@
     <string name="sky_dial_poor">Poor</string>
     <string name="sky_dial_dusk">Dusk</string>
     <string name="sky_dial_dawn">Dawn</string>
-    <string name="sky_dial_best_label">Best</string>
     <string name="sky_dial_help_title">Reading the Sky Dial</string>
     <string name="sky_dial_help_body">The dial is tonight, drawn as a clock: it sweeps from dusk at the lower-left, up over the top — deepest dark around midnight — and down to dawn at the lower-right.
 

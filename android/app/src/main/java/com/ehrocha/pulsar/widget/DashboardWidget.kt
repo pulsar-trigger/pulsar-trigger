@@ -25,8 +25,6 @@ import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
-import androidx.glance.appwidget.lazy.LazyColumn
-import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Alignment
@@ -45,24 +43,18 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
-import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.MainActivity
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.astro.AstroDashboardManager
 import com.ehrocha.pulsar.astro.DashboardState
-import com.ehrocha.pulsar.astro.LocationInfo
-import com.ehrocha.pulsar.astro.MoonInfo
 import com.ehrocha.pulsar.astro.NightModel
 import com.ehrocha.pulsar.astro.NightSample
 import com.ehrocha.pulsar.astro.NightVerdict
-import com.ehrocha.pulsar.astro.PhotoWindow
-import com.ehrocha.pulsar.astro.WeatherInfo
 import com.ehrocha.pulsar.astro.buildNightModel
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
-import kotlin.math.abs
 
 // Verdict palette — matches DashboardScreen.kt's VerdictRow exactly.
 // SIGNAL: the widget follows the app's own schemes (Carbon when the
@@ -73,12 +65,6 @@ private val PulsarWidgetColors = androidx.glance.material3.ColorProviders(
     light = com.ehrocha.pulsar.ui.theme.LightColorScheme,
     dark = com.ehrocha.pulsar.ui.theme.DarkColorScheme,
 )
-
-private val VERDICT_GOOD = Color(0xFF2E7D32)
-private val VERDICT_BAD = Color(0xFFE65100)
-private val WINDOW_EXCELLENT = Color(0xFF2E7D32)
-private val WINDOW_GOOD = Color(0xFF558B2F)
-private val WINDOW_FAIR = Color(0xFFF9A825)
 
 // ── Sky Dial widget palette — the live night bar + readouts ──────────────────
 // The dial's arc can't be drawn in Glance (no canvas), so it's reinterpreted
@@ -91,14 +77,18 @@ private val BAR_GOOD = Color(0xFF36D399)     // readout / verdict: good
 private val BAR_AMBER = Color(0xFFF9A825)    // readout / verdict: middling
 private val BAR_BAD = Color(0xFFE65100)      // readout / verdict: poor
 private val BAR_NEUTRAL = Color(0xFF9AA0A6)  // no data
+private val MOON_BAND = Color(0xFFD9B45A)    // moon-up rail (gold), above the bar
+private val MW_BAND = Color(0xFF53D7C9)       // Milky-Way-core rail (teal), below
+private val BAND_TRACK = Color(0x1FFFFFFF)    // faint rail where the body is down
+
+// Segment count shared by the quality bar and the moon/MW rails so they align.
+private const val BAR_SEGMENTS = 24
 
 // Glance's RemoteViews-backed Text path can silently drop fractional sp
 // (e.g. 15.6.sp from `15 * 1.2`), so we round to integer sp before handing
-// the value over. Same for the emoji-column widths in dp.
+// the value over.
 private fun scaledSp(base: Int, scale: Float) =
     (base * scale).toInt().coerceAtLeast(1).sp
-private fun scaledDp(base: Int, scale: Float) =
-    (base * scale).toInt().coerceAtLeast(1).dp
 
 class DashboardWidget : GlanceAppWidget() {
 
@@ -203,7 +193,7 @@ private fun TonightWidget(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(widgetBgWithAlpha(bgAlpha))
-            .padding(14.dp)
+            .padding(horizontal = 12.dp, vertical = 10.dp)
             .clickable(actionStartActivity(openAppIntent(ctx))),
     ) {
         // Header: city + verdict + refresh.
@@ -233,10 +223,16 @@ private fun TonightWidget(
             Spacer(GlanceModifier.width(6.dp))
             RefreshButton()
         }
-        Spacer(GlanceModifier.height(9.dp))
+        Spacer(GlanceModifier.height(6.dp))
 
+        // Moon-up rail (above) · quality bar · Milky-Way-core rail (below) —
+        // the dial's concentric bands, unrolled.
+        BandLine(downsampleFlags(model.samples) { it.moonUp }, MOON_BAND)
+        Spacer(GlanceModifier.height(2.dp))
         NightBar(model)
-        Spacer(GlanceModifier.height(5.dp))
+        Spacer(GlanceModifier.height(2.dp))
+        BandLine(downsampleFlags(model.samples) { it.coreUp }, MW_BAND)
+        Spacer(GlanceModifier.height(4.dp))
 
         // dusk · best window · dawn.
         Row(
@@ -265,7 +261,7 @@ private fun TonightWidget(
                 style = TextStyle(color = GlanceTheme.colors.onSurfaceVariant, fontSize = scaledSp(13, scale)),
             )
         }
-        Spacer(GlanceModifier.height(10.dp))
+        Spacer(GlanceModifier.height(7.dp))
 
         // Four tinted readouts — Moon · Light · Sky · Targets. defaultWeight()
         // is resolved here (in RowScope) and handed to each Readout.
@@ -289,7 +285,7 @@ private fun TonightWidget(
 /** The live night bar: [k] adjacent coloured Boxes, dusk → dawn. */
 @Composable
 private fun NightBar(model: NightModel) {
-    val n = 24
+    val n = BAR_SEGMENTS
     val seg = downsampleQuality(model.samples, n)
     val nowIdx = model.nowFraction?.let { (it * n).toInt().coerceIn(0, n - 1) }
     Row(
@@ -320,6 +316,28 @@ private fun NightBar(model: NightModel) {
                         .background(BAR_NOW),
                 ) {}
             }
+        }
+    }
+}
+
+/** A thin rail above/below the night bar, lit in [color] where the body is up
+ *  (moon / Milky-Way core), faint where it's down. */
+@Composable
+private fun BandLine(flags: List<Boolean>, color: Color) {
+    Row(
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .height(4.dp)
+            .cornerRadius(2.dp),
+    ) {
+        // `for` (not forEach) keeps the RowScope receiver for defaultWeight().
+        for (up in flags) {
+            Box(
+                modifier = GlanceModifier
+                    .defaultWeight()
+                    .fillMaxHeight()
+                    .background(if (up) color else BAND_TRACK),
+            ) {}
         }
     }
 }
@@ -378,198 +396,21 @@ private fun downsampleQuality(samples: List<NightSample>, k: Int): List<Float> {
     }
 }
 
+/** Downsample a per-sample boolean flag to [BAR_SEGMENTS] segments: a segment
+ *  is "up" if the body is up anywhere within it. */
+private fun downsampleFlags(samples: List<NightSample>, flag: (NightSample) -> Boolean): List<Boolean> {
+    val k = BAR_SEGMENTS
+    if (samples.isEmpty()) return List(k) { false }
+    return (0 until k).map { i ->
+        val a = i * samples.size / k
+        val b = (((i + 1) * samples.size / k).coerceAtLeast(a + 1)).coerceAtMost(samples.size)
+        samples.subList(a, b).any(flag)
+    }
+}
+
 /** "2026-06-17T19:27" or "19:27:00" → "19:27". */
 private fun hm(iso: String?): String =
     iso?.let { it.substringAfter("T", it).take(5) } ?: "—"
-
-@Composable
-private fun CardHeader(state: DashboardState, updatedAtMs: Long, scale: Float) {
-    val ctx = androidx.glance.LocalContext.current
-    val stale = isStale(updatedAtMs)
-    Row(
-        modifier = GlanceModifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = GlanceModifier.defaultWeight()) {
-            Text(
-                state.location?.cityName ?: "—",
-                style = TextStyle(
-                    color = GlanceTheme.colors.onSurface,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = scaledSp(19, scale),
-                ),
-                maxLines = 1,
-            )
-            state.location?.let { loc ->
-                Text(
-                    formatCoords(loc),
-                    style = TextStyle(
-                        color = GlanceTheme.colors.onSurfaceVariant,
-                        fontSize = scaledSp(14, scale),
-                    ),
-                    maxLines = 1,
-                )
-            }
-            val prefix = ctx.getString(
-                if (stale) R.string.widget_stale_prefix else R.string.widget_updated_prefix
-            )
-            Text(
-                "$prefix ${formatTime(updatedAtMs)}",
-                style = TextStyle(
-                    color = if (stale) GlanceTheme.colors.error
-                    else GlanceTheme.colors.onSurfaceVariant,
-                    fontSize = scaledSp(13, scale),
-                    fontWeight = if (stale) FontWeight.Medium else FontWeight.Normal,
-                ),
-            )
-        }
-        RefreshButton()
-    }
-}
-
-@Composable
-private fun MoonVerdict(moon: MoonInfo, scale: Float) {
-    val ctx = androidx.glance.LocalContext.current
-    VerdictRow(
-        moon.emoji,
-        ctx.getString(if (moon.goodForAstro) R.string.verdict_moon_good
-                      else R.string.verdict_moon_bright),
-        moon.goodForAstro,
-        scale,
-    )
-}
-
-@Composable
-private fun WeatherVerdict(weather: WeatherInfo, scale: Float) {
-    val ctx = androidx.glance.LocalContext.current
-    val hasRain = weather.precipitationMm > 0.1
-    val good = weather.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD && !hasRain
-    val labelRes = when {
-        hasRain -> R.string.verdict_rain
-        weather.cloudCoverPct <= AppConfig.CLOUD_COVER_CLEAR_THRESHOLD -> R.string.verdict_clear
-        weather.cloudCoverPct <= AppConfig.CLOUD_COVER_PARTLY_THRESHOLD -> R.string.verdict_partly
-        else -> R.string.verdict_cloudy
-    }
-    VerdictRow(weatherEmoji(weather.weatherCode), ctx.getString(labelRes), good, scale)
-}
-
-/** One verdict chip — emoji + label inside a soft-tinted rounded surface.
- *  Green tint for "good" conditions, orange for "bad". Matches
- *  [com.ehrocha.pulsar.ui.screens.DashboardScreen]'s `VerdictRow`. */
-@Composable
-private fun VerdictRow(emoji: String, label: String, good: Boolean, scale: Float) {
-    val accent = if (good) VERDICT_GOOD else VERDICT_BAD
-    val bg = accent.copy(alpha = 0.14f)
-    Row(
-        modifier = GlanceModifier
-            .fillMaxWidth()
-            .padding(vertical = 3.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Row(
-            modifier = GlanceModifier
-                .defaultWeight()
-                .background(bg)
-                .cornerRadius(10.dp)
-                .padding(horizontal = 10.dp, vertical = 7.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(emoji, style = TextStyle(fontSize = scaledSp(17, scale)))
-            Spacer(GlanceModifier.width(6.dp))
-            Text(
-                label,
-                style = TextStyle(
-                    color = ColorProvider(accent),
-                    fontWeight = FontWeight.Medium,
-                    fontSize = scaledSp(15, scale),
-                ),
-            )
-        }
-    }
-}
-
-@Composable
-private fun SectionLabel(text: String, scale: Float) {
-    Text(
-        text,
-        style = TextStyle(
-            color = GlanceTheme.colors.primary,
-            fontWeight = FontWeight.Bold,
-            fontSize = scaledSp(14, scale),
-        ),
-    )
-}
-
-@Composable
-private fun RiseSetRow(emoji: String, times: String, scale: Float) {
-    Row(
-        modifier = GlanceModifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            emoji,
-            style = TextStyle(fontSize = scaledSp(17, scale)),
-            modifier = GlanceModifier.width(scaledDp(28, scale)),
-        )
-        Text(
-            times,
-            style = TextStyle(
-                color = GlanceTheme.colors.onSurfaceVariant,
-                fontSize = scaledSp(15, scale),
-            ),
-        )
-    }
-}
-
-@Composable
-private fun WindowRow(w: PhotoWindow, scale: Float) {
-    val ctx = androidx.glance.LocalContext.current
-    val (chipColor, chipLabelRes) = when (w.rating) {
-        3 -> WINDOW_EXCELLENT to R.string.window_excellent
-        2 -> WINDOW_GOOD to R.string.window_good
-        else -> WINDOW_FAIR to R.string.window_fair
-    }
-    val chipLabel = ctx.getString(chipLabelRes)
-    val chipMark = when (w.rating) { 3 -> "⭐"; 2 -> "👍"; else -> "👌" }
-    Row(
-        modifier = GlanceModifier
-            .fillMaxWidth()
-            .padding(vertical = 3.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            chipMark,
-            style = TextStyle(fontSize = scaledSp(18, scale)),
-            modifier = GlanceModifier.width(scaledDp(30, scale)),
-        )
-        Text(
-            "${w.startTime} – ${w.endTime}",
-            style = TextStyle(
-                color = GlanceTheme.colors.onSurface,
-                fontWeight = FontWeight.Bold,
-                fontSize = scaledSp(15, scale),
-            ),
-            modifier = GlanceModifier.defaultWeight(),
-        )
-        Row(
-            modifier = GlanceModifier
-                .background(chipColor.copy(alpha = 0.17f))
-                .cornerRadius(10.dp)
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-        ) {
-            Text(
-                chipLabel,
-                style = TextStyle(
-                    color = ColorProvider(chipColor),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = scaledSp(13, scale),
-                ),
-            )
-        }
-    }
-}
 
 @Composable
 private fun RefreshButton() {
@@ -586,55 +427,8 @@ private fun RefreshButton() {
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
-private fun buildRiseSetRows(state: DashboardState): List<Pair<String, String>> = buildList {
-    state.sun?.let { sun ->
-        val t = listOfNotNull(
-            sun.sunrise?.let { "↑${stripSeconds(it)}" },
-            sun.sunset?.let { "↓${stripSeconds(it)}" },
-        ).joinToString("  ")
-        if (t.isNotEmpty()) add("☀️" to t)
-    }
-    state.moon?.let { moon ->
-        val t = listOfNotNull(
-            moon.rise?.let { "↑${stripSeconds(it)}" },
-            moon.set?.let { "↓${stripSeconds(it)}" },
-        ).joinToString("  ")
-        if (t.isNotEmpty()) add(moon.emoji to t)
-    }
-    state.milkyWay?.let { mw ->
-        val t = listOfNotNull(
-            mw.coreRise?.let { "↑$it" },
-            mw.coreSet?.let { "↓$it" },
-        ).joinToString("  ")
-        if (t.isNotEmpty()) add("🌌" to t)
-    }
-}
-
-/** Strip seconds off an "HH:mm:ss" timestamp so the row fits in tight widget cells. */
-private fun stripSeconds(s: String): String =
-    if (s.count { it == ':' } >= 2) s.substringBeforeLast(':') else s
-
-private fun formatCoords(loc: LocationInfo): String = String.format(
-    Locale.US, "%.4f° %s, %.4f° %s",
-    abs(loc.latitude), if (loc.latitude >= 0) "N" else "S",
-    abs(loc.longitude), if (loc.longitude >= 0) "E" else "W",
-)
-
 private fun formatTime(epochMs: Long): String {
     if (epochMs <= 0) return "—"
     val t = Instant.ofEpochMilli(epochMs).atZone(ZoneId.systemDefault())
     return DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()).format(t)
-}
-
-/** Map Open-Meteo weather codes to a small set of emoji. Subset of the
- *  in-app mapping — covers the categories the verdict logic uses. */
-private fun weatherEmoji(code: Int): String = when (code) {
-    in 0..1 -> "☀️"
-    in 2..3 -> "⛅"
-    in 45..48 -> "🌫️"
-    in 51..67 -> "🌦️"
-    in 71..77 -> "❄️"
-    in 80..82 -> "🌧️"
-    in 95..99 -> "⛈️"
-    else -> "☁️"
 }

@@ -110,7 +110,6 @@
     <string name="widget_updated_prefix">更新</string>
     <string name="widget_stale_prefix">期限切れ ·</string>
     <string name="widget_refresh_content_description">更新</string>
-    <string name="widget_verdict_sun">太陽</string>
     <string name="section_background">バックグラウンド動作</string>
     <string name="background_help">画面オフでの長時間天体撮影では、Android の Doze モードに制限される場合があります。バックグラウンド動作を許可すると、撮影終了まで Pulsar が確実に動作します。</string>
     <string name="background_status_allowed">バックグラウンド動作: 許可済み</string>
@@ -430,7 +429,6 @@
     <string name="sky_dial_poor">不良</string>
     <string name="sky_dial_dusk">日暮れ</string>
     <string name="sky_dial_dawn">夜明け</string>
-    <string name="sky_dial_best_label">最良</string>
     <string name="sky_dial_help_title">ダイヤルの見方</string>
     <string name="sky_dial_help_body">ダイヤルは今夜を時計のように描いたものです。左下の日暮れから始まり、上を通って — 真夜中ごろが最も暗い — 右下の夜明けへと下りていきます。
 

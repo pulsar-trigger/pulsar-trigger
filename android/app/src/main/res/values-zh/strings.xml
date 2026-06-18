@@ -110,7 +110,6 @@
     <string name="widget_updated_prefix">已更新</string>
     <string name="widget_stale_prefix">过期 ·</string>
     <string name="widget_refresh_content_description">刷新</string>
-    <string name="widget_verdict_sun">太阳</string>
     <string name="section_background">后台运行</string>
     <string name="background_help">关闭屏幕进行长时间天体拍摄时，Android 的 Doze 模式可能限制后台运行。允许后台运行可让 Pulsar 稳定运行至拍摄结束。</string>
     <string name="background_status_allowed">已允许后台运行</string>
@@ -432,7 +431,6 @@
     <string name="sky_dial_poor">较差</string>
     <string name="sky_dial_dusk">黄昏</string>
     <string name="sky_dial_dawn">黎明</string>
-    <string name="sky_dial_best_label">最佳</string>
     <string name="sky_dial_help_title">如何看懂表盘</string>
     <string name="sky_dial_help_body">表盘是今晚的写照，像时钟一样绘制：从左下角的黄昏开始，经由顶部——午夜前后最暗——再下行到右下角的黎明。
 

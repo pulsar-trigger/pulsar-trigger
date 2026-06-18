@@ -155,7 +155,7 @@ internal fun SkyDial(
                             useCenter = false,
                             topLeft = Offset(cx - moonR, cy - moonR),
                             size = Size(moonR * 2, moonR * 2),
-                            style = Stroke(5.dp.toPx(), cap = StrokeCap.Round),
+                            style = Stroke(7.dp.toPx(), cap = StrokeCap.Round),
                         )
                     }
 
@@ -169,7 +169,7 @@ internal fun SkyDial(
                             useCenter = false,
                             topLeft = Offset(cx - coreR, cy - coreR),
                             size = Size(coreR * 2, coreR * 2),
-                            style = Stroke(3.5.dp.toPx(), cap = StrokeCap.Round),
+                            style = Stroke(5.dp.toPx(), cap = StrokeCap.Round),
                         )
                     }
 

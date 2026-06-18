@@ -110,7 +110,6 @@
     <string name="widget_updated_prefix">Aktualisiert</string>
     <string name="widget_stale_prefix">Veraltet ·</string>
     <string name="widget_refresh_content_description">Aktualisieren</string>
-    <string name="widget_verdict_sun">Sonne</string>
     <string name="section_background">Hintergrundaktivität</string>
     <string name="background_help">Lange Astro-Aufnahmen mit ausgeschaltetem Display können durch Androids Doze-Modus gedrosselt werden. Hintergrundaktivität zu erlauben hält Pulsar bis zum Ende der Aufnahme laufend.</string>
     <string name="background_status_allowed">Hintergrundaktivität erlaubt</string>
@@ -430,7 +429,6 @@
     <string name="sky_dial_poor">Schwach</string>
     <string name="sky_dial_dusk">Dämmerung</string>
     <string name="sky_dial_dawn">Morgengrauen</string>
-    <string name="sky_dial_best_label">Beste</string>
     <string name="sky_dial_help_title">Das Zifferblatt lesen</string>
     <string name="sky_dial_help_body">Das Zifferblatt ist die heutige Nacht, als Uhr gezeichnet: es verläuft von der Abenddämmerung unten links, oben herum — tiefste Dunkelheit gegen Mitternacht — und hinunter zur Morgendämmerung unten rechts.
 

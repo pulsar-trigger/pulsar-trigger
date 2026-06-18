@@ -13,7 +13,6 @@ import androidx.compose.foundation.background
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import com.ehrocha.pulsar.ui.theme.Display
-import com.ehrocha.pulsar.ui.theme.Mono
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -992,54 +991,6 @@ private fun dashPageTitle(p: DashPage): Int = when (p) {
     DashPage.SKY -> R.string.dash_sky
     DashPage.TARGETS -> R.string.dash_targets
     DashPage.TIMELINE -> R.string.dash_timeline
-}
-
-/** The four domain tap-tiles under the dial — each a one-figure readout that
- *  opens its secondary page. */
-@Composable
-private fun DashReadoutRow(
-    state: com.ehrocha.pulsar.astro.DashboardState,
-    onOpen: (DashPage) -> Unit,
-) {
-    val moon = state.moon?.let { "${it.emoji} ${it.illuminationPct.toInt()}%" } ?: "—"
-    val light = state.bortle?.let { "B${it.bortleClass.toInt()}" } ?: "—"
-    val sky = state.weather?.let { "${it.cloudCoverPct}%" } ?: "—"
-    val targets = (state.planets.size + state.bestWindows.size)
-        .let { if (it > 0) it.toString() else "—" }
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        ReadoutTile(R.string.dash_moon, moon, Modifier.weight(1f)) { onOpen(DashPage.MOON) }
-        ReadoutTile(R.string.dash_light, light, Modifier.weight(1f)) { onOpen(DashPage.LIGHT) }
-        ReadoutTile(R.string.dash_sky, sky, Modifier.weight(1f)) { onOpen(DashPage.SKY) }
-        ReadoutTile(R.string.dash_targets, targets, Modifier.weight(1f)) { onOpen(DashPage.TARGETS) }
-    }
-}
-
-@Composable
-private fun ReadoutTile(labelRes: Int, value: String, modifier: Modifier, onClick: () -> Unit) {
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = modifier.clickable { onClick() },
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp)) {
-            Text(
-                stringResource(labelRes).uppercase(),
-                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.sp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                value,
-                style = MaterialTheme.typography.titleMedium.copy(fontFamily = Mono),
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-            )
-        }
-    }
 }
 
 // ── Reusable components ──────────────────────────────────────────────────────

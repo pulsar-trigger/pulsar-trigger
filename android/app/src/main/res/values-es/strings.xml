@@ -110,7 +110,6 @@
     <string name="widget_updated_prefix">Actualizado</string>
     <string name="widget_stale_prefix">Obsoleto ·</string>
     <string name="widget_refresh_content_description">Actualizar</string>
-    <string name="widget_verdict_sun">Sol</string>
     <string name="section_background">Actividad en segundo plano</string>
     <string name="background_help">Las sesiones astro largas con la pantalla apagada pueden ser interrumpidas por el modo Doze de Android. Permitir la actividad en segundo plano mantiene Pulsar funcionando hasta el final.</string>
     <string name="background_status_allowed">Actividad en segundo plano permitida</string>
@@ -430,7 +429,6 @@
     <string name="sky_dial_poor">Pobre</string>
     <string name="sky_dial_dusk">Anochecer</string>
     <string name="sky_dial_dawn">Amanecer</string>
-    <string name="sky_dial_best_label">Mejor</string>
     <string name="sky_dial_help_title">Cómo leer el disco</string>
     <string name="sky_dial_help_body">El disco es la noche de hoy, dibujada como un reloj: va desde el anochecer, abajo a la izquierda, subiendo por arriba — máxima oscuridad hacia la medianoche — y bajando hasta el amanecer, abajo a la derecha.
 

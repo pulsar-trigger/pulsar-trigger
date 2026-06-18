@@ -110,7 +110,6 @@
     <string name="widget_updated_prefix">Mis à jour</string>
     <string name="widget_stale_prefix">Périmé ·</string>
     <string name="widget_refresh_content_description">Actualiser</string>
-    <string name="widget_verdict_sun">Soleil</string>
     <string name="section_background">Activité en arrière-plan</string>
     <string name="background_help">Les longues sessions astro avec l\'écran éteint peuvent être interrompues par le mode Doze d\'Android. Autoriser l\'activité en arrière-plan permet à Pulsar de continuer jusqu\'à la fin.</string>
     <string name="background_status_allowed">Activité en arrière-plan autorisée</string>
@@ -430,7 +429,6 @@
     <string name="sky_dial_poor">Faible</string>
     <string name="sky_dial_dusk">Crépuscule</string>
     <string name="sky_dial_dawn">Aube</string>
-    <string name="sky_dial_best_label">Meilleur</string>
     <string name="sky_dial_help_title">Lire le cadran</string>
     <string name="sky_dial_help_body">Le cadran représente la nuit, dessinée comme une horloge : il part du crépuscule, en bas à gauche, monte par le haut — obscurité maximale vers minuit — et redescend vers l\'aube, en bas à droite.
 
