@@ -675,15 +675,6 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <string name="location_west">W</string>
 
     <!-- Summary verdict chips -->
-    <string name="verdict_moon_good">Dark Moon</string>
-    <string name="verdict_moon_bright">Bright Moon</string>
-    <string name="verdict_clear">Clear Skies</string>
-    <string name="verdict_partly">Partly Cloudy</string>
-    <string name="verdict_cloudy">Too Cloudy</string>
-    <string name="verdict_rain">Rain</string>
-    <string name="verdict_mw_visible">MW Visible</string>
-    <string name="verdict_mw_not_visible">MW Not Visible</string>
-    <string name="verdict_bortle">Bortle %1$d</string>
 
     <string name="card_moon">Moon Phase</string>
     <string name="moon_illuminated">%.0f%% illuminated</string>

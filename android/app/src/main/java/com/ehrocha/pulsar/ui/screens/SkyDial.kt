@@ -303,7 +303,7 @@ internal fun SkyDial(
                         val targetsTint =
                             if (state.planets.size + state.bestWindows.size > 0) pc.positive
                             else scheme.onSurfaceVariant
-                        Row(modifier = Modifier.fillMaxWidth().padding(top = 2.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth().padding(top = 7.dp)) {
                             DialComplication(
                                 Modifier.weight(1f),
                                 stringResource(R.string.dash_moon),

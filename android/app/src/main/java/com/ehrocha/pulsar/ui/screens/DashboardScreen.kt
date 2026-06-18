@@ -55,10 +55,6 @@ fun DashboardScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var showDialHelp by remember { mutableStateOf(false) }
     var isRefreshing by remember { mutableStateOf(false) }
-    // Phase 2 of the redesign: which secondary domain page is open (null =
-    // the unified dial + readout-ring main view). Back closes it.
-    var openPage by remember { mutableStateOf<DashPage?>(null) }
-    BackHandler(enabled = openPage != null) { openPage = null }
     val context = androidx.compose.ui.platform.LocalContext.current
 
     LaunchedEffect(Unit) {
@@ -247,9 +243,25 @@ fun DashboardScreen(
             },
             modifier = Modifier.fillMaxSize(),
         ) {
+            AstroDashboardContent(state, Modifier.fillMaxSize())
+        } // PullToRefreshBox
+    }
+}
+
+/** The unified Sky-Dial dashboard body — the radial hero, its tap-through
+ *  domain pages, and the best-windows list. Shared by the Astro tab
+ *  (DashboardScreen) and the planner's SessionDetailScreen so every dial
+ *  change lands in both places. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun AstroDashboardContent(
+    state: com.ehrocha.pulsar.astro.DashboardState,
+    modifier: Modifier = Modifier,
+) {
+    var openPage by remember { mutableStateOf<DashPage?>(null) }
+    BackHandler(enabled = openPage != null) { openPage = null }
         Column(
-            modifier = Modifier
-                .fillMaxSize()
+            modifier = modifier
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -976,8 +988,6 @@ fun DashboardScreen(
 
             Spacer(Modifier.height(16.dp))
         }
-        } // PullToRefreshBox
-    }
 }
 
 // ── Unified dashboard: domain pages + readout ring (Phase 2) ─────────────────

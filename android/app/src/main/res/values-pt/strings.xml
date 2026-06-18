@@ -458,15 +458,6 @@ A altura vem da escuridão do céu × céu limpo × sem lua brilhante × sem chu
     <string name="location_west">O</string>
 
     <!-- Summary verdict chips -->
-    <string name="verdict_moon_good">Lua Escura</string>
-    <string name="verdict_moon_bright">Lua Brilhante</string>
-    <string name="verdict_clear">Céu Limpo</string>
-    <string name="verdict_partly">Parcialm. Nublado</string>
-    <string name="verdict_cloudy">Muito Nublado</string>
-    <string name="verdict_rain">Chuva</string>
-    <string name="verdict_mw_visible">VL Visível</string>
-    <string name="verdict_mw_not_visible">VL Não Visível</string>
-    <string name="verdict_bortle">Bortle %1$d</string>
 
     <string name="card_moon">Fase da lua</string>
     <string name="moon_illuminated">%.0f%% iluminada</string>

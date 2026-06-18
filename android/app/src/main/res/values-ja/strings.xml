@@ -458,15 +458,6 @@
     <string name="location_west">西</string>
 
     <!-- Summary verdict chips -->
-    <string name="verdict_moon_good">暗い月</string>
-    <string name="verdict_moon_bright">明るい月</string>
-    <string name="verdict_clear">快晴</string>
-    <string name="verdict_partly">曇り時々晴れ</string>
-    <string name="verdict_cloudy">曇りすぎ</string>
-    <string name="verdict_rain">雨</string>
-    <string name="verdict_mw_visible">天の川 可視</string>
-    <string name="verdict_mw_not_visible">天の川 不可視</string>
-    <string name="verdict_bortle">ボートル %1$d</string>
 
     <string name="card_moon">月齢</string>
     <string name="moon_illuminated">%.0f%% 照度</string>

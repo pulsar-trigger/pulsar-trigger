@@ -458,15 +458,6 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="location_west">W</string>
 
     <!-- Summary verdict chips -->
-    <string name="verdict_moon_good">Dunkler Mond</string>
-    <string name="verdict_moon_bright">Heller Mond</string>
-    <string name="verdict_clear">Klarer Himmel</string>
-    <string name="verdict_partly">Teilweise Bewölkt</string>
-    <string name="verdict_cloudy">Zu Bewölkt</string>
-    <string name="verdict_rain">Regen</string>
-    <string name="verdict_mw_visible">MW Sichtbar</string>
-    <string name="verdict_mw_not_visible">MW Nicht Sichtbar</string>
-    <string name="verdict_bortle">Bortle %1$d</string>
 
     <string name="card_moon">Mondphase</string>
     <string name="moon_illuminated">%.0f%% beleuchtet</string>

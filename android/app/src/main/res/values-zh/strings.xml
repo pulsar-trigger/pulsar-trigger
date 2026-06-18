@@ -460,15 +460,6 @@
     <string name="location_west">西</string>
 
     <!-- Summary verdict chips -->
-    <string name="verdict_moon_good">暗月</string>
-    <string name="verdict_moon_bright">亮月</string>
-    <string name="verdict_clear">晴空</string>
-    <string name="verdict_partly">多云间晴</string>
-    <string name="verdict_cloudy">云层过厚</string>
-    <string name="verdict_rain">降雨</string>
-    <string name="verdict_mw_visible">银河可见</string>
-    <string name="verdict_mw_not_visible">银河不可见</string>
-    <string name="verdict_bortle">波特尔 %1$d</string>
 
     <string name="card_moon">月相</string>
     <string name="moon_illuminated">%.0f%% 照明</string>

@@ -458,15 +458,6 @@ La hauteur vient de l\'obscurité du ciel × ciel dégagé × pas de lune brilla
     <string name="location_west">O</string>
 
     <!-- Summary verdict chips -->
-    <string name="verdict_moon_good">Lune Sombre</string>
-    <string name="verdict_moon_bright">Lune Vive</string>
-    <string name="verdict_clear">Ciel Dégagé</string>
-    <string name="verdict_partly">Partiellement Nuageux</string>
-    <string name="verdict_cloudy">Trop Nuageux</string>
-    <string name="verdict_rain">Pluie</string>
-    <string name="verdict_mw_visible">VL Visible</string>
-    <string name="verdict_mw_not_visible">VL Non Visible</string>
-    <string name="verdict_bortle">Bortle %1$d</string>
 
     <string name="card_moon">Phase lunaire</string>
     <string name="moon_illuminated">%.0f%% illuminée</string>

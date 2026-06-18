@@ -458,15 +458,6 @@ La altura proviene de la oscuridad del cielo × cielo despejado × sin luna bril
     <string name="location_west">O</string>
 
     <!-- Summary verdict chips -->
-    <string name="verdict_moon_good">Luna Oscura</string>
-    <string name="verdict_moon_bright">Luna Brillante</string>
-    <string name="verdict_clear">Cielos Despejados</string>
-    <string name="verdict_partly">Parcialm. Nublado</string>
-    <string name="verdict_cloudy">Muy Nublado</string>
-    <string name="verdict_rain">Lluvia</string>
-    <string name="verdict_mw_visible">VL Visible</string>
-    <string name="verdict_mw_not_visible">VL No Visible</string>
-    <string name="verdict_bortle">Bortle %1$d</string>
 
     <string name="card_moon">Fase lunar</string>
     <string name="moon_illuminated">%.0f%% iluminada</string>
