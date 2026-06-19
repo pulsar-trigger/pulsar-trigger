@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -109,6 +110,7 @@ fun PhotoTransferScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                 controller.loadFailed -> EmptyStateBox(R.string.photo_transfer_error, Modifier.weight(1f))
                 controller.images.isEmpty() -> EmptyStateBox(R.string.photo_transfer_empty, Modifier.weight(1f))
                 else -> {
+                    FormatFilterChips(controller)
                     LazyVerticalGrid(
                         columns = GridCells.Adaptive(96.dp),
                         modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -116,7 +118,7 @@ fun PhotoTransferScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        items(controller.images, key = { it.id }) { img ->
+                        items(controller.visibleImages, key = { it.id }) { img ->
                             ThumbCell(
                                 image = img,
                                 bitmap = controller.thumbnail(img),
@@ -170,16 +172,23 @@ private fun ThumbCell(
                 modifier = Modifier.align(Alignment.Center).padding(4.dp),
             )
         }
-        if (image.isRaw) {
+        // Format badge on every thumb — RAW (accent) vs the file's extension
+        // (JPG / HEIF / …, muted) so a mixed card reads at a glance.
+        val rawLabel = stringResource(R.string.photo_transfer_raw_badge)
+        val badge = if (image.isRaw) rawLabel
+                    else image.fileName.substringAfterLast('.', "").uppercase()
+        if (badge.isNotEmpty()) {
             Surface(
-                color = MaterialTheme.colorScheme.tertiary,
+                color = if (image.isRaw) MaterialTheme.colorScheme.tertiary
+                        else MaterialTheme.colorScheme.secondaryContainer,
                 shape = RoundedCornerShape(topEnd = 6.dp),
                 modifier = Modifier.align(Alignment.BottomStart),
             ) {
                 Text(
-                    text = stringResource(R.string.photo_transfer_raw_badge),
+                    text = badge,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onTertiary,
+                    color = if (image.isRaw) MaterialTheme.colorScheme.onTertiary
+                            else MaterialTheme.colorScheme.onSecondaryContainer,
                     modifier = Modifier.padding(horizontal = 4.dp),
                 )
             }
@@ -197,6 +206,33 @@ private fun ThumbCell(
                     .background(MaterialTheme.colorScheme.surface),
             )
         }
+    }
+}
+
+@Composable
+private fun FormatFilterChips(controller: PhotoTransferController) {
+    // Only worth showing on a mixed card — a single-format card has nothing
+    // to filter.
+    if (controller.rawCount == 0 || controller.jpegCount == 0) return
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FilterChip(
+            selected = controller.filter == PhotoTransferController.Filter.ALL,
+            onClick = { controller.filter = PhotoTransferController.Filter.ALL },
+            label = { Text(stringResource(R.string.photo_transfer_filter_all, controller.images.size)) },
+        )
+        FilterChip(
+            selected = controller.filter == PhotoTransferController.Filter.JPEG,
+            onClick = { controller.filter = PhotoTransferController.Filter.JPEG },
+            label = { Text("JPG (${controller.jpegCount})") },
+        )
+        FilterChip(
+            selected = controller.filter == PhotoTransferController.Filter.RAW,
+            onClick = { controller.filter = PhotoTransferController.Filter.RAW },
+            label = { Text("RAW (${controller.rawCount})") },
+        )
     }
 }
 

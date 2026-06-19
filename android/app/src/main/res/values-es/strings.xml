@@ -1065,4 +1065,5 @@ La altura proviene de la oscuridad del cielo × cielo despejado × sin luna bril
     <string name="photo_transfer_done">Guardadas %1$d en la galería</string>
     <string name="photo_transfer_done_failed">Guardadas %1$d · %2$d fallaron</string>
     <string name="photo_transfer_raw_badge">RAW</string>
+    <string name="photo_transfer_filter_all">Todo (%1$d)</string>
 </resources>

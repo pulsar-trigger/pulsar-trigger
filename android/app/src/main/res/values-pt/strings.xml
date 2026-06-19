@@ -1067,4 +1067,5 @@ A altura vem da escuridão do céu × céu limpo × sem lua brilhante × sem chu
     <string name="photo_transfer_done">Guardadas %1$d na galeria</string>
     <string name="photo_transfer_done_failed">Guardadas %1$d · %2$d falharam</string>
     <string name="photo_transfer_raw_badge">RAW</string>
+    <string name="photo_transfer_filter_all">Tudo (%1$d)</string>
 </resources>

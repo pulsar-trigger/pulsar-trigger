@@ -1067,4 +1067,5 @@
     <string name="photo_transfer_done">%1$d 件をギャラリーに保存しました</string>
     <string name="photo_transfer_done_failed">%1$d 件保存 · %2$d 件失敗</string>
     <string name="photo_transfer_raw_badge">RAW</string>
+    <string name="photo_transfer_filter_all">すべて (%1$d)</string>
 </resources>

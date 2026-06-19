@@ -63,25 +63,35 @@ object MediaStoreSaver {
 
     private fun openScoped(context: Context, fileName: String, mimeType: String): Pair<Uri, OutputStream>? {
         val resolver = context.contentResolver
-        // Fresh ContentValues per attempt (insert may consume them).
-        fun values() = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-            put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
-            put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/$SUBDIR")
-            put(MediaStore.MediaColumns.IS_PENDING, 1)
-        }
-        // Prefer the Images collection (gallery-visible). Some bodies' RAW MIME
-        // (image/x-canon-cr3) isn't recognised by MediaStore and the Images
-        // insert is rejected — fall back to the Files collection (accepts any
-        // type) at the same Pictures/Pulsar path so RAW still lands. Both
-        // outcomes are logged so a hard failure is diagnosable from the dump.
-        val collections = listOf(
-            "Images" to MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY),
-            "Files" to MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY),
+        // Two destinations, tried in order. MediaStore's Images collection is
+        // gallery-visible but only accepts known image MIMEs (a RAW like
+        // image/x-canon-cr3 is rejected "Unsupported MIME type") and only
+        // Pictures/DCIM dirs. The Files collection accepts ANY MIME but only
+        // Download/Documents dirs. So:
+        //   • JPEG/HEIF/PNG land in Pictures/Pulsar (gallery), via Images.
+        //   • RAW falls through to Download/Pulsar, via Files (Android won't
+        //     put a CR3 in the gallery — no platform decoder for it).
+        val attempts = listOf(
+            Triple(
+                "Images",
+                MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY),
+                Environment.DIRECTORY_PICTURES,
+            ),
+            Triple(
+                "Files",
+                MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY),
+                Environment.DIRECTORY_DOWNLOADS,
+            ),
         )
-        for ((label, collection) in collections) {
+        for ((label, collection, dir) in attempts) {
+            val values = ContentValues().apply {
+                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+                put(MediaStore.MediaColumns.RELATIVE_PATH, "$dir/$SUBDIR")
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
+            }
             val uri = try {
-                resolver.insert(collection, values())
+                resolver.insert(collection, values)
             } catch (e: Exception) {
                 CanonBleLog.w(TAG, "insert[$label]($fileName, $mimeType) threw: " +
                     "${e.javaClass.simpleName}: ${e.message}")
@@ -102,6 +112,7 @@ object MediaStoreSaver {
                 runCatching { resolver.delete(uri, null, null) }
                 continue
             }
+            CanonBleLog.d(TAG, "saved $fileName via $label to $dir/$SUBDIR")
             return uri to stream
         }
         return null

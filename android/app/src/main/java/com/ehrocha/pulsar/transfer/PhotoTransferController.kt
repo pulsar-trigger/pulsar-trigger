@@ -45,6 +45,21 @@ class PhotoTransferController(
     /** Images on the card, newest-first. */
     val images = mutableStateListOf<CameraImage>()
 
+    /** Format filter for the grid. */
+    enum class Filter { ALL, JPEG, RAW }
+    var filter by mutableStateOf(Filter.ALL)
+
+    /** Images matching the active [filter] (same newest-first order). */
+    val visibleImages: List<CameraImage>
+        get() = when (filter) {
+            Filter.ALL -> images
+            Filter.RAW -> images.filter { it.isRaw }
+            Filter.JPEG -> images.filter { !it.isRaw }
+        }
+
+    val rawCount: Int get() = images.count { it.isRaw }
+    val jpegCount: Int get() = images.count { !it.isRaw }
+
     /** Selected image ids. */
     val selected = mutableStateListOf<String>()
 
@@ -69,7 +84,7 @@ class PhotoTransferController(
         scope.launch {
             loading = true
             loadFailed = false
-            images.clear(); selected.clear(); thumbs.clear()
+            images.clear(); selected.clear(); thumbs.clear(); filter = Filter.ALL
             val list = runCatching { transport.listContents() }.getOrNull()
             if (list == null) loadFailed = true else images.addAll(list)
             loading = false
@@ -95,12 +110,15 @@ class PhotoTransferController(
     }
 
     fun toggle(id: String) { if (id in selected) selected.remove(id) else selected.add(id) }
-    fun selectAll() { selected.clear(); selected.addAll(images.map { it.id }) }
+    /** Select every image in the *current filter* (so "Select all" under the
+     *  RAW chip selects only RAW). */
+    fun selectAll() { selected.clear(); selected.addAll(visibleImages.map { it.id }) }
     fun clearSelection() { selected.clear() }
     fun consumeResult() { result = null }
 
     fun transferSelected() = transferThese(images.filter { it.id in selected })
-    fun transferAll() = transferThese(images.toList())
+    /** Transfer every image in the current filter. */
+    fun transferAll() = transferThese(visibleImages.toList())
 
     private fun transferThese(list: List<CameraImage>) {
         if (list.isEmpty() || busy) return

@@ -1156,4 +1156,5 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <string name="photo_transfer_done">Saved %1$d to the gallery</string>
     <string name="photo_transfer_done_failed">Saved %1$d · %2$d failed</string>
     <string name="photo_transfer_raw_badge">RAW</string>
+    <string name="photo_transfer_filter_all">All (%1$d)</string>
 </resources>

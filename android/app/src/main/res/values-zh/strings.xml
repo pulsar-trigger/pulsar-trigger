@@ -1061,4 +1061,5 @@
     <string name="photo_transfer_done">已保存 %1$d 张到图库</string>
     <string name="photo_transfer_done_failed">已保存 %1$d 张 · %2$d 张失败</string>
     <string name="photo_transfer_raw_badge">RAW</string>
+    <string name="photo_transfer_filter_all">全部 (%1$d)</string>
 </resources>

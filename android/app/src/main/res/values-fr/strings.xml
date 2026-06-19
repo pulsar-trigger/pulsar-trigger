@@ -1067,4 +1067,5 @@ La hauteur vient de l\'obscurité du ciel × ciel dégagé × pas de lune brilla
     <string name="photo_transfer_done">%1$d enregistrée(s) dans la galerie</string>
     <string name="photo_transfer_done_failed">%1$d enregistrée(s) · %2$d échouée(s)</string>
     <string name="photo_transfer_raw_badge">RAW</string>
+    <string name="photo_transfer_filter_all">Tout (%1$d)</string>
 </resources>
