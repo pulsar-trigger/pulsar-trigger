@@ -152,6 +152,7 @@ class PtpClient(
     /** PTP `GetStorageIDs` — IDs of the stores (cards) present. */
     suspend fun getStorageIds(): List<Int> {
         val r = wire.transact(OP_GET_STORAGE_IDS, expectDataIn = true)
+        if (!r.ok) com.ehrocha.pulsar.canonble.CanonBleLog.w(tag, "GetStorageIDs rc=0x${"%04X".format(r.code)}")
         return if (r.ok && r.data != null) parsePtpU32Array(r.data) else emptyList()
     }
 
@@ -166,6 +167,7 @@ class PtpClient(
             OP_GET_OBJECT_HANDLES, intArrayOf(storageId, objectFormat, parent),
             expectDataIn = true,
         )
+        if (!r.ok) com.ehrocha.pulsar.canonble.CanonBleLog.w(tag, "GetObjectHandles rc=0x${"%04X".format(r.code)}")
         return if (r.ok && r.data != null) parsePtpU32Array(r.data) else emptyList()
     }
 
