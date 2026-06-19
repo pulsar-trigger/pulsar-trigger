@@ -25,37 +25,45 @@ import java.io.OutputStream
  */
 private const val TAG = "PtpContent"
 
+/** PTP object-format code for an Association (folder). */
+private const val FORMAT_ASSOCIATION = 0x3001
+/** Safety cap on objects walked, so a pathological card can't hang the UI. */
+private const val MAX_OBJECTS = 20_000
+
 /** Enumerate every still image on the card as [CameraImage]s, newest-first.
- *  Tries the flat "all objects on all stores" query first; if that comes back
- *  empty (some Canon bodies reject the 0xFFFFFFFF association in remote mode),
- *  falls back to enumerating each store's root. One `GetObjectInfo` per handle,
- *  filtered to image extensions. Returns empty on any wire error. */
+ *  `GetObjectHandles(parent=0xFFFFFFFF)` returns only the store **root** (the
+ *  DCIM / MISC folders), not a flat list — so we walk the association tree:
+ *  start at the root, recurse into every folder (format 0x3001), and collect
+ *  the image leaves. One `GetObjectInfo` per object; returns empty on a wire
+ *  error. */
 internal suspend fun PtpClient.listImageContents(): List<CameraImage> =
     withContext(Dispatchers.IO) {
         runCatching {
-            var handles = getObjectHandles()  // STORAGE_ALL, fmt 0, HANDLE_ALL
-            CanonBleLog.i(TAG, "GetObjectHandles(all) -> ${handles.size}")
-            if (handles.isEmpty()) {
-                val storages = getStorageIds()
-                CanonBleLog.i(TAG, "GetStorageIDs -> ${storages.size} " +
-                    storages.joinToString(prefix = "[", postfix = "]") { "0x%08X".format(it) })
-                handles = storages.flatMap { sid ->
-                    getObjectHandles(storageId = sid, objectFormat = 0, parent = 0)
+            val roots = getObjectHandles()  // STORAGE_ALL, fmt 0, root (0xFFFFFFFF)
+            CanonBleLog.i(TAG, "roots -> ${roots.size}")
+            val images = mutableListOf<CameraImage>()
+            val visited = HashSet<Int>()
+            val queue = ArrayDeque(roots)
+            var folders = 0
+            while (queue.isNotEmpty() && images.size < MAX_OBJECTS) {
+                val handle = queue.removeFirst()
+                if (!visited.add(handle)) continue
+                val info = getObjectInfo(handle) ?: continue
+                when {
+                    info.objectFormat == FORMAT_ASSOCIATION -> {
+                        folders++
+                        queue.addAll(getObjectHandles(parent = handle))  // children of this folder
+                    }
+                    CameraImage.isImageName(info.fileName) -> images += CameraImage(
+                        id = handle.toString(),
+                        fileName = info.fileName,
+                        byteSize = info.compressedSize,
+                        isRaw = CameraImage.isRawName(info.fileName),
+                        capturedEpochMs = info.captureEpochMs,
+                    )
                 }
-                CanonBleLog.i(TAG, "GetObjectHandles(per-storage root) -> ${handles.size}")
             }
-            val images = handles.mapNotNull { handle ->
-                val info = getObjectInfo(handle) ?: return@mapNotNull null
-                if (!CameraImage.isImageName(info.fileName)) return@mapNotNull null
-                CameraImage(
-                    id = handle.toString(),
-                    fileName = info.fileName,
-                    byteSize = info.compressedSize,
-                    isRaw = CameraImage.isRawName(info.fileName),
-                    capturedEpochMs = info.captureEpochMs,
-                )
-            }
-            CanonBleLog.i(TAG, "listContents -> ${images.size} images of ${handles.size} objects")
+            CanonBleLog.i(TAG, "listContents -> ${images.size} images ($folders folders walked)")
             images.sortedByDescending { it.capturedEpochMs ?: 0L }
         }.getOrElse {
             CanonBleLog.w(TAG, "listContents failed: ${it.javaClass.simpleName}: ${it.message}")
