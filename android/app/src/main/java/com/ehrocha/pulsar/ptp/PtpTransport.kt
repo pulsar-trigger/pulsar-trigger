@@ -429,11 +429,11 @@ class PtpTransport private constructor(
                 val data = byteArrayOf((v and 0xFF).toByte(), ((v ushr 8) and 0xFF).toByte())
                 val r = client.setDevicePropValue(PtpClient.PROP_CANON_SHUTTER_SPEED, data)
                 if (!r.ok) {
-                    Log.w(TAG, "SetShutterSpeed→Bulb rc=0x${"%04X".format(r.code)} — " +
+                    CanonBleLog.w(TAG, "SetShutterSpeed→Bulb rc=0x${"%04X".format(r.code)} — " +
                               "user may need to set Bulb on body dial")
-                }
+                } else CanonBleLog.d(TAG, "setShutterMode→Bulb ok")
             } catch (e: PtpProtocolException) {
-                Log.w(TAG, "setShutterMode threw (non-fatal): ${e.message}")
+                CanonBleLog.w(TAG, "setShutterMode threw (non-fatal): ${e.message}")
             }
         }
     }
@@ -444,26 +444,42 @@ class PtpTransport private constructor(
      *  surprises. */
     private var lastBulbMode: Int = MODE_FULL_PRESS_NO_AF
 
+    /** Set once an R-series body rejects mode=2 (no-AF) with DEVICE_BUSY, so
+     *  subsequent shots in the run skip straight to mode=3 instead of eating a
+     *  rejected round-trip each time. */
+    @Volatile private var noAfModeUnsupported = false
+
     override suspend fun startBulb(af: Boolean) = wireMutex.withLock {
         // The Canon RemoteRelease mode parameter directly controls AF:
         //   mode 2 = full press, no AF (camera holds whatever focus it has)
         //   mode 3 = full press + AF (body fires AF before the exposure)
-        // Astro / Dark Frame / long-exposure modes default `af=false` from
-        // the wizards so we don't hunt for focus on stars (would drift mid-
-        // run + waste battery on Canon's AF assist beam). Daylight modes
-        // pass `af=true` per the user's per-preset toggle.
+        // Astro / Dark Frame / long-exposure modes default `af=false` so we
+        // don't hunt for focus on stars. BUT R-series bodies reject mode=2
+        // with DEVICE_BUSY (0x2019) — so af=false bulb (intervalometer / astro
+        // / dark-frame / ramp) silently failed on the EOS R/RP over USB while
+        // manual hold (af=true → mode=3) worked. We fall back to mode=3 on that
+        // rejection: with the lens in MF the AF step is a no-op, so it neither
+        // hunts nor fires the assist beam. The PTP/IP path always uses mode=3
+        // for the same reason.
         withContext(Dispatchers.IO) {
             if (!_connected.value) {
-                Log.w(TAG, "startBulb: not connected — ignored")
+                CanonBleLog.w(TAG, "startBulb: not connected — ignored")
                 return@withContext
             }
             try {
-                lastBulbMode = if (af) MODE_FULL_PRESS_AF else MODE_FULL_PRESS_NO_AF
-                val r = client.canonRemoteReleaseOn(mode = lastBulbMode)
-                if (!r.ok) Log.w(TAG, "RemoteReleaseOn(mode=$lastBulbMode) " +
-                                       "rc=0x${"%04X".format(r.code)}")
+                var mode = if (af || noAfModeUnsupported) MODE_FULL_PRESS_AF else MODE_FULL_PRESS_NO_AF
+                var r = client.canonRemoteReleaseOn(mode = mode)
+                if (!r.ok && mode == MODE_FULL_PRESS_NO_AF && r.code == 0x2019) {
+                    CanonBleLog.i(TAG, "startBulb: mode=2 rejected (DEVICE_BUSY) — retrying mode=3")
+                    noAfModeUnsupported = true
+                    mode = MODE_FULL_PRESS_AF
+                    r = client.canonRemoteReleaseOn(mode = mode)
+                }
+                lastBulbMode = mode
+                if (!r.ok) CanonBleLog.w(TAG, "RemoteReleaseOn(mode=$mode) rc=0x${"%04X".format(r.code)}")
+                else CanonBleLog.d(TAG, "startBulb mode=$mode ok")
             } catch (e: PtpProtocolException) {
-                Log.w(TAG, "startBulb threw: ${e.message}")
+                CanonBleLog.w(TAG, "startBulb threw: ${e.message}")
             }
         }
     }
@@ -475,10 +491,10 @@ class PtpTransport private constructor(
                 // Release with the same mode value we pressed with — some
                 // bodies require the pair to match.
                 val r = client.canonRemoteReleaseOff(mode = lastBulbMode)
-                if (!r.ok) Log.w(TAG, "RemoteReleaseOff(mode=$lastBulbMode) " +
+                if (!r.ok) CanonBleLog.w(TAG, "RemoteReleaseOff(mode=$lastBulbMode) " +
                                        "rc=0x${"%04X".format(r.code)}")
             } catch (e: PtpProtocolException) {
-                Log.w(TAG, "stopBulb threw: ${e.message}")
+                CanonBleLog.w(TAG, "stopBulb threw: ${e.message}")
             }
         }
     }
