@@ -13,6 +13,8 @@ import android.hardware.usb.UsbEndpoint
 import android.hardware.usb.UsbInterface
 import android.hardware.usb.UsbManager
 import android.util.Log
+import com.ehrocha.pulsar.canonble.CanonBleLog
+import kotlinx.coroutines.delay
 import com.ehrocha.pulsar.transport.CameraImage
 import com.ehrocha.pulsar.transport.CameraTransport
 import com.ehrocha.pulsar.transport.TransportKind
@@ -365,21 +367,48 @@ class PtpTransport private constructor(
     }
 
     override suspend fun fireShutter(af: Boolean) = wireMutex.withLock {
-        // PTP `InitiateCapture` doesn't take an AF flag — the camera uses
-        // its own AF mode setting. The `af` param is honoured by CCAPI;
-        // we accept and ignore it here.
         withContext(Dispatchers.IO) {
             if (!_connected.value) {
-                Log.w(TAG, "fireShutter: not connected — ignored")
+                CanonBleLog.w(TAG, "fireShutter: not connected — ignored")
                 return@withContext
             }
-            try {
-                val r = client.initiateCapture()
-                if (!r.ok) {
-                    Log.w(TAG, "InitiateCapture rc=0x${"%04X".format(r.code)}")
+            // A single shot on a Canon EOS body in PC-remote mode is a
+            // RemoteRelease full-press + release — NOT generic InitiateCapture,
+            // which Canon rejects once SetRemoteMode(1) is active. Using
+            // InitiateCapture here is why USB timelapse + cable release silently
+            // did nothing while bulb / intervalometer (RemoteRelease) worked;
+            // the PTP/IP sibling was already on RemoteRelease. mode=3 (full
+            // press + AF) — R-series rejects mode=2 with DEVICE_BUSY, and the
+            // body's own AF/MF switch governs whether focus actually runs.
+            // Falls back to InitiateCapture for non-Canon / non-RemoteRelease
+            // bodies.
+            if (supportsBulb) {
+                val mode = MODE_FULL_PRESS_AF
+                CanonBleLog.i(TAG, "fireShutter af=$af mode=$mode → RemoteRelease pair")
+                try {
+                    val on = client.canonRemoteReleaseOn(mode = mode)
+                    if (!on.ok) {
+                        CanonBleLog.w(TAG, "fireShutter RemoteReleaseOn(mode=$mode) " +
+                            "rc=0x${"%04X".format(on.code)}")
+                        return@withContext
+                    }
+                    delay(80)  // brief press-hold so the body registers one frame
+                               // (matches the PTP/IP value verified on R-series)
+                    val off = client.canonRemoteReleaseOff(mode = mode)
+                    if (!off.ok) CanonBleLog.w(TAG, "fireShutter RemoteReleaseOff(mode=$mode) " +
+                        "rc=0x${"%04X".format(off.code)}")
+                    else CanonBleLog.d(TAG, "fireShutter done")
+                } catch (e: PtpProtocolException) {
+                    CanonBleLog.w(TAG, "fireShutter RemoteRelease threw: ${e.message}")
                 }
-            } catch (e: PtpProtocolException) {
-                Log.w(TAG, "InitiateCapture threw: ${e.message}")
+            } else {
+                CanonBleLog.i(TAG, "fireShutter → InitiateCapture (no RemoteRelease support)")
+                try {
+                    val r = client.initiateCapture()
+                    if (!r.ok) CanonBleLog.w(TAG, "InitiateCapture rc=0x${"%04X".format(r.code)}")
+                } catch (e: PtpProtocolException) {
+                    CanonBleLog.w(TAG, "InitiateCapture threw: ${e.message}")
+                }
             }
         }
     }
@@ -518,19 +547,19 @@ class PtpTransport private constructor(
                     true
                 } else {
                     lastLiveViewError = "SetEvfOutput rc=0x${"%04X".format(r.code)}"
-                    Log.w(TAG, "startLiveView: $lastLiveViewError")
+                    CanonBleLog.w(TAG, "startLiveView: $lastLiveViewError")
                     // Body advertised the op but rejects the underlying
                     // prop write — downgrade so the Star Focus tile gate
                     // and subsequent calls reflect reality.
                     if (r.code == 0x200A || r.code == 0x2005) {
                         _liveViewSupported.value = false
-                        Log.i(TAG, "supportsLiveView downgraded to false (advertised but rejects)")
+                        CanonBleLog.i(TAG, "supportsLiveView downgraded to false (advertised but rejects)")
                     }
                     false
                 }
             } catch (e: PtpProtocolException) {
                 lastLiveViewError = e.message ?: "protocol error"
-                Log.w(TAG, "startLiveView threw: ${e.message}")
+                CanonBleLog.w(TAG, "startLiveView threw: ${e.message}")
                 false
             }
         }
@@ -620,10 +649,10 @@ class PtpTransport private constructor(
             try {
                 val r = client.getDevicePropValue(PtpClient.PROP_BATTERY_LEVEL)
                 if (!r.ok || r.data == null || r.data.isEmpty()) {
-                    Log.w(TAG, "GetDevicePropValue(0x5001) rc=0x${"%04X".format(r.code)}")
+                    CanonBleLog.w(TAG, "GetDevicePropValue(0x5001 battery) rc=0x${"%04X".format(r.code)}")
                     if (r.code == 0x2005 || r.code == 0x200A) {
                         _batterySupported.value = false
-                        Log.i(TAG, "supportsBatteryReadout downgraded to false (advertised but rejects)")
+                        CanonBleLog.i(TAG, "supportsBatteryReadout downgraded to false (advertised but rejects)")
                     }
                     return@withContext null
                 }
