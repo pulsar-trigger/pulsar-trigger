@@ -127,9 +127,16 @@ class PhotoTransferController(
         withContext(Dispatchers.IO) {
             val mime = CameraImage.mimeFor(image.fileName)
             val (uri, stream) = MediaStoreSaver.open(appContext, image.fileName, mime)
-                ?: return@withContext false
+                ?: run {
+                    com.ehrocha.pulsar.canonble.CanonBleLog.w(
+                        "PhotoTransfer", "saveOne(${image.fileName}): MediaStore.open returned null")
+                    return@withContext false
+                }
             val ok = runCatching {
                 stream.use { transport.downloadImage(image, it, onProgress) }
+            }.onFailure {
+                com.ehrocha.pulsar.canonble.CanonBleLog.w(
+                    "PhotoTransfer", "saveOne(${image.fileName}) download threw: ${it.message}")
             }.getOrDefault(false)
             if (ok) MediaStoreSaver.publish(appContext, uri) else MediaStoreSaver.discard(appContext, uri)
             ok

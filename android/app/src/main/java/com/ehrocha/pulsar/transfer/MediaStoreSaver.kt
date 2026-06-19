@@ -12,6 +12,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import com.ehrocha.pulsar.canonble.CanonBleLog
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
@@ -33,6 +34,7 @@ object MediaStoreSaver {
 
     /** Sub-folder under Pictures/ that all transfers land in. */
     private const val SUBDIR = "Pulsar"
+    private const val TAG = "MediaStore"
 
     /** Create a (pending) gallery entry for [fileName] and return its content
      *  Uri + an OutputStream to stream the file into, or null on failure. */
@@ -61,20 +63,48 @@ object MediaStoreSaver {
 
     private fun openScoped(context: Context, fileName: String, mimeType: String): Pair<Uri, OutputStream>? {
         val resolver = context.contentResolver
-        val values = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
-            put(MediaStore.Images.Media.MIME_TYPE, mimeType)
-            put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/$SUBDIR")
-            put(MediaStore.Images.Media.IS_PENDING, 1)
+        // Fresh ContentValues per attempt (insert may consume them).
+        fun values() = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
+            put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/$SUBDIR")
+            put(MediaStore.MediaColumns.IS_PENDING, 1)
         }
-        val collection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
-        val uri = runCatching { resolver.insert(collection, values) }.getOrNull() ?: return null
-        val stream = runCatching { resolver.openOutputStream(uri) }.getOrNull()
-        if (stream == null) {
-            runCatching { resolver.delete(uri, null, null) }
-            return null
+        // Prefer the Images collection (gallery-visible). Some bodies' RAW MIME
+        // (image/x-canon-cr3) isn't recognised by MediaStore and the Images
+        // insert is rejected — fall back to the Files collection (accepts any
+        // type) at the same Pictures/Pulsar path so RAW still lands. Both
+        // outcomes are logged so a hard failure is diagnosable from the dump.
+        val collections = listOf(
+            "Images" to MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY),
+            "Files" to MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY),
+        )
+        for ((label, collection) in collections) {
+            val uri = try {
+                resolver.insert(collection, values())
+            } catch (e: Exception) {
+                CanonBleLog.w(TAG, "insert[$label]($fileName, $mimeType) threw: " +
+                    "${e.javaClass.simpleName}: ${e.message}")
+                null
+            }
+            if (uri == null) {
+                CanonBleLog.w(TAG, "insert[$label]($fileName) -> null")
+                continue
+            }
+            val stream = try {
+                resolver.openOutputStream(uri)
+            } catch (e: Exception) {
+                CanonBleLog.w(TAG, "openOutputStream[$label]($fileName) threw: ${e.message}")
+                null
+            }
+            if (stream == null) {
+                CanonBleLog.w(TAG, "openOutputStream[$label]($fileName) -> null")
+                runCatching { resolver.delete(uri, null, null) }
+                continue
+            }
+            return uri to stream
         }
-        return uri to stream
+        return null
     }
 
     private fun openLegacy(context: Context, fileName: String): Pair<Uri, OutputStream>? {
