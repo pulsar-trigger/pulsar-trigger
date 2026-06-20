@@ -1525,13 +1525,19 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         val current = _status.value ?: return prevShots
         var nextShots = prevShots
 
-        // `battery` in poll/devicestatus responses comes in two shapes
-        // depending on the body: an object (single battery) or an array
-        // (multi-cell battery grip). Both are wrapped here.
+        // Battery shows up in several shapes: `/event/polling` wraps it under
+        // "battery" (object or multi-cell array); newer bodies use "batterylist";
+        // and the connect-time seed passes the `/devicestatus/battery` response
+        // DIRECTLY (level at top level, no wrapper) — that last case was being
+        // dropped, so battery sat at 0% on the EOS RP over CCAPI.
         val battObj = json.optJSONObject("battery")
             ?: json.optJSONArray("battery")?.optJSONObject(0)
+            ?: json.optJSONArray("batterylist")?.optJSONObject(0)
+            ?: json.takeIf { it.has("level") }
         if (battObj != null) {
-            val pct = canonBatteryToPct(battObj.optString("level"))
+            val level = battObj.optString("level")
+            val pct = canonBatteryToPct(level)
+            com.ehrocha.pulsar.canonble.CanonBleLog.d(TAG, "battery level='$level' -> pct=$pct")
             if (pct != null) _status.update { it?.copy(batteryPct = pct) }
         }
 

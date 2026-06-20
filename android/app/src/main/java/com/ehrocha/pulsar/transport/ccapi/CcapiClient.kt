@@ -8,6 +8,8 @@ package com.ehrocha.pulsar.transport.ccapi
 import android.util.Log
 import com.ehrocha.pulsar.canonble.CanonBleLog
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -221,10 +223,17 @@ class CcapiClient(
             }
         }
 
+    // Canon's on-camera HTTP server tolerates only a couple of concurrent
+    // connections; the thumbnail grid firing hundreds at once exhausted it
+    // (ConnectException / Connection reset / unexpected end of stream — seen on
+    // the EOS RP). Serialise the per-content requests (thumbnails + downloads)
+    // so the grid loads steadily instead of storming the camera.
+    private val contentGate = Semaphore(1)
+
     /** GET the bytes of a content (e.g. `?kind=thumbnail`). */
     suspend fun getContentBytes(pathOrUrl: String, query: String = ""): Result<ByteArray> =
         withContext(Dispatchers.IO) {
-            sendBytesWithDigest(absolutize(pathOrUrl) + query, READ_TIMEOUT_MS)
+            contentGate.withPermit { sendBytesWithDigest(absolutize(pathOrUrl) + query, READ_TIMEOUT_MS) }
         }
 
     /** Stream a content (e.g. `?kind=main`) to [sink], reporting
@@ -236,7 +245,7 @@ class CcapiClient(
         sink: java.io.OutputStream,
         onProgress: (Long, Long) -> Unit,
     ): Boolean = withContext(Dispatchers.IO) {
-        streamWithDigest(absolutize(pathOrUrl) + query, sink, onProgress)
+        contentGate.withPermit { streamWithDigest(absolutize(pathOrUrl) + query, sink, onProgress) }
     }
 
     private enum class StreamResult { OK, NEEDS_AUTH, FAILED }
