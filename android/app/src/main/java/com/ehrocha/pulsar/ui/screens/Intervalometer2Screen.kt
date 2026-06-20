@@ -668,6 +668,10 @@ internal fun RunningView(
     exposureMs: Long = 0L,
     gapMs: Long = 0L,
     startDelayMs: Long = 0L,
+    // Cumulative shot count for the big "X / total" readout, for multi-step
+    // flows where each step's runner resets `_status.shotsTaken` (Camera Test).
+    // Null = use the per-step status count (single-step wizards).
+    shotsOverride: Int? = null,
 ) {
     val status = LocalDeviceStatus.current
     val state = status?.state ?: DeviceState.IDLE
@@ -705,10 +709,11 @@ internal fun RunningView(
     // Human-friendly count: bump to the current shot the instant exposure
     // starts (1-based) instead of waiting for it to finish — people want to
     // feel progress. Holds through the trailing gap; never overshoots.
+    val displayBase = shotsOverride ?: shotsTaken
     val shotsTakenDisplay = when {
-        state == DeviceState.RUNNING && continuous -> shotsTaken + 1
-        state == DeviceState.RUNNING -> (shotsTaken + 1).coerceAtMost(plannedShots)
-        else -> shotsTaken
+        state == DeviceState.RUNNING && continuous -> displayBase + 1
+        state == DeviceState.RUNNING -> (displayBase + 1).coerceAtMost(plannedShots)
+        else -> displayBase
     }
 
     val progress = when {

@@ -91,6 +91,7 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     // the phase-done transition on that fired the share after step 1 while the
     // rest kept shooting. flowRunning stays true until the whole flow ends.
     val running by vm.flowRunning.collectAsState()
+    val cumulativeShots by vm.flowShotsCompleted.collectAsState()
     val stepCount by vm.cameraTestStepCount.collectAsState()
     val fullSequence = stepCount >= 5  // i.e. bulb supported
     val ctx = LocalContext.current
@@ -149,7 +150,9 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                     // DarkFrame (1) + Ramp (FlowStep.Ramp.steps gets coerced
                     // to a minimum of 2 in executeFlowStep, so 2 ramp shots).
                     val plannedShots = if (phase == TestPhase.RUNNING_MANUAL) 1 else 5
-                    RunningView(plannedShots = plannedShots)
+                    // Cumulative across the bulb phase's steps so the count
+                    // climbs 1→5 instead of resetting per mode.
+                    RunningView(plannedShots = plannedShots, shotsOverride = cumulativeShots)
                     Spacer(Modifier.height(16.dp))
                     OutlinedButton(
                         onClick = { vm.stopFlow(); phase = TestPhase.IDLE },

@@ -1044,6 +1044,21 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         if (running && idx in steps.indices) steps[idx] else null
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
+    /** Cumulative shots fired across the WHOLE running flow: completed steps'
+     *  planned shots + the current step's per-step count. Each per-step runner
+     *  resets `_status.shotsTaken` to 0 at the start of its step, so a
+     *  multi-step run (Camera Test, Custom Flow) otherwise shows the per-step
+     *  count (e.g. stuck at 1/5 across five 1-shot bulb modes). Single-step
+     *  runs are unaffected (no prior steps to add). */
+    val flowShotsCompleted: StateFlow<Int> = combine(
+        _status, _flowCurrentStep, _flowSteps, _flowRunning,
+    ) { status, idx, steps, running ->
+        val perStep = status?.shotsTaken ?: 0
+        if (running && idx in steps.indices) {
+            steps.take(idx).sumOf { plannedShotsFor(it) } + perStep
+        } else perStep
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
+
     init {
         // Forward BLE controller state into the viewmodel's writable flows.
         // [_status] is multiplexed — BLE updates land here, and the simulator
