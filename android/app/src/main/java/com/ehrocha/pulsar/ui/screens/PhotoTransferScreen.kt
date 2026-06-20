@@ -94,10 +94,13 @@ fun PhotoTransferScreen(vm: PulsarViewModel, onBack: () -> Unit) {
         val result = controller.result
         LaunchedEffect(result) {
             if (result != null) {
-                val msg = if (result.failed == 0) {
-                    context.getString(R.string.photo_transfer_done, result.saved)
-                } else {
-                    context.getString(R.string.photo_transfer_done_failed, result.saved, result.failed)
+                val msg = when {
+                    result.failed > 0 ->
+                        context.getString(R.string.photo_transfer_done_failed, result.saved, result.failed)
+                    result.rawSaved > 0 ->
+                        context.getString(R.string.photo_transfer_done_raw, result.saved)
+                    else ->
+                        context.getString(R.string.photo_transfer_done, result.saved)
                 }
                 postSnackbar(msg)
                 controller.consumeResult()

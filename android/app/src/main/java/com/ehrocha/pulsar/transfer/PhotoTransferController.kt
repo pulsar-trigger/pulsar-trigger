@@ -75,7 +75,7 @@ class PhotoTransferController(
         private set
 
     data class Progress(val current: Int, val total: Int, val fileName: String, val fraction: Float)
-    data class Result(val saved: Int, val failed: Int)
+    data class Result(val saved: Int, val rawSaved: Int, val failed: Int)
 
     val busy: Boolean get() = transfer != null
 
@@ -124,6 +124,7 @@ class PhotoTransferController(
         if (list.isEmpty() || busy) return
         scope.launch {
             var saved = 0
+            var rawSaved = 0
             var failed = 0
             list.forEachIndexed { i, img ->
                 transfer = Progress(i + 1, list.size, img.fileName, 0f)
@@ -131,10 +132,13 @@ class PhotoTransferController(
                     val frac = if (total > 0) (written.toFloat() / total).coerceIn(0f, 1f) else 0f
                     transfer = Progress(i + 1, list.size, img.fileName, frac)
                 }
-                if (ok) saved++ else failed++
+                if (ok) {
+                    saved++
+                    if (img.isRaw) rawSaved++  // RAW lands in Download/Pulsar, not the gallery
+                } else failed++
             }
             transfer = null
-            result = Result(saved, failed)
+            result = Result(saved, rawSaved, failed)
             clearSelection()
         }
     }

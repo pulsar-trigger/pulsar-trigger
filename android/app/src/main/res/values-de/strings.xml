@@ -1068,4 +1068,5 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="photo_transfer_done_failed">%1$d gespeichert · %2$d fehlgeschlagen</string>
     <string name="photo_transfer_raw_badge">RAW</string>
     <string name="photo_transfer_filter_all">Alle (%1$d)</string>
+    <string name="photo_transfer_done_raw">%1$d gespeichert · RAW in Download/Pulsar</string>
 </resources>
