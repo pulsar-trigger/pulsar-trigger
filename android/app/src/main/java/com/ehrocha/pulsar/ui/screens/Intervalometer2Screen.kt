@@ -12,6 +12,8 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -1173,16 +1175,11 @@ private fun CameraSettingsTab(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp),
+        verticalArrangement = Arrangement.spacedBy(28.dp),
     ) {
-        Spacer(Modifier.height(4.dp))
-        Text(
-            stringResource(R.string.iv2_camera_help),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Spacer(Modifier.height(8.dp))
         if (supportsIso) {
-            SettingPicker(
+            SettingRow(
                 label = stringResource(R.string.iv2_camera_iso),
                 current = iso,
                 options = isoOptions,
@@ -1191,7 +1188,7 @@ private fun CameraSettingsTab(
             )
         }
         if (supportsAperture) {
-            SettingPicker(
+            SettingRow(
                 label = stringResource(R.string.iv2_camera_aperture),
                 current = aperture,
                 options = apertureOptions,
@@ -1199,61 +1196,112 @@ private fun CameraSettingsTab(
                 enabled = enabled,
             )
         }
+        Text(
+            stringResource(R.string.iv2_camera_help),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
-/** A single setting row — label on the left, picker on the right. Null
- *  `current` shows as "Leave as-is", which means "Pulsar won't write
- *  this; whatever's on the body wins". Empty `options` falls through to
- *  a free-text editor. */
-@OptIn(ExperimentalMaterial3Api::class)
+/** SIGNAL instrument readout for one camera setting: an UPPERCASE label with
+ *  the current value beside it in big Mono (a dash when "Leave as-is"), over a
+ *  horizontal rail of selectable Mono value chips (the body's accepted values,
+ *  led by Leave-as-is). Replaces the consumer-app dropdown — data-forward,
+ *  values in Mono, no generic Material picker. Empty `options` (body can't
+ *  enumerate) falls back to a free-text field. */
 @Composable
-private fun SettingPicker(
+private fun SettingRow(
     label: String,
     current: String?,
     options: List<String>,
     onChange: (String?) -> Unit,
     enabled: Boolean,
 ) {
-    var menuOpen by remember { mutableStateOf(false) }
-    Column {
-        Text(
-            label,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Spacer(Modifier.height(8.dp))
-        ExposedDropdownMenuBox(
-            expanded = menuOpen,
-            onExpandedChange = { if (enabled) menuOpen = !menuOpen },
-        ) {
-            OutlinedTextField(
-                value = current ?: stringResource(R.string.iv2_camera_leave_as_is),
-                onValueChange = { },
-                readOnly = options.isNotEmpty(),
-                enabled = enabled,
+    val mono = com.ehrocha.pulsar.ui.theme.Mono
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // Header: setting name + big Mono current value.
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                label.uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                current ?: "—",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontFamily = mono,
+                    fontFeatureSettings = "tnum",
+                ),
+                color = if (current != null) MaterialTheme.colorScheme.onSurface
+                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            )
+        }
+        if (options.isNotEmpty()) {
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true),
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = menuOpen)
-                },
-            )
-            ExposedDropdownMenu(
-                expanded = menuOpen,
-                onDismissRequest = { menuOpen = false },
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.iv2_camera_leave_as_is)) },
-                    onClick = { onChange(null); menuOpen = false },
+                ValueChip(
+                    text = stringResource(R.string.iv2_camera_leave_as_is),
+                    selected = current == null,
+                    enabled = enabled,
+                    mono = false,
+                    onClick = { onChange(null) },
                 )
                 options.forEach { v ->
-                    DropdownMenuItem(
-                        text = { Text(v) },
-                        onClick = { onChange(v); menuOpen = false },
+                    ValueChip(
+                        text = v,
+                        selected = current == v,
+                        enabled = enabled,
+                        mono = true,
+                        onClick = { onChange(v) },
                     )
                 }
             }
+        } else {
+            // Body can't enumerate this setting — let the user type what it
+            // accepts. Blank clears back to Leave-as-is.
+            OutlinedTextField(
+                value = current ?: "",
+                onValueChange = { onChange(it.takeIf { s -> s.isNotBlank() }) },
+                enabled = enabled,
+                singleLine = true,
+                placeholder = { Text(stringResource(R.string.iv2_camera_leave_as_is)) },
+                textStyle = androidx.compose.material3.LocalTextStyle.current.copy(fontFamily = mono),
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
+}
+
+@Composable
+private fun ValueChip(
+    text: String,
+    selected: Boolean,
+    enabled: Boolean,
+    mono: Boolean,
+    onClick: () -> Unit,
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        enabled = enabled,
+        label = {
+            Text(
+                text,
+                maxLines = 1,
+                style = if (mono) {
+                    MaterialTheme.typography.bodyMedium.copy(
+                        fontFamily = com.ehrocha.pulsar.ui.theme.Mono,
+                        fontFeatureSettings = "tnum",
+                    )
+                } else MaterialTheme.typography.bodyMedium,
+            )
+        },
+    )
 }
