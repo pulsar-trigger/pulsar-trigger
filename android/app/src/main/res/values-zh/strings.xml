@@ -1063,4 +1063,5 @@
     <string name="photo_transfer_raw_badge">RAW</string>
     <string name="photo_transfer_filter_all">全部 (%1$d)</string>
     <string name="photo_transfer_done_raw">已保存 %1$d 张 · RAW 在 Download/Pulsar</string>
+    <string name="camera_drive_single_hint">提示：将相机设为单张拍摄模式——连续拍摄可能在一次触发中多拍几张。</string>
 </resources>

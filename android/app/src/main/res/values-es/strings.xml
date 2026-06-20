@@ -1067,4 +1067,5 @@ La altura proviene de la oscuridad del cielo × cielo despejado × sin luna bril
     <string name="photo_transfer_raw_badge">RAW</string>
     <string name="photo_transfer_filter_all">Todo (%1$d)</string>
     <string name="photo_transfer_done_raw">Guardadas %1$d · RAW en Download/Pulsar</string>
+    <string name="camera_drive_single_hint">Consejo: pon la cámara en modo de disparo único — el disparo continuo puede capturar fotogramas de más por toma.</string>
 </resources>

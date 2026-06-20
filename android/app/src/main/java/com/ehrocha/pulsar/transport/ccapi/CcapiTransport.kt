@@ -6,6 +6,7 @@
 package com.ehrocha.pulsar.transport.ccapi
 
 import android.util.Log
+import com.ehrocha.pulsar.canonble.CanonBleLog
 import com.ehrocha.pulsar.transport.CameraImage
 import com.ehrocha.pulsar.transport.CameraTransport
 import com.ehrocha.pulsar.transport.TransportKind
@@ -38,6 +39,8 @@ class CcapiTransport(
         private const val PATH_CONTENTS = "/contents"
         /** Canon pages content listings at 100 entries; a short page is last. */
         private const val CONTENTS_PAGE_SIZE = 100
+        /** Diagnostics tag for the contents walk (mirrors PTP's PtpContent). */
+        private const val CONTENT_TAG = "CcapiContent"
         private const val PATH_LIVEVIEW = "/shooting/liveview"
         private const val PATH_LIVEVIEW_FLIP = "/shooting/liveview/flip"
         private const val PATH_DRIVE_FOCUS = "/shooting/control/drivefocus"
@@ -322,12 +325,14 @@ class CcapiTransport(
         CcapiClient.Result.Network(e)
     }
 
+    // Routed through CanonBleLog so CCAPI op results (shutter / bulb / live
+    // view / settings) show in the in-app diagnostics dump, like the PTP path.
     private fun logResult(tag: String, r: CcapiClient.Result<*>) {
         when (r) {
-            is CcapiClient.Result.Ok -> { /* success — quiet */ }
-            is CcapiClient.Result.Http -> Log.w(TAG, "$tag HTTP ${r.code}: ${r.body}")
-            is CcapiClient.Result.NeedsAuth -> Log.w(TAG, "$tag needs auth (digest in Phase 4)")
-            is CcapiClient.Result.Network -> Log.w(TAG, "$tag network error", r.cause)
+            is CcapiClient.Result.Ok -> CanonBleLog.d(TAG, "$tag ok")
+            is CcapiClient.Result.Http -> CanonBleLog.w(TAG, "$tag HTTP ${r.code}: ${r.body.take(120)}")
+            is CcapiClient.Result.NeedsAuth -> CanonBleLog.w(TAG, "$tag needs auth")
+            is CcapiClient.Result.Network -> CanonBleLog.w(TAG, "$tag network: ${r.cause.message}")
         }
     }
 
@@ -410,9 +415,14 @@ class CcapiTransport(
 
     override suspend fun listContents(): List<CameraImage> {
         val out = mutableListOf<CameraImage>()
-        for (storage in client.getContentPaths(PATH_CONTENTS)) {
-            for (dir in client.getContentPaths(storage)) {
+        val storages = client.getContentPaths(PATH_CONTENTS)
+        CanonBleLog.i(CONTENT_TAG, "GET /contents -> ${storages.size} storages")
+        for (storage in storages) {
+            val dirs = client.getContentPaths(storage)
+            CanonBleLog.i(CONTENT_TAG, "$storage -> ${dirs.size} dirs")
+            for (dir in dirs) {
                 var page = 1
+                var dirImages = 0
                 while (true) {
                     val files = client.getContentPaths("$dir?kind=list&page=$page")
                     if (files.isEmpty()) break
@@ -425,26 +435,33 @@ class CcapiTransport(
                                 byteSize = 0L,           // CCAPI list omits size; fetched lazily if needed
                                 isRaw = CameraImage.isRawName(name),
                             )
+                            dirImages++
                         }
                     }
                     if (files.size < CONTENTS_PAGE_SIZE) break
                     page++
                 }
+                CanonBleLog.i(CONTENT_TAG, "$dir -> $dirImages images")
             }
         }
+        CanonBleLog.i(CONTENT_TAG, "listContents -> ${out.size} images")
         return out.asReversed()
     }
 
     override suspend fun getThumbnail(image: CameraImage): ByteArray? =
         when (val r = client.getContentBytes(image.id, "?kind=thumbnail")) {
             is CcapiClient.Result.Ok -> r.value
-            else -> null
+            else -> { CanonBleLog.d(CONTENT_TAG, "thumbnail(${image.fileName}) -> $r"); null }
         }
 
     override suspend fun downloadImage(
         image: CameraImage,
         sink: java.io.OutputStream,
         onProgress: (Long, Long) -> Unit,
-    ): Boolean = client.streamContent(image.id, "?kind=main", sink, onProgress)
+    ): Boolean {
+        val ok = client.streamContent(image.id, "?kind=main", sink, onProgress)
+        if (!ok) CanonBleLog.w(CONTENT_TAG, "download(${image.fileName}) failed")
+        return ok
+    }
 }
 

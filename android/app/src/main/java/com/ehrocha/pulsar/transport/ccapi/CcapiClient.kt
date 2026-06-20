@@ -6,6 +6,7 @@
 package com.ehrocha.pulsar.transport.ccapi
 
 import android.util.Log
+import com.ehrocha.pulsar.canonble.CanonBleLog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -178,13 +179,24 @@ class CcapiClient(
     suspend fun getContentPaths(pathOrUrl: String): List<String> =
         withContext(Dispatchers.IO) {
             when (val r = rawGet(absolutize(pathOrUrl))) {
-                is Result.Ok -> runCatching {
-                    val arr = JSONObject(r.value).optJSONArray("path") ?: JSONArray()
-                    (0 until arr.length()).mapNotNull {
-                        arr.optString(it).takeIf { s -> s.isNotBlank() }
+                is Result.Ok -> {
+                    val list = runCatching {
+                        val arr = JSONObject(r.value).optJSONArray("path") ?: JSONArray()
+                        (0 until arr.length()).mapNotNull {
+                            arr.optString(it).takeIf { s -> s.isNotBlank() }
+                        }
+                    }.getOrDefault(emptyList())
+                    // 0 entries from a 2xx → our `path[]` assumption is likely
+                    // wrong for this body. Log a snippet of the actual JSON so
+                    // the shape is fixable from the diagnostics dump.
+                    if (list.isEmpty()) {
+                        CanonBleLog.w(TAG, "getContentPaths($pathOrUrl): 0 entries; body=${r.value.take(200)}")
                     }
-                }.getOrDefault(emptyList())
-                else -> emptyList()
+                    list
+                }
+                is Result.Http -> { CanonBleLog.w(TAG, "getContentPaths($pathOrUrl) HTTP ${r.code}"); emptyList() }
+                is Result.NeedsAuth -> { CanonBleLog.w(TAG, "getContentPaths($pathOrUrl) needs auth"); emptyList() }
+                is Result.Network -> { CanonBleLog.w(TAG, "getContentPaths($pathOrUrl) network: ${r.cause.message}"); emptyList() }
             }
         }
 

@@ -1158,4 +1158,5 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <string name="photo_transfer_raw_badge">RAW</string>
     <string name="photo_transfer_filter_all">All (%1$d)</string>
     <string name="photo_transfer_done_raw">Saved %1$d · RAW in Download/Pulsar</string>
+    <string name="camera_drive_single_hint">Tip: set the camera to single-drive mode — continuous drive can capture extra frames per shot.</string>
 </resources>
