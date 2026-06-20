@@ -629,10 +629,13 @@ class PtpIpTransport private constructor(
     override suspend fun getThumbnail(image: CameraImage): ByteArray? =
         wireMutex.withLock { client.thumbnailFor(image) }
 
+    // No JPEG rendition yet (would need to extract the CR3's embedded preview),
+    // so `asJpeg` is ignored and the original file is streamed.
     override suspend fun downloadImage(
         image: CameraImage,
         sink: java.io.OutputStream,
         onProgress: (Long, Long) -> Unit,
+        asJpeg: Boolean,
     ): Boolean = wireMutex.withLock { client.downloadObject(image, sink, onProgress) }
 }
 

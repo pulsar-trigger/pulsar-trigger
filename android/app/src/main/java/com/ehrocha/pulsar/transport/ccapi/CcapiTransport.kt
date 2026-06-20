@@ -489,13 +489,21 @@ class CcapiTransport(
             else -> { CanonBleLog.d(CONTENT_TAG, "thumbnail(${image.fileName}) -> $r"); null }
         }
 
+    // CCAPI renders a display-resolution JPEG of any content (incl. CR3) via
+    // ?kind=display, so the gallery's JPEG-default works for RAW too.
+    override val supportsJpegRendition: Boolean get() = true
+
     override suspend fun downloadImage(
         image: CameraImage,
         sink: java.io.OutputStream,
         onProgress: (Long, Long) -> Unit,
+        asJpeg: Boolean,
     ): Boolean {
-        val ok = client.streamContent(image.id, "?kind=main", sink, onProgress)
-        if (!ok) CanonBleLog.w(CONTENT_TAG, "download(${image.fileName}) failed")
+        // JPEG rendition (display) only makes sense for a RAW; a JPEG file's
+        // original (main) already is the JPEG and is full-resolution.
+        val kind = if (asJpeg && image.isRaw) "?kind=display" else "?kind=main"
+        val ok = client.streamContent(image.id, kind, sink, onProgress)
+        if (!ok) CanonBleLog.w(CONTENT_TAG, "download(${image.fileName}, kind=$kind) failed")
         return ok
     }
 }

@@ -1069,5 +1069,8 @@
     <string name="photo_transfer_raw_badge">RAW</string>
     <string name="photo_transfer_filter_all">すべて (%1$d)</string>
     <string name="photo_transfer_done_raw">%1$d 件保存 · RAW は Download/Pulsar</string>
+    <string name="photo_transfer_raw_toggle">RAW 原本をダウンロード</string>
+    <string name="photo_transfer_raw_hint_on">原本 (CR3) → Download/Pulsar</string>
+    <string name="photo_transfer_raw_hint_off">RAW は JPEG でギャラリーに保存</string>
     <string name="camera_drive_single_hint">ヒント: カメラを1枚撮影モードに設定してください。連続撮影では1回の撮影で余分なコマが撮られることがあります。</string>
 </resources>

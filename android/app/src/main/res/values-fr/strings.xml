@@ -1069,5 +1069,8 @@ La hauteur vient de l\'obscurité du ciel × ciel dégagé × pas de lune brilla
     <string name="photo_transfer_raw_badge">RAW</string>
     <string name="photo_transfer_filter_all">Tout (%1$d)</string>
     <string name="photo_transfer_done_raw">%1$d enregistrée(s) · RAW dans Download/Pulsar</string>
+    <string name="photo_transfer_raw_toggle">Télécharger les originaux RAW</string>
+    <string name="photo_transfer_raw_hint_on">Originaux (CR3) → Download/Pulsar</string>
+    <string name="photo_transfer_raw_hint_off">RAW enregistré en JPEG dans la galerie</string>
     <string name="camera_drive_single_hint">Astuce : réglez l\'appareil en mode vue par vue — le mode rafale peut capturer des images supplémentaires par déclenchement.</string>
 </resources>

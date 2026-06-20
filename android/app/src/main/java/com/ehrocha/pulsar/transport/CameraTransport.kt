@@ -218,6 +218,13 @@ interface CameraTransport {
      *  Gates the photo-transfer tool in the UI. */
     val supportsContentTransfer: Boolean get() = false
 
+    /** Transport can deliver a JPEG rendition of a RAW file (so the gallery's
+     *  JPEG-default download works even for CR3s). CCAPI does this natively via
+     *  `?kind=display`; the PTP wires can't yet (would need to extract the
+     *  embedded preview), so RAW downloads as RAW there. When false the UI's
+     *  RAW/JPEG choice is hidden — RAW files just download as the original. */
+    val supportsJpegRendition: Boolean get() = false
+
     /** Enumerate images on the camera (newest-first where the protocol
      *  allows). Empty list when unsupported or the card has no images.
      *  May be slow on a full card — callers run it off the main thread and
@@ -234,10 +241,16 @@ interface CameraTransport {
      *  Streams rather than buffering so multi-MB RAW files don't sit in
      *  memory. The caller owns [sink] (a MediaStore OutputStream) and closes
      *  it. */
+    /** When [asJpeg] is true, stream a JPEG rendition of [image] instead of the
+     *  original file — used for the gallery's JPEG-default download of a RAW.
+     *  Only honoured by transports with [supportsJpegRendition]; ignored (the
+     *  original is streamed) otherwise. For a non-RAW image it's a no-op since
+     *  the original is already a JPEG. */
     suspend fun downloadImage(
         image: CameraImage,
         sink: java.io.OutputStream,
         onProgress: (Long, Long) -> Unit = { _, _ -> },
+        asJpeg: Boolean = false,
     ): Boolean = false
 }
 

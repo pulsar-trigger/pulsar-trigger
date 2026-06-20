@@ -1069,5 +1069,8 @@ A altura vem da escuridão do céu × céu limpo × sem lua brilhante × sem chu
     <string name="photo_transfer_raw_badge">RAW</string>
     <string name="photo_transfer_filter_all">Tudo (%1$d)</string>
     <string name="photo_transfer_done_raw">Guardadas %1$d · RAW em Download/Pulsar</string>
+    <string name="photo_transfer_raw_toggle">Baixar originais RAW</string>
+    <string name="photo_transfer_raw_hint_on">Originais (CR3) → Download/Pulsar</string>
+    <string name="photo_transfer_raw_hint_off">RAW guardado como JPEG na galeria</string>
     <string name="camera_drive_single_hint">Dica: defina a câmara para o modo de disparo único — o disparo contínuo pode capturar fotogramas extra por disparo.</string>
 </resources>

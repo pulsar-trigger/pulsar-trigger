@@ -1069,5 +1069,8 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="photo_transfer_raw_badge">RAW</string>
     <string name="photo_transfer_filter_all">Alle (%1$d)</string>
     <string name="photo_transfer_done_raw">%1$d gespeichert · RAW in Download/Pulsar</string>
+    <string name="photo_transfer_raw_toggle">RAW-Originale herunterladen</string>
+    <string name="photo_transfer_raw_hint_on">Originale (CR3) → Download/Pulsar</string>
+    <string name="photo_transfer_raw_hint_off">RAW als JPEG in der Galerie gespeichert</string>
     <string name="camera_drive_single_hint">Tipp: Stell die Kamera auf Einzelbild — Reihenaufnahme kann pro Auslösung zusätzliche Bilder aufnehmen.</string>
 </resources>

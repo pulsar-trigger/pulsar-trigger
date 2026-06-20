@@ -49,6 +49,16 @@ class PhotoTransferController(
     enum class Filter { ALL, JPEG, RAW }
     var filter by mutableStateOf(Filter.ALL)
 
+    /** Download format for RAW files. False (default) → a JPEG rendition lands
+     *  in the gallery; true → the original CR3 lands in Download/Pulsar. Only
+     *  meaningful when [canChooseFormat]. JPEG files always download as-is. */
+    var downloadRaw by mutableStateOf(false)
+
+    /** Show the RAW/JPEG choice only when there are RAW files AND the transport
+     *  can actually render a JPEG of them (CCAPI). Otherwise RAW just downloads
+     *  as the original and there's nothing to choose. */
+    val canChooseFormat: Boolean get() = rawCount > 0 && transport.supportsJpegRendition
+
     /** Images matching the active [filter] (same newest-first order). */
     val visibleImages: List<CameraImage>
         get() = when (filter) {
@@ -134,7 +144,10 @@ class PhotoTransferController(
                 }
                 if (ok) {
                     saved++
-                    if (img.isRaw) rawSaved++  // RAW lands in Download/Pulsar, not the gallery
+                    // Only counts as a RAW save when we actually wrote the
+                    // original CR3 (→ Download/Pulsar). A JPEG rendition of a
+                    // RAW lands in the gallery like any JPEG.
+                    if (img.isRaw && !renderJpeg(img)) rawSaved++
                 } else failed++
             }
             transfer = null
@@ -143,22 +156,33 @@ class PhotoTransferController(
         }
     }
 
+    /** True when [image] (a RAW) will be fetched as a JPEG rendition rather than
+     *  its original — i.e. JPEG is selected (the default) and the transport can
+     *  render one. JPEG files always download as-is. */
+    private fun renderJpeg(image: CameraImage): Boolean =
+        image.isRaw && !downloadRaw && transport.supportsJpegRendition
+
+    private fun jpegName(fileName: String): String = fileName.substringBeforeLast('.') + ".JPG"
+
     /** Stream one image straight into a MediaStore entry; publish on success,
-     *  discard the partial entry on failure. */
+     *  discard the partial entry on failure. A RAW downloaded as JPEG is saved
+     *  as `<name>.JPG` (image/jpeg → gallery) rather than the CR3. */
     private suspend fun saveOne(image: CameraImage, onProgress: (Long, Long) -> Unit): Boolean =
         withContext(Dispatchers.IO) {
-            val mime = CameraImage.mimeFor(image.fileName)
-            val (uri, stream) = MediaStoreSaver.open(appContext, image.fileName, mime)
+            val asJpeg = renderJpeg(image)
+            val saveName = if (asJpeg) jpegName(image.fileName) else image.fileName
+            val mime = if (asJpeg) "image/jpeg" else CameraImage.mimeFor(image.fileName)
+            val (uri, stream) = MediaStoreSaver.open(appContext, saveName, mime)
                 ?: run {
                     com.ehrocha.pulsar.canonble.CanonBleLog.w(
-                        "PhotoTransfer", "saveOne(${image.fileName}): MediaStore.open returned null")
+                        "PhotoTransfer", "saveOne($saveName): MediaStore.open returned null")
                     return@withContext false
                 }
             val ok = runCatching {
-                stream.use { transport.downloadImage(image, it, onProgress) }
+                stream.use { transport.downloadImage(image, it, onProgress, asJpeg) }
             }.onFailure {
                 com.ehrocha.pulsar.canonble.CanonBleLog.w(
-                    "PhotoTransfer", "saveOne(${image.fileName}) download threw: ${it.message}")
+                    "PhotoTransfer", "saveOne($saveName) download threw: ${it.message}")
             }.getOrDefault(false)
             if (ok) MediaStoreSaver.publish(appContext, uri) else MediaStoreSaver.discard(appContext, uri)
             ok
