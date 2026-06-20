@@ -143,8 +143,12 @@ fun Intervalometer2Screen(
     // Hide the Camera tab when the active transport supports neither
     // setting — keeps the wizard tab strip clean on ESP32 / Canon BLE /
     // bodies that don't expose iso+av in CCAPI's endpoint matrix.
+    // On a settings-capable body, lead with Camera settings (ISO / aperture)
+    // and keep Shots last — the user dials in the exposure look first, then
+    // confirms count + Start (Eduardo). Without the camera tab the order is the
+    // natural exposure → interval → delay → shots.
     val visibleTabs = remember(showCameraTab) {
-        if (showCameraTab) IvTab.entries.toList()
+        if (showCameraTab) listOf(IvTab.CAMERA) + IvTab.entries.filter { it != IvTab.CAMERA }
         else IvTab.entries.filter { it != IvTab.CAMERA }
     }
 
@@ -253,8 +257,10 @@ fun Intervalometer2Screen(
                 onNext = { if (tabIdx < visibleTabs.size - 1) tabIdx++ },
                 onStart = {
                     when {
-                        exposureMs == 0L -> tabIdx = IvTab.EXPOSURE.ordinal
-                        intervalMs == 0L -> tabIdx = IvTab.INTERVAL.ordinal
+                        // indexOf, not .ordinal — visibleTabs is reordered
+                        // (Camera first) so the enum ordinal != tab position.
+                        exposureMs == 0L -> tabIdx = visibleTabs.indexOf(IvTab.EXPOSURE)
+                        intervalMs == 0L -> tabIdx = visibleTabs.indexOf(IvTab.INTERVAL)
                         else -> {
                             val builtStep = FlowStep.Intervalometer(
                                 intervalMs = intervalMs,
@@ -283,12 +289,20 @@ fun Intervalometer2Screen(
         },
     ) { pad ->
         Column(modifier = Modifier.padding(pad).fillMaxSize()) {
-            TabRow(selectedTabIndex = tabIdx) {
+            // Scrollable so the 5th (Camera) tab + longer locales never squeeze
+            // the labels into two lines — each tab sizes to its text on one
+            // line; the selected tab auto-scrolls into view.
+            ScrollableTabRow(
+                selectedTabIndex = tabIdx,
+                edgePadding = 8.dp,
+            ) {
                 visibleTabs.forEachIndexed { i, t ->
                     Tab(
                         selected = tabIdx == i,
                         onClick = { tabIdx = i },
-                        text = { Text(stringResource(t.labelRes)) },
+                        text = {
+                            Text(stringResource(t.labelRes), maxLines = 1, softWrap = false)
+                        },
                     )
                 }
             }
