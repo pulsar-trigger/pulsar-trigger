@@ -189,40 +189,48 @@ class CcapiTransport(
      *  response body we saw. */
     override suspend fun startLiveView(): Boolean {
         if (!_connected.value) return false
-        // `cameraposition` was introduced in ver110 — ver100 bodies (EOS RP)
-        // reject the field as invalid_parameter. Adapt the payload to what
-        // the pinned API version actually accepts.
-        val includeCameraPos = client.version?.let { it != "ver100" } ?: false
-        // Prefer small first — it's the universally supported size, lowest
-        // bandwidth, and renders fast enough for focus work.
-        val sizesToTry = listOf("small", "medium", "large")
+        CanonBleLog.i(TAG, "startLiveView (ccapi ver=${client.version})")
+        // The CCAPI liveview-start body is `liveviewsize` + the optional
+        // `cameradisplay` (on/keep/off). The old code sent `cameraposition`,
+        // which isn't a liveview field — the RP rejected the whole request
+        // ("Invalid parameter"). Try the documented payload (with
+        // cameradisplay) first, then a size-only fallback for bodies that want
+        // neither; first 200 wins.
+        val sizes = listOf("small", "medium", "large")
         var lastError: String? = null
-        for (size in sizesToTry) {
-            val body = JSONObject().put("liveviewsize", size)
-            if (includeCameraPos) body.put("cameraposition", "off")
-            val r = client.post(PATH_LIVEVIEW, body)
-            if (r is CcapiClient.Result.Ok) {
-                Log.i(TAG, "liveview started @ $size (ver=${client.version})")
-                lastLiveViewError = null
-                return true
-            }
-            logResult("liveview start @ $size", r)
-            lastError = when (r) {
-                is CcapiClient.Result.Http -> "HTTP ${r.code}: ${r.body.take(200)}"
-                is CcapiClient.Result.NeedsAuth -> "auth required"
-                is CcapiClient.Result.Network -> "network error: ${r.cause.message}"
-                else -> "unknown"
+        for (size in sizes) {
+            val bodies = listOf(
+                JSONObject().put("liveviewsize", size).put("cameradisplay", "on"),
+                JSONObject().put("liveviewsize", size),
+            )
+            for (body in bodies) {
+                val r = client.post(PATH_LIVEVIEW, body)
+                if (r is CcapiClient.Result.Ok) {
+                    CanonBleLog.i(TAG, "liveview started @ $size body=$body")
+                    lastLiveViewError = null
+                    return true
+                }
+                logResult("liveview start @ $size $body", r)
+                lastError = when (r) {
+                    is CcapiClient.Result.Http -> "HTTP ${r.code}: ${r.body.take(200)}"
+                    is CcapiClient.Result.NeedsAuth -> "auth required"
+                    is CcapiClient.Result.Network -> "network error: ${r.cause.message}"
+                    else -> "unknown"
+                }
             }
         }
         lastLiveViewError = lastError
         return false
     }
 
-    /** End the live-view session. */
+    /** End the live-view session. Mirrors start's payload — `liveviewsize:off`
+     *  plus `cameradisplay:keep` (don't disturb the body's screen), falling
+     *  back to size-only. */
     override suspend fun stopLiveView() {
         if (!_connected.value) return
-        val body = JSONObject().put("liveviewsize", "off")
-        logResult("liveview stop", client.post(PATH_LIVEVIEW, body))
+        val withDisplay = JSONObject().put("liveviewsize", "off").put("cameradisplay", "keep")
+        if (client.post(PATH_LIVEVIEW, withDisplay) is CcapiClient.Result.Ok) return
+        logResult("liveview stop", client.post(PATH_LIVEVIEW, JSONObject().put("liveviewsize", "off")))
     }
 
     /** Fetch one JPEG frame from the running live-view session. Returns the
