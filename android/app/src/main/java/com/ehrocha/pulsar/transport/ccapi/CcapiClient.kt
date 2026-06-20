@@ -173,6 +173,12 @@ class CcapiClient(
             rawGet("$rootUrl/$ver$path")
         }
 
+    /** GET an already-resolved absolute URL as text (e.g. the URL returned by
+     *  [endpointUrl], which may live under a different API version than the
+     *  pinned one). */
+    suspend fun getAtUrl(url: String): Result<String> =
+        withContext(Dispatchers.IO) { rawGet(url) }
+
     /** Like [get] but returns the raw response body. Used by binary endpoints
      *  like `/shooting/liveview/flip` where decoding through `readText()` would
      *  mangle the JPEG. */

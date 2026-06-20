@@ -287,10 +287,29 @@ class CcapiTransport(
      *  ticked since boot is invisible to it. Returns null on failure. */
     suspend fun getBatteryStatus(): JSONObject? {
         if (!_connected.value) return null
-        return when (val r = client.get("/devicestatus/battery")) {
-            is CcapiClient.Result.Ok -> runCatching { JSONObject(r.value) }.getOrNull()
+        // Single-battery endpoint first — log the raw body since bodies disagree
+        // on the shape (the EOS RP returned an object whose `level` was empty).
+        val single = when (val r = client.get("/devicestatus/battery")) {
+            is CcapiClient.Result.Ok -> {
+                CanonBleLog.d(TAG, "devicestatus/battery raw: ${r.value.take(300)}")
+                runCatching { JSONObject(r.value) }.getOrNull()
+            }
             else -> { logResult("devicestatus/battery", r); null }
         }
+        if (single != null && single.optString("level").isNotEmpty()) return single
+        // No usable level — newer bodies report it under `batterylist`, which
+        // can live under a different API version (resolve via endpointUrl).
+        val listUrl = client.endpointUrl("/devicestatus/batterylist")
+        if (listUrl != null) {
+            when (val r = client.getAtUrl(listUrl)) {
+                is CcapiClient.Result.Ok -> {
+                    CanonBleLog.d(TAG, "devicestatus/batterylist raw: ${r.value.take(300)}")
+                    runCatching { JSONObject(r.value) }.getOrNull()?.let { return it }
+                }
+                else -> logResult("devicestatus/batterylist", r)
+            }
+        }
+        return single
     }
 
     /**
