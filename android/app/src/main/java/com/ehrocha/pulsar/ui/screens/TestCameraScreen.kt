@@ -95,20 +95,30 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     var probeMark by remember { mutableStateOf(0L) }
     var sharePromptText by remember { mutableStateOf<String?>(null) }
 
-    // Phase transitions driven by the running flag. The running flag is
-    // false during preflight (compat + probe), so we only advance when the
-    // *previously-running* phase completes — never when we were just
-    // expecting to start.
+    // Phase transitions driven by the running flag. CRITICAL: the manual phase
+    // runs the compatibility report + settings probe BEFORE startFlow(), so
+    // `running` stays false for several seconds after we enter RUNNING_MANUAL.
+    // Keying the "phase done" transition on `!running` alone fired it during
+    // that preflight window — raising the share dialog (and resetting the shot
+    // count) before a single shot. So we only advance once we've actually SEEN
+    // the phase run (running went true), then back to false.
+    var sawRunning by remember { mutableStateOf(false) }
     LaunchedEffect(running, phase) {
+        if (running) {
+            sawRunning = true
+            return@LaunchedEffect
+        }
         when {
-            phase == TestPhase.RUNNING_MANUAL && !running -> {
+            phase == TestPhase.RUNNING_MANUAL && sawRunning -> {
+                sawRunning = false
                 phase = if (fullSequence) TestPhase.AWAIT_BULB else TestPhase.IDLE
                 if (!fullSequence) {
                     // No bulb phase → the entire test is done, raise share.
                     sharePromptText = com.ehrocha.pulsar.canonble.CanonBleLog.dumpSince(probeMark)
                 }
             }
-            phase == TestPhase.RUNNING_BULB && !running -> {
+            phase == TestPhase.RUNNING_BULB && sawRunning -> {
+                sawRunning = false
                 phase = TestPhase.IDLE
                 sharePromptText = com.ehrocha.pulsar.canonble.CanonBleLog.dumpSince(probeMark)
             }

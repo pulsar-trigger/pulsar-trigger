@@ -132,6 +132,24 @@ class CcapiClient(
         return false
     }
 
+    /** Full URL of the advertised endpoint whose path ends with [pathSuffix],
+     *  searched across **all** versions. Some endpoints — notably `/contents`
+     *  — are listed only under an older version than the pinned one, so
+     *  prefixing the pinned version (`/ccapi/<pinned>/contents`) 404s. The
+     *  matrix carries the correct full URL, so we use that. Null if the body
+     *  doesn't advertise it at all. */
+    fun endpointUrl(pathSuffix: String): String? {
+        for ((_, arr) in endpoints) {
+            for (i in 0 until arr.length()) {
+                val ep = arr.optJSONObject(i) ?: continue
+                val url = ep.optString("url").takeIf { it.isNotBlank() } ?: continue
+                val path = runCatching { URL(url).path }.getOrNull() ?: url
+                if (path.endsWith(pathSuffix)) return url
+            }
+        }
+        return null
+    }
+
     suspend fun post(path: String, body: JSONObject? = null): Result<String> =
         withContext(Dispatchers.IO) {
             val ver = version ?: return@withContext Result.Network(

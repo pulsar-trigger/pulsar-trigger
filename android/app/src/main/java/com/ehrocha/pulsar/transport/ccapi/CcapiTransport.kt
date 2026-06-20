@@ -415,8 +415,16 @@ class CcapiTransport(
 
     override suspend fun listContents(): List<CameraImage> {
         val out = mutableListOf<CameraImage>()
-        val storages = client.getContentPaths(PATH_CONTENTS)
-        CanonBleLog.i(CONTENT_TAG, "GET /contents -> ${storages.size} storages")
+        // Seed from the advertised endpoint URL (correct version baked in),
+        // NOT a pinned-version prefix — /contents lives under a specific
+        // CCAPI version and 404s otherwise.
+        val contentsUrl = client.endpointUrl(PATH_CONTENTS)
+        if (contentsUrl == null) {
+            CanonBleLog.w(CONTENT_TAG, "no $PATH_CONTENTS endpoint advertised by this body")
+            return out
+        }
+        val storages = client.getContentPaths(contentsUrl)
+        CanonBleLog.i(CONTENT_TAG, "GET $contentsUrl -> ${storages.size} storages")
         for (storage in storages) {
             val dirs = client.getContentPaths(storage)
             CanonBleLog.i(CONTENT_TAG, "$storage -> ${dirs.size} dirs")
