@@ -199,7 +199,10 @@ class CcapiClient(
             when (val r = rawGet(absolutize(pathOrUrl))) {
                 is Result.Ok -> {
                     val list = runCatching {
-                        val arr = JSONObject(r.value).optJSONArray("path") ?: JSONArray()
+                        // Canon returns the entries under "url"; some
+                        // versions/docs say "path" — accept either.
+                        val obj = JSONObject(r.value)
+                        val arr = obj.optJSONArray("url") ?: obj.optJSONArray("path") ?: JSONArray()
                         (0 until arr.length()).mapNotNull {
                             arr.optString(it).takeIf { s -> s.isNotBlank() }
                         }

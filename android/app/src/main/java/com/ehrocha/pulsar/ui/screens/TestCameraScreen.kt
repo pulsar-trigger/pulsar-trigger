@@ -85,8 +85,12 @@ private enum class TestPhase {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
-    val runState = LocalRunState.current
-    val running = runState !is RunState.Idle
+    // flowRunning (not the status-derived RunState) is authoritative across a
+    // multi-step flow: runCanonBulb sets status IDLE at the end of EACH bulb
+    // step, so RunState flickers Idle between the bulb phase's steps — keying
+    // the phase-done transition on that fired the share after step 1 while the
+    // rest kept shooting. flowRunning stays true until the whole flow ends.
+    val running by vm.flowRunning.collectAsState()
     val stepCount by vm.cameraTestStepCount.collectAsState()
     val fullSequence = stepCount >= 5  // i.e. bulb supported
     val ctx = LocalContext.current

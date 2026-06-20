@@ -12,8 +12,6 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,6 +28,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -1240,28 +1239,36 @@ private fun SettingRow(
             )
         }
         if (options.isNotEmpty()) {
+            // Position 0 = Leave-as-is (—), 1..N = the accepted values. The
+            // big Mono readout above tracks the selection as you slide, so the
+            // whole enumerated list collapses to one instrument slider instead
+            // of a wall of chips.
+            val currentIdx = if (current == null) 0
+                             else options.indexOf(current).let { if (it >= 0) it + 1 else 0 }
+            Slider(
+                value = currentIdx.toFloat(),
+                onValueChange = { v ->
+                    val idx = v.roundToInt()
+                    onChange(if (idx <= 0) null else options.getOrNull(idx - 1))
+                },
+                valueRange = 0f..options.size.toFloat(),
+                steps = (options.size - 1).coerceAtLeast(0),
+                enabled = enabled,
+            )
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                ValueChip(
-                    text = stringResource(R.string.iv2_camera_leave_as_is),
-                    selected = current == null,
-                    enabled = enabled,
-                    mono = false,
-                    onClick = { onChange(null) },
+                Text(
+                    "—",
+                    style = MaterialTheme.typography.labelSmall.copy(fontFamily = mono),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                options.forEach { v ->
-                    ValueChip(
-                        text = v,
-                        selected = current == v,
-                        enabled = enabled,
-                        mono = true,
-                        onClick = { onChange(v) },
-                    )
-                }
+                Text(
+                    options.last(),
+                    style = MaterialTheme.typography.labelSmall.copy(fontFamily = mono),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         } else {
             // Body can't enumerate this setting — let the user type what it
@@ -1279,29 +1286,3 @@ private fun SettingRow(
     }
 }
 
-@Composable
-private fun ValueChip(
-    text: String,
-    selected: Boolean,
-    enabled: Boolean,
-    mono: Boolean,
-    onClick: () -> Unit,
-) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        enabled = enabled,
-        label = {
-            Text(
-                text,
-                maxLines = 1,
-                style = if (mono) {
-                    MaterialTheme.typography.bodyMedium.copy(
-                        fontFamily = com.ehrocha.pulsar.ui.theme.Mono,
-                        fontFeatureSettings = "tnum",
-                    )
-                } else MaterialTheme.typography.bodyMedium,
-            )
-        },
-    )
-}
