@@ -629,14 +629,19 @@ class PtpIpTransport private constructor(
     override suspend fun getThumbnail(image: CameraImage): ByteArray? =
         wireMutex.withLock { client.thumbnailFor(image) }
 
-    // No JPEG rendition yet (would need to extract the CR3's embedded preview),
-    // so `asJpeg` is ignored and the original file is streamed.
+    // JPEG rendition = the embedded preview extracted from the CR3 (PTP has no
+    // display-rendition op like CCAPI's ?kind=display).
+    override val supportsJpegRendition: Boolean get() = true
+
     override suspend fun downloadImage(
         image: CameraImage,
         sink: java.io.OutputStream,
         onProgress: (Long, Long) -> Unit,
         asJpeg: Boolean,
-    ): Boolean = wireMutex.withLock { client.downloadObject(image, sink, onProgress) }
+    ): Boolean = wireMutex.withLock {
+        if (asJpeg && image.isRaw) client.downloadObjectAsJpeg(image, sink, onProgress)
+        else client.downloadObject(image, sink, onProgress)
+    }
 }
 
 /** Outcome of [PtpIpTransport.openOn] — distinguishes user-rejection on the
