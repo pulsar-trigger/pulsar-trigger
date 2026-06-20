@@ -213,6 +213,11 @@ data class StatusFrame(
     val fwVersion: String = "",
 ) {
     companion object {
+        /** [batteryPct] sentinel: the transport has no usable charge reading
+         *  (e.g. CCAPI bodies that report an AC adapter / empty `level`, or the
+         *  EOS RP which refuses battery over USB). UI shows "—", not "0%". */
+        const val BATTERY_UNKNOWN = -1
+
         fun parse(data: ByteArray): StatusFrame? {
             val r = TlvReader.parse(data) ?: return null
             if (r.opcode != NotifyOp.STATUS) return null

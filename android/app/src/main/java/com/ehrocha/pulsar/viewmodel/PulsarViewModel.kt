@@ -1536,9 +1536,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             ?: json.takeIf { it.has("level") }
         if (battObj != null) {
             val level = battObj.optString("level")
-            val pct = canonBatteryToPct(level)
-            com.ehrocha.pulsar.canonble.CanonBleLog.d(TAG, "battery level='$level' -> pct=$pct")
-            if (pct != null) _status.update { it?.copy(batteryPct = pct) }
+            val kind = battObj.optString("kind")
+            // No parseable level (empty, or an AC-adapter/DC-coupler kind that
+            // carries no charge) → UNKNOWN so the UI shows "—" instead of a
+            // false 0%. The EOS RP reports `ac_adapter`/DR-E18 over CCAPI.
+            val pct = canonBatteryToPct(level) ?: StatusFrame.BATTERY_UNKNOWN
+            com.ehrocha.pulsar.canonble.CanonBleLog.d(TAG, "battery kind='$kind' level='$level' -> pct=$pct")
+            _status.update { it?.copy(batteryPct = pct) }
         }
 
         // `addedcontents` is the list of files added since the last poll. Add

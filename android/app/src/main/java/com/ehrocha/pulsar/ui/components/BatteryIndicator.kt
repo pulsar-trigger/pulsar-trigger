@@ -59,19 +59,22 @@ fun BatteryIndicator() {
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            val battText = if (status != null) "${status.batteryPct}%" else "—"
+            // A negative pct is the "no reading" sentinel (CCAPI AC-adapter /
+            // empty level) — render it like the disconnected state: dim "—".
+            val unknown = status != null && status.batteryPct < 0
+            val battText = if (status != null && !unknown) "${status.batteryPct}%" else "—"
             Text(
                 text = battText,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
                 color = when {
-                    status == null -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
+                    status == null || unknown -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
                     status.batteryPct < 20 -> StatusRed
                     else -> MaterialTheme.colorScheme.onSurface
                 },
             )
             val battIcon = when {
-                status == null -> "󰁺"
+                status == null || unknown -> "󰁺"
                 status.batteryPct > 75 -> "󰁹"
                 status.batteryPct > 25 -> "󰁾"
                 else -> "󰁺"
@@ -79,7 +82,7 @@ fun BatteryIndicator() {
             Text(
                 text = battIcon,
                 fontSize = 16.sp,
-                color = if (status == null)
+                color = if (status == null || unknown)
                     MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
                 else Color.Unspecified,
             )
