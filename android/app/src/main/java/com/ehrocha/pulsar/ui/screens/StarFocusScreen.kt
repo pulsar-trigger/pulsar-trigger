@@ -577,6 +577,10 @@ private fun BoxScope.RoiOverlay(
         border = BorderStroke(2.dp, Color.Yellow),
         shape = CircleShape,
         modifier = Modifier
+            // Anchor top-left so the offset is absolute. Without this the
+            // parent Box's contentAlignment=Center placed the circle at the
+            // centre first, then the absolute offset pushed it bottom-right.
+            .align(Alignment.TopStart)
             .offset(
                 x = with(density) { (centerXpx - boxPx / 2f).toDp() },
                 y = with(density) { (centerYpx - boxPx / 2f).toDp() },
