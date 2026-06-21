@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.ui.theme.PulsarTheme
+import kotlin.math.hypot
 
 /**
  * SIGNAL's printed-circuit backdrop: a faint via-dot grid, a routed decorative
@@ -243,6 +244,10 @@ private fun DrawScope.drawBeams(color: Color, pulse: Float) {
     val headR = 2.6.dp.toPx()
     val tailR = 0.8.dp.toPx()
     DECOR_TRACES.forEachIndexed { i, poly ->
+        // Only the longer buses carry a beam — skip the short stubs / fans, so
+        // the board reads as a few signals flowing, not a swarm.
+        val fracLen = poly.zipWithNext { a, b -> hypot(b.first - a.first, b.second - a.second) }.sum()
+        if (fracLen < 0.35f) return@forEachIndexed
         val pts = poly.map { Offset(it.first * size.width, it.second * size.height) }
         val phase = (pulse + i * 0.137f) % 1f
         for (t in 0..2) {

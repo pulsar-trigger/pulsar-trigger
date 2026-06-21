@@ -829,7 +829,8 @@ private fun LauncherTile(
 
     // Each tile is a little IC soldered to the board: carbon body with side
     // legs, a pin-1 dot and a part-number, the icon + label as its printing.
-    Box(modifier = modifier.fillMaxWidth().scale(scale)) {
+    // Fixed height so every chip is the same size regardless of label lines.
+    Box(modifier = modifier.fillMaxWidth().height(110.dp).scale(scale)) {
         // Side legs, in the margins either side of the chip body.
         Canvas(Modifier.matchParentSize()) {
             val ll = legLen.toPx()
@@ -848,9 +849,9 @@ private fun LauncherTile(
             shape = RoundedCornerShape(8.dp),
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = legLen),
+            modifier = Modifier.fillMaxSize().padding(horizontal = legLen),
         ) {
-            Box(Modifier.fillMaxWidth()) {
+            Box(Modifier.fillMaxSize()) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,

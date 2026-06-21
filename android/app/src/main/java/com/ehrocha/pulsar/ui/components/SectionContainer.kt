@@ -54,11 +54,11 @@ fun SectionContainer(
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.5.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 4.dp, top = 2.dp),
+                    modifier = Modifier.padding(start = 4.dp, top = 2.dp, bottom = 2.dp),
                 )
-                // SIGNAL: the section rule is a flat trace with one pulse
-                // in it — the CP 1919 mark instead of a hairline.
-                PulseDivider(modifier = Modifier.padding(horizontal = 4.dp))
+                // No pulse-divider here: on the PCB board the traces + beams are
+                // the texture, so an extra section rule just competes. The
+                // letter-spaced region label is the delineation.
             }
             content()
         }
