@@ -61,6 +61,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.model.FlowStepType
+import com.ehrocha.pulsar.ui.components.PcbField
 import com.ehrocha.pulsar.ui.components.SectionContainer
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import kotlinx.coroutines.launch
@@ -414,6 +415,8 @@ private fun MenuPageContent(
                     val lastKey by vm.lastTriggerKey.collectAsState()
                     val lastTile = (bulbR + standardR + customR)
                         .find { it.key == lastKey && it.enabled }
+                    Box(Modifier.fillMaxSize()) {
+                    PcbField(Modifier.matchParentSize())
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -448,6 +451,7 @@ private fun MenuPageContent(
                             SectionGrid(customR)
                         }
                         Spacer(Modifier.height(8.dp))
+                    }
                     }
                 }
                 DEST_TOOLS -> {
@@ -523,6 +527,8 @@ private fun MenuPageContent(
                             Icons.Default.FlightTakeoff,
                         ) { onAircraftWatchSelected() },
                     )
+                    Box(Modifier.fillMaxSize()) {
+                    PcbField(Modifier.matchParentSize())
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -540,6 +546,7 @@ private fun MenuPageContent(
                             SectionGrid(spottingTools)
                         }
                         Spacer(Modifier.height(8.dp))
+                    }
                     }
                 }
             }
