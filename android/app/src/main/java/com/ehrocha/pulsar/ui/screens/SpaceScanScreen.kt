@@ -125,27 +125,30 @@ fun SpaceScanScreen(
     }
     val ctx = LocalContext.current
 
-    // Six worlds on a downward fan: outer giants flank, inner bodies sit low.
+    // Corner-cascade (solar-system diagram): the pulsar sits in the upper-left
+    // corner and the worlds march outward along nested orbits on a down-right
+    // diagonal — small/near bodies first, gas-giant farthest — so each planet
+    // gets its own ring + screen region instead of crowding a single band.
     val planets = remember {
         listOf(
-            PlanetSpec(TransportKind.CCAPI, Icons.Default.Wifi,
-                R.string.transport_tile_ccapi_title, listOf("lv", "bat", "bulb"),
-                PlanetAmber, 46.dp, ring = true, ghost = false, orbit = 0.95f, angleDeg = 148f),
-            PlanetSpec(TransportKind.PTP_IP, Icons.Default.Wifi,
-                R.string.transport_tile_ptp_ip_title, listOf("lv", "bulb"),
-                PlanetSlate, 40.dp, ring = false, ghost = false, orbit = 0.97f, angleDeg = 33f),
-            PlanetSpec(TransportKind.PTP_USB, Icons.Default.Usb,
-                R.string.transport_tile_ptp_title, listOf("lv", "bulb"),
-                PlanetCopper, 34.dp, ring = false, ghost = false, orbit = 0.62f, angleDeg = 60f),
-            PlanetSpec(TransportKind.BLE_ESP, Icons.Default.Bluetooth,
-                R.string.transport_tile_pulsar_ble_title, listOf("bulb"),
-                PlanetAzure, 32.dp, ring = false, ghost = false, orbit = 0.58f, angleDeg = 120f),
             PlanetSpec(TransportKind.CANON_BLE, Icons.Default.Bluetooth,
-                R.string.transport_tile_canon_ble_title, listOf("bulb"),
-                PlanetRose, 24.dp, ring = false, ghost = false, orbit = 0.42f, angleDeg = 100f),
+                R.string.transport_tile_canon_ble_title, R.string.transport_short_canon_ble, listOf("bulb"),
+                PlanetRose, 22.dp, ring = false, ghost = false, orbit = 0.30f, angleDeg = 40f),
+            PlanetSpec(TransportKind.BLE_ESP, Icons.Default.Bluetooth,
+                R.string.transport_tile_pulsar_ble_title, R.string.transport_short_ble_esp, listOf("bulb"),
+                PlanetAzure, 30.dp, ring = false, ghost = false, orbit = 0.45f, angleDeg = 60f),
             PlanetSpec(null, Icons.Default.Science,
-                R.string.transport_tile_simulator_title, listOf("demo"),
-                PlanetMint, 30.dp, ring = false, ghost = true, orbit = 0.46f, angleDeg = 72f),
+                R.string.transport_tile_simulator_title, R.string.transport_short_sim, listOf("demo"),
+                PlanetMint, 28.dp, ring = false, ghost = true, orbit = 0.57f, angleDeg = 37f),
+            PlanetSpec(TransportKind.PTP_USB, Icons.Default.Usb,
+                R.string.transport_tile_ptp_title, R.string.transport_short_usb, listOf("lv", "bulb"),
+                PlanetCopper, 34.dp, ring = false, ghost = false, orbit = 0.70f, angleDeg = 54f),
+            PlanetSpec(TransportKind.PTP_IP, Icons.Default.Wifi,
+                R.string.transport_tile_ptp_ip_title, R.string.transport_short_ptp_ip, listOf("lv", "bulb"),
+                PlanetSlate, 40.dp, ring = false, ghost = false, orbit = 0.84f, angleDeg = 39f),
+            PlanetSpec(TransportKind.CCAPI, Icons.Default.Wifi,
+                R.string.transport_tile_ccapi_title, R.string.transport_short_ccapi, listOf("lv", "bat", "bulb"),
+                PlanetAmber, 48.dp, ring = true, ghost = false, orbit = 0.99f, angleDeg = 53f),
         )
     }
 
@@ -200,6 +203,8 @@ private data class PlanetSpec(
     val kind: TransportKind?,
     val icon: ImageVector,
     val titleRes: Int,
+    /** Short caption for the orrery (planet names must stay tight). */
+    val shortRes: Int,
     val caps: List<String>,
     val hue: Color,
     val sizeDp: Dp,
@@ -240,10 +245,12 @@ private fun Orrery(
     BoxWithConstraints(modifier) {
         val w = maxWidth
         val h = maxHeight
-        val cxF = 0.5f
-        val cyF = 0.30f
-        val rxF = 0.40f
-        val ryF = 0.42f
+        // Pulsar anchored near the upper-left corner; orbits reach almost the
+        // full field so the worlds cascade out toward the lower-right.
+        val cxF = 0.13f
+        val cyF = 0.15f
+        val rxF = 0.92f
+        val ryF = 0.86f
 
         // ── Orbits + pulsar (behind the planet composables) ──────────────────
         Canvas(Modifier.fillMaxSize()) {
@@ -262,16 +269,16 @@ private fun Orrery(
                 )
             }
 
-            val glowR = 44.dp.toPx()
+            val glowR = 60.dp.toPx()
             drawCircle(
                 brush = Brush.radialGradient(
-                    listOf(primary.copy(alpha = 0.10f + 0.22f * breathe), Color.Transparent),
+                    listOf(primary.copy(alpha = 0.12f + 0.22f * breathe), Color.Transparent),
                     center = core, radius = glowR,
                 ),
                 radius = glowR, center = core,
             )
 
-            val maxRing = size.width * 0.42f
+            val maxRing = size.width * 0.50f
             listOf(pulse, (pulse + 0.5f).mod(1f)).forEach { ph ->
                 drawCircle(
                     color = colors.liveEnd.copy(alpha = ((1f - ph) * 0.40f).coerceIn(0f, 1f)),
@@ -280,15 +287,17 @@ private fun Orrery(
                 )
             }
 
-            val beamLen = size.width * 0.46f
-            val beamHalf = 14.dp.toPx()
-            val near = colors.liveEnd.copy(alpha = 0.42f)
+            // Signature sweep from the corner — kept thin + faint so the meteors
+            // carry the motion, not a solid wedge.
+            val beamLen = size.width * 0.74f
+            val beamHalf = 9.dp.toPx()
+            val near = colors.liveEnd.copy(alpha = 0.26f)
             val far = colors.liveStart.copy(alpha = 0f)
             drawPulsarBeam(core, beamAngle, beamLen, beamHalf, near, far)
             drawPulsarBeam(core, beamAngle + PI.toFloat(), beamLen, beamHalf, near, far)
 
-            drawCircle(colors.liveEnd.copy(alpha = 0.5f), radius = 9.dp.toPx(), center = core)
-            drawCircle(onSurface, radius = 5.dp.toPx(), center = core)
+            drawCircle(colors.liveEnd.copy(alpha = 0.5f), radius = 10.dp.toPx(), center = core)
+            drawCircle(onSurface, radius = 5.5.dp.toPx(), center = core)
             drawCircle(Color.White, radius = 2.5.dp.toPx(), center = core)
         }
 
@@ -297,7 +306,7 @@ private fun Orrery(
             val a = (p.angleDeg * PI / 180f).toFloat()
             val px = w * cxF + (w * rxF) * p.orbit * cos(a)
             val py = h * cyF + (h * ryF) * p.orbit * sin(a)
-            val boxW = 132.dp
+            val boxW = 96.dp
             Planet(
                 spec = p,
                 hue = tint(p.hue),
@@ -367,12 +376,12 @@ private fun Planet(
         PlanetBody(spec, hue, recent)
         Spacer(Modifier.height(5.dp))
         Text(
-            stringResource(spec.titleRes),
+            stringResource(spec.shortRes),
             fontFamily = Grotesk,
             fontWeight = FontWeight.SemiBold,
             fontSize = 13.sp,
             lineHeight = 14.sp,
-            maxLines = 2,
+            maxLines = 1,
             textAlign = TextAlign.Center,
             overflow = TextOverflow.Ellipsis,
             color = MaterialTheme.colorScheme.onSurface,

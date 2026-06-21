@@ -212,6 +212,13 @@
     <string name="visual_style_circuit">Circuito</string>
     <string name="visual_style_classic">Clásico</string>
     <string name="visual_style_space">Espacio</string>
+    <!-- Short transport labels for the Space orrery (planet captions). -->
+    <string name="transport_short_ccapi">CCAPI</string>
+    <string name="transport_short_ptp_ip">PTP/IP</string>
+    <string name="transport_short_usb">USB</string>
+    <string name="transport_short_ble_esp">Pulsar</string>
+    <string name="transport_short_canon_ble">Canon BLE</string>
+    <string name="transport_short_sim">Sim</string>
     <string name="disconnect">Desconectar</string>
     <string name="back">Atrás</string>
     <string name="cancel">Cancelar</string>
