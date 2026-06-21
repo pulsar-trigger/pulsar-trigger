@@ -17,11 +17,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
@@ -57,12 +60,22 @@ fun PcbField(modifier: Modifier = Modifier, animated: Boolean = true, variant: I
         label = "beam",
     )
     Box(modifier) {
-        // Static board — no animation state read, so it draws once.
-        Canvas(Modifier.matchParentSize()) {
-            drawViaField(fieldDot)
-            drawDecor(decorTrace, decorVia, variant)
-            drawComponents(compLine, compFill, variant)
-        }
+        // Static board, rasterised into a cached bitmap (drawWithCache) so a
+        // tile scrolling into view is a cheap blit — not a re-rasterise of
+        // hundreds of traces/dots, which made the incoming half pop in late.
+        Box(
+            Modifier.matchParentSize().drawWithCache {
+                val w = size.width.toInt().coerceAtLeast(1)
+                val h = size.height.toInt().coerceAtLeast(1)
+                val bmp = ImageBitmap(w, h)
+                CanvasDrawScope().draw(this, layoutDirection, androidx.compose.ui.graphics.Canvas(bmp), size) {
+                    drawViaField(fieldDot)
+                    drawDecor(decorTrace, decorVia, variant)
+                    drawComponents(compLine, compFill, variant)
+                }
+                onDrawBehind { drawImage(bmp) }
+            }
+        )
         // Travelling beams — only this thin layer redraws each frame.
         if (animated) {
             Canvas(Modifier.matchParentSize()) { drawBeams(beamColor, pulse, variant) }
