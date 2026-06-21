@@ -54,6 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -202,22 +203,68 @@ private data class PadSpec(
 )
 
 /** Decorative PCB bus routed behind the board — fixed fractional polylines
- *  (45° / 90° bends) that fill the field above, below and around the pads so
- *  the carbon isn't empty. Purely cosmetic; the six functional traces are
- *  drawn separately and brighter. */
+ *  that pack the field with parallel runs, fan-outs and edge buses so the
+ *  carbon reads like a populated board. Purely cosmetic; the six functional
+ *  traces are drawn separately and brighter. */
 private val DECOR_TRACES = listOf(
-    listOf(0.06f to 0.06f, 0.94f to 0.06f),
-    listOf(0.20f to 0.06f, 0.20f to 0.12f, 0.27f to 0.19f),
-    listOf(0.80f to 0.06f, 0.80f to 0.11f, 0.73f to 0.18f),
-    listOf(0.05f to 0.10f, 0.05f to 0.44f),
-    listOf(0.95f to 0.10f, 0.95f to 0.44f),
-    listOf(0.05f to 0.56f, 0.05f to 0.90f),
-    listOf(0.95f to 0.56f, 0.95f to 0.90f),
-    listOf(0.06f to 0.94f, 0.94f to 0.94f),
-    listOf(0.30f to 0.94f, 0.30f to 0.88f, 0.37f to 0.81f),
-    listOf(0.70f to 0.94f, 0.70f to 0.88f),
-    listOf(0.14f to 0.30f, 0.14f to 0.50f),
-    listOf(0.86f to 0.30f, 0.86f to 0.50f),
+    // top ribbon bus (parallel runs)
+    listOf(0.05f to 0.045f, 0.95f to 0.045f),
+    listOf(0.07f to 0.065f, 0.93f to 0.065f),
+    listOf(0.05f to 0.085f, 0.95f to 0.085f),
+    listOf(0.09f to 0.105f, 0.42f to 0.105f),
+    listOf(0.58f to 0.105f, 0.91f to 0.105f),
+    // top fan-outs dropping toward the pads
+    listOf(0.16f to 0.105f, 0.16f to 0.15f, 0.22f to 0.21f),
+    listOf(0.27f to 0.085f, 0.27f to 0.15f),
+    listOf(0.73f to 0.085f, 0.73f to 0.15f),
+    listOf(0.84f to 0.105f, 0.84f to 0.15f, 0.78f to 0.21f),
+    // left edge vertical bundle + branch stubs
+    listOf(0.040f to 0.12f, 0.040f to 0.88f),
+    listOf(0.065f to 0.16f, 0.065f to 0.45f),
+    listOf(0.065f to 0.55f, 0.065f to 0.84f),
+    listOf(0.040f to 0.28f, 0.12f to 0.28f),
+    listOf(0.040f to 0.50f, 0.10f to 0.50f),
+    listOf(0.040f to 0.72f, 0.12f to 0.72f),
+    // right edge vertical bundle + branch stubs
+    listOf(0.960f to 0.12f, 0.960f to 0.88f),
+    listOf(0.935f to 0.16f, 0.935f to 0.45f),
+    listOf(0.935f to 0.55f, 0.935f to 0.84f),
+    listOf(0.960f to 0.28f, 0.88f to 0.28f),
+    listOf(0.960f to 0.50f, 0.90f to 0.50f),
+    listOf(0.960f to 0.72f, 0.88f to 0.72f),
+    // bottom ribbon bus
+    listOf(0.05f to 0.955f, 0.95f to 0.955f),
+    listOf(0.07f to 0.935f, 0.93f to 0.935f),
+    listOf(0.05f to 0.915f, 0.95f to 0.915f),
+    listOf(0.09f to 0.895f, 0.42f to 0.895f),
+    listOf(0.58f to 0.895f, 0.91f to 0.895f),
+    // bottom fan-outs
+    listOf(0.18f to 0.895f, 0.18f to 0.85f, 0.24f to 0.79f),
+    listOf(0.30f to 0.915f, 0.30f to 0.85f),
+    listOf(0.70f to 0.915f, 0.70f to 0.85f),
+    listOf(0.82f to 0.895f, 0.82f to 0.85f, 0.76f to 0.79f),
+)
+
+private enum class Comp { RES, LED, NPN, SMD, IC }
+private class DecorComp(val type: Comp, val x: Float, val y: Float)
+
+/** Scattered SMD silkscreen — resistors, LEDs, transistors, chip caps and a
+ *  couple of small ICs — placed in the field margins (hidden where a pad sits
+ *  on top). */
+private val DECOR_COMPONENTS = listOf(
+    DecorComp(Comp.IC, 0.50f, 0.055f),
+    DecorComp(Comp.RES, 0.31f, 0.05f),
+    DecorComp(Comp.LED, 0.63f, 0.05f),
+    DecorComp(Comp.NPN, 0.72f, 0.055f),
+    DecorComp(Comp.SMD, 0.40f, 0.105f),
+    DecorComp(Comp.SMD, 0.60f, 0.105f),
+    DecorComp(Comp.RES, 0.10f, 0.34f),
+    DecorComp(Comp.NPN, 0.90f, 0.34f),
+    DecorComp(Comp.LED, 0.10f, 0.62f),
+    DecorComp(Comp.SMD, 0.90f, 0.62f),
+    DecorComp(Comp.RES, 0.35f, 0.93f),
+    DecorComp(Comp.NPN, 0.50f, 0.93f),
+    DecorComp(Comp.IC, 0.64f, 0.93f),
 )
 
 @Composable
@@ -251,9 +298,9 @@ private fun TransportBoard(
         // A big, present IC; pads sized to the room each row has. The mid row
         // flanks the chip so it's the tight one (short BLE labels live there);
         // the wide top/bottom rows carry the long "Canon Wi-Fi …" names.
-        val chip = (w * 0.32f).coerceIn(120.dp, 150.dp)
+        val chip = (w * 0.30f).coerceIn(118.dp, 142.dp)
         val legW = 9.dp
-        val padWMid = (w / 2 - chip / 2 - legW - 10.dp).coerceIn(104.dp, 150.dp)
+        val padWMid = (w / 2 - chip / 2 - legW - 6.dp).coerceIn(112.dp, 150.dp)
         val padWOuter = (w * 0.46f).coerceIn(150.dp, 190.dp)
         val padH = 70.dp
 
@@ -268,6 +315,8 @@ private fun TransportBoard(
         val viaFaint = colors.liveStart.copy(alpha = 0.32f)
         val decorTrace = colors.liveStart.copy(alpha = 0.10f)
         val decorVia = colors.liveEnd.copy(alpha = 0.16f)
+        val compLine = colors.liveStart.copy(alpha = 0.17f)
+        val compFill = colors.liveEnd.copy(alpha = 0.12f)
         val fieldDot = outline.copy(alpha = 0.045f)
         val legColor = colors.liveStart.copy(alpha = 0.5f)
         val activeBrush = Brush.linearGradient(listOf(colors.liveStart, colors.liveEnd))
@@ -276,6 +325,7 @@ private fun TransportBoard(
         Canvas(Modifier.matchParentSize()) {
             drawViaField(fieldDot)
             drawDecor(decorTrace, decorVia)
+            drawComponents(compLine, compFill)
 
             val cx = size.width / 2f
             val cy = size.height / 2f
@@ -454,7 +504,7 @@ private fun TransportPad(
         modifier = modifier,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp),
+            modifier = Modifier.padding(horizontal = 9.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -463,7 +513,7 @@ private fun TransportPad(
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp),
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(7.dp))
             Column(Modifier.weight(1f)) {
                 Text(
                     stringResource(spec.titleRes),
@@ -562,6 +612,58 @@ private fun DrawScope.drawDecor(trace: Color, via: Color) {
         }
         for (pt in poly) {
             drawCircle(via, radius = viaR, center = Offset(pt.first * size.width, pt.second * size.height))
+        }
+    }
+}
+
+/** Draw the scattered [DECOR_COMPONENTS] as faint SMD silkscreen. */
+private fun DrawScope.drawComponents(line: Color, fill: Color) {
+    val stroke = Stroke(width = 1.3.dp.toPx(), cap = StrokeCap.Round)
+    for (comp in DECOR_COMPONENTS) {
+        val c = Offset(comp.x * size.width, comp.y * size.height)
+        when (comp.type) {
+            Comp.RES -> {
+                val bw = 16.dp.toPx(); val bh = 6.dp.toPx(); val lead = 6.dp.toPx()
+                drawRoundRect(line, topLeft = Offset(c.x - bw / 2, c.y - bh / 2), size = Size(bw, bh),
+                    cornerRadius = CornerRadius(2.dp.toPx()), style = stroke)
+                drawLine(line, Offset(c.x - bw / 2 - lead, c.y), Offset(c.x - bw / 2, c.y), strokeWidth = stroke.width)
+                drawLine(line, Offset(c.x + bw / 2, c.y), Offset(c.x + bw / 2 + lead, c.y), strokeWidth = stroke.width)
+            }
+            Comp.LED -> {
+                val r = 5.dp.toPx()
+                drawCircle(line, radius = r, center = c, style = stroke)
+                drawCircle(fill, radius = 1.6.dp.toPx(), center = c)
+                drawLine(line, Offset(c.x - r - 5.dp.toPx(), c.y), Offset(c.x - r, c.y), strokeWidth = stroke.width)
+                drawLine(line, Offset(c.x + r, c.y), Offset(c.x + r + 5.dp.toPx(), c.y), strokeWidth = stroke.width)
+            }
+            Comp.NPN -> {
+                val s = 13.dp.toPx(); val leg = 5.dp.toPx()
+                drawRoundRect(line, topLeft = Offset(c.x - s / 2, c.y - s * 0.4f), size = Size(s, s * 0.8f),
+                    cornerRadius = CornerRadius(2.dp.toPx()), style = stroke)
+                drawLine(line, Offset(c.x - s * 0.25f, c.y + s * 0.4f), Offset(c.x - s * 0.25f, c.y + s * 0.4f + leg), strokeWidth = stroke.width)
+                drawLine(line, Offset(c.x + s * 0.25f, c.y + s * 0.4f), Offset(c.x + s * 0.25f, c.y + s * 0.4f + leg), strokeWidth = stroke.width)
+                drawLine(line, Offset(c.x, c.y - s * 0.4f), Offset(c.x, c.y - s * 0.4f - leg), strokeWidth = stroke.width)
+            }
+            Comp.SMD -> {
+                val bw = 12.dp.toPx(); val bh = 7.dp.toPx(); val pad = 3.dp.toPx()
+                drawRoundRect(fill, topLeft = Offset(c.x - bw / 2, c.y - bh / 2), size = Size(bw, bh),
+                    cornerRadius = CornerRadius(1.5.dp.toPx()))
+                drawRect(fill, topLeft = Offset(c.x - bw / 2 - pad, c.y - bh / 2), size = Size(pad, bh))
+                drawRect(fill, topLeft = Offset(c.x + bw / 2, c.y - bh / 2), size = Size(pad, bh))
+            }
+            Comp.IC -> {
+                val s = 20.dp.toPx(); val leg = 4.dp.toPx()
+                drawRoundRect(fill, topLeft = Offset(c.x - s / 2, c.y - s / 2), size = Size(s, s),
+                    cornerRadius = CornerRadius(2.dp.toPx()))
+                drawRoundRect(line, topLeft = Offset(c.x - s / 2, c.y - s / 2), size = Size(s, s),
+                    cornerRadius = CornerRadius(2.dp.toPx()), style = stroke)
+                for (k in 0 until 4) {
+                    val lx = c.x - s / 2 + s * (k + 0.5f) / 4f
+                    drawLine(line, Offset(lx, c.y - s / 2), Offset(lx, c.y - s / 2 - leg), strokeWidth = stroke.width)
+                    drawLine(line, Offset(lx, c.y + s / 2), Offset(lx, c.y + s / 2 + leg), strokeWidth = stroke.width)
+                }
+                drawCircle(line, radius = 1.3.dp.toPx(), center = Offset(c.x - s / 2 + 3.dp.toPx(), c.y - s / 2 + 3.dp.toPx()))
+            }
         }
     }
 }
