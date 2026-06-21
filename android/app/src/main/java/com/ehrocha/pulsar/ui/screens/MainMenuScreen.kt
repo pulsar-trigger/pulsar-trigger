@@ -326,7 +326,7 @@ fun MainMenuScreen(
             // the pager and pans 1:1 with the swipe, so each page is a different
             // region of the same board.
             Box(modifier = Modifier.weight(1f).fillMaxWidth().clipToBounds()) {
-                ContinuousPcb(pagerState, destCount)
+                ContinuousPcb(pagerState)
                 // Pager body — swipe still works to change destinations, the
                 // NavigationBar reflects the swipe and vice-versa.
                 HorizontalPager(
@@ -346,26 +346,25 @@ fun MainMenuScreen(
  *  [destCount] distinct regions side by side plus a repeat of region 0, so the
  *  infinite pager's wrap (last → first) stays seamless. */
 @Composable
-private fun ContinuousPcb(pagerState: PagerState, destCount: Int) {
+private fun ContinuousPcb(pagerState: PagerState) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val pageW = maxWidth
         Row(
+            // requiredWidth so the two tiles aren't clamped to one screen.
             modifier = Modifier
                 .fillMaxHeight()
-                // requiredWidth: ignore the parent's max constraint so the board
-                // can actually be (destCount+1) screens wide instead of being
-                // clamped (which crushed every region to 1/N width).
-                .requiredWidth(pageW * (destCount + 1))
+                .requiredWidth(pageW * 2)
                 .offset {
-                    val scroll = pagerState.currentPage + pagerState.currentPageOffsetFraction
-                    val pos = ((scroll % destCount) + destCount) % destCount
+                    // Treadmill: pan by the fractional position WITHIN the page
+                    // [0,1) so the board resets by exactly one tile at EVERY
+                    // boundary (not by 3 at just the wrap). With identical,
+                    // edge-matched tiles each reset is invisible — so page 3
+                    // connects to page 1 exactly like every other boundary.
+                    val pos = (pagerState.currentPageOffsetFraction + 1f) % 1f
                     IntOffset((-(pageW.toPx() * pos)).roundToInt(), 0)
                 },
         ) {
-            // Identical tileable regions: with edge-matched, full-width decor
-            // every boundary is indistinguishable from a tile's interior, so
-            // the board is one seamless infinite surface as you scroll the loop.
-            for (slot in 0..destCount) {
+            repeat(2) {
                 PcbField(modifier = Modifier.requiredWidth(pageW).fillMaxHeight())
             }
         }
