@@ -777,6 +777,7 @@ A altura vem da escuridão do céu × céu limpo × sem lua brilhante × sem chu
     <string name="scan_landing_use_simulator">Usar simulador</string>
     <string name="scan_landing_known_devices">Dispositivos conhecidos</string>
     <string name="scan_section_transports">Transportes</string>
+    <string name="scan_tool_diagnostics">Diagnóstico</string>
     <string name="scan_section_recent">Recentes</string>
     <string name="scan_section_tools">Ferramentas</string>
     <string name="trigger_section_bulb">Modos Bulb</string>

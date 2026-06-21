@@ -5,23 +5,34 @@
 
 package com.ehrocha.pulsar.ui.screens
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.Image
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Close
@@ -30,7 +41,6 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Usb
 import androidx.compose.material.icons.filled.Wifi
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -40,31 +50,49 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.model.LastConnection
 import com.ehrocha.pulsar.transport.TransportKind
-import com.ehrocha.pulsar.ui.components.SectionContainer
+import com.ehrocha.pulsar.ui.components.SignalSweep
+import com.ehrocha.pulsar.ui.theme.Display
+import com.ehrocha.pulsar.ui.theme.Grotesk
+import com.ehrocha.pulsar.ui.theme.Mono
+import com.ehrocha.pulsar.ui.theme.PulsarTheme
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
+import kotlin.math.abs
+import kotlin.math.min
 
 /**
- * Initial post-permission screen. Three grouped sections share the same
- * `SectionContainer` shape so they read as a coherent set: **Transports**
- * (the 2×2 protocol tile grid), **Recent** (the last-connection reconnect
- * row, shown only if any), **Tools** (Simulator + Diagnostics as compact
- * rows). The Simulator and Diagnostics rows match the Recent row's
- * structure on purpose — within a section the items look alike; the
- * containers themselves carry the visual hierarchy.
+ * Initial post-permission screen — the **Driver-IC board** (SIGNAL).
+ *
+ * Pulsar is the chip; the six transports are connector pads fanned around it,
+ * wired by hand-routed PCB traces over a faint via-dot field. Tap a pad to
+ * route the signal to that transport. The whole screen is one instrument face
+ * (no stacked tile cards), which also keeps it on a single non-scrolling page.
+ *
+ * Everything draws through role colors (`PulsarTheme.colors` / `colorScheme`)
+ * so Phosphor-Red night mode resolves the traces to its red luminance ramp,
+ * and the live gradient only ever lights the trace that's actively connecting
+ * (the one law).
  */
 @Composable
 fun ScanLandingScreen(
@@ -92,286 +120,353 @@ fun ScanLandingScreen(
     }
     val ctx = androidx.compose.ui.platform.LocalContext.current
 
+    // Pads in fan order: index 0/2/4 sit on the left column (top/mid/bottom),
+    // 1/3/5 on the right. Capability chips are the body's known feature set.
+    val pads = remember {
+        listOf(
+            PadSpec(TransportKind.BLE_ESP, Icons.Default.Bluetooth,
+                R.string.transport_tile_pulsar_ble_title, listOf("bulb")),
+            PadSpec(TransportKind.CANON_BLE, Icons.Default.Bluetooth,
+                R.string.transport_tile_canon_ble_title, listOf("bulb")),
+            PadSpec(TransportKind.CCAPI, Icons.Default.Wifi,
+                R.string.transport_tile_ccapi_title, listOf("lv", "bat", "bulb")),
+            PadSpec(TransportKind.PTP_IP, Icons.Default.Wifi,
+                R.string.transport_tile_ptp_ip_title, listOf("lv", "bulb")),
+            PadSpec(TransportKind.PTP_USB, Icons.Default.Usb,
+                R.string.transport_tile_ptp_title, listOf("lv", "bulb")),
+            PadSpec(null, Icons.Default.Science,
+                R.string.transport_tile_simulator_title, listOf("demo")),
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(16.dp))
 
-        // ── Brand mark ────────────────────────────────────────────────────
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            // Use the foreground PNG, NOT the mipmap adaptive-icon XML —
-            // Compose's painterResource crashes on AdaptiveIconDrawable.
-            // Foreground is sized for a 108dp canvas with 72dp safe zone,
-            // so it self-centers fine in a smaller circular clip.
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary),
-                contentAlignment = Alignment.Center,
-            ) {
-                Image(
-                    // White-forward brand mark — the launcher foreground's
-                    // violet beams vanished against this violet circle.
-                    painter = painterResource(R.drawable.ic_pulsar_mark),
-                    contentDescription = null,
-                    modifier = Modifier.size(52.dp),
-                )
-            }
-            Spacer(Modifier.width(16.dp))
-            Text(
-                stringResource(R.string.app_name),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 2.sp,
-                color = MaterialTheme.colorScheme.primary,
-            )
-        }
+        // ── The board (fills the page; never scrolls) ────────────────────────
+        TransportBoard(
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            pads = pads,
+            recentKind = lastConnection?.kind,
+            reconnectingKind = if (reconnecting) lastConnection?.kind else null,
+            versionName = com.ehrocha.pulsar.BuildConfig.VERSION_NAME,
+            onSelect = { kind -> if (kind == null) onSimulatorSelected() else onTransportSelected(kind) },
+        )
 
-        Spacer(Modifier.height(4.dp))
-
-        // ── Transports ────────────────────────────────────────────────────
-        // 2×3 grid grouped by family: BLE row, Wi-Fi row, USB + Simulator
-        // row. Simulator joins the transport tiles (instead of living in the
-        // Tools section) so all the "ways to connect" sit together. Each
-        // row has two tiles of similar shape so the grid reads as a single
-        // matrix.
-        SectionContainer(title = stringResource(R.string.scan_section_transports)) {
-            val rows = listOf(
-                // BLE row
-                listOf(
-                    TileSpec(TransportKind.BLE_ESP, Icons.Default.Bluetooth,
-                        R.string.transport_tile_pulsar_ble_title,
-                        R.string.transport_tile_pulsar_ble_subtitle),
-                    TileSpec(TransportKind.CANON_BLE, Icons.Default.Bluetooth,
-                        R.string.transport_tile_canon_ble_title,
-                        R.string.transport_tile_canon_ble_subtitle),
-                ),
-                // Wi-Fi row
-                listOf(
-                    TileSpec(TransportKind.CCAPI, Icons.Default.Wifi,
-                        R.string.transport_tile_ccapi_title,
-                        R.string.transport_tile_ccapi_subtitle),
-                    TileSpec(TransportKind.PTP_IP, Icons.Default.Wifi,
-                        R.string.transport_tile_ptp_ip_title,
-                        R.string.transport_tile_ptp_ip_subtitle),
-                ),
-                // USB + Simulator row
-                listOf(
-                    TileSpec(TransportKind.PTP_USB, Icons.Default.Usb,
-                        R.string.transport_tile_ptp_title,
-                        R.string.transport_tile_ptp_subtitle),
-                    // Sentinel: a null kind means "simulator" (no
-                    // TransportKind for it). Handled below.
-                    null,
-                ),
-            )
-            rows.forEach { row ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    row.forEach { spec ->
-                        if (spec != null) {
-                            TransportTile(spec, modifier = Modifier.weight(1f)) {
-                                onTransportSelected(spec.kind)
-                            }
-                        } else {
-                            SimulatorTile(modifier = Modifier.weight(1f), onClick = onSimulatorSelected)
-                        }
-                    }
-                }
-            }
-        }
-
-        // ── Recent ────────────────────────────────────────────────────────
+        // ── Recent route ─────────────────────────────────────────────────────
         lastConnection?.let { last ->
-            SectionContainer(title = stringResource(R.string.scan_section_recent)) {
-                ReconnectRow(
-                    last = last,
-                    reconnecting = reconnecting,
-                    onReconnect = { vm.reconnectLast() },
-                    // Full-forget: clears the Pulsar hint AND the OS bond
-                    // (BLE) or CCAPI credentials (Wi-Fi) when the kind is
-                    // known. Falls back to hint-only when the transport is
-                    // PTP (no persistent state) or unrecognised.
-                    onForget = {
-                        val device = last?.toManagedDevice()
-                        if (device != null) vm.forgetDevice(device) else vm.forgetLastConnection()
-                    },
-                )
-            }
+            ReconnectRow(
+                last = last,
+                reconnecting = reconnecting,
+                onReconnect = { vm.reconnectLast() },
+                onForget = {
+                    val device = last.toManagedDevice()
+                    if (device != null) vm.forgetDevice(device) else vm.forgetLastConnection()
+                },
+            )
+            Spacer(Modifier.height(8.dp))
         }
 
-        // ── Tools ─────────────────────────────────────────────────────────
-        // Simulator moved to the Transports grid above (it's a peer way
-        // to drive the app). Tools holds the pre-connect utilities:
-        // forgetting paired devices (deliberately only here — see
-        // AppScreen.ManageDevices) and collecting diagnostics.
-        SectionContainer(title = stringResource(R.string.scan_section_tools)) {
-            ActionRow(
-                icon = Icons.Default.Bluetooth,
-                title = stringResource(R.string.section_devices),
-                subtitle = stringResource(R.string.devices_help),
-                onClick = onManageDevicesSelected,
-            )
-            ActionRow(
-                icon = Icons.Default.Description,
-                title = stringResource(R.string.tools_collect_diagnostics),
-                subtitle = stringResource(R.string.tools_collect_diagnostics_hint),
-                onClick = { shareDiagnostics(ctx, vm.canonDiagnosticsText()) },
-            )
+        // ── Service pads (edge connector) ────────────────────────────────────
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            ToolPad(Icons.Default.Bluetooth, stringResource(R.string.section_devices), onManageDevicesSelected)
+            ToolPad(Icons.Default.Description, stringResource(R.string.scan_tool_diagnostics)) {
+                shareDiagnostics(ctx, vm.canonDiagnosticsText())
+            }
         }
 
         Spacer(Modifier.height(16.dp))
     }
 }
 
-private data class TileSpec(
-    val kind: TransportKind,
+private data class PadSpec(
+    /** null == Simulator (it has no [TransportKind]). */
+    val kind: TransportKind?,
     val icon: ImageVector,
     val titleRes: Int,
-    val subtitleRes: Int,
+    val caps: List<String>,
 )
 
-/** Compact tile used by the Transports section. Fixed-height to keep the
- *  section short; icon then text, top-aligned so titles line up across a row
- *  even when one tile's subtitle wraps to two lines and its neighbour's doesn't. */
+/** Vertical row centres of the three pad rows, as a fraction of board height. */
+private val ROW_FRACTIONS = listOf(0.16f, 0.50f, 0.84f)
+
 @Composable
-private fun TransportTile(spec: TileSpec, modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun TransportBoard(
+    modifier: Modifier,
+    pads: List<PadSpec>,
+    recentKind: TransportKind?,
+    reconnectingKind: TransportKind?,
+    versionName: String,
+    onSelect: (TransportKind?) -> Unit,
+) {
+    val colors = PulsarTheme.colors
+    val outline = MaterialTheme.colorScheme.outline
+    val breathe by rememberInfiniteTransition(label = "chip").animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1300, easing = LinearEasing), RepeatMode.Reverse),
+        label = "core",
+    )
+
+    BoxWithConstraints(modifier) {
+        val w = maxWidth
+        val h = maxHeight
+        // Chip first, then pads sized to the gap that's left → mid-row pads can
+        // never reach the chip, on any width.
+        val chip = (min(w.value, h.value) * 0.24f).dp.coerceIn(84.dp, 108.dp)
+        val padW = (w / 2 - chip / 2 - 12.dp).coerceIn(104.dp, 152.dp)
+        val padH = 54.dp
+
+        val traceFaint = colors.liveStart.copy(alpha = 0.16f)
+        val viaFaint = colors.liveStart.copy(alpha = 0.30f)
+        val fieldDot = outline.copy(alpha = 0.05f)
+        val activeBrush = Brush.linearGradient(listOf(colors.liveStart, colors.liveEnd))
+
+        // ── PCB layer: via field + the six traces ────────────────────────────
+        Canvas(Modifier.matchParentSize()) {
+            drawViaField(fieldDot)
+            val cx = size.width / 2f
+            val cy = size.height / 2f
+            val chHalf = chip.toPx() / 2f
+            val padWpx = padW.toPx()
+            pads.forEachIndexed { i, spec ->
+                val left = i % 2 == 0
+                val row = i / 2
+                val anchor = Offset(
+                    x = if (left) padWpx else size.width - padWpx,
+                    y = size.height * ROW_FRACTIONS[row],
+                )
+                val pin = Offset(
+                    x = if (left) cx - chHalf else cx + chHalf,
+                    y = cy + (row - 1) * (chHalf * 0.62f),
+                )
+                val path = tracePath(pin, anchor)
+                val active = spec.kind != null && spec.kind == reconnectingKind
+                if (active) {
+                    drawPath(path, activeBrush, style = Stroke(width = 2.6.dp.toPx(), cap = StrokeCap.Round))
+                    drawCircle(colors.liveEnd, radius = 3.4.dp.toPx(), center = anchor)
+                } else {
+                    drawPath(path, traceFaint, style = Stroke(width = 1.6.dp.toPx(), cap = StrokeCap.Round))
+                    drawCircle(viaFaint, radius = 2.6.dp.toPx(), center = anchor)
+                }
+            }
+        }
+
+        // ── The chip ─────────────────────────────────────────────────────────
+        ChipCore(chip, breathe)
+
+        // ── Silkscreen under the chip ────────────────────────────────────────
+        Column(
+            modifier = Modifier.align(Alignment.Center).offset(y = chip / 2 + 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                stringResource(R.string.app_name).uppercase(),
+                fontFamily = Display,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 3.sp,
+                fontSize = 15.sp,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                "PSR-5T · v$versionName",
+                fontFamily = Mono,
+                fontSize = 9.sp,
+                letterSpacing = 1.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            )
+        }
+
+        // ── The six pads ─────────────────────────────────────────────────────
+        pads.forEachIndexed { i, spec ->
+            val left = i % 2 == 0
+            val row = i / 2
+            TransportPad(
+                spec = spec,
+                recent = spec.kind != null && spec.kind == recentKind,
+                connecting = spec.kind != null && spec.kind == reconnectingKind,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .offset(
+                        x = if (left) 0.dp else w - padW,
+                        y = h * ROW_FRACTIONS[row] - padH / 2,
+                    )
+                    .width(padW)
+                    .height(padH),
+                onClick = { onSelect(spec.kind) },
+            )
+        }
+    }
+}
+
+/** Pulsar as a QFN-style package: raised carbon body, thin outline, a soft
+ *  breathing core glow behind the white-forward brand mark. */
+@Composable
+private fun BoxScope.ChipCore(size: Dp, breathe: Float) {
+    Box(
+        modifier = Modifier
+            .align(Alignment.Center)
+            .size(size)
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(size * 0.6f)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f + 0.12f * breathe)),
+        )
+        Image(
+            painter = painterResource(R.drawable.ic_pulsar_mark),
+            contentDescription = null,
+            modifier = Modifier.size(size * 0.56f),
+        )
+    }
+}
+
+/** One transport connector pad: icon · name · capability chips · status LED. */
+@Composable
+private fun TransportPad(
+    spec: PadSpec,
+    recent: Boolean,
+    connecting: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    val colors = PulsarTheme.colors
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(8.dp),
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 2.dp,
-        modifier = modifier.height(108.dp),
+        border = if (recent) BorderStroke(1.dp, colors.liveStart.copy(alpha = 0.55f)) else null,
+        modifier = modifier,
     ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 spec.icon,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(26.dp),
+                modifier = Modifier.size(20.dp),
             )
-            Column {
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f)) {
                 Text(
                     stringResource(spec.titleRes),
+                    fontFamily = Grotesk,
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
+                    fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    stringResource(spec.subtitleRes),
+                    spec.caps.joinToString(" · "),
+                    fontFamily = Mono,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Spacer(Modifier.width(6.dp))
+            if (connecting) {
+                SignalSweep(modifier = Modifier.size(20.dp, 10.dp))
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(7.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (recent) colors.liveStart
+                            else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        ),
                 )
             }
         }
     }
 }
 
-/** Simulator tile — same square format as [TransportTile] so it sits as a
- *  peer in the 2×3 transport grid (BLE row / Wi-Fi row / USB + Simulator
- *  row). Same anatomy as TransportTile; separate composable only because
- *  Simulator doesn't have a [TransportKind] entry. */
+/** Bottom edge-connector chip for the pre-connect utilities. */
 @Composable
-private fun SimulatorTile(modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun RowScope.ToolPad(icon: ImageVector, label: String, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(8.dp),
         color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp,
-        modifier = modifier.height(108.dp),
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Icon(
-                Icons.Default.Science,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(26.dp),
-            )
-            Column {
-                Text(
-                    stringResource(R.string.transport_tile_simulator_title),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                )
-                Text(
-                    stringResource(R.string.transport_tile_simulator_subtitle),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                )
-            }
-        }
-    }
-}
-
-/** Shared row used inside Tools (Diagnostics today) and structurally
- *  matched by [ReconnectRow] (which adds a trailing forget X + spinner +
- *  primary tint). Keeping the inner anatomy identical is the consistency
- *  the user asked for — same icon size, same padding, same text styles. */
-@Composable
-private fun ActionRow(
-    icon: ImageVector,
-    title: String,
-    subtitle: String?,
-    onClick: () -> Unit,
-) {
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth(),
+        tonalElevation = 1.dp,
+        modifier = Modifier.weight(1f).height(44.dp),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 12.dp).fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
         ) {
             Icon(
                 icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(22.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp),
             )
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                )
-                if (subtitle != null) {
-                    Text(
-                        subtitle,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                    )
-                }
-            }
+            Spacer(Modifier.width(8.dp))
+            Text(
+                label,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
 
-/** Reconnect to the last connection. Same row anatomy as [ActionRow] but
- *  with a primary tint (this is the CTA), a leading spinner while
- *  reconnecting, and a trailing X to forget the bond. */
+/** A faint via-dot grid behind everything — the bare board. */
+private fun DrawScope.drawViaField(color: Color) {
+    val step = 34.dp.toPx()
+    val r = 1.2.dp.toPx()
+    var y = step / 2f
+    while (y < size.height) {
+        var x = step / 2f
+        while (x < size.width) {
+            drawCircle(color, radius = r, center = Offset(x, y))
+            x += step
+        }
+        y += step
+    }
+}
+
+/** Single-bend 45° PCB route from [s] to [e]: the longer axis runs straight,
+ *  then a 45° diagonal lands exactly on the target. */
+private fun tracePath(s: Offset, e: Offset): Path {
+    val dx = e.x - s.x
+    val dy = e.y - s.y
+    val adx = abs(dx)
+    val ady = abs(dy)
+    val p = Path()
+    p.moveTo(s.x, s.y)
+    if (adx >= ady) {
+        val midX = s.x + (if (dx >= 0f) 1f else -1f) * (adx - ady)
+        p.lineTo(midX, s.y)
+    } else {
+        val midY = s.y + (if (dy >= 0f) 1f else -1f) * (ady - adx)
+        p.lineTo(s.x, midY)
+    }
+    p.lineTo(e.x, e.y)
+    return p
+}
+
+/** Reconnect to the last connection. Filled primary CTA with a leading
+ *  SignalSweep while reconnecting and a trailing X to forget the bond. */
 @Composable
 private fun ReconnectRow(
     last: LastConnection,
@@ -400,7 +495,7 @@ private fun ReconnectRow(
         ) {
             Box(modifier = Modifier.size(22.dp), contentAlignment = Alignment.Center) {
                 if (reconnecting) {
-                    com.ehrocha.pulsar.ui.components.SignalSweep(
+                    SignalSweep(
                         modifier = Modifier.size(22.dp, 12.dp),
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )

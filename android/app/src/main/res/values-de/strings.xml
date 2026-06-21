@@ -777,6 +777,7 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="scan_landing_use_simulator">Simulator verwenden</string>
     <string name="scan_landing_known_devices">Bekannte Geräte</string>
     <string name="scan_section_transports">Verbindungen</string>
+    <string name="scan_tool_diagnostics">Diagnose</string>
     <string name="scan_section_recent">Zuletzt</string>
     <string name="scan_section_tools">Werkzeuge</string>
     <string name="trigger_section_bulb">Bulb-Modi</string>

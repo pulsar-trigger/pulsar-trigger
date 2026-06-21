@@ -1069,6 +1069,7 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <string name="scan_landing_use_simulator">Use simulator</string>
     <string name="scan_landing_known_devices">Known devices</string>
     <string name="scan_section_transports">Transports</string>
+    <string name="scan_tool_diagnostics">Diagnostics</string>
     <string name="scan_section_recent">Recent</string>
     <string name="scan_section_tools">Tools</string>
     <string name="trigger_section_bulb">Bulb modes</string>

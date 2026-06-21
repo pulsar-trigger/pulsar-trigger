@@ -777,6 +777,7 @@
     <string name="scan_landing_use_simulator">使用模拟器</string>
     <string name="scan_landing_known_devices">已知设备</string>
     <string name="scan_section_transports">连接方式</string>
+    <string name="scan_tool_diagnostics">诊断</string>
     <string name="scan_section_recent">最近</string>
     <string name="scan_section_tools">工具</string>
     <string name="trigger_section_bulb">B 门模式</string>

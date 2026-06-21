@@ -775,6 +775,7 @@ La altura proviene de la oscuridad del cielo × cielo despejado × sin luna bril
     <string name="scan_landing_use_simulator">Usar simulador</string>
     <string name="scan_landing_known_devices">Dispositivos conocidos</string>
     <string name="scan_section_transports">Transportes</string>
+    <string name="scan_tool_diagnostics">Diagnóstico</string>
     <string name="scan_section_recent">Recientes</string>
     <string name="scan_section_tools">Herramientas</string>
     <string name="trigger_section_bulb">Modos Bulb</string>

@@ -777,6 +777,7 @@
     <string name="scan_landing_use_simulator">シミュレーターを使用</string>
     <string name="scan_landing_known_devices">既知のデバイス</string>
     <string name="scan_section_transports">接続方式</string>
+    <string name="scan_tool_diagnostics">診断</string>
     <string name="scan_section_recent">最近</string>
     <string name="scan_section_tools">ツール</string>
     <string name="trigger_section_bulb">バルブモード</string>
