@@ -18,7 +18,7 @@ enum class ThemeMode { Light, Outdoor, Dark, RedLight }
  *  printed-circuit-board look; CLASSIC is the original card-based SIGNAL look
  *  (SPACE — pulsar + orbits + starfield — is planned as a third). Distinct
  *  from [ThemeMode], which only swaps the colour palette. */
-enum class VisualStyle { CIRCUIT, CLASSIC }
+enum class VisualStyle { CIRCUIT, CLASSIC, SPACE }
 
 // ── SIGNAL palette ──────────────────────────────────────────────────────
 // Carbon surfaces, one electric accent. The violet→magenta gradient is
@@ -132,6 +132,19 @@ val LocalNightModeLocked = compositionLocalOf { mutableStateOf(false) }
 
 /** Global visual style — survives recomposition; loaded/persisted by MainActivity. */
 val LocalVisualStyle = compositionLocalOf { mutableStateOf(VisualStyle.CIRCUIT) }
+
+// ── Space style — planet hues ───────────────────────────────────────────────
+// The SPACE visual style is the ONE place we step outside the single-accent
+// SIGNAL discipline: each transport is a distinctly-coloured world. Literals
+// live here in the theme (never in screens). Everything else in Space (stars,
+// nebula, the pulsar, orbits) stays on the role palette. In RedLight night
+// mode these are red-shifted at the draw site to preserve dark adaptation.
+val PlanetAmber = Color(0xFFE2A23A)   // Canon CCAPI — ringed gas giant
+val PlanetSlate = Color(0xFF7C90C4)   // Canon PTP-IP — banded blue-grey
+val PlanetCopper = Color(0xFFC9743F)  // USB-PTP — rocky, close-in
+val PlanetAzure = Color(0xFF4F9DF2)   // Pulsar BLE (ESP32) — your own world
+val PlanetRose = Color(0xFFD9648F)    // Canon direct BLE — small moon
+val PlanetMint = Color(0xFF49C9A8)    // Simulator — ghost/wireframe world
 
 // ── Status / semantic colors (shared across all themes) ────────────────────
 val StatusGreen = Color(0xFF4CAF50)

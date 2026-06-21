@@ -454,6 +454,7 @@ private fun VisualStylePicker() {
                                 when (vs) {
                                     VisualStyle.CIRCUIT -> R.string.visual_style_circuit
                                     VisualStyle.CLASSIC -> R.string.visual_style_classic
+                                    VisualStyle.SPACE -> R.string.visual_style_space
                                 }
                             ),
                             style = MaterialTheme.typography.labelLarge,

@@ -108,11 +108,18 @@ fun ScanLandingScreen(
     onConnected: () -> Unit,
     onManageDevicesSelected: () -> Unit,
 ) {
-    // CLASSIC style → the original tile-grid scan landing; CIRCUIT → the
-    // Driver-IC board below.
-    if (LocalVisualStyle.current.value == VisualStyle.CLASSIC) {
-        ScanLandingClassic(vm, onTransportSelected, onSimulatorSelected, onConnected, onManageDevicesSelected)
-        return
+    // Style dispatch: SPACE → the orrery; CLASSIC → the original tile-grid;
+    // CIRCUIT → the Driver-IC board below.
+    when (LocalVisualStyle.current.value) {
+        VisualStyle.SPACE -> {
+            SpaceScanScreen(vm, onTransportSelected, onSimulatorSelected, onConnected, onManageDevicesSelected)
+            return
+        }
+        VisualStyle.CLASSIC -> {
+            ScanLandingClassic(vm, onTransportSelected, onSimulatorSelected, onConnected, onManageDevicesSelected)
+            return
+        }
+        VisualStyle.CIRCUIT -> Unit
     }
     val connected by vm.connected.collectAsState()
     val lastConnection by vm.lastConnection.collectAsState()

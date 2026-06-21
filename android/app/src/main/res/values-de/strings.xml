@@ -211,6 +211,7 @@
     <string name="settings_visual_style">Visueller Stil</string>
     <string name="visual_style_circuit">Schaltkreis</string>
     <string name="visual_style_classic">Klassisch</string>
+    <string name="visual_style_space">Weltraum</string>
     <string name="disconnect">Trennen</string>
     <string name="back">Zurück</string>
     <string name="cancel">Abbrechen</string>

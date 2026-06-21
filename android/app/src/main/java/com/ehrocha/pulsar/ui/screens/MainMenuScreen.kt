@@ -843,9 +843,10 @@ private fun LauncherTile(
         label = "tileScale",
     )
 
-    // CLASSIC: the original rounded launcher tile (icon over label).
-    if (com.ehrocha.pulsar.ui.theme.LocalVisualStyle.current.value ==
-        com.ehrocha.pulsar.ui.theme.VisualStyle.CLASSIC
+    // The rounded launcher tile is used by every non-CIRCUIT style (CLASSIC
+    // today; SPACE temporarily, until its own menu tiles are built).
+    if (com.ehrocha.pulsar.ui.theme.LocalVisualStyle.current.value !=
+        com.ehrocha.pulsar.ui.theme.VisualStyle.CIRCUIT
     ) {
         Surface(
             onClick = onClick,

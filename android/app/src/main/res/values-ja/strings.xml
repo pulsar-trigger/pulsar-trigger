@@ -211,6 +211,7 @@
     <string name="settings_visual_style">ビジュアルスタイル</string>
     <string name="visual_style_circuit">サーキット</string>
     <string name="visual_style_classic">クラシック</string>
+    <string name="visual_style_space">宇宙</string>
     <string name="disconnect">切断</string>
     <string name="back">戻る</string>
     <string name="cancel">キャンセル</string>

@@ -291,6 +291,7 @@
     <string name="settings_visual_style">Visual style</string>
     <string name="visual_style_circuit">Circuit</string>
     <string name="visual_style_classic">Classic</string>
+    <string name="visual_style_space">Space</string>
     <string name="disconnect">Disconnect</string>
 
     <!-- Common actions / labels -->
