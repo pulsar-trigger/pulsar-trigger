@@ -78,10 +78,12 @@ private fun vy(y: Float, variant: Int) = if (variant == 1 || variant == 2) 1f - 
  *  pack the field with parallel runs, fan-outs and edge buses so the carbon
  *  reads like a populated board. */
 private val DECOR_TRACES = listOf(
-    // top ribbon bus (parallel runs)
-    listOf(0.05f to 0.045f, 0.95f to 0.045f),
-    listOf(0.07f to 0.065f, 0.93f to 0.065f),
-    listOf(0.05f to 0.085f, 0.95f to 0.085f),
+    // top ribbon bus — full width + mirror-symmetric y with the bottom ribbon,
+    // so it survives the region flips and lines up across every page boundary
+    // (seamless, infinite board).
+    listOf(0.0f to 0.045f, 1.0f to 0.045f),
+    listOf(0.0f to 0.065f, 1.0f to 0.065f),
+    listOf(0.0f to 0.085f, 1.0f to 0.085f),
     listOf(0.09f to 0.105f, 0.42f to 0.105f),
     listOf(0.58f to 0.105f, 0.91f to 0.105f),
     // top fan-outs
@@ -89,24 +91,25 @@ private val DECOR_TRACES = listOf(
     listOf(0.27f to 0.085f, 0.27f to 0.15f),
     listOf(0.73f to 0.085f, 0.73f to 0.15f),
     listOf(0.84f to 0.105f, 0.84f to 0.15f, 0.78f to 0.21f),
-    // left edge vertical bundle + branch stubs
-    listOf(0.040f to 0.12f, 0.040f to 0.88f),
+    // left edge vertical bundle (at x=0 so it coincides with the next page's
+    // right-edge bundle → one seamless connector at every boundary) + stubs
+    listOf(0.0f to 0.12f, 0.0f to 0.88f),
     listOf(0.065f to 0.16f, 0.065f to 0.45f),
     listOf(0.065f to 0.55f, 0.065f to 0.84f),
-    listOf(0.040f to 0.28f, 0.12f to 0.28f),
-    listOf(0.040f to 0.50f, 0.10f to 0.50f),
-    listOf(0.040f to 0.72f, 0.12f to 0.72f),
-    // right edge vertical bundle + branch stubs
-    listOf(0.960f to 0.12f, 0.960f to 0.88f),
+    listOf(0.0f to 0.28f, 0.12f to 0.28f),
+    listOf(0.0f to 0.50f, 0.10f to 0.50f),
+    listOf(0.0f to 0.72f, 0.12f to 0.72f),
+    // right edge vertical bundle (at x=1) + branch stubs
+    listOf(1.0f to 0.12f, 1.0f to 0.88f),
     listOf(0.935f to 0.16f, 0.935f to 0.45f),
     listOf(0.935f to 0.55f, 0.935f to 0.84f),
-    listOf(0.960f to 0.28f, 0.88f to 0.28f),
-    listOf(0.960f to 0.50f, 0.90f to 0.50f),
-    listOf(0.960f to 0.72f, 0.88f to 0.72f),
-    // bottom ribbon bus
-    listOf(0.05f to 0.955f, 0.95f to 0.955f),
-    listOf(0.07f to 0.935f, 0.93f to 0.935f),
-    listOf(0.05f to 0.915f, 0.95f to 0.915f),
+    listOf(1.0f to 0.28f, 0.88f to 0.28f),
+    listOf(1.0f to 0.50f, 0.90f to 0.50f),
+    listOf(1.0f to 0.72f, 0.88f to 0.72f),
+    // bottom ribbon bus — full width, mirror of the top
+    listOf(0.0f to 0.955f, 1.0f to 0.955f),
+    listOf(0.0f to 0.935f, 1.0f to 0.935f),
+    listOf(0.0f to 0.915f, 1.0f to 0.915f),
     listOf(0.09f to 0.895f, 0.42f to 0.895f),
     listOf(0.58f to 0.895f, 0.91f to 0.895f),
     // bottom fan-outs
