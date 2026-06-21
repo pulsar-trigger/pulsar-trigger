@@ -16,6 +16,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -105,6 +106,7 @@ fun ScanLandingScreen(
     onSimulatorSelected: () -> Unit,
     onConnected: () -> Unit,
     onManageDevicesSelected: () -> Unit,
+    onAboutSelected: () -> Unit = {},
 ) {
     val connected by vm.connected.collectAsState()
     val lastConnection by vm.lastConnection.collectAsState()
@@ -161,6 +163,7 @@ fun ScanLandingScreen(
             reconnectingKind = if (reconnecting) lastConnection?.kind else null,
             versionName = com.ehrocha.pulsar.BuildConfig.VERSION_NAME,
             onSelect = { kind -> if (kind == null) onSimulatorSelected() else onTransportSelected(kind) },
+            onAbout = onAboutSelected,
         )
 
         // ── Recent route ─────────────────────────────────────────────────────
@@ -301,6 +304,7 @@ private fun TransportBoard(
     reconnectingKind: TransportKind?,
     versionName: String,
     onSelect: (TransportKind?) -> Unit,
+    onAbout: () -> Unit,
 ) {
     val colors = PulsarTheme.colors
     val outline = MaterialTheme.colorScheme.outline
@@ -409,7 +413,7 @@ private fun TransportBoard(
         }
 
         // ── The DIP chip (package + branding + pulsing mark) ─────────────────
-        ChipCore(chipW, chipH, versionName, breathe)
+        ChipCore(chipW, chipH, versionName, breathe, onAbout)
 
         // ── The six scattered pads ───────────────────────────────────────────
         pads.forEach { spec ->
@@ -436,12 +440,13 @@ private fun TransportBoard(
  *  part-number silkscreen on the right. The pins are drawn on the board canvas
  *  along the long edges where the traces dock. */
 @Composable
-private fun BoxScope.ChipCore(width: Dp, height: Dp, versionName: String, breathe: Float) {
+private fun BoxScope.ChipCore(width: Dp, height: Dp, versionName: String, breathe: Float, onAbout: () -> Unit) {
     Box(
         modifier = Modifier
             .align(Alignment.Center)
             .size(width, height)
             .clip(RoundedCornerShape(14.dp))
+            .clickable(onClick = onAbout)
             .background(MaterialTheme.colorScheme.surface)
             .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f), RoundedCornerShape(14.dp)),
         contentAlignment = Alignment.Center,
