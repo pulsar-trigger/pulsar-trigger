@@ -15,16 +15,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import com.ehrocha.pulsar.ui.theme.Mono
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -67,6 +70,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.R
@@ -318,14 +322,48 @@ fun MainMenuScreen(
                 .padding(vertical = 8.dp),
         ) {
             updateBanner()
-            // Pager body — swipe still works to change destinations, the
-            // NavigationBar reflects the swipe and vice-versa.
-            HorizontalPager(
-                state = pagerState,
-                modifier = Modifier.weight(1f),
-            ) { virtualPage ->
-                val page = virtualPage % destCount
-                pageContent(page)
+            // One continuous PCB spans all destinations: the board sits behind
+            // the pager and pans 1:1 with the swipe, so each page is a different
+            // region of the same board.
+            Box(modifier = Modifier.weight(1f).fillMaxWidth().clipToBounds()) {
+                ContinuousPcb(pagerState, destCount)
+                // Pager body — swipe still works to change destinations, the
+                // NavigationBar reflects the swipe and vice-versa.
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize(),
+                ) { virtualPage ->
+                    val page = virtualPage % destCount
+                    pageContent(page)
+                }
+            }
+        }
+    }
+}
+
+/** The single PCB shared by all destinations, panned 1:1 with the pager so each
+ *  page lands on a different region of the same board. The board is laid out as
+ *  [destCount] distinct regions side by side plus a repeat of region 0, so the
+ *  infinite pager's wrap (last → first) stays seamless. */
+@Composable
+private fun ContinuousPcb(pagerState: PagerState, destCount: Int) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val pageW = maxWidth
+        Row(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(pageW * (destCount + 1))
+                .offset {
+                    val scroll = pagerState.currentPage + pagerState.currentPageOffsetFraction
+                    val pos = ((scroll % destCount) + destCount) % destCount
+                    IntOffset((-(pageW.toPx() * pos)).roundToInt(), 0)
+                },
+        ) {
+            for (slot in 0..destCount) {
+                PcbField(
+                    modifier = Modifier.width(pageW).fillMaxHeight(),
+                    variant = slot % destCount,
+                )
             }
         }
     }
@@ -425,8 +463,6 @@ private fun MenuPageContent(
                     val lastKey by vm.lastTriggerKey.collectAsState()
                     val lastTile = (bulbR + standardR + customR)
                         .find { it.key == lastKey && it.enabled }
-                    Box(Modifier.fillMaxSize()) {
-                    PcbField(Modifier.matchParentSize())
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -461,7 +497,6 @@ private fun MenuPageContent(
                             SectionGrid(customR)
                         }
                         Spacer(Modifier.height(8.dp))
-                    }
                     }
                 }
                 DEST_TOOLS -> {
@@ -537,8 +572,6 @@ private fun MenuPageContent(
                             Icons.Default.FlightTakeoff,
                         ) { onAircraftWatchSelected() },
                     )
-                    Box(Modifier.fillMaxSize()) {
-                    PcbField(Modifier.matchParentSize())
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -556,7 +589,6 @@ private fun MenuPageContent(
                             SectionGrid(spottingTools)
                         }
                         Spacer(Modifier.height(8.dp))
-                    }
                     }
                 }
             }

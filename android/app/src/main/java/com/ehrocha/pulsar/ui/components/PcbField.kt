@@ -40,7 +40,7 @@ import kotlin.math.hypot
  * tab. Place it as the first child of a `Box` with [Modifier.matchParentSize].
  */
 @Composable
-fun PcbField(modifier: Modifier = Modifier, animated: Boolean = true) {
+fun PcbField(modifier: Modifier = Modifier, animated: Boolean = true, variant: Int = 0) {
     val colors = PulsarTheme.colors
     val outline = MaterialTheme.colorScheme.outline
     val decorTrace = colors.liveStart.copy(alpha = 0.12f)
@@ -59,15 +59,20 @@ fun PcbField(modifier: Modifier = Modifier, animated: Boolean = true) {
         // Static board — no animation state read, so it draws once.
         Canvas(Modifier.matchParentSize()) {
             drawViaField(fieldDot)
-            drawDecor(decorTrace, decorVia)
-            drawComponents(compLine, compFill)
+            drawDecor(decorTrace, decorVia, variant)
+            drawComponents(compLine, compFill, variant)
         }
         // Travelling beams — only this thin layer redraws each frame.
         if (animated) {
-            Canvas(Modifier.matchParentSize()) { drawBeams(beamColor, pulse) }
+            Canvas(Modifier.matchParentSize()) { drawBeams(beamColor, pulse, variant) }
         }
     }
 }
+
+/** Per-region orientation so each slice of the continuous board looks distinct:
+ *  0 = as-authored, 1 = flipped vertically, 2 = rotated 180°. */
+private fun vx(x: Float, variant: Int) = if (variant == 2) 1f - x else x
+private fun vy(y: Float, variant: Int) = if (variant == 1 || variant == 2) 1f - y else y
 
 /** Decorative PCB bus routed behind content — fixed fractional polylines that
  *  pack the field with parallel runs, fan-outs and edge buses so the carbon
@@ -171,26 +176,26 @@ private fun DrawScope.drawViaField(color: Color) {
 }
 
 /** Draw the [DECOR_TRACES] polylines + a via at every vertex. */
-private fun DrawScope.drawDecor(trace: Color, via: Color) {
+private fun DrawScope.drawDecor(trace: Color, via: Color, variant: Int) {
     val sw = 1.4.dp.toPx()
     val viaR = 2.0.dp.toPx()
     for (poly in DECOR_TRACES) {
         for (k in 0 until poly.size - 1) {
-            val a = Offset(poly[k].first * size.width, poly[k].second * size.height)
-            val b = Offset(poly[k + 1].first * size.width, poly[k + 1].second * size.height)
+            val a = Offset(vx(poly[k].first, variant) * size.width, vy(poly[k].second, variant) * size.height)
+            val b = Offset(vx(poly[k + 1].first, variant) * size.width, vy(poly[k + 1].second, variant) * size.height)
             drawLine(trace, a, b, strokeWidth = sw, cap = StrokeCap.Round)
         }
         for (pt in poly) {
-            drawCircle(via, radius = viaR, center = Offset(pt.first * size.width, pt.second * size.height))
+            drawCircle(via, radius = viaR, center = Offset(vx(pt.first, variant) * size.width, vy(pt.second, variant) * size.height))
         }
     }
 }
 
 /** Draw the scattered [DECOR_COMPONENTS] as faint SMD silkscreen. */
-private fun DrawScope.drawComponents(line: Color, fill: Color) {
+private fun DrawScope.drawComponents(line: Color, fill: Color, variant: Int) {
     val stroke = Stroke(width = 1.3.dp.toPx(), cap = StrokeCap.Round)
     for (comp in DECOR_COMPONENTS) {
-        val c = Offset(comp.x * size.width, comp.y * size.height)
+        val c = Offset(vx(comp.x, variant) * size.width, vy(comp.y, variant) * size.height)
         when (comp.type) {
             Comp.RES -> {
                 val bw = 16.dp.toPx(); val bh = 6.dp.toPx(); val lead = 6.dp.toPx()
@@ -240,7 +245,7 @@ private fun DrawScope.drawComponents(line: Color, fill: Color) {
 
 /** A travelling pulse (head + short tail) along every decorative track,
  *  staggered so they read as signal flowing across the board. */
-private fun DrawScope.drawBeams(color: Color, pulse: Float) {
+private fun DrawScope.drawBeams(color: Color, pulse: Float, variant: Int) {
     val headR = 2.6.dp.toPx()
     val tailR = 0.8.dp.toPx()
     DECOR_TRACES.forEachIndexed { i, poly ->
@@ -248,7 +253,7 @@ private fun DrawScope.drawBeams(color: Color, pulse: Float) {
         // the board reads as a few signals flowing, not a swarm.
         val fracLen = poly.zipWithNext { a, b -> hypot(b.first - a.first, b.second - a.second) }.sum()
         if (fracLen < 0.35f) return@forEachIndexed
-        val pts = poly.map { Offset(it.first * size.width, it.second * size.height) }
+        val pts = poly.map { Offset(vx(it.first, variant) * size.width, vy(it.second, variant) * size.height) }
         val phase = (pulse + i * 0.137f) % 1f
         for (t in 0..2) {
             val f = phase - t * 0.05f
