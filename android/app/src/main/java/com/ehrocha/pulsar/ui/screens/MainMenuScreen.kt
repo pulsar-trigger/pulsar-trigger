@@ -352,7 +352,10 @@ private fun ContinuousPcb(pagerState: PagerState, destCount: Int) {
         Row(
             modifier = Modifier
                 .fillMaxHeight()
-                .width(pageW * (destCount + 1))
+                // requiredWidth: ignore the parent's max constraint so the board
+                // can actually be (destCount+1) screens wide instead of being
+                // clamped (which crushed every region to 1/N width).
+                .requiredWidth(pageW * (destCount + 1))
                 .offset {
                     val scroll = pagerState.currentPage + pagerState.currentPageOffsetFraction
                     val pos = ((scroll % destCount) + destCount) % destCount
@@ -361,7 +364,7 @@ private fun ContinuousPcb(pagerState: PagerState, destCount: Int) {
         ) {
             for (slot in 0..destCount) {
                 PcbField(
-                    modifier = Modifier.width(pageW).fillMaxHeight(),
+                    modifier = Modifier.requiredWidth(pageW).fillMaxHeight(),
                     variant = slot % destCount,
                 )
             }
