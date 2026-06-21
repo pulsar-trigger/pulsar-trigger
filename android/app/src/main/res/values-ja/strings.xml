@@ -792,7 +792,7 @@
     <string name="transport_tile_simulator_subtitle">ハードウェアなしで試す</string>
     <string name="transport_tile_pulsar_ble_title">Pulsar BLE</string>
     <string name="transport_tile_pulsar_ble_subtitle">シャッターポート上の ESP32 モジュール</string>
-    <string name="transport_tile_ccapi_title">Canon Wi-Fi</string>
+    <string name="transport_tile_ccapi_title">Canon Wi-Fi CCAPI</string>
     <string name="transport_tile_ccapi_subtitle">CCAPI 対応の EOS R シリーズ</string>
     <string name="transport_tile_ptp_title">Canon USB-C</string>
     <string name="transport_tile_ptp_subtitle">USB-C ケーブル、PTP 対応ボディ</string>

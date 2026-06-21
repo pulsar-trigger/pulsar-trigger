@@ -240,7 +240,8 @@ private data class TileSpec(
 )
 
 /** Compact tile used by the Transports section. Fixed-height to keep the
- *  section short; icon-top / text-bottom layout. */
+ *  section short; icon then text, top-aligned so titles line up across a row
+ *  even when one tile's subtitle wraps to two lines and its neighbour's doesn't. */
 @Composable
 private fun TransportTile(spec: TileSpec, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(
@@ -252,7 +253,7 @@ private fun TransportTile(spec: TileSpec, modifier: Modifier = Modifier, onClick
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Icon(
                 spec.icon,
@@ -293,7 +294,7 @@ private fun SimulatorTile(modifier: Modifier = Modifier, onClick: () -> Unit) {
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Icon(
                 Icons.Default.Science,

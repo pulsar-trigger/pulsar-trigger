@@ -1084,7 +1084,7 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <string name="transport_tile_simulator_subtitle">Try without hardware</string>
     <string name="transport_tile_pulsar_ble_title">Pulsar BLE</string>
     <string name="transport_tile_pulsar_ble_subtitle">ESP32 module on the camera\'s shutter port</string>
-    <string name="transport_tile_ccapi_title">Canon Wi-Fi</string>
+    <string name="transport_tile_ccapi_title">Canon Wi-Fi CCAPI</string>
     <string name="transport_tile_ccapi_subtitle">EOS R-series with CCAPI</string>
     <string name="transport_tile_ptp_title">Canon USB-C</string>
     <string name="transport_tile_ptp_subtitle">USB-C cable, any PTP body</string>

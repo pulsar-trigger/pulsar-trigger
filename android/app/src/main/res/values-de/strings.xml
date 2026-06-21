@@ -792,7 +792,7 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="transport_tile_simulator_subtitle">Ohne Hardware testen</string>
     <string name="transport_tile_pulsar_ble_title">Pulsar BLE</string>
     <string name="transport_tile_pulsar_ble_subtitle">ESP32-Modul am Auslöseranschluss</string>
-    <string name="transport_tile_ccapi_title">Canon WLAN</string>
+    <string name="transport_tile_ccapi_title">Canon WLAN CCAPI</string>
     <string name="transport_tile_ccapi_subtitle">EOS R-Serie mit CCAPI</string>
     <string name="transport_tile_ptp_title">Canon USB-C</string>
     <string name="transport_tile_ptp_subtitle">USB-C-Kabel, jedes PTP-Gehäuse</string>
