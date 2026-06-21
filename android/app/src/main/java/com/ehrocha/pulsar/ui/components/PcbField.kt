@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.ui.theme.PulsarTheme
 import kotlin.math.hypot
@@ -87,6 +88,56 @@ fun PcbField(modifier: Modifier = Modifier, animated: Boolean = true, variant: I
  *  0 = as-authored, 1 = flipped vertically, 2 = rotated 180°. */
 private fun vx(x: Float, variant: Int) = if (variant == 2) 1f - x else x
 private fun vy(y: Float, variant: Int) = if (variant == 1 || variant == 2) 1f - y else y
+
+/**
+ * Continuous-board variant for the menu pager: the same edge-matched board, but
+ * drawn TWICE side by side and panned by [pan] (0..1, the fractional scroll
+ * within a page) inside ONE always-on-screen layer. Because the layer never
+ * leaves the screen there are no off-screen tiles to pop in late (the cause of
+ * the "exactly half renders a beat later" glitch). The static board is cached
+ * to a bitmap and blitted; the beams are drawn live. The two copies join
+ * seamlessly thanks to the edge-matched decor, so the loop is infinite.
+ */
+@Composable
+fun PcbFieldTiled(modifier: Modifier = Modifier, pan: () -> Float) {
+    val colors = PulsarTheme.colors
+    val outline = MaterialTheme.colorScheme.outline
+    val decorTrace = colors.liveStart.copy(alpha = 0.12f)
+    val decorVia = colors.liveEnd.copy(alpha = 0.19f)
+    val compLine = colors.liveStart.copy(alpha = 0.20f)
+    val compFill = colors.liveEnd.copy(alpha = 0.14f)
+    val fieldDot = outline.copy(alpha = 0.055f)
+    val beamColor = colors.liveEnd
+    val pulse by rememberInfiniteTransition(label = "pcbTiled").animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(2400, easing = LinearEasing), RepeatMode.Restart),
+        label = "beam",
+    )
+    Box(modifier) {
+        Box(
+            Modifier.matchParentSize().drawWithCache {
+                val w = size.width.toInt().coerceAtLeast(1)
+                val h = size.height.toInt().coerceAtLeast(1)
+                val bmp = ImageBitmap(w, h)
+                CanvasDrawScope().draw(this, layoutDirection, androidx.compose.ui.graphics.Canvas(bmp), size) {
+                    drawViaField(fieldDot)
+                    drawDecor(decorTrace, decorVia, 0)
+                    drawComponents(compLine, compFill, 0)
+                }
+                onDrawBehind {
+                    val xo = -pan() * size.width
+                    drawImage(bmp, topLeft = Offset(xo, 0f))
+                    drawImage(bmp, topLeft = Offset(xo + size.width, 0f))
+                }
+            }
+        )
+        Canvas(Modifier.matchParentSize()) {
+            val xo = -pan() * size.width
+            translate(xo, 0f) { drawBeams(beamColor, pulse, 0) }
+            translate(xo + size.width, 0f) { drawBeams(beamColor, pulse, 0) }
+        }
+    }
+}
 
 /** Decorative PCB bus routed behind content — fixed fractional polylines that
  *  pack the field with parallel runs, fan-outs and edge buses so the carbon

@@ -75,7 +75,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.model.FlowStepType
-import com.ehrocha.pulsar.ui.components.PcbField
+import com.ehrocha.pulsar.ui.components.PcbFieldTiled
 import com.ehrocha.pulsar.ui.components.SectionContainer
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import kotlinx.coroutines.launch
@@ -347,27 +347,11 @@ fun MainMenuScreen(
  *  infinite pager's wrap (last → first) stays seamless. */
 @Composable
 private fun ContinuousPcb(pagerState: PagerState) {
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        val pageW = maxWidth
-        Row(
-            // requiredWidth so the two tiles aren't clamped to one screen.
-            modifier = Modifier
-                .fillMaxHeight()
-                .requiredWidth(pageW * 2)
-                .offset {
-                    // Treadmill: pan by the fractional position WITHIN the page
-                    // [0,1) so the board resets by exactly one tile at EVERY
-                    // boundary (not by 3 at just the wrap). With identical,
-                    // edge-matched tiles each reset is invisible — so page 3
-                    // connects to page 1 exactly like every other boundary.
-                    val pos = (pagerState.currentPageOffsetFraction + 1f) % 1f
-                    IntOffset((-(pageW.toPx() * pos)).roundToInt(), 0)
-                },
-        ) {
-            repeat(2) {
-                PcbField(modifier = Modifier.requiredWidth(pageW).fillMaxHeight())
-            }
-        }
+    // One always-on-screen layer, panned by the fractional scroll within a page
+    // [0,1). The board draws twice (edge-matched) so it's a seamless infinite
+    // loop, and nothing is ever off-screen, so no half pops in late.
+    PcbFieldTiled(Modifier.fillMaxSize()) {
+        (pagerState.currentPageOffsetFraction + 1f) % 1f
     }
 }
 
