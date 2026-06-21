@@ -68,6 +68,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -123,27 +124,24 @@ fun ScanLandingScreen(
     }
     val ctx = androidx.compose.ui.platform.LocalContext.current
 
-    // Pads fan around the chip: index 0/2/4 = left column (top/mid/bottom),
-    // 1/3/5 = right. Rows are grouped by bus AND by label length: the long
-    // "Canon Wi-Fi …" names take the WIDE top row, the short BLE names flank
-    // the chip on the narrow mid row, wired transports sit on the wide bottom.
+    // Six pads scattered around a wide DIP chip — three in the upper field,
+    // three in the lower, each at its own height so it reads like a populated
+    // board, not a grid. Top holds the live-view Canon transports; the bottom
+    // the BLE pair + Simulator. (x, y) are board-fraction centres.
     val pads = remember {
         listOf(
-            // top row (wide)
             PadSpec(TransportKind.CCAPI, Icons.Default.Wifi,
-                R.string.transport_tile_ccapi_title, listOf("lv", "bat", "bulb")),
-            PadSpec(TransportKind.PTP_IP, Icons.Default.Wifi,
-                R.string.transport_tile_ptp_ip_title, listOf("lv", "bulb")),
-            // mid row (narrow, flanks the chip)
-            PadSpec(TransportKind.BLE_ESP, Icons.Default.Bluetooth,
-                R.string.transport_tile_pulsar_ble_title, listOf("bulb")),
-            PadSpec(TransportKind.CANON_BLE, Icons.Default.Bluetooth,
-                R.string.transport_tile_canon_ble_title, listOf("bulb")),
-            // bottom row (wide)
+                R.string.transport_tile_ccapi_title, listOf("lv", "bat", "bulb"), 0.19f, 0.19f),
             PadSpec(TransportKind.PTP_USB, Icons.Default.Usb,
-                R.string.transport_tile_ptp_title, listOf("lv", "bulb")),
+                R.string.transport_tile_ptp_title, listOf("lv", "bulb"), 0.50f, 0.115f),
+            PadSpec(TransportKind.PTP_IP, Icons.Default.Wifi,
+                R.string.transport_tile_ptp_ip_title, listOf("lv", "bulb"), 0.81f, 0.21f),
+            PadSpec(TransportKind.BLE_ESP, Icons.Default.Bluetooth,
+                R.string.transport_tile_pulsar_ble_title, listOf("bulb"), 0.19f, 0.81f),
+            PadSpec(TransportKind.CANON_BLE, Icons.Default.Bluetooth,
+                R.string.transport_tile_canon_ble_title, listOf("bulb"), 0.50f, 0.885f),
             PadSpec(null, Icons.Default.Science,
-                R.string.transport_tile_simulator_title, listOf("demo")),
+                R.string.transport_tile_simulator_title, listOf("demo"), 0.81f, 0.79f),
         )
     }
 
@@ -200,6 +198,10 @@ private data class PadSpec(
     val icon: ImageVector,
     val titleRes: Int,
     val caps: List<String>,
+    /** Pad CENTRE as a fraction of board width/height — scattered, not gridded.
+     *  [yf] < 0.5 docks on the chip's top edge, else the bottom. */
+    val xf: Float,
+    val yf: Float,
 )
 
 /** Decorative PCB bus routed behind the board — fixed fractional polylines
@@ -319,21 +321,12 @@ private fun TransportBoard(
         val w = maxWidth
         val h = maxHeight
 
-        // A big, present IC; pads sized to the room each row has. The mid row
-        // flanks the chip so it's the tight one (short BLE labels live there);
-        // the wide top/bottom rows carry the long "Canon Wi-Fi …" names.
-        val chip = (w * 0.30f).coerceIn(118.dp, 142.dp)
+        // Wide DIP package laid across the middle; pads scatter above and below.
+        val chipW = (w * 0.82f).coerceIn(260.dp, 380.dp)
+        val chipH = 84.dp
+        val padW = (w * 0.30f).coerceIn(108.dp, 140.dp)
+        val padH = 82.dp
         val legW = 9.dp
-        val padWMid = (w / 2 - chip / 2 - legW - 6.dp).coerceIn(112.dp, 150.dp)
-        val padWOuter = (w * 0.46f).coerceIn(150.dp, 190.dp)
-        val padH = 70.dp
-
-        // Rows a fixed distance off centre (not stretched to the page height),
-        // so the board stays a compact instrument with room for the PCB field
-        // above and below it.
-        val rowGap = (h * 0.20f).coerceIn(150.dp, 200.dp)
-        val rowsY = listOf(h / 2 - rowGap, h / 2, h / 2 + rowGap)
-        fun padWidth(row: Int): Dp = if (row == 1) padWMid else padWOuter
 
         val traceFaint = colors.liveStart.copy(alpha = 0.22f)
         val viaFaint = colors.liveStart.copy(alpha = 0.32f)
@@ -345,7 +338,7 @@ private fun TransportBoard(
         val legColor = colors.liveStart.copy(alpha = 0.5f)
         val activeBrush = Brush.linearGradient(listOf(colors.liveStart, colors.liveEnd))
 
-        // ── PCB layer: via field, decorative bus, IC legs + the six traces ───
+        // ── PCB layer: via field, decorative bus, DIP pins + the six traces ──
         Canvas(Modifier.matchParentSize()) {
             drawViaField(fieldDot)
             drawDecor(decorTrace, decorVia)
@@ -353,51 +346,33 @@ private fun TransportBoard(
 
             val cx = size.width / 2f
             val cy = size.height / 2f
-            val chHalf = chip.toPx() / 2f
+            val chHW = chipW.toPx() / 2f
+            val chHH = chipH.toPx() / 2f
             val legWpx = legW.toPx()
             val legHpx = 6.dp.toPx()
             val padHpx = padH.toPx()
+            val pinInset = 16.dp.toPx()
 
-            pads.forEachIndexed { i, spec ->
-                val left = i % 2 == 0
-                val row = i / 2
-                val pw = padWidth(row).toPx()
-                val padLeftX = if (left) 0f else size.width - pw
-                val rowY = rowsY[row].toPx()
+            // Decorative DIP pins evenly along the top + bottom long edges.
+            val nPins = 7
+            for (k in 0 until nPins) {
+                val px = cx - chHW + pinInset + (chipW.toPx() - 2f * pinInset) * k / (nPins - 1)
+                drawRect(legColor.copy(alpha = 0.3f), Offset(px - legHpx / 2f, cy - chHH - legWpx * 0.7f), Size(legHpx, legWpx * 0.7f))
+                drawRect(legColor.copy(alpha = 0.3f), Offset(px - legHpx / 2f, cy + chHH), Size(legHpx, legWpx * 0.7f))
+            }
 
-                // Route by row: the top pad docks on the chip's TOP edge ↔ its
-                // own BOTTOM edge; the bottom pad TOP↔BOTTOM mirrored; the mid
-                // pair stays side-wired (they flank the chip). Each end carries
-                // an IC leg, so the chip grows legs on all four sides.
-                val pin: Offset
-                val anchor: Offset
-                when (row) {
-                    0 -> {
-                        val pinX = cx + if (left) -chHalf * 0.5f else chHalf * 0.5f
-                        val dockX = padLeftX + pw / 2f
-                        val padBottom = rowY + padHpx / 2f
-                        pin = Offset(pinX, cy - chHalf - legWpx)
-                        anchor = Offset(dockX, padBottom + legWpx)
-                        drawRect(legColor, Offset(pinX - legHpx / 2f, cy - chHalf - legWpx), Size(legHpx, legWpx))
-                        drawRect(legColor, Offset(dockX - legHpx / 2f, padBottom), Size(legHpx, legWpx))
-                    }
-                    2 -> {
-                        val pinX = cx + if (left) -chHalf * 0.5f else chHalf * 0.5f
-                        val dockX = padLeftX + pw / 2f
-                        val padTop = rowY - padHpx / 2f
-                        pin = Offset(pinX, cy + chHalf + legWpx)
-                        anchor = Offset(dockX, padTop - legWpx)
-                        drawRect(legColor, Offset(pinX - legHpx / 2f, cy + chHalf), Size(legHpx, legWpx))
-                        drawRect(legColor, Offset(dockX - legHpx / 2f, padTop - legWpx), Size(legHpx, legWpx))
-                    }
-                    else -> {
-                        val padInner = if (left) padLeftX + pw else padLeftX
-                        pin = Offset(if (left) cx - chHalf - legWpx else cx + chHalf + legWpx, cy)
-                        anchor = Offset(if (left) padInner + legWpx else padInner - legWpx, rowY)
-                        drawRect(legColor, Offset(if (left) cx - chHalf - legWpx else cx + chHalf, cy - legHpx / 2f), Size(legWpx, legHpx))
-                        drawRect(legColor, Offset(if (left) padInner else padInner - legWpx, rowY - legHpx / 2f), Size(legWpx, legHpx))
-                    }
-                }
+            pads.forEach { spec ->
+                val padCx = spec.xf * size.width
+                val padCy = spec.yf * size.height
+                val top = spec.yf < 0.5f
+                // dock on the nearer DIP edge (pin x clamped into the package)
+                val pinX = padCx.coerceIn(cx - chHW + pinInset, cx + chHW - pinInset)
+                val pin = Offset(pinX, if (top) cy - chHH - legWpx else cy + chHH + legWpx)
+                val padEdgeY = if (top) padCy + padHpx / 2f else padCy - padHpx / 2f
+                val anchor = Offset(padCx, if (top) padEdgeY + legWpx else padEdgeY - legWpx)
+                // a leg on the chip edge and one on the pad edge
+                drawRect(legColor, Offset(pinX - legHpx / 2f, if (top) cy - chHH - legWpx else cy + chHH), Size(legHpx, legWpx))
+                drawRect(legColor, Offset(padCx - legHpx / 2f, if (top) padEdgeY else padEdgeY - legWpx), Size(legHpx, legWpx))
 
                 val path = tracePath(pin, anchor)
                 val active = spec.kind != null && spec.kind == reconnectingKind
@@ -429,36 +404,11 @@ private fun TransportBoard(
             }
         }
 
-        // ── The chip (IC package + pulsing mark) ─────────────────────────────
-        ChipCore(chip, breathe)
+        // ── The DIP chip (package + branding + pulsing mark) ─────────────────
+        ChipCore(chipW, chipH, versionName, breathe)
 
-        // ── Wordmark under the chip ──────────────────────────────────────────
-        Column(
-            modifier = Modifier.align(Alignment.Center).offset(y = chip / 2 + 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                stringResource(R.string.app_name).uppercase(),
-                fontFamily = Display,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 4.sp,
-                fontSize = 18.sp,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                "v$versionName",
-                fontFamily = Mono,
-                fontSize = 9.sp,
-                letterSpacing = 1.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-            )
-        }
-
-        // ── The six pads ─────────────────────────────────────────────────────
-        pads.forEachIndexed { i, spec ->
-            val left = i % 2 == 0
-            val row = i / 2
-            val pw = padWidth(row)
+        // ── The six scattered pads ───────────────────────────────────────────
+        pads.forEach { spec ->
             TransportPad(
                 spec = spec,
                 recent = spec.kind != null && spec.kind == recentKind,
@@ -466,10 +416,10 @@ private fun TransportBoard(
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .offset(
-                        x = if (left) 0.dp else w - pw,
-                        y = rowsY[row] - padH / 2,
+                        x = (w * spec.xf - padW / 2).coerceIn(0.dp, w - padW),
+                        y = h * spec.yf - padH / 2,
                     )
-                    .width(pw)
+                    .width(padW)
                     .height(padH),
                 onClick = { onSelect(spec.kind) },
             )
@@ -477,21 +427,31 @@ private fun TransportBoard(
     }
 }
 
-/** Pulsar as an IC package: a carbon body with a pin-1 dot and part-number
- *  silkscreen, the pulsing brand mark printed on its face. The side legs are
- *  drawn on the board canvas where the traces dock. */
+/** Pulsar as a wide DIP package laid across the middle: carbon body, a notched
+ *  + dotted pin-1 end, the pulsing brand mark on the left and the PULSAR /
+ *  part-number silkscreen on the right. The pins are drawn on the board canvas
+ *  along the long edges where the traces dock. */
 @Composable
-private fun BoxScope.ChipCore(size: Dp, breathe: Float) {
+private fun BoxScope.ChipCore(width: Dp, height: Dp, versionName: String, breathe: Float) {
     Box(
         modifier = Modifier
             .align(Alignment.Center)
-            .size(size)
+            .size(width, height)
             .clip(RoundedCornerShape(14.dp))
             .background(MaterialTheme.colorScheme.surface)
             .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f), RoundedCornerShape(14.dp)),
         contentAlignment = Alignment.Center,
     ) {
-        // pin-1 indicator
+        // pin-1 notch carved into the left edge
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .offset(x = (-7).dp)
+                .size(14.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.background),
+        )
+        // pin-1 dot
         Box(
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -500,29 +460,41 @@ private fun BoxScope.ChipCore(size: Dp, breathe: Float) {
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)),
         )
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
             Box(contentAlignment = Alignment.Center) {
                 // breathing core glow behind the mark — the pulse
                 Box(
                     modifier = Modifier
-                        .size(size * 0.5f)
+                        .size(height * 0.6f)
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f + 0.16f * breathe)),
                 )
                 Image(
                     painter = painterResource(R.drawable.ic_pulsar_mark),
                     contentDescription = null,
-                    modifier = Modifier.size(size * 0.5f),
+                    modifier = Modifier.size(height * 0.58f),
                 )
             }
-            Spacer(Modifier.height(2.dp))
-            Text(
-                "PSR-5T",
-                fontFamily = Mono,
-                fontSize = 9.sp,
-                letterSpacing = 2.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f),
-            )
+            Column {
+                Text(
+                    stringResource(R.string.app_name).uppercase(),
+                    fontFamily = Display,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 5.sp,
+                    fontSize = 22.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    "PSR-5T · v$versionName",
+                    fontFamily = Mono,
+                    fontSize = 9.sp,
+                    letterSpacing = 1.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                )
+            }
         }
     }
 }
@@ -545,49 +517,51 @@ private fun TransportPad(
         border = if (recent) BorderStroke(1.dp, colors.liveStart.copy(alpha = 0.55f)) else null,
         modifier = modifier,
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 9.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                spec.icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp),
-            )
-            Spacer(Modifier.width(7.dp))
-            Column(Modifier.weight(1f)) {
+        Box(Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 6.dp, vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Icon(
+                    spec.icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp),
+                )
+                Spacer(Modifier.height(5.dp))
                 Text(
                     stringResource(spec.titleRes),
                     fontFamily = Grotesk,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp,
-                    lineHeight = 16.sp,
+                    fontSize = 14.sp,
+                    lineHeight = 15.sp,
                     maxLines = 2,
+                    textAlign = TextAlign.Center,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    spec.caps.joinToString(" · "),
-                    fontFamily = Mono,
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Spacer(Modifier.height(3.dp))
+                if (connecting) {
+                    SignalSweep(modifier = Modifier.size(22.dp, 10.dp))
+                } else {
+                    Text(
+                        spec.caps.joinToString(" · "),
+                        fontFamily = Mono,
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
-            Spacer(Modifier.width(6.dp))
-            if (connecting) {
-                SignalSweep(modifier = Modifier.size(20.dp, 10.dp))
-            } else {
+            if (recent && !connecting) {
                 Box(
                     modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(6.dp)
                         .size(7.dp)
                         .clip(CircleShape)
-                        .background(
-                            if (recent) colors.liveStart
-                            else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                        ),
+                        .background(colors.liveStart),
                 )
             }
         }
