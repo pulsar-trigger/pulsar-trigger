@@ -330,11 +330,11 @@ private fun TransportBoard(
 
         val traceFaint = colors.liveStart.copy(alpha = 0.22f)
         val viaFaint = colors.liveStart.copy(alpha = 0.32f)
-        val decorTrace = colors.liveStart.copy(alpha = 0.10f)
-        val decorVia = colors.liveEnd.copy(alpha = 0.16f)
-        val compLine = colors.liveStart.copy(alpha = 0.17f)
-        val compFill = colors.liveEnd.copy(alpha = 0.12f)
-        val fieldDot = outline.copy(alpha = 0.045f)
+        val decorTrace = colors.liveStart.copy(alpha = 0.12f)
+        val decorVia = colors.liveEnd.copy(alpha = 0.19f)
+        val compLine = colors.liveStart.copy(alpha = 0.20f)
+        val compFill = colors.liveEnd.copy(alpha = 0.14f)
+        val fieldDot = outline.copy(alpha = 0.055f)
         val legColor = colors.liveStart.copy(alpha = 0.5f)
         val activeBrush = Brush.linearGradient(listOf(colors.liveStart, colors.liveEnd))
 
@@ -365,8 +365,12 @@ private fun TransportBoard(
                 val padCx = spec.xf * size.width
                 val padCy = spec.yf * size.height
                 val top = spec.yf < 0.5f
-                // dock on the nearer DIP edge (pin x clamped into the package)
-                val pinX = padCx.coerceIn(cx - chHW + pinInset, cx + chHW - pinInset)
+                // The upper pads CROSS: each top pad docks on the DIP pin
+                // mirrored across the chip centre, so the far-right leg reaches
+                // the far-left pad and vice-versa (centre stays straight). The
+                // bottom row docks on the nearer pin as before.
+                val pinTargetX = if (top) 2f * cx - padCx else padCx
+                val pinX = pinTargetX.coerceIn(cx - chHW + pinInset, cx + chHW - pinInset)
                 val pin = Offset(pinX, if (top) cy - chHH - legWpx else cy + chHH + legWpx)
                 val padEdgeY = if (top) padCy + padHpx / 2f else padCy - padHpx / 2f
                 val anchor = Offset(padCx, if (top) padEdgeY + legWpx else padEdgeY - legWpx)
