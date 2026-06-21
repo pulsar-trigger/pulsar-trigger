@@ -208,6 +208,9 @@
     <string name="mode_cable_release_help">Déclenche une photo via l\'obturateur BLE smartphone. L\'appareil contrôle l\'exposition (sa propre vitesse d\'obturation) — Pulsar envoie juste un événement appui-relâche.\n\nPour les poses longues (Bulb), utilisez Manuel.</string>
     <string name="mode_custom_flow">Flux &amp; Préréglages</string>
     <string name="menu_settings">Paramètres</string>
+    <string name="settings_visual_style">Style visuel</string>
+    <string name="visual_style_circuit">Circuit</string>
+    <string name="visual_style_classic">Classique</string>
     <string name="disconnect">Déconnecter</string>
     <string name="back">Retour</string>
     <string name="cancel">Annuler</string>

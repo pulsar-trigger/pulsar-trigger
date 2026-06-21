@@ -14,6 +14,12 @@ import com.ehrocha.pulsar.ble.StatusFrame
 
 enum class ThemeMode { Light, Outdoor, Dark, RedLight }
 
+/** The app's visual identity, user-switchable and persisted. CIRCUIT is the
+ *  printed-circuit-board look; CLASSIC is the original card-based SIGNAL look
+ *  (SPACE — pulsar + orbits + starfield — is planned as a third). Distinct
+ *  from [ThemeMode], which only swaps the colour palette. */
+enum class VisualStyle { CIRCUIT, CLASSIC }
+
 // ── SIGNAL palette ──────────────────────────────────────────────────────
 // Carbon surfaces, one electric accent. The violet→magenta gradient is
 // reserved for LIVE elements (a running flow, an armed control); idle UI
@@ -123,6 +129,9 @@ val LocalNightMode = compositionLocalOf { mutableStateOf(ThemeMode.Dark) }
 
 /** When true, night mode cannot be changed by a single tap — long-press to unlock. */
 val LocalNightModeLocked = compositionLocalOf { mutableStateOf(false) }
+
+/** Global visual style — survives recomposition; loaded/persisted by MainActivity. */
+val LocalVisualStyle = compositionLocalOf { mutableStateOf(VisualStyle.CIRCUIT) }
 
 // ── Status / semantic colors (shared across all themes) ────────────────────
 val StatusGreen = Color(0xFF4CAF50)

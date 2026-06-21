@@ -77,6 +77,8 @@ import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.ui.components.PcbFieldTiled
 import com.ehrocha.pulsar.ui.components.SectionContainer
+import com.ehrocha.pulsar.ui.theme.LocalVisualStyle
+import com.ehrocha.pulsar.ui.theme.VisualStyle
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import kotlinx.coroutines.launch
 
@@ -326,7 +328,10 @@ fun MainMenuScreen(
             // the pager and pans 1:1 with the swipe, so each page is a different
             // region of the same board.
             Box(modifier = Modifier.weight(1f).fillMaxWidth().clipToBounds()) {
-                ContinuousPcb(pagerState)
+                // The PCB board backdrop is the CIRCUIT style only.
+                if (LocalVisualStyle.current.value == VisualStyle.CIRCUIT) {
+                    ContinuousPcb(pagerState)
+                }
                 // Pager body — swipe still works to change destinations, the
                 // NavigationBar reflects the swipe and vice-versa.
                 HorizontalPager(
@@ -838,6 +843,47 @@ private fun LauncherTile(
         label = "tileScale",
     )
 
+    // CLASSIC: the original rounded launcher tile (icon over label).
+    if (com.ehrocha.pulsar.ui.theme.LocalVisualStyle.current.value ==
+        com.ehrocha.pulsar.ui.theme.VisualStyle.CLASSIC
+    ) {
+        Surface(
+            onClick = onClick,
+            enabled = enabled,
+            interactionSource = interactionSource,
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = modifier.fillMaxWidth().height(110.dp).scale(scale),
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 16.dp),
+            ) {
+                val a = if (enabled) 1f else 0.35f
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = (if (pressed && enabled) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.liveEnd
+                    else MaterialTheme.colorScheme.primary).copy(alpha = a),
+                    modifier = Modifier.size(26.dp),
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = a),
+                )
+            }
+        }
+        return
+    }
+
+    // ── CIRCUIT: the IC chip ─────────────────────────────────────────────
     val contentAlpha = if (enabled) 1f else 0.35f
     val legColor = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.liveStart
         .copy(alpha = if (enabled) 0.5f else 0.25f)

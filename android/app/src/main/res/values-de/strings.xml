@@ -208,6 +208,9 @@
     <string name="mode_cable_release_help">Löst eine einzelne Aufnahme über den BLE-Auslöser aus. Die Kamera steuert die Belichtung (eigene Verschlusszeit) — Pulsar sendet nur ein Press-and-Release-Event.\n\nFür Langzeitbelichtungen (Bulb) bitte Manuell verwenden.</string>
     <string name="mode_custom_flow">Abläufe &amp; Vorlagen</string>
     <string name="menu_settings">Einstellungen</string>
+    <string name="settings_visual_style">Visueller Stil</string>
+    <string name="visual_style_circuit">Schaltkreis</string>
+    <string name="visual_style_classic">Klassisch</string>
     <string name="disconnect">Trennen</string>
     <string name="back">Zurück</string>
     <string name="cancel">Abbrechen</string>

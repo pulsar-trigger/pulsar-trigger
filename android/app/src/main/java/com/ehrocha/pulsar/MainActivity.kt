@@ -169,6 +169,22 @@ class MainActivity : AppCompatActivity() {
         setContent {
             val nightMode = remember { mutableStateOf(ThemeMode.Dark) }
             val nightModeLocked = remember { mutableStateOf(false) }
+            // Visual style is a persisted user choice (unlike night mode, which
+            // is session-only). Loaded from prefs, saved on every change.
+            val uiPrefs = remember {
+                this@MainActivity.getSharedPreferences("pulsar_ui", android.content.Context.MODE_PRIVATE)
+            }
+            val visualStyle = remember {
+                mutableStateOf(
+                    runCatching {
+                        com.ehrocha.pulsar.ui.theme.VisualStyle.valueOf(
+                            uiPrefs.getString("visual_style", null) ?: "CIRCUIT")
+                    }.getOrDefault(com.ehrocha.pulsar.ui.theme.VisualStyle.CIRCUIT)
+                )
+            }
+            LaunchedEffect(visualStyle.value) {
+                uiPrefs.edit().putString("visual_style", visualStyle.value.name).apply()
+            }
             val colorScheme = when (nightMode.value) {
                 ThemeMode.Light -> LightColorScheme
                 ThemeMode.Outdoor -> OutdoorColorScheme
@@ -179,6 +195,7 @@ class MainActivity : AppCompatActivity() {
             CompositionLocalProvider(
                 LocalNightMode provides nightMode,
                 LocalNightModeLocked provides nightModeLocked,
+                com.ehrocha.pulsar.ui.theme.LocalVisualStyle provides visualStyle,
                 com.ehrocha.pulsar.ui.components.LocalSnackbarHost provides snackbarHost,
                 // Semantic roles resolved per mode — under RedLight every
                 // role collapses to a red/grey luminance ramp so the user's

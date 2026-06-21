@@ -288,6 +288,9 @@
     <string name="mode_ramp">Exposure Ramp</string>
     <string name="mode_custom_flow">Flows &amp; Presets</string>
     <string name="menu_settings">Settings</string>
+    <string name="settings_visual_style">Visual style</string>
+    <string name="visual_style_circuit">Circuit</string>
+    <string name="visual_style_classic">Classic</string>
     <string name="disconnect">Disconnect</string>
 
     <!-- Common actions / labels -->

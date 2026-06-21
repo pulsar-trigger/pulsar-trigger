@@ -210,6 +210,9 @@
     <string name="mode_cable_release_help">通过智能手机 BLE 快门触发一张照片。曝光由相机控制（自己的快门速度设置）——Pulsar 仅发送按下与释放事件。\n\n长曝光（Bulb）请使用手动模式。</string>
     <string name="mode_custom_flow">流程和预设</string>
     <string name="menu_settings">设置</string>
+    <string name="settings_visual_style">视觉风格</string>
+    <string name="visual_style_circuit">电路</string>
+    <string name="visual_style_classic">经典</string>
     <string name="disconnect">断开连接</string>
     <string name="back">返回</string>
     <string name="cancel">取消</string>

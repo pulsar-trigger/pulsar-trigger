@@ -208,6 +208,9 @@
     <string name="mode_cable_release_help">Dispara una foto con el obturador BLE de la cámara. La cámara controla la exposición (su propio ajuste de velocidad) — Pulsar solo envía un evento de pulsar y soltar.\n\nPara exposiciones largas (Bulb), usa Manual.</string>
     <string name="mode_custom_flow">Flujos y Presets</string>
     <string name="menu_settings">Ajustes</string>
+    <string name="settings_visual_style">Estilo visual</string>
+    <string name="visual_style_circuit">Circuito</string>
+    <string name="visual_style_classic">Clásico</string>
     <string name="disconnect">Desconectar</string>
     <string name="back">Atrás</string>
     <string name="cancel">Cancelar</string>

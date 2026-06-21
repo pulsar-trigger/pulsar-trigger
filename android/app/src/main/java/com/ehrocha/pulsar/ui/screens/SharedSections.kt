@@ -60,6 +60,8 @@ import com.ehrocha.pulsar.ble.OtaState
 import com.ehrocha.pulsar.update.AppUpdateState
 import com.ehrocha.pulsar.BuildConfig
 import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.ui.theme.LocalVisualStyle
+import com.ehrocha.pulsar.ui.theme.VisualStyle
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.MenuBook
@@ -425,6 +427,49 @@ enum class SettingsSection(val icon: ImageVector, @StringRes val titleRes: Int) 
     ABOUT(Icons.Outlined.Info, R.string.section_about),
 }
 
+/** Visual-style switch (Circuit / Classic) at the top of Settings. Reads +
+ *  writes the persisted [LocalVisualStyle] — the whole app re-skins live. */
+@Composable
+private fun VisualStylePicker() {
+    val style = LocalVisualStyle.current
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(stringResource(R.string.settings_visual_style), style = MaterialTheme.typography.bodyLarge)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                VisualStyle.entries.forEach { vs ->
+                    val selected = style.value == vs
+                    Surface(
+                        onClick = { style.value = vs },
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (selected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.surfaceContainerHighest,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(
+                            stringResource(
+                                when (vs) {
+                                    VisualStyle.CIRCUIT -> R.string.visual_style_circuit
+                                    VisualStyle.CLASSIC -> R.string.visual_style_classic
+                                }
+                            ),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center,
+                            color = if (selected) MaterialTheme.colorScheme.onPrimary
+                            else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 internal fun SettingsMenu(
     onSectionSelected: (SettingsSection) -> Unit,
@@ -441,6 +486,7 @@ internal fun SettingsMenu(
         }
     }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        VisualStylePicker()
         sections.forEach { section ->
             Surface(
                 onClick = { onSectionSelected(section) },

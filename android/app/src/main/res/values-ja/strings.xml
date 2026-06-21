@@ -208,6 +208,9 @@
     <string name="mode_cable_release_help">スマートフォン BLE シャッターで 1 枚撮影します。露出はカメラ側（シャッタースピード設定）が制御し、Pulsar は押す/離すイベントのみ送信します。\n\n長時間露光（バルブ）にはマニュアルを使用してください。</string>
     <string name="mode_custom_flow">フロー＆プリセット</string>
     <string name="menu_settings">設定</string>
+    <string name="settings_visual_style">ビジュアルスタイル</string>
+    <string name="visual_style_circuit">サーキット</string>
+    <string name="visual_style_classic">クラシック</string>
     <string name="disconnect">切断</string>
     <string name="back">戻る</string>
     <string name="cancel">キャンセル</string>

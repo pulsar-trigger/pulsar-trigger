@@ -208,6 +208,9 @@
     <string name="mode_cable_release_help">Dispara uma única foto pelo disparador BLE smartphone. A câmera controla a exposição (sua própria velocidade do obturador) — o Pulsar apenas envia um evento de pressionar e soltar.\n\nPara exposições longas (Bulb), use o modo Manual.</string>
     <string name="mode_custom_flow">Fluxos &amp; Predefinições</string>
     <string name="menu_settings">Configurações</string>
+    <string name="settings_visual_style">Estilo visual</string>
+    <string name="visual_style_circuit">Circuito</string>
+    <string name="visual_style_classic">Clássico</string>
     <string name="disconnect">Desconectar</string>
     <string name="back">Voltar</string>
     <string name="cancel">Cancelar</string>

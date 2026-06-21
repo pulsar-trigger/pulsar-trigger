@@ -16,9 +16,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ehrocha.pulsar.ui.theme.LocalVisualStyle
+import com.ehrocha.pulsar.ui.theme.VisualStyle
 
 /**
  * Grouped panel used to segment a screen into visually distinct sections —
@@ -36,11 +39,12 @@ fun SectionContainer(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    // CIRCUIT: transparent — the section is just a labelled region on the PCB.
+    // CLASSIC: a raised card with the CP-1919 pulse-divider under the title.
+    val classic = LocalVisualStyle.current.value == VisualStyle.CLASSIC
     Surface(
         shape = RoundedCornerShape(12.dp),
-        // Transparent: the section is just a labelled region on the PCB — the
-        // board (and its IC tiles) is the surface, grouped by title + divider.
-        color = androidx.compose.ui.graphics.Color.Transparent,
+        color = if (classic) MaterialTheme.colorScheme.surfaceContainerLow else Color.Transparent,
         modifier = modifier.fillMaxWidth(),
     ) {
         Column(
@@ -56,9 +60,9 @@ fun SectionContainer(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = 4.dp, top = 2.dp, bottom = 2.dp),
                 )
-                // No pulse-divider here: on the PCB board the traces + beams are
-                // the texture, so an extra section rule just competes. The
-                // letter-spaced region label is the delineation.
+                if (classic) {
+                    PulseDivider(modifier = Modifier.padding(horizontal = 4.dp))
+                }
             }
             content()
         }
