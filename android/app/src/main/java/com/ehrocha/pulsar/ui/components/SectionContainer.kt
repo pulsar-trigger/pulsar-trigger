@@ -38,9 +38,9 @@ fun SectionContainer(
 ) {
     Surface(
         shape = RoundedCornerShape(12.dp),
-        // Translucent so the PCB backdrop (Trigger/Tools tabs) reads through the
-        // section panel; over a plain background it's an imperceptible change.
-        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.55f),
+        // Transparent: the section is just a labelled region on the PCB — the
+        // board (and its IC tiles) is the surface, grouped by title + divider.
+        color = androidx.compose.ui.graphics.Color.Transparent,
         modifier = modifier.fillMaxWidth(),
     ) {
         Column(

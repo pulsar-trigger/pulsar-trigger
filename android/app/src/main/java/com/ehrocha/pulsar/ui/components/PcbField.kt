@@ -5,9 +5,17 @@
 
 package com.ehrocha.pulsar.ui.components
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -31,7 +39,7 @@ import com.ehrocha.pulsar.ui.theme.PulsarTheme
  * tab. Place it as the first child of a `Box` with [Modifier.matchParentSize].
  */
 @Composable
-fun PcbField(modifier: Modifier = Modifier) {
+fun PcbField(modifier: Modifier = Modifier, animated: Boolean = true) {
     val colors = PulsarTheme.colors
     val outline = MaterialTheme.colorScheme.outline
     val decorTrace = colors.liveStart.copy(alpha = 0.12f)
@@ -39,10 +47,24 @@ fun PcbField(modifier: Modifier = Modifier) {
     val compLine = colors.liveStart.copy(alpha = 0.20f)
     val compFill = colors.liveEnd.copy(alpha = 0.14f)
     val fieldDot = outline.copy(alpha = 0.055f)
-    Canvas(modifier) {
-        drawViaField(fieldDot)
-        drawDecor(decorTrace, decorVia)
-        drawComponents(compLine, compFill)
+    val beamColor = colors.liveEnd
+    // Beams travel each track, staggered, like signal flowing across the board.
+    val pulse by rememberInfiniteTransition(label = "pcb").animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(2400, easing = LinearEasing), RepeatMode.Restart),
+        label = "beam",
+    )
+    Box(modifier) {
+        // Static board — no animation state read, so it draws once.
+        Canvas(Modifier.matchParentSize()) {
+            drawViaField(fieldDot)
+            drawDecor(decorTrace, decorVia)
+            drawComponents(compLine, compFill)
+        }
+        // Travelling beams — only this thin layer redraws each frame.
+        if (animated) {
+            Canvas(Modifier.matchParentSize()) { drawBeams(beamColor, pulse) }
+        }
     }
 }
 
@@ -213,4 +235,47 @@ private fun DrawScope.drawComponents(line: Color, fill: Color) {
             }
         }
     }
+}
+
+/** A travelling pulse (head + short tail) along every decorative track,
+ *  staggered so they read as signal flowing across the board. */
+private fun DrawScope.drawBeams(color: Color, pulse: Float) {
+    val headR = 2.6.dp.toPx()
+    val tailR = 0.8.dp.toPx()
+    DECOR_TRACES.forEachIndexed { i, poly ->
+        val pts = poly.map { Offset(it.first * size.width, it.second * size.height) }
+        val phase = (pulse + i * 0.137f) % 1f
+        for (t in 0..2) {
+            val f = phase - t * 0.05f
+            if (f in 0f..1f) {
+                val a = ((1f - t * 0.35f) * edgeFade(f) * 0.9f).coerceIn(0f, 1f)
+                drawCircle(color.copy(alpha = a), radius = headR - t * tailR, center = pointAlong(pts, f))
+            }
+        }
+    }
+}
+
+/** Position at fraction [f] (0..1) along a polyline, by arc length. */
+private fun pointAlong(pts: List<Offset>, f: Float): Offset {
+    if (pts.size < 2) return pts.first()
+    var total = 0f
+    for (k in 0 until pts.size - 1) total += (pts[k + 1] - pts[k]).getDistance()
+    if (total <= 0f) return pts.first()
+    var target = f * total
+    for (k in 0 until pts.size - 1) {
+        val len = (pts[k + 1] - pts[k]).getDistance()
+        if (target <= len) {
+            val r = if (len > 0f) target / len else 0f
+            return Offset(pts[k].x + (pts[k + 1].x - pts[k].x) * r, pts[k].y + (pts[k + 1].y - pts[k].y) * r)
+        }
+        target -= len
+    }
+    return pts.last()
+}
+
+/** Fade the beam in/out near the track ends. */
+private fun edgeFade(f: Float): Float = when {
+    f < 0.1f -> f / 0.1f
+    f > 0.9f -> (1f - f) / 0.1f
+    else -> 1f
 }

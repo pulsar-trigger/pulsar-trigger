@@ -523,7 +523,6 @@ fun PulsarNavHost(
                 },
                 onConnected = { currentScreen = AppScreen.Menu },
                 onManageDevicesSelected = { currentScreen = AppScreen.ManageDevices },
-                onAboutSelected = { currentScreen = AppScreen.Settings(SettingsSection.ABOUT) },
             )
             AppScreen.ManageDevices -> {
                 BackHandler { currentScreen = AppScreen.ScanLanding }

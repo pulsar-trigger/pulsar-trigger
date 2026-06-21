@@ -9,7 +9,16 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import com.ehrocha.pulsar.ui.theme.Mono
+import kotlin.math.abs
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -59,6 +68,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.ui.components.PcbField
@@ -810,47 +820,80 @@ private fun LauncherTile(
         label = "tileScale",
     )
 
-    // Denser tile: drop the 0.9 aspect-ratio square so the tile sizes to
-    // content (much shorter), bump corner radius for a more "expressive"
-    // M3 feel, use surfaceContainerHigh (M3 token) instead of plain
-    // surface + tonalElevation.
-    Surface(
-        onClick = onClick,
-        enabled = enabled,
-        interactionSource = interactionSource,
-        shape = RoundedCornerShape(20.dp),
-        // Slightly translucent so the PCB field reads through behind the tiles.
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.82f),
-        modifier = modifier
-            .fillMaxWidth()
-            .scale(scale),
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 16.dp),
+    val contentAlpha = if (enabled) 1f else 0.35f
+    val legColor = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.liveStart
+        .copy(alpha = if (enabled) 0.5f else 0.25f)
+    // A stable pseudo part-number per tile — silkscreen flavour.
+    val ref = remember(label) { "U%02d".format(abs(label.hashCode()) % 100) }
+    val legLen = 6.dp
+
+    // Each tile is a little IC soldered to the board: carbon body with side
+    // legs, a pin-1 dot and a part-number, the icon + label as its printing.
+    Box(modifier = modifier.fillMaxWidth().scale(scale)) {
+        // Side legs, in the margins either side of the chip body.
+        Canvas(Modifier.matchParentSize()) {
+            val ll = legLen.toPx()
+            val lt = 2.dp.toPx()
+            val n = 4
+            for (k in 0 until n) {
+                val y = size.height * (k + 1) / (n + 1)
+                drawRect(legColor, topLeft = Offset(0f, y - lt / 2), size = Size(ll, lt))
+                drawRect(legColor, topLeft = Offset(size.width - ll, y - lt / 2), size = Size(ll, lt))
+            }
+        }
+        Surface(
+            onClick = onClick,
+            enabled = enabled,
+            interactionSource = interactionSource,
+            shape = RoundedCornerShape(8.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = legLen),
         ) {
-            val contentAlpha = if (enabled) 1f else 0.35f
-            // SIGNAL press feedback: the icon slides along the live
-            // gradient (violet → magenta) while held.
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = (if (pressed && enabled)
-                    com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.liveEnd
-                else MaterialTheme.colorScheme.primary).copy(alpha = contentAlpha),
-                modifier = Modifier.size(26.dp),
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Medium,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
-            )
+            Box(Modifier.fillMaxWidth()) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 14.dp),
+                ) {
+                    // SIGNAL press feedback: the icon jumps to the live magenta.
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        tint = (if (pressed && enabled)
+                            com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.liveEnd
+                        else MaterialTheme.colorScheme.primary).copy(alpha = contentAlpha),
+                        modifier = Modifier.size(26.dp),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
+                    )
+                }
+                // pin-1 dot
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(6.dp)
+                        .size(4.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f * contentAlpha)),
+                )
+                // part-number silkscreen
+                Text(
+                    ref,
+                    fontFamily = Mono,
+                    fontSize = 8.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f * contentAlpha),
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(horizontal = 6.dp, vertical = 4.dp),
+                )
+            }
         }
     }
 }

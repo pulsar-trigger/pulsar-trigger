@@ -16,7 +16,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -106,7 +105,6 @@ fun ScanLandingScreen(
     onSimulatorSelected: () -> Unit,
     onConnected: () -> Unit,
     onManageDevicesSelected: () -> Unit,
-    onAboutSelected: () -> Unit = {},
 ) {
     val connected by vm.connected.collectAsState()
     val lastConnection by vm.lastConnection.collectAsState()
@@ -163,7 +161,6 @@ fun ScanLandingScreen(
             reconnectingKind = if (reconnecting) lastConnection?.kind else null,
             versionName = com.ehrocha.pulsar.BuildConfig.VERSION_NAME,
             onSelect = { kind -> if (kind == null) onSimulatorSelected() else onTransportSelected(kind) },
-            onAbout = onAboutSelected,
         )
 
         // ── Recent route ─────────────────────────────────────────────────────
@@ -215,7 +212,6 @@ private fun TransportBoard(
     reconnectingKind: TransportKind?,
     versionName: String,
     onSelect: (TransportKind?) -> Unit,
-    onAbout: () -> Unit,
 ) {
     val colors = PulsarTheme.colors
     val breathe by rememberInfiniteTransition(label = "chip").animateFloat(
@@ -247,8 +243,10 @@ private fun TransportBoard(
         val legColor = colors.liveStart.copy(alpha = 0.5f)
         val activeBrush = Brush.linearGradient(listOf(colors.liveStart, colors.liveEnd))
 
-        // Static PCB backdrop (via field, decorative bus, SMD silkscreen).
-        PcbField(Modifier.matchParentSize())
+        // Static PCB backdrop (via field, decorative bus, SMD silkscreen). The
+        // IC's own functional traces carry the beacon here, so the decor stays
+        // still — no competing beams on this screen.
+        PcbField(Modifier.matchParentSize(), animated = false)
 
         // ── IC layer: DIP pins + the six functional traces + the beacon ──────
         Canvas(Modifier.matchParentSize()) {
@@ -317,7 +315,7 @@ private fun TransportBoard(
         }
 
         // ── The DIP chip (package + branding + pulsing mark) ─────────────────
-        ChipCore(chipW, chipH, versionName, breathe, onAbout)
+        ChipCore(chipW, chipH, versionName, breathe)
 
         // ── The six scattered pads ───────────────────────────────────────────
         pads.forEach { spec ->
@@ -344,13 +342,12 @@ private fun TransportBoard(
  *  part-number silkscreen on the right. The pins are drawn on the board canvas
  *  along the long edges where the traces dock. */
 @Composable
-private fun BoxScope.ChipCore(width: Dp, height: Dp, versionName: String, breathe: Float, onAbout: () -> Unit) {
+private fun BoxScope.ChipCore(width: Dp, height: Dp, versionName: String, breathe: Float) {
     Box(
         modifier = Modifier
             .align(Alignment.Center)
             .size(width, height)
             .clip(RoundedCornerShape(14.dp))
-            .clickable(onClick = onAbout)
             .background(MaterialTheme.colorScheme.surface)
             .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.55f), RoundedCornerShape(14.dp)),
         contentAlignment = Alignment.Center,
