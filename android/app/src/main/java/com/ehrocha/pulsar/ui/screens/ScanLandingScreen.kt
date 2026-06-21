@@ -80,7 +80,9 @@ import com.ehrocha.pulsar.ui.components.SignalSweep
 import com.ehrocha.pulsar.ui.theme.Display
 import com.ehrocha.pulsar.ui.theme.Grotesk
 import com.ehrocha.pulsar.ui.theme.Mono
+import com.ehrocha.pulsar.ui.theme.LocalVisualStyle
 import com.ehrocha.pulsar.ui.theme.PulsarTheme
+import com.ehrocha.pulsar.ui.theme.VisualStyle
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import kotlin.math.abs
 import kotlin.math.min
@@ -106,6 +108,12 @@ fun ScanLandingScreen(
     onConnected: () -> Unit,
     onManageDevicesSelected: () -> Unit,
 ) {
+    // CLASSIC style → the original tile-grid scan landing; CIRCUIT → the
+    // Driver-IC board below.
+    if (LocalVisualStyle.current.value == VisualStyle.CLASSIC) {
+        ScanLandingClassic(vm, onTransportSelected, onSimulatorSelected, onConnected, onManageDevicesSelected)
+        return
+    }
     val connected by vm.connected.collectAsState()
     val lastConnection by vm.lastConnection.collectAsState()
     val canonBleConnecting by vm.canonBleConnecting.collectAsState()
