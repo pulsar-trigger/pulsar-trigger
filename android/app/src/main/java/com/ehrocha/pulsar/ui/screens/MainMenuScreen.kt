@@ -362,11 +362,11 @@ private fun ContinuousPcb(pagerState: PagerState, destCount: Int) {
                     IntOffset((-(pageW.toPx() * pos)).roundToInt(), 0)
                 },
         ) {
+            // Identical tileable regions: with edge-matched, full-width decor
+            // every boundary is indistinguishable from a tile's interior, so
+            // the board is one seamless infinite surface as you scroll the loop.
             for (slot in 0..destCount) {
-                PcbField(
-                    modifier = Modifier.requiredWidth(pageW).fillMaxHeight(),
-                    variant = slot % destCount,
-                )
+                PcbField(modifier = Modifier.requiredWidth(pageW).fillMaxHeight())
             }
         }
     }

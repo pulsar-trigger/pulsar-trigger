@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.ui.theme.PulsarTheme
 import kotlin.math.hypot
+import kotlin.math.roundToInt
 
 /**
  * SIGNAL's printed-circuit backdrop: a faint via-dot grid, a routed decorative
@@ -163,18 +164,23 @@ private val DECOR_COMPONENTS = listOf(
     DecorComp(Comp.RES, 0.80f, 0.895f),
 )
 
-/** A faint via-dot grid — the bare board. */
+/** A faint via-dot grid — the bare board. The column step evenly divides the
+ *  width so the grid lines up across page boundaries (tileable). */
 private fun DrawScope.drawViaField(color: Color) {
-    val step = 40.dp.toPx()
+    val target = 40.dp.toPx()
     val r = 1.1.dp.toPx()
-    var y = step / 2f
+    val cols = (size.width / target).roundToInt().coerceAtLeast(1)
+    val stepX = size.width / cols
+    val rows = (size.height / target).roundToInt().coerceAtLeast(1)
+    val stepY = size.height / rows
+    var y = stepY / 2f
     while (y < size.height) {
-        var x = step / 2f
+        var x = stepX / 2f
         while (x < size.width) {
             drawCircle(color, radius = r, center = Offset(x, y))
-            x += step
+            x += stepX
         }
-        y += step
+        y += stepY
     }
 }
 
