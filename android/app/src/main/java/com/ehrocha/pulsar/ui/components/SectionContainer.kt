@@ -38,7 +38,9 @@ fun SectionContainer(
 ) {
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        // Translucent so the PCB backdrop (Trigger/Tools tabs) reads through the
+        // section panel; over a plain background it's an imperceptible change.
+        color = MaterialTheme.colorScheme.surfaceContainerLow.copy(alpha = 0.55f),
         modifier = modifier.fillMaxWidth(),
     ) {
         Column(

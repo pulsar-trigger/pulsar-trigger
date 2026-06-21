@@ -819,7 +819,8 @@ private fun LauncherTile(
         enabled = enabled,
         interactionSource = interactionSource,
         shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        // Slightly translucent so the PCB field reads through behind the tiles.
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.82f),
         modifier = modifier
             .fillMaxWidth()
             .scale(scale),
