@@ -243,6 +243,23 @@ private val DECOR_TRACES = listOf(
     listOf(0.30f to 0.915f, 0.30f to 0.85f),
     listOf(0.70f to 0.915f, 0.70f to 0.85f),
     listOf(0.82f to 0.895f, 0.82f to 0.85f, 0.76f to 0.79f),
+    // extra density: corner diagonals, 3rd edge rails, mid stubs, short drops
+    listOf(0.05f to 0.20f, 0.16f to 0.31f),
+    listOf(0.95f to 0.20f, 0.84f to 0.31f),
+    listOf(0.05f to 0.80f, 0.16f to 0.69f),
+    listOf(0.95f to 0.80f, 0.84f to 0.69f),
+    listOf(0.085f to 0.36f, 0.085f to 0.64f),
+    listOf(0.915f to 0.36f, 0.915f to 0.64f),
+    listOf(0.12f to 0.115f, 0.12f to 0.05f),
+    listOf(0.88f to 0.115f, 0.88f to 0.05f),
+    listOf(0.12f to 0.885f, 0.12f to 0.95f),
+    listOf(0.88f to 0.885f, 0.88f to 0.95f),
+    listOf(0.34f to 0.045f, 0.34f to 0.095f),
+    listOf(0.66f to 0.045f, 0.66f to 0.095f),
+    listOf(0.46f to 0.955f, 0.46f to 0.905f),
+    listOf(0.54f to 0.955f, 0.54f to 0.905f),
+    listOf(0.025f to 0.40f, 0.025f to 0.60f),
+    listOf(0.975f to 0.40f, 0.975f to 0.60f),
 )
 
 private enum class Comp { RES, LED, NPN, SMD, IC }
@@ -265,6 +282,13 @@ private val DECOR_COMPONENTS = listOf(
     DecorComp(Comp.RES, 0.35f, 0.93f),
     DecorComp(Comp.NPN, 0.50f, 0.93f),
     DecorComp(Comp.IC, 0.64f, 0.93f),
+    DecorComp(Comp.LED, 0.45f, 0.055f),
+    DecorComp(Comp.RES, 0.82f, 0.105f),
+    DecorComp(Comp.SMD, 0.20f, 0.05f),
+    DecorComp(Comp.RES, 0.10f, 0.50f),
+    DecorComp(Comp.SMD, 0.90f, 0.50f),
+    DecorComp(Comp.LED, 0.45f, 0.93f),
+    DecorComp(Comp.RES, 0.80f, 0.895f),
 )
 
 @Composable
@@ -332,31 +356,49 @@ private fun TransportBoard(
             val chHalf = chip.toPx() / 2f
             val legWpx = legW.toPx()
             val legHpx = 6.dp.toPx()
-
-            // IC legs down both sides — one dock per row.
-            for (row in 0..2) {
-                val ly = cy + (row - 1) * (chHalf * 0.6f)
-                drawRect(legColor, topLeft = Offset(cx - chHalf - legWpx, ly - legHpx / 2), size = Size(legWpx, legHpx))
-                drawRect(legColor, topLeft = Offset(cx + chHalf, ly - legHpx / 2), size = Size(legWpx, legHpx))
-            }
+            val padHpx = padH.toPx()
 
             pads.forEachIndexed { i, spec ->
                 val left = i % 2 == 0
                 val row = i / 2
-                val padEdge = if (left) padWidth(row).toPx() else size.width - padWidth(row).toPx()
+                val pw = padWidth(row).toPx()
+                val padLeftX = if (left) 0f else size.width - pw
                 val rowY = rowsY[row].toPx()
-                // A docking leg on each pad's inner edge — each pad reads as a
-                // little IC component, wired back to the driver.
-                drawRect(
-                    legColor,
-                    topLeft = Offset(if (left) padEdge else padEdge - legWpx, rowY - legHpx / 2),
-                    size = Size(legWpx, legHpx),
-                )
-                val anchor = Offset(if (left) padEdge + legWpx else padEdge - legWpx, rowY)
-                val pin = Offset(
-                    x = if (left) cx - chHalf - legWpx else cx + chHalf + legWpx,
-                    y = cy + (row - 1) * (chHalf * 0.6f),
-                )
+
+                // Route by row: the top pad docks on the chip's TOP edge ↔ its
+                // own BOTTOM edge; the bottom pad TOP↔BOTTOM mirrored; the mid
+                // pair stays side-wired (they flank the chip). Each end carries
+                // an IC leg, so the chip grows legs on all four sides.
+                val pin: Offset
+                val anchor: Offset
+                when (row) {
+                    0 -> {
+                        val pinX = cx + if (left) -chHalf * 0.5f else chHalf * 0.5f
+                        val dockX = padLeftX + pw / 2f
+                        val padBottom = rowY + padHpx / 2f
+                        pin = Offset(pinX, cy - chHalf - legWpx)
+                        anchor = Offset(dockX, padBottom + legWpx)
+                        drawRect(legColor, Offset(pinX - legHpx / 2f, cy - chHalf - legWpx), Size(legHpx, legWpx))
+                        drawRect(legColor, Offset(dockX - legHpx / 2f, padBottom), Size(legHpx, legWpx))
+                    }
+                    2 -> {
+                        val pinX = cx + if (left) -chHalf * 0.5f else chHalf * 0.5f
+                        val dockX = padLeftX + pw / 2f
+                        val padTop = rowY - padHpx / 2f
+                        pin = Offset(pinX, cy + chHalf + legWpx)
+                        anchor = Offset(dockX, padTop - legWpx)
+                        drawRect(legColor, Offset(pinX - legHpx / 2f, cy + chHalf), Size(legHpx, legWpx))
+                        drawRect(legColor, Offset(dockX - legHpx / 2f, padTop - legWpx), Size(legHpx, legWpx))
+                    }
+                    else -> {
+                        val padInner = if (left) padLeftX + pw else padLeftX
+                        pin = Offset(if (left) cx - chHalf - legWpx else cx + chHalf + legWpx, cy)
+                        anchor = Offset(if (left) padInner + legWpx else padInner - legWpx, rowY)
+                        drawRect(legColor, Offset(if (left) cx - chHalf - legWpx else cx + chHalf, cy - legHpx / 2f), Size(legWpx, legHpx))
+                        drawRect(legColor, Offset(if (left) padInner else padInner - legWpx, rowY - legHpx / 2f), Size(legWpx, legHpx))
+                    }
+                }
+
                 val path = tracePath(pin, anchor)
                 val active = spec.kind != null && spec.kind == reconnectingKind
                 if (active) {
