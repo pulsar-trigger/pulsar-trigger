@@ -13,10 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -39,13 +36,12 @@ import com.ehrocha.pulsar.ui.theme.StatusRed
  * Compact connection status pill for a single top bar — the whole persistent
  * identity bar (device name + battery + signal + latency) collapses into this.
  * Shows a link glyph + battery% at a glance; tapping opens a menu with the
- * device name, signal/latency, and Disconnect (so the stray disconnect icon
- * gets a home). Reads battery/signal/latency from the device CompositionLocals.
+ * device name + signal/latency. Disconnect is its own 1-tap top-bar icon.
+ * Reads battery/signal/latency from the device CompositionLocals.
  */
 @Composable
 fun ConnectionPill(
     deviceName: String,
-    onDisconnect: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val status = LocalDeviceStatus.current
@@ -101,15 +97,6 @@ fun ConnectionPill(
                 SignalStrengthIndicator()
                 LatencyIndicator()
             }
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.disconnect)) },
-                leadingIcon = { Icon(Icons.Default.LinkOff, contentDescription = null) },
-                onClick = {
-                    expanded = false
-                    onDisconnect()
-                },
-            )
         }
     }
 }

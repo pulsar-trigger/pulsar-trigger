@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -49,6 +50,8 @@ import java.util.Locale
 @Composable
 fun DashboardScreen(
     dashboardManager: AstroDashboardManager,
+    recentSessions: List<com.ehrocha.pulsar.model.ShotLogEntry> = emptyList(),
+    onSessionHistorySelected: () -> Unit = {},
 ) {
     val state by dashboardManager.state.collectAsState()
     val scope = rememberCoroutineScope()
@@ -149,10 +152,10 @@ fun DashboardScreen(
         // left; refresh sits on the right. Previously these were on two
         // rows which ate vertical space for no benefit.
         val isToday = state.selectedDate == LocalDate.now()
-        val dateLabel = if (isToday)
-            stringResource(R.string.date_today)
-        else
-            state.selectedDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+        // Always state the date we're looking at — even "today" spells it out so
+        // there's no ambiguity about which night's conditions are shown.
+        val dateStr = state.selectedDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+        val dateLabel = if (isToday) "${stringResource(R.string.date_today)} · $dateStr" else dateStr
 
         Row(
             modifier = Modifier
@@ -243,8 +246,81 @@ fun DashboardScreen(
             },
             modifier = Modifier.fillMaxSize(),
         ) {
-            AstroDashboardContent(state, Modifier.fillMaxSize())
+            AstroDashboardContent(state, Modifier.fillMaxSize()) {
+                SessionHistoryCard(recentSessions, onSessionHistorySelected)
+            }
         } // PullToRefreshBox
+    }
+}
+
+/** Session-history "second dashboard" on the Astro tab: brief run / shot /
+ *  success stats, tapping through to the full ShotLog. Reuses the shot_log_*
+ *  strings + stat logic so it can't drift from the full screen. */
+@Composable
+private fun SessionHistoryCard(
+    entries: List<com.ehrocha.pulsar.model.ShotLogEntry>,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.History, contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    stringResource(R.string.shot_log_title).uppercase(),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold, letterSpacing = 1.sp,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+            if (entries.isEmpty()) {
+                Text(
+                    stringResource(R.string.shot_log_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                val totalShots = entries.sumOf { it.completedShots }
+                val totalRuns = entries.size
+                val completedRuns = entries.count { it.status == com.ehrocha.pulsar.model.ShotLogStatus.COMPLETED }
+                val successRate = if (totalRuns > 0) (100 * completedRuns) / totalRuns else 0
+                Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                    SessionStat(stringResource(R.string.shot_log_stat_runs), "$totalRuns")
+                    SessionStat(stringResource(R.string.shot_log_stat_shots), "$totalShots")
+                    SessionStat(stringResource(R.string.shot_log_stat_success), "$successRate%")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SessionStat(label: String, value: String) {
+    Column {
+        Text(
+            value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -257,6 +333,9 @@ fun DashboardScreen(
 internal fun AstroDashboardContent(
     state: com.ehrocha.pulsar.astro.DashboardState,
     modifier: Modifier = Modifier,
+    /** Optional extra content at the bottom of the main view (Astro tab uses it
+     *  for the session-history card; the planner reuse passes nothing). */
+    footer: (@Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit)? = null,
 ) {
     var openPage by remember { mutableStateOf<DashPage?>(null) }
     BackHandler(enabled = openPage != null) { openPage = null }
@@ -297,6 +376,12 @@ internal fun AstroDashboardContent(
                     onTap = { openPage = DashPage.TIMELINE },
                     onOpenPage = { openPage = it },
                 )
+            }
+
+            // ── Session-history card — a "second dashboard" below the Sky Dial
+            // on the main view; taps through to the full ShotLog. ─────────────
+            if (openPage == null) {
+                footer?.invoke(this)
             }
 
             // ── Domain pages: each detail card is gated to its page; hidden

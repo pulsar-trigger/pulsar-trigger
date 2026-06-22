@@ -44,7 +44,7 @@ import androidx.compose.material.icons.filled.FilterBAndW
 import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.LensBlur
-import androidx.compose.material.icons.automirrored.filled.ListAlt
+import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
@@ -243,6 +243,7 @@ fun MainMenuScreen(
             onAstroMode2Selected = onAstroMode2Selected,
             onTimelapseSelected = onTimelapseSelected,
             onStarTrailsSelected = onStarTrailsSelected,
+            onShotLogSelected = onShotLogSelected,
         )
     }
 
@@ -269,17 +270,17 @@ fun MainMenuScreen(
                     )
                 },
                 actions = {
-                    // Unified bar: the persistent device/battery/signal bar
-                    // folds into this pill (tap → device name, signal, latency,
-                    // Disconnect) so the Menu carries a single top bar.
-                    ConnectionPill(deviceName = deviceName, onDisconnect = onDisconnect)
-                    nightModeToggle()
-                    IconButton(onClick = onShotLogSelected) {
+                    // One unified bar: a status pill (tap → device name, signal,
+                    // latency), 1-tap disconnect, the theme picker, and settings.
+                    // Session history now lives on the dashboard card.
+                    ConnectionPill(deviceName = deviceName)
+                    IconButton(onClick = onDisconnect) {
                         Icon(
-                            Icons.AutoMirrored.Filled.ListAlt,
-                            contentDescription = stringResource(R.string.shot_log_title),
+                            Icons.Default.LinkOff,
+                            contentDescription = stringResource(R.string.disconnect),
                         )
                     }
+                    nightModeToggle()
                     IconButton(onClick = onSettingsSelected) {
                         BadgedBox(
                             badge = {
@@ -422,10 +423,16 @@ private fun MenuPageContent(
     onAstroMode2Selected: () -> Unit,
     onTimelapseSelected: () -> Unit,
     onStarTrailsSelected: () -> Unit = {},
+    onShotLogSelected: () -> Unit = {},
 ) {
     when (page) {
         DEST_DASHBOARD -> {
-            DashboardScreen(dashboardManager = vm.dashboardManager)
+            val sessions by vm.shotLog.entries.collectAsState()
+            DashboardScreen(
+                dashboardManager = vm.dashboardManager,
+                recentSessions = sessions,
+                onSessionHistorySelected = onShotLogSelected,
+            )
         }
         DEST_TRIGGER -> {
                     val userModes by vm.userModes.collectAsState()
