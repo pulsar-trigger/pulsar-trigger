@@ -221,6 +221,7 @@
     <string name="transport_short_ble_esp">Pulsar</string>
     <string name="transport_short_canon_ble">Canon BLE</string>
     <string name="transport_short_sim">Sim</string>
+    <string name="scan_space_select_destination">选择目的地</string>
     <string name="disconnect">断开连接</string>
     <string name="back">返回</string>
     <string name="cancel">取消</string>

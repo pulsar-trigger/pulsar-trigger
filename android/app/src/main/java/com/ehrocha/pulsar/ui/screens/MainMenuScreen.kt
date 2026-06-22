@@ -337,6 +337,13 @@ fun MainMenuScreen(
                     VisualStyle.SPACE -> SpaceField(Modifier.fillMaxSize())
                     VisualStyle.CLASSIC -> Unit
                 }
+                // Brand watermark in the lower-right, behind the pager — the
+                // identity the unified bar dropped. Chips render on top of it.
+                PulsarWatermark(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 20.dp, bottom = 20.dp),
+                )
                 // Pager body — swipe still works to change destinations, the
                 // NavigationBar reflects the swipe and vice-versa.
                 HorizontalPager(
@@ -362,6 +369,32 @@ private fun ContinuousPcb(pagerState: PagerState) {
     // loop, and nothing is ever off-screen, so no half pops in late.
     PcbFieldTiled(Modifier.fillMaxSize()) {
         (pagerState.currentPageOffsetFraction + 1f) % 1f
+    }
+}
+
+/** Faint brand watermark for the menu's lower-right — the Pulsar mark + wordmark
+ *  at low alpha, sitting on the backdrop behind the chips (they render on top). */
+@Composable
+private fun PulsarWatermark(modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(R.drawable.ic_pulsar_mark),
+            contentDescription = null,
+            alpha = 0.12f,
+            modifier = Modifier.size(30.dp),
+        )
+        Text(
+            "PULSAR",
+            fontFamily = com.ehrocha.pulsar.ui.theme.Display,
+            fontWeight = FontWeight.Black,
+            letterSpacing = 4.sp,
+            fontSize = 24.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
+        )
     }
 }
 

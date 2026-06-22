@@ -219,6 +219,7 @@
     <string name="transport_short_ble_esp">Pulsar</string>
     <string name="transport_short_canon_ble">Canon BLE</string>
     <string name="transport_short_sim">Sim</string>
+    <string name="scan_space_select_destination">Selecciona tu destino</string>
     <string name="disconnect">Desconectar</string>
     <string name="back">Atrás</string>
     <string name="cancel">Cancelar</string>
