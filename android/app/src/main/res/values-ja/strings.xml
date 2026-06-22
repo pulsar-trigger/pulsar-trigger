@@ -232,6 +232,7 @@
     <string name="save_as_preset">プリセットとして保存</string>
     <string name="preset_name">プリセット名</string>
     <string name="preset_saved">プリセットを保存しました</string>
+    <string name="preset_limit">プリセットの上限に達しました（最大5）</string>
     <string name="sessions_group_toggle">モードでグループ化</string>
     <string name="disconnect">切断</string>
     <string name="back">戻る</string>

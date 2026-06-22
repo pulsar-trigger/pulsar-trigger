@@ -5,6 +5,7 @@
 
 package com.ehrocha.pulsar.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -40,7 +41,10 @@ import com.ehrocha.pulsar.model.ShotLogEntry
 import com.ehrocha.pulsar.model.ShotLogStatus
 import com.ehrocha.pulsar.model.UserMode
 import com.ehrocha.pulsar.ui.components.LocalSnackbarHost
+import com.ehrocha.pulsar.ui.components.ModeUsageBar
 import com.ehrocha.pulsar.ui.components.PulsarTopBar
+import com.ehrocha.pulsar.ui.components.SessionStat
+import com.ehrocha.pulsar.ui.components.SuccessRing
 import com.ehrocha.pulsar.ui.theme.StatusGreen
 import com.ehrocha.pulsar.ui.theme.StatusOrange
 import com.ehrocha.pulsar.ui.theme.StatusRed
@@ -59,6 +63,7 @@ fun ShotLogScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     val snackHost = LocalSnackbarHost.current
     val scope = rememberCoroutineScope()
     val presetSavedMsg = stringResource(R.string.preset_saved)
+    val presetLimitMsg = stringResource(R.string.preset_limit)
 
     Scaffold(
         topBar = {
@@ -89,12 +94,12 @@ fun ShotLogScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                 modifier = Modifier.padding(pad),
             )
         } else {
-            ShotLogStats(entries)
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(pad),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 88.dp, bottom = 16.dp),
+                contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                item("hero") { SessionStatsHeader(entries) }
                 if (grouped) {
                     entries.groupBy { it.modeLabel }.entries.sortedByDescending { it.value.size }
                         .forEach { (mode, list) ->
@@ -134,12 +139,13 @@ fun ShotLogScreen(vm: PulsarViewModel, onBack: () -> Unit) {
         SavePresetDialog(
             entry = entry,
             onSave = { name ->
-                entry.presetStep?.let { step ->
+                val msg = entry.presetStep?.let { step ->
                     bodyFromStep(step)?.let { body ->
-                        vm.upsertUserMode(UserMode(name = name, body = body))
-                        scope.launch { snackHost.showSnackbar(presetSavedMsg) }
+                        if (vm.upsertUserMode(UserMode(name = name, body = body))) presetSavedMsg
+                        else presetLimitMsg
                     }
                 }
+                if (msg != null) scope.launch { snackHost.showSnackbar(msg) }
                 savePresetFor = null
             },
             onDismiss = { savePresetFor = null },
@@ -221,43 +227,46 @@ private fun GroupHeader(mode: String, count: Int) {
     }
 }
 
+/** Bold session-stats hero atop the ShotLog list — the same SuccessRing +
+ *  Runs/Shots + mode-usage bars as the dashboard card (shared graphics), at a
+ *  larger scale so the full screen reads as the detailed view of that card. */
 @Composable
-private fun ShotLogStats(entries: List<ShotLogEntry>) {
+private fun SessionStatsHeader(entries: List<ShotLogEntry>) {
     val totalShots = entries.sumOf { it.completedShots }
     val totalRuns = entries.size
     val completedRuns = entries.count { it.status == ShotLogStatus.COMPLETED }
     val successRate = if (totalRuns > 0) (100 * completedRuns) / totalRuns else 0
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, top = 72.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        StatCard(stringResource(R.string.shot_log_stat_runs), "$totalRuns", Modifier.weight(1f))
-        StatCard(stringResource(R.string.shot_log_stat_shots), "$totalShots", Modifier.weight(1f))
-        StatCard(stringResource(R.string.shot_log_stat_success), "${successRate}%", Modifier.weight(1f))
-    }
-}
-
-@Composable
-private fun StatCard(label: String, value: String, modifier: Modifier = Modifier) {
     Surface(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = modifier,
+        modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-            Text(
-                label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                value,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-            )
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(20.dp),
+            ) {
+                SuccessRing(successRate, Modifier.size(84.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SessionStat(stringResource(R.string.shot_log_stat_runs), "$totalRuns")
+                    SessionStat(stringResource(R.string.shot_log_stat_shots), "$totalShots")
+                }
+            }
+            val usage = entries.groupingBy { it.modeLabel }.eachCount()
+                .entries.sortedByDescending { it.value }.take(5)
+            if (usage.isNotEmpty()) {
+                val maxUse = usage.first().value
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    stringResource(R.string.session_mode_usage).uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(6.dp))
+                usage.forEach { (mode, count) -> ModeUsageBar(mode, count, maxUse) }
+            }
         }
     }
 }
@@ -274,7 +283,10 @@ private fun ShotLogRow(entry: ShotLogEntry, onSavePreset: (() -> Unit)? = null) 
         ),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(modifier = Modifier.height(IntrinsicSize.Min)) {
+            // Status accent stripe — green / amber / red down the leading edge.
+            Box(Modifier.width(4.dp).fillMaxHeight().background(tint))
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
@@ -330,6 +342,7 @@ private fun ShotLogRow(entry: ShotLogEntry, onSavePreset: (() -> Unit)? = null) 
                 }
             }
             entry.conditions?.let { ConditionsRow(it) }
+            }
         }
     }
 }

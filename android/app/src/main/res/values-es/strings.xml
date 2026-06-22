@@ -232,6 +232,7 @@
     <string name="save_as_preset">Guardar como preajuste</string>
     <string name="preset_name">Nombre del preajuste</string>
     <string name="preset_saved">Preajuste guardado</string>
+    <string name="preset_limit">Límite de preajustes alcanzado (máx. 5)</string>
     <string name="sessions_group_toggle">Agrupar por modo</string>
     <string name="disconnect">Desconectar</string>
     <string name="back">Atrás</string>

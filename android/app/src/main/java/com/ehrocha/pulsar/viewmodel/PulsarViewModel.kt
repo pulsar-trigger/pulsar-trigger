@@ -901,8 +901,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val _userModes = MutableStateFlow(userModeRepo.load())
     val userModes: StateFlow<List<com.ehrocha.pulsar.model.UserMode>> = _userModes
 
-    fun upsertUserMode(mode: com.ehrocha.pulsar.model.UserMode) {
-        _userModes.value = userModeRepo.upsert(mode)
+    /** Insert/update a preset. Returns false when a NEW preset was rejected
+     *  because the [UserMode.MAX_USER_MODES] cap is full (callers can surface
+     *  this instead of pretending the save succeeded). */
+    fun upsertUserMode(mode: com.ehrocha.pulsar.model.UserMode): Boolean {
+        val after = userModeRepo.upsert(mode)
+        _userModes.value = after
+        return after.any { it.id == mode.id }
     }
 
     fun removeUserMode(id: String) {
