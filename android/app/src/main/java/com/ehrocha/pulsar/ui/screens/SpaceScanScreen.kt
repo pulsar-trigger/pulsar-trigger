@@ -133,22 +133,22 @@ fun SpaceScanScreen(
         listOf(
             PlanetSpec(TransportKind.CANON_BLE, Icons.Default.Bluetooth,
                 R.string.transport_tile_canon_ble_title, R.string.transport_short_canon_ble, listOf("bulb"),
-                PlanetRose, 22.dp, ring = false, ghost = false, orbit = 0.30f, angleDeg = 40f),
+                PlanetRose, 22.dp, ring = false, ghost = false, orbit = 0.34f, angleDeg = 30f),
             PlanetSpec(TransportKind.BLE_ESP, Icons.Default.Bluetooth,
                 R.string.transport_tile_pulsar_ble_title, R.string.transport_short_ble_esp, listOf("bulb"),
-                PlanetAzure, 30.dp, ring = false, ghost = false, orbit = 0.45f, angleDeg = 60f),
+                PlanetAzure, 30.dp, ring = false, ghost = false, orbit = 0.50f, angleDeg = 62f),
             PlanetSpec(null, Icons.Default.Science,
                 R.string.transport_tile_simulator_title, R.string.transport_short_sim, listOf("demo"),
-                PlanetMint, 28.dp, ring = false, ghost = true, orbit = 0.57f, angleDeg = 37f),
+                PlanetMint, 28.dp, ring = false, ghost = true, orbit = 0.62f, angleDeg = 33f),
             PlanetSpec(TransportKind.PTP_USB, Icons.Default.Usb,
                 R.string.transport_tile_ptp_title, R.string.transport_short_usb, listOf("lv", "bulb"),
-                PlanetCopper, 34.dp, ring = false, ghost = false, orbit = 0.70f, angleDeg = 54f),
+                PlanetCopper, 34.dp, ring = false, ghost = false, orbit = 0.74f, angleDeg = 58f),
             PlanetSpec(TransportKind.PTP_IP, Icons.Default.Wifi,
                 R.string.transport_tile_ptp_ip_title, R.string.transport_short_ptp_ip, listOf("lv", "bulb"),
-                PlanetSlate, 40.dp, ring = false, ghost = false, orbit = 0.84f, angleDeg = 39f),
+                PlanetSlate, 40.dp, ring = false, ghost = false, orbit = 0.92f, angleDeg = 36f),
             PlanetSpec(TransportKind.CCAPI, Icons.Default.Wifi,
                 R.string.transport_tile_ccapi_title, R.string.transport_short_ccapi, listOf("lv", "bat", "bulb"),
-                PlanetAmber, 48.dp, ring = true, ghost = false, orbit = 0.99f, angleDeg = 53f),
+                PlanetAmber, 48.dp, ring = true, ghost = false, orbit = 1.05f, angleDeg = 55f),
         )
     }
 
@@ -245,10 +245,10 @@ private fun Orrery(
     BoxWithConstraints(modifier) {
         val w = maxWidth
         val h = maxHeight
-        // Pulsar anchored near the upper-left corner; orbits reach almost the
-        // full field so the worlds cascade out toward the lower-right.
-        val cxF = 0.13f
-        val cyF = 0.15f
+        // Pulsar tucked into the upper-left corner; orbits reach past the full
+        // field so the worlds cascade out across the lower-right, well spread.
+        val cxF = 0.10f
+        val cyF = 0.12f
         val rxF = 0.92f
         val ryF = 0.86f
 
