@@ -77,6 +77,7 @@ import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.ui.components.PcbFieldTiled
 import com.ehrocha.pulsar.ui.components.SectionContainer
+import com.ehrocha.pulsar.ui.components.SpaceField
 import com.ehrocha.pulsar.ui.theme.LocalVisualStyle
 import com.ehrocha.pulsar.ui.theme.VisualStyle
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
@@ -328,9 +329,13 @@ fun MainMenuScreen(
             // the pager and pans 1:1 with the swipe, so each page is a different
             // region of the same board.
             Box(modifier = Modifier.weight(1f).fillMaxWidth().clipToBounds()) {
-                // The PCB board backdrop is the CIRCUIT style only.
-                if (LocalVisualStyle.current.value == VisualStyle.CIRCUIT) {
-                    ContinuousPcb(pagerState)
+                // Per-style backdrop behind the pager: CIRCUIT gets the
+                // continuous PCB; SPACE gets the starfield (stars show through
+                // the card gaps + behind the Sky Dial); CLASSIC stays plain.
+                when (LocalVisualStyle.current.value) {
+                    VisualStyle.CIRCUIT -> ContinuousPcb(pagerState)
+                    VisualStyle.SPACE -> SpaceField(Modifier.fillMaxSize())
+                    VisualStyle.CLASSIC -> Unit
                 }
                 // Pager body — swipe still works to change destinations, the
                 // NavigationBar reflects the swipe and vice-versa.
