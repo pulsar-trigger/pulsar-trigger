@@ -474,10 +474,12 @@ fun PulsarNavHost(
         LocalDeviceLatency provides deviceLatency,
     ) {
     Column(Modifier.fillMaxSize()) {
-        // ── Persistent top bar (hidden on Scan screen) ───────────────
-        // Hide the persistent top bar on ScanLanding — it has its own
-        // brand header. TransportSetup also has its own top bar.
-        if (currentScreen !is AppScreen.ScanLanding && currentScreen !is AppScreen.TransportSetup) {
+        // ── Persistent top bar (hidden on Scan + Menu) ───────────────
+        // Hidden on ScanLanding / TransportSetup (own brand header) and on the
+        // Menu, which now carries a single unified bar: its destination title
+        // plus a ConnectionPill that folds in this bar's device/battery/signal.
+        if (currentScreen !is AppScreen.ScanLanding && currentScreen !is AppScreen.TransportSetup &&
+            currentScreen !is AppScreen.Menu) {
             Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -623,6 +625,7 @@ fun PulsarNavHost(
                     // callback that lands on UPDATES.
                     onSettingsSelected = { currentScreen = AppScreen.Settings() },
                     onUpdatesSelected = { currentScreen = AppScreen.Settings(SettingsSection.UPDATES) },
+                    deviceName = deviceName,
                     onDisconnect = { vm.disconnect() },
                     onShotLogSelected = { currentScreen = AppScreen.ShotLog },
                     nightModeToggle = { NightModeToggle() },

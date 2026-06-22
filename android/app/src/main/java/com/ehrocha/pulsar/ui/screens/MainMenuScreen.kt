@@ -44,7 +44,6 @@ import androidx.compose.material.icons.filled.FilterBAndW
 import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.LensBlur
-import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Settings
@@ -77,6 +76,7 @@ import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.ui.components.PcbFieldTiled
 import com.ehrocha.pulsar.ui.components.SectionContainer
+import com.ehrocha.pulsar.ui.components.ConnectionPill
 import com.ehrocha.pulsar.ui.components.SpaceCockpitTile
 import com.ehrocha.pulsar.ui.components.SpaceField
 import com.ehrocha.pulsar.ui.theme.LocalVisualStyle
@@ -115,6 +115,7 @@ fun MainMenuScreen(
      *  in-app update banner — should jump to Updates, not the menu root. */
     onUpdatesSelected: () -> Unit = {},
     onDisconnect: () -> Unit = {},
+    deviceName: String = "",
     onShotLogSelected: () -> Unit = {},
     nightModeToggle: @Composable () -> Unit = {},
 ) {
@@ -268,12 +269,10 @@ fun MainMenuScreen(
                     )
                 },
                 actions = {
-                    IconButton(onClick = onDisconnect) {
-                        Icon(
-                            Icons.Default.LinkOff,
-                            contentDescription = stringResource(R.string.disconnect),
-                        )
-                    }
+                    // Unified bar: the persistent device/battery/signal bar
+                    // folds into this pill (tap → device name, signal, latency,
+                    // Disconnect) so the Menu carries a single top bar.
+                    ConnectionPill(deviceName = deviceName, onDisconnect = onDisconnect)
                     nightModeToggle()
                     IconButton(onClick = onShotLogSelected) {
                         Icon(
