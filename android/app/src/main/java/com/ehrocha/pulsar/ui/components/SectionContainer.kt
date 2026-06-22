@@ -39,10 +39,10 @@ fun SectionContainer(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    // CIRCUIT: transparent — the section is just a labelled region on the PCB.
-    // Every other style (CLASSIC; SPACE for now) gets the raised card with the
+    // CIRCUIT + SPACE: transparent — the section is just a labelled region so
+    // the board / starfield shows through. CLASSIC: a raised card with the
     // CP-1919 pulse-divider under the title.
-    val classic = LocalVisualStyle.current.value != VisualStyle.CIRCUIT
+    val classic = LocalVisualStyle.current.value == VisualStyle.CLASSIC
     Surface(
         shape = RoundedCornerShape(12.dp),
         color = if (classic) MaterialTheme.colorScheme.surfaceContainerLow else Color.Transparent,
