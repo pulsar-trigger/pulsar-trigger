@@ -77,8 +77,8 @@ import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.ui.components.PcbFieldTiled
 import com.ehrocha.pulsar.ui.components.SectionContainer
+import com.ehrocha.pulsar.ui.components.SpaceCockpitTile
 import com.ehrocha.pulsar.ui.components.SpaceField
-import com.ehrocha.pulsar.ui.components.SpaceTileSampler
 import com.ehrocha.pulsar.ui.theme.LocalVisualStyle
 import com.ehrocha.pulsar.ui.theme.VisualStyle
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
@@ -326,11 +326,6 @@ fun MainMenuScreen(
                 .padding(vertical = 8.dp),
         ) {
             updateBanner()
-            // TEMPORARY: console-tile style sampler (Space only) — pick one, then
-            // this row + SpaceTileSampler get removed and the winner becomes the tile.
-            if (LocalVisualStyle.current.value == VisualStyle.SPACE) {
-                SpaceTileSampler(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-            }
             // One continuous PCB spans all destinations: the board sits behind
             // the pager and pans 1:1 with the swipe, so each page is a different
             // region of the same board.
@@ -854,11 +849,26 @@ private fun LauncherTile(
         label = "tileScale",
     )
 
-    // The rounded launcher tile is used by every non-CIRCUIT style (CLASSIC
-    // today; SPACE temporarily, until its own menu tiles are built).
-    if (com.ehrocha.pulsar.ui.theme.LocalVisualStyle.current.value !=
-        com.ehrocha.pulsar.ui.theme.VisualStyle.CIRCUIT
-    ) {
+    val visualStyle = com.ehrocha.pulsar.ui.theme.LocalVisualStyle.current.value
+
+    // SPACE: a spaceship cockpit push-button — pressing it lights the LED +
+    // border on the live gradient (shared interaction source so the press,
+    // scale, and lit state all track the same gesture).
+    if (visualStyle == com.ehrocha.pulsar.ui.theme.VisualStyle.SPACE) {
+        SpaceCockpitTile(
+            label = label,
+            icon = icon,
+            onClick = onClick,
+            modifier = modifier.fillMaxWidth().scale(scale),
+            active = pressed && enabled,
+            enabled = enabled,
+            interactionSource = interactionSource,
+        )
+        return
+    }
+
+    // CLASSIC: the original rounded launcher tile (icon over label).
+    if (visualStyle == com.ehrocha.pulsar.ui.theme.VisualStyle.CLASSIC) {
         Surface(
             onClick = onClick,
             enabled = enabled,
