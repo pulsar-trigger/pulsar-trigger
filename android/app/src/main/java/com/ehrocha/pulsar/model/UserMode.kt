@@ -92,8 +92,9 @@ data class UserMode(
         const val SCHEMA_ID = "pulsar-mode/1"
         const val BUNDLE_SCHEMA_ID = "pulsar-mode-bundle/1"
 
-        /** Maximum user modes that can be saved at once. */
-        const val MAX_USER_MODES = 5
+        /** Maximum user modes that can be saved at once — a high safety bound
+         *  (prevents unbounded SharedPreferences growth), not a UX limit. */
+        const val MAX_USER_MODES = 200
 
         fun fromJson(json: JSONObject): UserMode? {
             if (json.optString("schema") != SCHEMA_ID) return null

@@ -232,7 +232,7 @@
     <string name="save_as_preset">Salvar como predefinição</string>
     <string name="preset_name">Nome da predefinição</string>
     <string name="preset_saved">Predefinição salva</string>
-    <string name="preset_limit">Limite de predefinições atingido (máx. 5)</string>
+    <string name="preset_limit">Limite de predefinições atingido (máx. %1$d)</string>
     <string name="sessions_group_toggle">Agrupar por modo</string>
     <string name="disconnect">Desconectar</string>
     <string name="back">Voltar</string>

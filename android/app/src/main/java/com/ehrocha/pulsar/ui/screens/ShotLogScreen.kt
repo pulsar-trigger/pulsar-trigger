@@ -63,7 +63,7 @@ fun ShotLogScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     val snackHost = LocalSnackbarHost.current
     val scope = rememberCoroutineScope()
     val presetSavedMsg = stringResource(R.string.preset_saved)
-    val presetLimitMsg = stringResource(R.string.preset_limit)
+    val presetLimitMsg = stringResource(R.string.preset_limit, com.ehrocha.pulsar.model.UserMode.MAX_USER_MODES)
 
     Scaffold(
         topBar = {

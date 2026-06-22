@@ -232,7 +232,7 @@
     <string name="save_as_preset">Enregistrer comme préréglage</string>
     <string name="preset_name">Nom du préréglage</string>
     <string name="preset_saved">Préréglage enregistré</string>
-    <string name="preset_limit">Limite de préréglages atteinte (max 5)</string>
+    <string name="preset_limit">Limite de préréglages atteinte (max %1$d)</string>
     <string name="sessions_group_toggle">Grouper par mode</string>
     <string name="disconnect">Déconnecter</string>
     <string name="back">Retour</string>

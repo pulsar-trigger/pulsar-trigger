@@ -50,7 +50,7 @@ import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material.icons.filled.Usb
 import androidx.compose.material.icons.filled.Timer
@@ -295,7 +295,7 @@ fun MainMenuScreen(
     val destIcons = listOf(
         Icons.Default.Stars,         // Dashboard
         Icons.Default.PhotoCamera,   // Trigger
-        Icons.Default.Science,       // Tools
+        Icons.Default.Handyman,      // Tools
     )
     val hasAnyUpdate = hasFwUpdate || hasAppUpdate
 

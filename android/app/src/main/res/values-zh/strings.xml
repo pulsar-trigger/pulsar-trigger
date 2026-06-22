@@ -234,7 +234,7 @@
     <string name="save_as_preset">另存为预设</string>
     <string name="preset_name">预设名称</string>
     <string name="preset_saved">预设已保存</string>
-    <string name="preset_limit">已达预设上限（最多5个）</string>
+    <string name="preset_limit">已达预设上限（最多%1$d个）</string>
     <string name="sessions_group_toggle">按模式分组</string>
     <string name="disconnect">断开连接</string>
     <string name="back">返回</string>

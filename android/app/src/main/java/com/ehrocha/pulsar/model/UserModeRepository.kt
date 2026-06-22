@@ -9,8 +9,8 @@ import android.content.Context
 
 /**
  * Persists user-authored modes in SharedPreferences. Capped at
- * [UserMode.MAX_USER_MODES] (5) — the camera strip's "User" expansion shows
- * exactly that many slots, and the cap keeps the list scannable.
+ * [UserMode.MAX_USER_MODES] — a generous cap (across all modes) that keeps the
+ * preset list scannable and SharedPreferences storage bounded.
  *
  * Modes are stored as serialised JSON. Order is preserved (camera-strip
  * tile order matches list order). Single source of truth — read-modify-write
