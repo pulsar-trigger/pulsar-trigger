@@ -78,6 +78,7 @@ import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.ui.components.PcbFieldTiled
 import com.ehrocha.pulsar.ui.components.SectionContainer
 import com.ehrocha.pulsar.ui.components.SpaceField
+import com.ehrocha.pulsar.ui.components.SpaceTileSampler
 import com.ehrocha.pulsar.ui.theme.LocalVisualStyle
 import com.ehrocha.pulsar.ui.theme.VisualStyle
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
@@ -325,6 +326,11 @@ fun MainMenuScreen(
                 .padding(vertical = 8.dp),
         ) {
             updateBanner()
+            // TEMPORARY: console-tile style sampler (Space only) — pick one, then
+            // this row + SpaceTileSampler get removed and the winner becomes the tile.
+            if (LocalVisualStyle.current.value == VisualStyle.SPACE) {
+                SpaceTileSampler(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+            }
             // One continuous PCB spans all destinations: the board sits behind
             // the pager and pans 1:1 with the swipe, so each page is a different
             // region of the same board.
