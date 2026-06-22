@@ -6,16 +6,9 @@
 package com.ehrocha.pulsar.ui.components
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.Nightlight
-import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -29,7 +22,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,13 +31,10 @@ import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
 import com.ehrocha.pulsar.ui.theme.LocalDeviceLatency
 import com.ehrocha.pulsar.ui.theme.LocalDeviceRssi
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
-import com.ehrocha.pulsar.ui.theme.LocalNightMode
-import com.ehrocha.pulsar.ui.theme.LocalNightModeLocked
 import com.ehrocha.pulsar.ui.theme.StatusGreen
 import com.ehrocha.pulsar.ui.theme.StatusOrange
 import com.ehrocha.pulsar.ui.theme.StatusOff
 import com.ehrocha.pulsar.ui.theme.StatusRed
-import com.ehrocha.pulsar.ui.theme.ThemeMode
 
 @Composable
 fun BatteryIndicator() {
@@ -85,67 +74,6 @@ fun BatteryIndicator() {
                 color = if (status == null || unknown)
                     MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
                 else Color.Unspecified,
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun NightModeToggle() {
-    val nightMode = LocalNightMode.current
-    val locked = LocalNightModeLocked.current
-
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .combinedClickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = androidx.compose.material3.ripple(),
-                role = Role.Button,
-                onClick = {
-                    if (!locked.value) {
-                        nightMode.value = when (nightMode.value) {
-                            ThemeMode.Light -> ThemeMode.Outdoor
-                            ThemeMode.Outdoor -> ThemeMode.Dark
-                            ThemeMode.Dark -> ThemeMode.RedLight
-                            ThemeMode.RedLight -> ThemeMode.Light
-                        }
-                    }
-                },
-                onLongClick = {
-                    locked.value = !locked.value
-                },
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            when (nightMode.value) {
-                ThemeMode.Light -> Icons.Default.LightMode
-                ThemeMode.Outdoor -> Icons.Default.WbSunny
-                ThemeMode.Dark -> Icons.Default.Nightlight
-                ThemeMode.RedLight -> Icons.Default.Nightlight
-            },
-            contentDescription = stringResource(
-                if (locked.value) R.string.night_mode_locked else R.string.night_mode_toggle,
-            ),
-            modifier = Modifier.size(20.dp),
-            tint = when (nightMode.value) {
-                ThemeMode.Light -> MaterialTheme.colorScheme.onSurfaceVariant
-                ThemeMode.Outdoor -> MaterialTheme.colorScheme.primary
-                ThemeMode.Dark -> MaterialTheme.colorScheme.onSurfaceVariant
-                ThemeMode.RedLight -> Color(0xFFCC4444)
-            },
-        )
-        // Lock badge
-        if (locked.value) {
-            Icon(
-                Icons.Default.Lock,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(10.dp)
-                    .align(Alignment.BottomEnd),
-                tint = MaterialTheme.colorScheme.primary,
             )
         }
     }

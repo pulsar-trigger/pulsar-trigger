@@ -16,7 +16,9 @@ import com.ehrocha.pulsar.ui.theme.Display
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -42,6 +44,7 @@ import com.ehrocha.pulsar.astro.*
 import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
@@ -60,8 +63,19 @@ fun DashboardScreen(
     var isRefreshing by remember { mutableStateOf(false) }
     val context = androidx.compose.ui.platform.LocalContext.current
 
+    // The observing night in progress — rolls over at dawn (sunrise from the
+    // loaded sun data, else ~6am), NOT midnight. So at 1am you still land on
+    // tonight's session, not tomorrow. Computed once on entry.
+    val observingNight = remember {
+        val sunriseHour = com.ehrocha.pulsar.astro.AstroCalculator
+            .parseIsoHour(dashboardManager.state.value.sun?.sunrise) ?: 6.0
+        val now = LocalTime.now()
+        val nowHour = now.hour + now.minute / 60.0
+        if (nowHour < sunriseHour) LocalDate.now().minusDays(1) else LocalDate.now()
+    }
+
     LaunchedEffect(Unit) {
-        dashboardManager.refresh()
+        dashboardManager.refresh(observingNight)
     }
 
     // Whenever the in-app dashboard has a non-empty state, mirror the
@@ -131,7 +145,25 @@ fun DashboardScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = 16.dp)
+            // Horizontal swipe = previous / next night (tab-swipe is suppressed
+            // on this page). Neighbours refresh in place; moon/sun recompute
+            // instantly, weather catches up.
+            .pointerInput(state.selectedDate) {
+                var dragAccum = 0f
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        val threshold = 64.dp.toPx()
+                        when {
+                            dragAccum <= -threshold ->
+                                scope.launch { dashboardManager.refresh(state.selectedDate.plusDays(1)) }
+                            dragAccum >= threshold ->
+                                scope.launch { dashboardManager.refresh(state.selectedDate.minusDays(1)) }
+                        }
+                        dragAccum = 0f
+                    },
+                ) { _, dragAmount -> dragAccum += dragAmount }
+            },
     ) {
         // ── Location header — the place the dial is computed for (keeps
         // the city name the retired Summary card used to show). ──────────
@@ -151,7 +183,7 @@ fun DashboardScreen(
         // Date chip + (when not today) "Today" shortcut stretch across the
         // left; refresh sits on the right. Previously these were on two
         // rows which ate vertical space for no benefit.
-        val isToday = state.selectedDate == LocalDate.now()
+        val isToday = state.selectedDate == observingNight
         // Always state the date we're looking at — even "today" spells it out so
         // there's no ambiguity about which night's conditions are shown.
         val dateStr = state.selectedDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
@@ -188,7 +220,7 @@ fun DashboardScreen(
             }
             if (!isToday) {
                 Spacer(Modifier.width(8.dp))
-                TextButton(onClick = { scope.launch { dashboardManager.refresh(LocalDate.now()) } }) {
+                TextButton(onClick = { scope.launch { dashboardManager.refresh(observingNight) } }) {
                     Text(stringResource(R.string.date_today))
                 }
             }

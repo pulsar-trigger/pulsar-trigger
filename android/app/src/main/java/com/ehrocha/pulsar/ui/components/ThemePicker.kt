@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Nightlight
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
@@ -60,8 +61,10 @@ fun ThemePicker() {
 
     Box {
         IconButton(onClick = { expanded = true }) {
+            // Generic "theme" icon now that this controls colour scheme AND
+            // visual style — the per-mode sun/moon icons live in the left column.
             Icon(
-                colorSchemeIcon(nightMode.value),
+                Icons.Default.Palette,
                 contentDescription = stringResource(R.string.night_mode_toggle),
                 modifier = Modifier.size(20.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,

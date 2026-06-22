@@ -350,6 +350,10 @@ fun MainMenuScreen(
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
+                    // On the Dashboard, horizontal swipe changes the NIGHT (not
+                    // the tab) — disable the tab-pager's drag there; the bottom
+                    // nav still switches tabs.
+                    userScrollEnabled = currentDest != DEST_DASHBOARD,
                 ) { virtualPage ->
                     val page = virtualPage % destCount
                     pageContent(page)
