@@ -33,7 +33,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
@@ -389,7 +388,7 @@ private fun PulsarWatermark(modifier: Modifier = Modifier) {
         androidx.compose.foundation.Image(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_pulsar_mark),
             contentDescription = null,
-            alpha = 0.15f,
+            alpha = 0.19f,
             modifier = Modifier.size(30.dp),
         )
         Text(
@@ -398,7 +397,7 @@ private fun PulsarWatermark(modifier: Modifier = Modifier) {
             fontWeight = FontWeight.Black,
             letterSpacing = 4.sp,
             fontSize = 24.sp,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.13f),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f),
         )
     }
 }
@@ -500,9 +499,6 @@ private fun MenuPageContent(
                     val bulbR = rec(bulbTiles)
                     val standardR = rec(standardTiles)
                     val customR = rec(customTiles)
-                    val lastKey by vm.lastTriggerKey.collectAsState()
-                    val lastTile = (bulbR + standardR + customR)
-                        .find { it.key == lastKey && it.enabled }
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -521,9 +517,6 @@ private fun MenuPageContent(
                         }
                         if (onCanonBle || canonBleReconnecting) {
                             CanonBleBanner(reconnecting = canonBleReconnecting)
-                        }
-                        if (lastTile != null) {
-                            ResumeLastRow(lastTile)
                         }
                         // Filter chips removed (v0.416 design review): three
                         // always-visible sections need no filtering ceremony.
@@ -638,40 +631,6 @@ const val DEST_DASHBOARD = 0
 const val DEST_TRIGGER = 1
 const val DEST_TOOLS = 2
 
-
-@Composable
-private fun ResumeLastRow(tile: LauncherItem) {
-    Surface(
-        onClick = tile.onClick,
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Icon(
-                tile.icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-            )
-            Text(
-                stringResource(R.string.trigger_resume_last, tile.label),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.weight(1f),
-            )
-            Icon(
-                Icons.Default.PlayArrow,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-            )
-        }
-    }
-}
 
 private data class LauncherItem(
     val key: String,

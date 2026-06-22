@@ -769,6 +769,10 @@ class AstroDashboardManager(private val context: Context) {
     private val _state = MutableStateFlow(DashboardState())
     val state: StateFlow<DashboardState> = _state
 
+    // In-memory per-night cache so swiping back to a recently-viewed night is
+    // instant (no re-fetch). Session-scoped; small.
+    private val nightCache = mutableMapOf<LocalDate, DashboardState>()
+
     init {
         // Restore from cache on startup
         loadCache()?.let { _state.value = it }
@@ -1025,10 +1029,18 @@ class AstroDashboardManager(private val context: Context) {
                 ),
             )
             refreshInternal(locationInfo, date)
+            nightCache[date] = _state.value
         } catch (e: Exception) {
             Log.e(TAG, "Dashboard refresh failed", e)
             _state.value = _state.value.copy(loading = false, error = e.message)
         }
+    }
+
+    /** Switch to [date] — instant from this session's cache if we've already
+     *  loaded it (swipe back/forth between nights), otherwise a normal refresh. */
+    suspend fun goToNight(date: LocalDate) {
+        val cached = nightCache[date]
+        if (cached != null) _state.value = cached else refresh(date)
     }
 
     /** Refresh using explicit coordinates (for planner session detail). */

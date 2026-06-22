@@ -16,9 +16,15 @@ import com.ehrocha.pulsar.ui.theme.Display
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import com.ehrocha.pulsar.ui.theme.PulsarTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -156,9 +162,9 @@ fun DashboardScreen(
                         val threshold = 64.dp.toPx()
                         when {
                             dragAccum <= -threshold ->
-                                scope.launch { dashboardManager.refresh(state.selectedDate.plusDays(1)) }
+                                scope.launch { dashboardManager.goToNight(state.selectedDate.plusDays(1)) }
                             dragAccum >= threshold ->
-                                scope.launch { dashboardManager.refresh(state.selectedDate.minusDays(1)) }
+                                scope.launch { dashboardManager.goToNight(state.selectedDate.minusDays(1)) }
                         }
                         dragAccum = 0f
                     },
@@ -329,10 +335,15 @@ private fun SessionHistoryCard(
                 val totalRuns = entries.size
                 val completedRuns = entries.count { it.status == com.ehrocha.pulsar.model.ShotLogStatus.COMPLETED }
                 val successRate = if (totalRuns > 0) (100 * completedRuns) / totalRuns else 0
-                Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                    SessionStat(stringResource(R.string.shot_log_stat_runs), "$totalRuns")
-                    SessionStat(stringResource(R.string.shot_log_stat_shots), "$totalShots")
-                    SessionStat(stringResource(R.string.shot_log_stat_success), "$successRate%")
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(20.dp),
+                ) {
+                    SuccessRing(successRate, Modifier.size(62.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        SessionStat(stringResource(R.string.shot_log_stat_runs), "$totalRuns")
+                        SessionStat(stringResource(R.string.shot_log_stat_shots), "$totalShots")
+                    }
                 }
             }
         }
@@ -346,12 +357,43 @@ private fun SessionStat(label: String, value: String) {
             value,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
             label,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** Success-rate gauge for the session card — a ring coloured by quality (the
+ *  same green/amber/red honest model as the Sky Dial) with the % in the centre. */
+@Composable
+private fun SuccessRing(pct: Int, modifier: Modifier) {
+    val track = MaterialTheme.colorScheme.surfaceVariant
+    val color = when {
+        pct >= 80 -> PulsarTheme.colors.positive
+        pct >= 50 -> PulsarTheme.colors.caution
+        else -> PulsarTheme.colors.negative
+    }
+    Box(modifier, contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            val sw = 6.dp.toPx()
+            val inset = sw / 2f
+            val topLeft = Offset(inset, inset)
+            val arcSize = Size(size.width - sw, size.height - sw)
+            drawArc(track, 0f, 360f, false, topLeft = topLeft, size = arcSize, style = Stroke(sw, cap = StrokeCap.Round))
+            drawArc(
+                color, -90f, 360f * pct / 100f, false,
+                topLeft = topLeft, size = arcSize, style = Stroke(sw, cap = StrokeCap.Round),
+            )
+        }
+        Text(
+            "$pct%",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = color,
         )
     }
 }

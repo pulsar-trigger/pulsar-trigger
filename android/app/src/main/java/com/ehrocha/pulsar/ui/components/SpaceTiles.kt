@@ -89,8 +89,8 @@ fun SpaceCockpitTile(
                 )
                 androidx.compose.foundation.layout.Spacer(Modifier.height(8.dp))
                 Text(
-                    label.uppercase(), fontFamily = Mono, fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp,
+                    label.uppercase(), fontFamily = Mono, fontSize = 10.5.sp,
+                    fontWeight = FontWeight.Medium, letterSpacing = 0.5.sp, lineHeight = 12.sp,
                     textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
