@@ -130,8 +130,9 @@ val LocalNightMode = compositionLocalOf { mutableStateOf(ThemeMode.Dark) }
 /** When true, night mode cannot be changed by a single tap — long-press to unlock. */
 val LocalNightModeLocked = compositionLocalOf { mutableStateOf(false) }
 
-/** Global visual style — survives recomposition; loaded/persisted by MainActivity. */
-val LocalVisualStyle = compositionLocalOf { mutableStateOf(VisualStyle.CIRCUIT) }
+/** Global visual style — survives recomposition; loaded/persisted by MainActivity.
+ *  Defaults to SPACE (the showcase identity). */
+val LocalVisualStyle = compositionLocalOf { mutableStateOf(VisualStyle.SPACE) }
 
 // ── Space style — planet hues ───────────────────────────────────────────────
 // The SPACE visual style is the ONE place we step outside the single-accent

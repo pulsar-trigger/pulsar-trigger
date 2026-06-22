@@ -220,6 +220,11 @@
     <string name="transport_short_canon_ble">Canon BLE</string>
     <string name="transport_short_sim">Sim</string>
     <string name="scan_space_select_destination">目的地を選択</string>
+    <string name="color_scheme">配色</string>
+    <string name="color_scheme_light">ライト</string>
+    <string name="color_scheme_outdoor">屋外</string>
+    <string name="color_scheme_dark">ダーク</string>
+    <string name="color_scheme_red">レッド</string>
     <string name="disconnect">切断</string>
     <string name="back">戻る</string>
     <string name="cancel">キャンセル</string>

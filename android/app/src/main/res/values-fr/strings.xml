@@ -220,6 +220,11 @@
     <string name="transport_short_canon_ble">Canon BLE</string>
     <string name="transport_short_sim">Sim</string>
     <string name="scan_space_select_destination">Choisissez votre destination</string>
+    <string name="color_scheme">Schéma de couleurs</string>
+    <string name="color_scheme_light">Clair</string>
+    <string name="color_scheme_outdoor">Extérieur</string>
+    <string name="color_scheme_dark">Sombre</string>
+    <string name="color_scheme_red">Rouge</string>
     <string name="disconnect">Déconnecter</string>
     <string name="back">Retour</string>
     <string name="cancel">Annuler</string>

@@ -222,6 +222,11 @@
     <string name="transport_short_canon_ble">Canon BLE</string>
     <string name="transport_short_sim">Sim</string>
     <string name="scan_space_select_destination">选择目的地</string>
+    <string name="color_scheme">配色方案</string>
+    <string name="color_scheme_light">明亮</string>
+    <string name="color_scheme_outdoor">户外</string>
+    <string name="color_scheme_dark">深色</string>
+    <string name="color_scheme_red">红色</string>
     <string name="disconnect">断开连接</string>
     <string name="back">返回</string>
     <string name="cancel">取消</string>

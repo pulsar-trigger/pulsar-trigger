@@ -59,7 +59,7 @@ import com.ehrocha.pulsar.update.AppUpdateState
 import com.ehrocha.pulsar.ui.components.BatteryIndicator
 import com.ehrocha.pulsar.ui.components.LatencyIndicator
 import com.ehrocha.pulsar.ui.components.SignalStrengthIndicator
-import com.ehrocha.pulsar.ui.components.NightModeToggle
+import com.ehrocha.pulsar.ui.components.ThemePicker
 import com.ehrocha.pulsar.ui.screens.AircraftWatchScreen
 import com.ehrocha.pulsar.ui.screens.SpottingLogScreen
 import com.ehrocha.pulsar.ui.screens.NdCalculatorScreen
@@ -178,8 +178,8 @@ class MainActivity : AppCompatActivity() {
                 mutableStateOf(
                     runCatching {
                         com.ehrocha.pulsar.ui.theme.VisualStyle.valueOf(
-                            uiPrefs.getString("visual_style", null) ?: "CIRCUIT")
-                    }.getOrDefault(com.ehrocha.pulsar.ui.theme.VisualStyle.CIRCUIT)
+                            uiPrefs.getString("visual_style", null) ?: "SPACE")
+                    }.getOrDefault(com.ehrocha.pulsar.ui.theme.VisualStyle.SPACE)
                 )
             }
             LaunchedEffect(visualStyle.value) {
@@ -628,7 +628,7 @@ fun PulsarNavHost(
                     deviceName = deviceName,
                     onDisconnect = { vm.disconnect() },
                     onShotLogSelected = { currentScreen = AppScreen.ShotLog },
-                    nightModeToggle = { NightModeToggle() },
+                    nightModeToggle = { ThemePicker() },
                 )
             }
             is AppScreen.Mode -> {

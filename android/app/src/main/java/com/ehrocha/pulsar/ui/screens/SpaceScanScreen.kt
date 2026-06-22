@@ -157,6 +157,8 @@ fun SpaceScanScreen(
         SpaceField(Modifier.fillMaxSize())
 
         Column(modifier = Modifier.fillMaxSize()) {
+            SpaceBrandHeader()
+
             // ── Viewport: the decorative orrery (pulsar · orbits · planets),
             // now scenery only — the cockpit below does the picking. ──────────
             DecorOrrery(
@@ -245,6 +247,43 @@ private data class PlanetSpec(
     /** Angle on the orbit ellipse; 0° = right, 90° = straight down. */
     val angleDeg: Float,
 )
+
+/** Brand header at the very top of the Space scan screen — the Pulsar mark +
+ *  PULSAR wordmark + PSR-5T·version silkscreen. */
+@Composable
+private fun SpaceBrandHeader() {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(R.drawable.ic_pulsar_mark),
+                contentDescription = null,
+                modifier = Modifier.size(34.dp),
+            )
+            Text(
+                stringResource(R.string.app_name).uppercase(),
+                fontFamily = com.ehrocha.pulsar.ui.theme.Display,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 6.sp,
+                fontSize = 26.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        Text(
+            "PSR-5T · v${com.ehrocha.pulsar.BuildConfig.VERSION_NAME}",
+            fontFamily = Mono,
+            fontSize = 9.sp,
+            letterSpacing = 1.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            modifier = Modifier.padding(top = 2.dp),
+        )
+    }
+}
 
 @Composable
 private fun DecorOrrery(

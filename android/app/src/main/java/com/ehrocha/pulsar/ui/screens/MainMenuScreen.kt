@@ -384,7 +384,7 @@ private fun PulsarWatermark(modifier: Modifier = Modifier) {
         androidx.compose.foundation.Image(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_pulsar_mark),
             contentDescription = null,
-            alpha = 0.12f,
+            alpha = 0.15f,
             modifier = Modifier.size(30.dp),
         )
         Text(
@@ -393,7 +393,7 @@ private fun PulsarWatermark(modifier: Modifier = Modifier) {
             fontWeight = FontWeight.Black,
             letterSpacing = 4.sp,
             fontSize = 24.sp,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.13f),
         )
     }
 }
