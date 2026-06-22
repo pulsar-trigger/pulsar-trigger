@@ -2152,6 +2152,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 exposureMs = mode.body.exposureMs,
                 shotCount = mode.body.shotCount,
                 gapMs = mode.body.intervalMs,
+                delayMs = mode.body.delayMs,
                 useAutofocus = mode.body.useAutofocus,
             )
             com.ehrocha.pulsar.ble.TriggerMode.RAMP -> FlowStep.Ramp(
@@ -2159,6 +2160,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 endExposureMs = mode.body.rampEndExposureMs,
                 steps = mode.body.rampSteps,
                 intervalMs = mode.body.intervalMs,
+                delayMs = mode.body.delayMs,
                 useAutofocus = mode.body.useAutofocus,
             )
             else -> return  // PRESS_HOLD / PRESS_LOCK / TRACKER / CUSTOM_FLOW aren't presetable.
