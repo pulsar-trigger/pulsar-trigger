@@ -227,6 +227,8 @@
     <string name="color_scheme_red">レッド</string>
     <string name="disconnect_confirm_body">カメラから切断しますか？</string>
     <string name="dialog_dont_ask_again">今後表示しない</string>
+    <string name="session_mode_usage">モード使用状況</string>
+    <string name="menu_back_confirm_body">切断してアプリを閉じますか？</string>
     <string name="disconnect">切断</string>
     <string name="back">戻る</string>
     <string name="cancel">キャンセル</string>

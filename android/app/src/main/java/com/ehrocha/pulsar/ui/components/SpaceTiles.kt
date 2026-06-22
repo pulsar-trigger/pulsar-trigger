@@ -58,6 +58,9 @@ fun SpaceCockpitTile(
     val colors = PulsarTheme.colors
     val source = interactionSource ?: remember { MutableInteractionSource() }
     val liveBrush = Brush.linearGradient(listOf(colors.liveStart, colors.liveEnd))
+    // Disabled tiles must READ disabled — dim the icon + label (the Surface only
+    // blocks the click, it doesn't grey the content).
+    val contentAlpha = if (enabled) 1f else 0.38f
     Surface(
         onClick = onClick,
         enabled = enabled,
@@ -84,7 +87,7 @@ fun SpaceCockpitTile(
             ) {
                 Icon(
                     icon, contentDescription = null,
-                    tint = if (active) colors.liveEnd else MaterialTheme.colorScheme.primary,
+                    tint = (if (active) colors.liveEnd else MaterialTheme.colorScheme.primary).copy(alpha = contentAlpha),
                     modifier = Modifier.size(26.dp),
                 )
                 androidx.compose.foundation.layout.Spacer(Modifier.height(8.dp))
@@ -92,7 +95,7 @@ fun SpaceCockpitTile(
                     label.uppercase(), fontFamily = Mono, fontSize = 10.5.sp,
                     fontWeight = FontWeight.Medium, letterSpacing = 0.5.sp, lineHeight = 12.sp,
                     textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
                 )
             }
         }

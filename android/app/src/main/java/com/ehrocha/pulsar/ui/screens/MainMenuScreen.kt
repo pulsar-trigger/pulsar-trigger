@@ -11,6 +11,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -169,6 +170,29 @@ fun MainMenuScreen(
                 onDisconnect()
             },
             onDismiss = { showDisconnectConfirm = false },
+        )
+    }
+
+    // Back from the Menu (Dashboard / Trigger / Tools) → confirm disconnect +
+    // close the app, rather than silently dropping out.
+    var showBackConfirm by remember { mutableStateOf(false) }
+    BackHandler { showBackConfirm = true }
+    if (showBackConfirm) {
+        AlertDialog(
+            onDismissRequest = { showBackConfirm = false },
+            icon = { Icon(Icons.Default.LinkOff, contentDescription = null) },
+            title = { Text(stringResource(R.string.disconnect)) },
+            text = { Text(stringResource(R.string.menu_back_confirm_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showBackConfirm = false
+                    onDisconnect()
+                    (menuCtx as? android.app.Activity)?.finish()
+                }) { Text(stringResource(R.string.disconnect)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBackConfirm = false }) { Text(stringResource(R.string.cancel)) }
+            },
         )
     }
     val scope = rememberCoroutineScope()

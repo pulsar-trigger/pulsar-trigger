@@ -22,6 +22,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.style.TextOverflow
 import com.ehrocha.pulsar.ui.theme.PulsarTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -333,6 +334,23 @@ private fun SessionHistoryCard(
                         SessionStat(stringResource(R.string.shot_log_stat_shots), "$totalShots")
                     }
                 }
+
+                // Mode usage — which modes you run most, grouped by label.
+                val usage = entries.groupingBy { it.modeLabel }.eachCount()
+                    .entries.sortedByDescending { it.value }.take(4)
+                if (usage.isNotEmpty()) {
+                    val maxUse = usage.first().value
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        stringResource(R.string.session_mode_usage).uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    usage.forEach { (mode, count) -> ModeUsageBar(mode, count, maxUse) }
+                }
             }
         }
     }
@@ -352,6 +370,47 @@ private fun SessionStat(label: String, value: String) {
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+    }
+}
+
+/** One mode-usage row — the mode name, its run count, and a bar scaled to the
+ *  most-used mode. Bold + primary so the session card reads as a real readout. */
+@Composable
+private fun ModeUsageBar(name: String, count: Int, maxCount: Int) {
+    Column(modifier = Modifier.padding(vertical = 3.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                name,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                "$count",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(6.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth((count.toFloat() / maxCount).coerceIn(0.06f, 1f))
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(MaterialTheme.colorScheme.primary),
+            )
+        }
     }
 }
 

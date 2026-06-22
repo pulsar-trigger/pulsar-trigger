@@ -61,18 +61,25 @@ private val FIELD_STARS: List<FieldStar> = run {
 }
 
 private data class MeteorLane(
-    val period: Float, val phase: Float, val yStart: Float,
+    val period: Float, val phase: Float,
+    val startXf: Float, val startYf: Float,
     val angle: Float, val lenF: Float, val speedF: Float,
 )
 
 private val METEOR_LANES: List<MeteorLane> = run {
     val rnd = Random(1919)
-    List(4) {
+    List(5) {
+        // Vary the direction: angle 20°..160° spans down-right → down-left; the
+        // entry edge follows the horizontal direction so the streak crosses the
+        // field (no longer all left→right).
+        val angle = (20f + rnd.nextFloat() * 140f) * (PI / 180f).toFloat()
+        val goesRight = cos(angle) >= 0f
         MeteorLane(
             period = 6f + rnd.nextFloat() * 7f,                      // seconds between passes
             phase = rnd.nextFloat(),
-            yStart = -0.05f + rnd.nextFloat() * 0.55f,               // entry height fraction
-            angle = (26f + rnd.nextFloat() * 20f) * (PI / 180f).toFloat(),
+            startXf = if (goesRight) -0.12f - rnd.nextFloat() * 0.08f else 1.12f + rnd.nextFloat() * 0.08f,
+            startYf = -0.10f + rnd.nextFloat() * 0.40f,              // entry height fraction
+            angle = angle,
             lenF = 0.10f + rnd.nextFloat() * 0.10f,                  // streak length (frac of width)
             speedF = 0.85f + rnd.nextFloat() * 0.5f,
         )
@@ -177,8 +184,8 @@ fun SpaceField(modifier: Modifier = Modifier, animated: Boolean = true) {
                     val dirX = cos(m.angle)
                     val dirY = sin(m.angle)
                     val travel = (w + h) * 0.95f * m.speedF
-                    val hx = -w * 0.12f + dirX * travel * p
-                    val hy = m.yStart * h + dirY * travel * p
+                    val hx = m.startXf * w + dirX * travel * p
+                    val hy = m.startYf * h + dirY * travel * p
                     val len = m.lenF * w
                     val tx = hx - dirX * len
                     val ty = hy - dirY * len
