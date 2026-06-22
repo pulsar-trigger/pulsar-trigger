@@ -15,6 +15,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.BookmarkAdd
+import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.StopCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -22,6 +24,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,13 +34,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.R
-import com.ehrocha.pulsar.ui.components.PulsarTopBar
+import com.ehrocha.pulsar.ble.TriggerMode
+import com.ehrocha.pulsar.model.FlowStep
 import com.ehrocha.pulsar.model.ShotLogEntry
 import com.ehrocha.pulsar.model.ShotLogStatus
+import com.ehrocha.pulsar.model.UserMode
+import com.ehrocha.pulsar.ui.components.LocalSnackbarHost
+import com.ehrocha.pulsar.ui.components.PulsarTopBar
 import com.ehrocha.pulsar.ui.theme.StatusGreen
 import com.ehrocha.pulsar.ui.theme.StatusOrange
 import com.ehrocha.pulsar.ui.theme.StatusRed
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
+import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.util.Date
 
@@ -46,6 +54,11 @@ import java.util.Date
 fun ShotLogScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     val entries by vm.shotLog.entries.collectAsState()
     var confirmClear by remember { mutableStateOf(false) }
+    var grouped by remember { mutableStateOf(false) }
+    var savePresetFor by remember { mutableStateOf<ShotLogEntry?>(null) }
+    val snackHost = LocalSnackbarHost.current
+    val scope = rememberCoroutineScope()
+    val presetSavedMsg = stringResource(R.string.preset_saved)
 
     Scaffold(
         topBar = {
@@ -54,6 +67,13 @@ fun ShotLogScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                 onBack = onBack,
                 actions = {
                     if (entries.isNotEmpty()) {
+                        IconButton(onClick = { grouped = !grouped }) {
+                            Icon(
+                                Icons.Default.Sort,
+                                contentDescription = stringResource(R.string.sessions_group_toggle),
+                                tint = if (grouped) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                            )
+                        }
                         IconButton(onClick = { confirmClear = true }) {
                             Icon(Icons.Default.DeleteOutline, contentDescription = stringResource(R.string.delete))
                         }
@@ -75,7 +95,19 @@ fun ShotLogScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 88.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(entries, key = { it.id }) { entry -> ShotLogRow(entry) }
+                if (grouped) {
+                    entries.groupBy { it.modeLabel }.entries.sortedByDescending { it.value.size }
+                        .forEach { (mode, list) ->
+                            item(key = "h:$mode") { GroupHeader(mode, list.size) }
+                            items(list, key = { it.id }) { entry ->
+                                ShotLogRow(entry, if (entry.canMakePreset()) ({ savePresetFor = entry }) else null)
+                            }
+                        }
+                } else {
+                    items(entries, key = { it.id }) { entry ->
+                        ShotLogRow(entry, if (entry.canMakePreset()) ({ savePresetFor = entry }) else null)
+                    }
+                }
             }
         }
     }
@@ -95,6 +127,96 @@ fun ShotLogScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                     Text(stringResource(R.string.cancel))
                 }
             },
+        )
+    }
+
+    savePresetFor?.let { entry ->
+        SavePresetDialog(
+            entry = entry,
+            onSave = { name ->
+                entry.presetStep?.let { step ->
+                    bodyFromStep(step)?.let { body ->
+                        vm.upsertUserMode(UserMode(name = name, body = body))
+                        scope.launch { snackHost.showSnackbar(presetSavedMsg) }
+                    }
+                }
+                savePresetFor = null
+            },
+            onDismiss = { savePresetFor = null },
+        )
+    }
+}
+
+/** Converts a captured run-step into a preset [UserMode.Body]. Null for a Pause
+ *  (not a shooting mode). Mirrors the wizard → Body field mapping. */
+private fun bodyFromStep(step: FlowStep): UserMode.Body? = when (step) {
+    is FlowStep.Intervalometer -> UserMode.Body(
+        fwMode = if (step.timelapse) TriggerMode.TIMELAPSE else TriggerMode.INTERVALOMETER,
+        intervalMs = step.intervalMs, exposureMs = step.exposureMs, shotCount = step.shotCount,
+        delayMs = step.delayMs, useAutofocus = step.useAutofocus,
+        iso = step.cameraSettings.iso, aperture = step.cameraSettings.aperture,
+        shutterSpeed = step.cameraSettings.shutterSpeed,
+    )
+    is FlowStep.Astro -> UserMode.Body(
+        fwMode = TriggerMode.ASTRO, intervalMs = step.gapMs, shotCount = step.shotCount,
+        delayMs = step.delayMs, focalLength = step.focalLength, cropFactor = step.cropFactor,
+        ruleDivisor = step.ruleDivisor, useAutofocus = step.useAutofocus,
+    )
+    is FlowStep.DarkFrame -> UserMode.Body(
+        fwMode = TriggerMode.DARK_FRAME, exposureMs = step.exposureMs, shotCount = step.shotCount,
+        intervalMs = step.gapMs, delayMs = step.delayMs, useAutofocus = step.useAutofocus,
+    )
+    is FlowStep.Ramp -> UserMode.Body(
+        fwMode = TriggerMode.RAMP, intervalMs = step.intervalMs,
+        rampStartExposureMs = step.startExposureMs, rampEndExposureMs = step.endExposureMs,
+        rampSteps = step.steps, delayMs = step.delayMs, useAutofocus = step.useAutofocus,
+    )
+    is FlowStep.Pause -> null
+}
+
+@Composable
+private fun SavePresetDialog(entry: ShotLogEntry, onSave: (String) -> Unit, onDismiss: () -> Unit) {
+    var name by remember { mutableStateOf(entry.modeLabel) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Default.BookmarkAdd, contentDescription = null) },
+        title = { Text(stringResource(R.string.save_as_preset)) },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text(stringResource(R.string.preset_name)) },
+                singleLine = true,
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(name.trim()) }, enabled = name.isNotBlank()) {
+                Text(stringResource(R.string.save_as_preset))
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
+}
+
+@Composable
+private fun GroupHeader(mode: String, count: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            mode.uppercase(),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.sp,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            "$count",
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -141,7 +263,7 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
 }
 
 @Composable
-private fun ShotLogRow(entry: ShotLogEntry) {
+private fun ShotLogRow(entry: ShotLogEntry, onSavePreset: (() -> Unit)? = null) {
     val (icon, tint) = statusIconAndColor(entry.status)
     Surface(
         shape = RoundedCornerShape(12.dp),
@@ -168,6 +290,17 @@ private fun ShotLogRow(entry: ShotLogEntry) {
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (onSavePreset != null) {
+                    Spacer(Modifier.width(4.dp))
+                    IconButton(onClick = onSavePreset, modifier = Modifier.size(28.dp)) {
+                        Icon(
+                            Icons.Default.BookmarkAdd,
+                            contentDescription = stringResource(R.string.save_as_preset),
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(

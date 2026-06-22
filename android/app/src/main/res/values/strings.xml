@@ -309,6 +309,10 @@
     <string name="dialog_dont_ask_again">Don\'t ask again</string>
     <string name="session_mode_usage">Mode usage</string>
     <string name="menu_back_confirm_body">Disconnect and close the app?</string>
+    <string name="save_as_preset">Save as preset</string>
+    <string name="preset_name">Preset name</string>
+    <string name="preset_saved">Preset saved</string>
+    <string name="sessions_group_toggle">Group by mode</string>
     <string name="disconnect">Disconnect</string>
 
     <!-- Common actions / labels -->
