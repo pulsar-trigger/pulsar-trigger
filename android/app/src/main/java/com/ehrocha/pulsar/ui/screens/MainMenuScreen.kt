@@ -12,6 +12,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
@@ -151,6 +152,25 @@ fun MainMenuScreen(
         pageCount = { virtualCount },
     )
     val currentDest = pagerState.currentPage % destCount
+
+    // Disconnect confirmation, with a persisted "don't ask again".
+    val menuCtx = androidx.compose.ui.platform.LocalContext.current
+    val uiPrefs = remember { menuCtx.getSharedPreferences("pulsar_ui", android.content.Context.MODE_PRIVATE) }
+    var skipDisconnectConfirm by remember { mutableStateOf(uiPrefs.getBoolean("disconnect_no_confirm", false)) }
+    var showDisconnectConfirm by remember { mutableStateOf(false) }
+    if (showDisconnectConfirm) {
+        DisconnectConfirmDialog(
+            onConfirm = { dontAsk ->
+                if (dontAsk) {
+                    uiPrefs.edit().putBoolean("disconnect_no_confirm", true).apply()
+                    skipDisconnectConfirm = true
+                }
+                showDisconnectConfirm = false
+                onDisconnect()
+            },
+            onDismiss = { showDisconnectConfirm = false },
+        )
+    }
     val scope = rememberCoroutineScope()
     LaunchedEffect(currentDest) { onDestChanged(currentDest) }
 
@@ -269,16 +289,18 @@ fun MainMenuScreen(
                     )
                 },
                 actions = {
-                    // One unified bar: a status pill (tap → device name, signal,
-                    // latency), 1-tap disconnect, the theme picker, and settings.
-                    // Session history now lives on the dashboard card.
-                    ConnectionPill(deviceName = deviceName)
-                    IconButton(onClick = onDisconnect) {
+                    // Disconnect is the first action (most reached-for), then a
+                    // status pill (tap → device name, signal, latency), the theme
+                    // picker, and settings. Disconnect confirms unless silenced.
+                    IconButton(onClick = {
+                        if (skipDisconnectConfirm) onDisconnect() else showDisconnectConfirm = true
+                    }) {
                         Icon(
                             Icons.Default.LinkOff,
                             contentDescription = stringResource(R.string.disconnect),
                         )
                     }
+                    ConnectionPill(deviceName = deviceName)
                     nightModeToggle()
                     IconButton(onClick = onSettingsSelected) {
                         BadgedBox(
@@ -349,10 +371,6 @@ fun MainMenuScreen(
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
-                    // On the Dashboard, horizontal swipe changes the NIGHT (not
-                    // the tab) — disable the tab-pager's drag there; the bottom
-                    // nav still switches tabs.
-                    userScrollEnabled = currentDest != DEST_DASHBOARD,
                 ) { virtualPage ->
                     val page = virtualPage % destCount
                     pageContent(page)
@@ -376,6 +394,40 @@ private fun ContinuousPcb(pagerState: PagerState) {
     }
 }
 
+/** Disconnect confirmation with a "don't ask again" checkbox; [onConfirm] passes
+ *  whether the box was ticked so the caller can persist the preference. */
+@Composable
+private fun DisconnectConfirmDialog(onConfirm: (Boolean) -> Unit, onDismiss: () -> Unit) {
+    var dontAsk by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Default.LinkOff, contentDescription = null) },
+        title = { Text(stringResource(R.string.disconnect)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.disconnect_confirm_body))
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().clickable { dontAsk = !dontAsk },
+                ) {
+                    Checkbox(checked = dontAsk, onCheckedChange = { dontAsk = it })
+                    Spacer(Modifier.width(4.dp))
+                    Text(stringResource(R.string.dialog_dont_ask_again))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(dontAsk) }) {
+                Text(stringResource(R.string.disconnect))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        },
+    )
+}
+
 /** Faint brand watermark for the menu's lower-right — the Pulsar mark + wordmark
  *  at low alpha, sitting on the backdrop behind the chips (they render on top). */
 @Composable
@@ -388,16 +440,16 @@ private fun PulsarWatermark(modifier: Modifier = Modifier) {
         androidx.compose.foundation.Image(
             painter = androidx.compose.ui.res.painterResource(R.drawable.ic_pulsar_mark),
             contentDescription = null,
-            alpha = 0.19f,
-            modifier = Modifier.size(30.dp),
+            alpha = 0.30f,
+            modifier = Modifier.size(34.dp),
         )
         Text(
             "PULSAR",
             fontFamily = com.ehrocha.pulsar.ui.theme.Display,
             fontWeight = FontWeight.Black,
             letterSpacing = 4.sp,
-            fontSize = 24.sp,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f),
+            fontSize = 27.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.26f),
         )
     }
 }

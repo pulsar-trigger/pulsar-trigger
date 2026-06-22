@@ -305,6 +305,8 @@
     <string name="color_scheme_outdoor">Outdoor</string>
     <string name="color_scheme_dark">Dark</string>
     <string name="color_scheme_red">Red</string>
+    <string name="disconnect_confirm_body">Disconnect from the camera?</string>
+    <string name="dialog_dont_ask_again">Don\'t ask again</string>
     <string name="disconnect">Disconnect</string>
 
     <!-- Common actions / labels -->

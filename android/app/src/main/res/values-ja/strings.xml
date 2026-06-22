@@ -225,6 +225,8 @@
     <string name="color_scheme_outdoor">屋外</string>
     <string name="color_scheme_dark">ダーク</string>
     <string name="color_scheme_red">レッド</string>
+    <string name="disconnect_confirm_body">カメラから切断しますか？</string>
+    <string name="dialog_dont_ask_again">今後表示しない</string>
     <string name="disconnect">切断</string>
     <string name="back">戻る</string>
     <string name="cancel">キャンセル</string>

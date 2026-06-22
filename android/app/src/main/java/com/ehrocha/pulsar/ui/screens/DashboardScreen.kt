@@ -17,13 +17,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.pointerInput
 import com.ehrocha.pulsar.ui.theme.PulsarTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -151,25 +149,7 @@ fun DashboardScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp)
-            // Horizontal swipe = previous / next night (tab-swipe is suppressed
-            // on this page). Neighbours refresh in place; moon/sun recompute
-            // instantly, weather catches up.
-            .pointerInput(state.selectedDate) {
-                var dragAccum = 0f
-                detectHorizontalDragGestures(
-                    onDragEnd = {
-                        val threshold = 64.dp.toPx()
-                        when {
-                            dragAccum <= -threshold ->
-                                scope.launch { dashboardManager.goToNight(state.selectedDate.plusDays(1)) }
-                            dragAccum >= threshold ->
-                                scope.launch { dashboardManager.goToNight(state.selectedDate.minusDays(1)) }
-                        }
-                        dragAccum = 0f
-                    },
-                ) { _, dragAmount -> dragAccum += dragAmount }
-            },
+            .padding(horizontal = 16.dp),
     ) {
         // ── Location header — the place the dial is computed for (keeps
         // the city name the retired Summary card used to show). ──────────
@@ -201,6 +181,11 @@ fun DashboardScreen(
                 .padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // Night controls — rewind / forward a night (swipe was reverted to
+            // tab-switching). Cached nights flip instantly.
+            IconButton(onClick = { scope.launch { dashboardManager.goToNight(state.selectedDate.minusDays(1)) } }) {
+                Icon(Icons.Default.ChevronLeft, contentDescription = null)
+            }
             Surface(
                 shape = RoundedCornerShape(20.dp),
                 color = MaterialTheme.colorScheme.secondaryContainer,
@@ -223,6 +208,9 @@ fun DashboardScreen(
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
                     )
                 }
+            }
+            IconButton(onClick = { scope.launch { dashboardManager.goToNight(state.selectedDate.plusDays(1)) } }) {
+                Icon(Icons.Default.ChevronRight, contentDescription = null)
             }
             if (!isToday) {
                 Spacer(Modifier.width(8.dp))

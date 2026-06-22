@@ -17,7 +17,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.unit.dp
+import com.ehrocha.pulsar.ui.theme.PlanetAmber
+import com.ehrocha.pulsar.ui.theme.PlanetSlate
 import com.ehrocha.pulsar.ui.theme.PulsarTheme
 import kotlin.math.PI
 import kotlin.math.cos
@@ -42,7 +47,7 @@ private data class FieldStar(
 
 private val FIELD_STARS: List<FieldStar> = run {
     val rnd = Random(0xC1A19)   // CP 1919 — the first pulsar
-    List(96) {
+    List(132) {
         val bright = rnd.nextFloat() < 0.16f
         FieldStar(
             xf = rnd.nextFloat(),
@@ -74,6 +79,21 @@ private val METEOR_LANES: List<MeteorLane> = run {
     }
 }
 
+// A handful of deep-sky objects — faint galaxies + a couple of distant planets
+// — so the field reads as more than stars (kept sparse, "not too much").
+private enum class SkyKind { GALAXY, PLANET }
+private data class DeepSky(
+    val kind: SkyKind, val xf: Float, val yf: Float,
+    val sizeF: Float, val angle: Float, val tintIdx: Int,
+)
+private val DEEP_SKY = listOf(
+    DeepSky(SkyKind.GALAXY, 0.80f, 0.15f, 0.11f, 28f, 0),
+    DeepSky(SkyKind.GALAXY, 0.13f, 0.70f, 0.075f, -18f, 1),
+    DeepSky(SkyKind.GALAXY, 0.60f, 0.89f, 0.060f, 12f, 2),
+    DeepSky(SkyKind.PLANET, 0.90f, 0.54f, 0.022f, 0f, 0),
+    DeepSky(SkyKind.PLANET, 0.34f, 0.24f, 0.016f, 0f, 1),
+)
+
 @Composable
 fun SpaceField(modifier: Modifier = Modifier, animated: Boolean = true) {
     val colors = PulsarTheme.colors
@@ -102,6 +122,38 @@ fun SpaceField(modifier: Modifier = Modifier, animated: Boolean = true) {
         drawNebula(Offset(w * 0.22f, h * 0.28f), minOf(w, h) * 0.60f, nebViolet.copy(alpha = 0.10f))
         drawNebula(Offset(w * 0.84f, h * 0.66f), minOf(w, h) * 0.55f, nebPrimary.copy(alpha = 0.07f))
         drawNebula(Offset(w * 0.62f, h * 0.10f), minOf(w, h) * 0.42f, nebMagenta.copy(alpha = 0.06f))
+
+        // ── deep-sky objects: faint tilted galaxies + a couple of planets ────
+        DEEP_SKY.forEach { d ->
+            val c = Offset(d.xf * w, d.yf * h)
+            val r = d.sizeF * minOf(w, h)
+            when (d.kind) {
+                SkyKind.GALAXY -> {
+                    val tint = when (d.tintIdx) { 0 -> nebViolet; 1 -> nebPrimary; else -> nebMagenta }
+                    rotate(d.angle, c) {
+                        scale(1f, 0.42f, c) {
+                            drawCircle(
+                                brush = Brush.radialGradient(
+                                    listOf(tint.copy(alpha = 0.18f), Color.Transparent), center = c, radius = r,
+                                ),
+                                radius = r, center = c,
+                            )
+                        }
+                    }
+                    drawCircle(starColor.copy(alpha = 0.45f), radius = 1.2.dp.toPx(), center = c)
+                }
+                SkyKind.PLANET -> {
+                    val hue = if (d.tintIdx == 0) PlanetSlate else PlanetAmber
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            listOf(lerp(hue, Color.White, 0.4f), hue, lerp(hue, Color.Black, 0.45f)),
+                            center = Offset(c.x - r * 0.3f, c.y - r * 0.3f), radius = r * 1.3f,
+                        ),
+                        radius = r, center = c, alpha = 0.7f,
+                    )
+                }
+            }
+        }
 
         // ── stars (twinkling) ────────────────────────────────────────────────
         FIELD_STARS.forEach { s ->

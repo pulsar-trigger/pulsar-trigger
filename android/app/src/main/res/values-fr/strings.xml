@@ -225,6 +225,8 @@
     <string name="color_scheme_outdoor">Extérieur</string>
     <string name="color_scheme_dark">Sombre</string>
     <string name="color_scheme_red">Rouge</string>
+    <string name="disconnect_confirm_body">Se déconnecter de l\'appareil ?</string>
+    <string name="dialog_dont_ask_again">Ne plus demander</string>
     <string name="disconnect">Déconnecter</string>
     <string name="back">Retour</string>
     <string name="cancel">Annuler</string>

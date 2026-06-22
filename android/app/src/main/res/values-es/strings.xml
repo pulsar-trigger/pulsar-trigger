@@ -225,6 +225,8 @@
     <string name="color_scheme_outdoor">Exterior</string>
     <string name="color_scheme_dark">Oscuro</string>
     <string name="color_scheme_red">Rojo</string>
+    <string name="disconnect_confirm_body">¿Desconectar de la cámara?</string>
+    <string name="dialog_dont_ask_again">No volver a preguntar</string>
     <string name="disconnect">Desconectar</string>
     <string name="back">Atrás</string>
     <string name="cancel">Cancelar</string>
