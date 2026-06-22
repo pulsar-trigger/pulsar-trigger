@@ -2319,6 +2319,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                             intervalMs = intvMs,
                             status = status,
                             conditions = conditions,
+                            // Capture the single run-step so this session can be
+                            // re-saved as a preset later. Null for multi-step
+                            // custom flows (not a simple preset).
+                            presetStep = steps.singleOrNull(),
                         )
                     )
                     // Tell the user the run ended — they're often away from

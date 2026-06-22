@@ -82,7 +82,15 @@ data class ShotLogEntry(
      *  v0.327 (when this field was introduced) or when no cached dashboard
      *  snapshot was available on the device at run start. */
     val conditions: ConditionSnapshot? = null,
+    /** The originating single run-step (Intervalometer / Astro / DarkFrame /
+     *  Ramp), captured so a past session can be re-saved as a preset. Null for
+     *  multi-step custom flows and for entries logged before this was added. */
+    val presetStep: FlowStep? = null,
 ) {
+    /** Whether this session carries enough captured config to become a preset
+     *  (a single, preset-able run-step). Old entries return false. */
+    fun canMakePreset(): Boolean = presetStep != null
+
     fun durationMs(): Long = endedAtMs - startedAtMs
 
     fun toJson(): JSONObject = JSONObject().apply {
@@ -97,6 +105,7 @@ data class ShotLogEntry(
         put("intervalMs", intervalMs)
         put("status", status.name)
         conditions?.let { put("conditions", it.toJson()) }
+        presetStep?.let { put("presetStep", it.toJson()) }
     }
 
     companion object {
@@ -114,6 +123,7 @@ data class ShotLogEntry(
                 ShotLogStatus.valueOf(j.optString("status", "COMPLETED"))
             }.getOrDefault(ShotLogStatus.COMPLETED),
             conditions = j.optJSONObject("conditions")?.let { ConditionSnapshot.fromJson(it) },
+            presetStep = j.optJSONObject("presetStep")?.let { FlowStep.fromJson(it) },
         )
     }
 }
