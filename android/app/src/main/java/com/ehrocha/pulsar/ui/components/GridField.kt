@@ -15,15 +15,18 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.ui.theme.PulsarTheme
 
 /**
  * "Grid" visual-style backdrop — a neon perspective floor receding to a glowing
  * horizon (Tron-inspired). Electric-cyan grid lines on the carbon background,
- * with the SIGNAL live-gradient reserved for the horizon band + the scan sweep,
- * so it ties into the rest of the system. Static by default (calm behind forms);
- * [animated] adds a slow scan-line running down the floor.
+ * with the SIGNAL live-gradient reserved for the horizon band + the runners,
+ * so it ties into the rest of the system. Static behind forms (calm); when
+ * [animated] (menu + scan), Tron light cycles run the floor leaving neon trails,
+ * and an identity disc drifts the sky band.
  *
  * Sibling of [SpaceField] / [PcbField]: transparent, drawn behind the app.
  */
@@ -100,18 +103,39 @@ fun GridField(modifier: Modifier = Modifier, animated: Boolean = true) {
             strokeWidth = 2.dp.toPx(),
         )
 
-        // ── animated: a scan-line sweeping down the floor ────────────────────
+        // ── animated: light cycles running the grid + an identity disc ───────
         if (animated) {
-            val sweep = (timeS * 0.16f).mod(1f)
-            val y = horizon + (h - horizon) * (sweep * sweep)
-            drawLine(
-                brush = Brush.horizontalGradient(
-                    listOf(Color.Transparent, glowB.copy(alpha = 0.5f), Color.Transparent),
-                ),
-                start = Offset(0f, y),
-                end = Offset(w, y),
-                strokeWidth = 2.dp.toPx(),
-            )
+            val cycles = 5
+            for (i in 0 until cycles) {
+                val rowT = 0.32f + 0.62f * (i / (cycles - 1f))
+                val y = horizon + (h - horizon) * (rowT * rowT)
+                val speed = 0.11f + 0.045f * i
+                val dir = if (i % 2 == 0) 1f else -1f
+                // 0..1.6 — the >1 stretch is the off-screen respawn gap
+                val p = ((timeS * speed) + i * 0.31f).mod(1.6f)
+                if (p <= 1f) {
+                    val headX = if (dir > 0f) p * w else (1f - p) * w
+                    val trailLen = w * (0.18f + 0.04f * (i % 3))
+                    val tailX = headX - dir * trailLen
+                    val col = if (i % 2 == 0) line else glowB  // cyan / magenta runner
+                    drawLine(
+                        brush = Brush.linearGradient(
+                            listOf(Color.Transparent, col.copy(alpha = 0.9f)),
+                            start = Offset(tailX, y), end = Offset(headX, y),
+                        ),
+                        start = Offset(tailX, y), end = Offset(headX, y),
+                        strokeWidth = 2.5.dp.toPx(), cap = StrokeCap.Round,
+                    )
+                    drawCircle(col.copy(alpha = 0.30f), radius = 5.dp.toPx(), center = Offset(headX, y))
+                    drawCircle(col, radius = 2.2.dp.toPx(), center = Offset(headX, y))
+                }
+            }
+            // identity disc — a glowing ring drifting across the sky band
+            val dp = (timeS * 0.05f).mod(1f)
+            val dc = Offset(w * (0.1f + 0.8f * dp), horizon * 0.5f)
+            val dr = minOf(w, h) * 0.045f
+            drawCircle(glowB.copy(alpha = 0.5f), radius = dr, center = dc, style = Stroke(2.dp.toPx()))
+            drawCircle(glowB.copy(alpha = 0.16f), radius = dr * 0.7f, center = dc)
         }
     }
 }

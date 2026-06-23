@@ -32,6 +32,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -66,6 +67,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -986,6 +990,66 @@ private fun LauncherTile(
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = a),
                 )
+            }
+        }
+        return
+    }
+
+    // GRID: a Tron "program" — angular cut-corner cell with a glowing neon
+    // edge + a data-bus baseline. Pressing lights the edge to the live
+    // gradient. Deliberately NOT the IC chip: Grid has its own identity.
+    if (visualStyle == com.ehrocha.pulsar.ui.theme.VisualStyle.GRID) {
+        val colors = com.ehrocha.pulsar.ui.theme.PulsarTheme.colors
+        val a = if (enabled) 1f else 0.35f
+        val lit = pressed && enabled
+        val edge = if (lit) colors.liveEnd else colors.liveStart
+        Surface(
+            onClick = onClick,
+            enabled = enabled,
+            interactionSource = interactionSource,
+            shape = CutCornerShape(topStart = 14.dp, bottomEnd = 14.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            border = BorderStroke(
+                width = if (lit) 2.dp else 1.5.dp,
+                brush = if (lit) Brush.linearGradient(listOf(colors.liveStart, colors.liveEnd))
+                else SolidColor(edge.copy(alpha = 0.6f * a)),
+            ),
+            modifier = modifier.fillMaxWidth().height(110.dp).scale(scale),
+        ) {
+            Box(Modifier.fillMaxSize()) {
+                Canvas(Modifier.matchParentSize()) {
+                    val y = size.height - 10.dp.toPx()
+                    drawLine(
+                        brush = Brush.horizontalGradient(
+                            listOf(Color.Transparent, edge.copy(alpha = 0.5f * a), Color.Transparent),
+                        ),
+                        start = Offset(size.width * 0.12f, y),
+                        end = Offset(size.width * 0.88f, y),
+                        strokeWidth = 1.5.dp.toPx(),
+                    )
+                }
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 16.dp),
+                ) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        tint = edge.copy(alpha = a),
+                        modifier = Modifier.size(26.dp),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = a),
+                    )
+                }
             }
         }
         return

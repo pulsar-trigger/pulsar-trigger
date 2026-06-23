@@ -263,16 +263,18 @@ private fun TransportBoard(
         val legColor = colors.liveStart.copy(alpha = 0.5f)
         val activeBrush = Brush.linearGradient(listOf(colors.liveStart, colors.liveEnd))
 
-        // Static backdrop — PCB field for Circuit, the neon grid for Grid. The
-        // IC's own functional traces carry the beacon, so the decor stays still.
-        if (LocalVisualStyle.current.value == VisualStyle.GRID) {
-            GridField(Modifier.matchParentSize(), animated = false)
+        val isGrid = LocalVisualStyle.current.value == VisualStyle.GRID
+        // Backdrop — PCB field for Circuit; for Grid, the LIVE neon grid with
+        // light cycles, and the IC chrome below is dropped so it stops echoing
+        // Circuit — the transports sit as programs on the bare Grid.
+        if (isGrid) {
+            GridField(Modifier.matchParentSize(), animated = true)
         } else {
             PcbField(Modifier.matchParentSize(), animated = false)
         }
 
-        // ── IC layer: DIP pins + the six functional traces + the beacon ──────
-        Canvas(Modifier.matchParentSize()) {
+        // ── IC layer (Circuit only): DIP pins + functional traces + beacon ──
+        if (!isGrid) Canvas(Modifier.matchParentSize()) {
             val cx = size.width / 2f
             val cy = size.height / 2f
             val chHW = chipW.toPx() / 2f
@@ -337,8 +339,8 @@ private fun TransportBoard(
             }
         }
 
-        // ── The DIP chip (package + branding + pulsing mark) ─────────────────
-        ChipCore(chipW, chipH, versionName, breathe)
+        // ── The DIP chip (package + branding + pulsing mark) — Circuit only ──
+        if (!isGrid) ChipCore(chipW, chipH, versionName, breathe)
 
         // ── The six scattered pads ───────────────────────────────────────────
         pads.forEach { spec ->
