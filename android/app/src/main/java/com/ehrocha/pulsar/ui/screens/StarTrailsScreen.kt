@@ -5,10 +5,15 @@
 
 package com.ehrocha.pulsar.ui.screens
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -47,7 +52,17 @@ import com.ehrocha.pulsar.ui.components.PulsarTopBar
 import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
 import com.ehrocha.pulsar.ui.theme.LocalRunState
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import com.ehrocha.pulsar.ui.theme.Mono
+import com.ehrocha.pulsar.ui.theme.PulsarTheme
+import kotlin.math.cos
+import kotlin.math.hypot
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 /**
  * Star Trails wizard — guided front end that produces a stacked
@@ -155,6 +170,32 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            // ── Sweep scope: live preview of the star-trail arc ──────────────
+            // The one beautiful, intuitive truth of the mode — stars trail
+            // 15°/h around the pole — drawn live as you tune the session.
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                tonalElevation = 1.dp,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Box(modifier = Modifier.fillMaxWidth().aspectRatio(1.7f)) {
+                    StarTrailScope(arcDeg = arcDeg.toFloat(), modifier = Modifier.fillMaxSize())
+                    Column(modifier = Modifier.align(Alignment.TopStart).padding(14.dp)) {
+                        Text(
+                            stringResource(R.string.star_trails_arc).uppercase(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            "${arcDeg.roundToInt()}°",
+                            style = MaterialTheme.typography.headlineLarge.copy(fontFamily = Mono),
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+            }
+
             // Summary card.
             com.ehrocha.pulsar.ui.components.StatPanel {
                 Column(modifier = Modifier.fillMaxWidth()) {
@@ -166,10 +207,6 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                     com.ehrocha.pulsar.ui.components.StatRow(
                         stringResource(R.string.star_trails_total),
                         formatExposure(actualTotalSec.toDouble()),
-                    )
-                    com.ehrocha.pulsar.ui.components.StatRow(
-                        stringResource(R.string.star_trails_arc),
-                        String.format(java.util.Locale.US, "%.1f°", arcDeg),
                     )
                     com.ehrocha.pulsar.ui.components.StatRow(
                         stringResource(R.string.star_trails_frame_row),
@@ -256,6 +293,48 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
 
             Spacer(Modifier.height(8.dp))
         }
+    }
+}
+
+/**
+ * Live preview of the predicted star-trail sweep — concentric arcs around the
+ * celestial pole, each star trailing [arcDeg]° (15°/h × session length). The
+ * arc grows as the session lengthens. Transparent, so the themed backdrop
+ * (starfield / board) shows through and it reads in every visual style.
+ */
+@Composable
+private fun StarTrailScope(arcDeg: Float, modifier: Modifier) {
+    val trail = MaterialTheme.colorScheme.primary
+    val starColor = MaterialTheme.colorScheme.onSurface
+    val poleColor = PulsarTheme.colors.liveEnd
+    val sweep by animateFloatAsState(arcDeg, tween(450), label = "sweep")
+    Canvas(modifier) {
+        val pole = Offset(size.width * 0.15f, size.height * 0.18f)
+        val maxR = hypot(size.width, size.height) * 0.9f
+        // radius fraction → start angle (deg) for a handful of stars
+        val stars = listOf(
+            0.30f to 20f, 0.44f to 65f, 0.57f to 110f,
+            0.70f to 45f, 0.83f to 92f, 0.95f to 135f,
+        )
+        stars.forEach { (rf, startA) ->
+            val r = maxR * rf
+            val tl = Offset(pole.x - r, pole.y - r)
+            val sz = Size(2 * r, 2 * r)
+            // faint full circle = the star's whole nightly path
+            drawArc(starColor.copy(alpha = 0.05f), 0f, 360f, false, tl, sz, style = Stroke(1f))
+            // the trail it will actually draw this session
+            drawArc(
+                trail.copy(alpha = 0.85f), startA, sweep, false, tl, sz,
+                style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round),
+            )
+            // bright head at the leading end (the star's current position)
+            val a = Math.toRadians((startA + sweep).toDouble())
+            val head = Offset(pole.x + (r * cos(a)).toFloat(), pole.y + (r * sin(a)).toFloat())
+            drawCircle(starColor.copy(alpha = 0.25f), 4.dp.toPx(), head)
+            drawCircle(starColor, 2.dp.toPx(), head)
+        }
+        // celestial pole
+        drawCircle(poleColor.copy(alpha = 0.6f), 3.dp.toPx(), pole)
     }
 }
 
