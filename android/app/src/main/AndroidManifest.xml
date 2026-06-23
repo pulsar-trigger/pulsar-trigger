@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!--
       Android 12+ (API 31): BLUETOOTH_SCAN with usesPermissionFlags=neverForLocation
@@ -58,14 +59,16 @@
             </intent-filter>
 
             <!-- Open shared .pulsar event files -->
-            <intent-filter>
+            <!-- File-association filter, not a web App Link — pathPattern has no
+                 host/scheme by design; AppLinkUrlError doesn't apply. -->
+            <intent-filter tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:mimeType="application/octet-stream" />
                 <data android:pathPattern=".*\\.pulsar" />
             </intent-filter>
-            <intent-filter>
+            <intent-filter tools:ignore="AppLinkUrlError">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />

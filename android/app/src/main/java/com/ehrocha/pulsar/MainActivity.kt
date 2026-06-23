@@ -14,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -188,6 +189,21 @@ class MainActivity : AppCompatActivity() {
             }
             LaunchedEffect(visualStyle.value) {
                 uiPrefs.edit().putString("visual_style", visualStyle.value.name).apply()
+            }
+            // Keep the live style in sync when a settings RESTORE writes the pref
+            // directly (import bypasses the picker). The same-value write from the
+            // LaunchedEffect above is a no-op, so this can't loop.
+            androidx.compose.runtime.DisposableEffect(uiPrefs) {
+                val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { p, key ->
+                    if (key == "visual_style") {
+                        visualStyle.value = runCatching {
+                            com.ehrocha.pulsar.ui.theme.VisualStyle.valueOf(
+                                p.getString("visual_style", null) ?: "SPACE")
+                        }.getOrDefault(com.ehrocha.pulsar.ui.theme.VisualStyle.SPACE)
+                    }
+                }
+                uiPrefs.registerOnSharedPreferenceChangeListener(listener)
+                onDispose { uiPrefs.unregisterOnSharedPreferenceChangeListener(listener) }
             }
             val colorScheme = when (nightMode.value) {
                 ThemeMode.Light -> LightColorScheme
@@ -516,6 +532,11 @@ fun PulsarNavHost(
             VisualStyle.CIRCUIT -> PcbField(Modifier.matchParentSize(), animated = false)
             VisualStyle.SPACE -> SpaceField(Modifier.matchParentSize(), animated = false)
             VisualStyle.CLASSIC -> Unit
+        }
+        // Legibility scrim: mute the field so text on the transparent sub-screens
+        // stays readable while the backdrop still shows through.
+        if (LocalVisualStyle.current.value != VisualStyle.CLASSIC) {
+            Box(Modifier.matchParentSize().background(MaterialTheme.colorScheme.background.copy(alpha = 0.4f)))
         }
         // SIGNAL motion: screens enter with a fast fade + 1/24-height rise,
         // exit with a quicker fade — the app stops hard-cutting between

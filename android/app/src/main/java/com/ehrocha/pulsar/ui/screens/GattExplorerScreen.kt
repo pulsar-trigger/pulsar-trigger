@@ -258,6 +258,9 @@ private fun ConnectStep(
     ) { Text(stringResource(R.string.cancel)) }
 }
 
+// bondedDevices needs BLUETOOTH_CONNECT; the runCatching swallows the
+// SecurityException when it's not granted, so the lint flag is a false positive.
+@android.annotation.SuppressLint("MissingPermission")
 private fun bondedBleDevices(ctx: Context): List<BluetoothDevice> {
     val mgr = ctx.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
     val adapter: BluetoothAdapter? = mgr?.adapter

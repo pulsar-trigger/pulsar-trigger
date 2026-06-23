@@ -65,8 +65,10 @@ class PlannerManager(context: Context) {
             .putString(KEY_EVENTS, o.optString("events", "[]"))
             .putString(KEY_SESSIONS, o.optString("sessions", "[]"))
             .apply()
-        if (o.has("cloud_clear_threshold")) cloudClearThreshold = o.getInt("cloud_clear_threshold")
-        if (o.has("cache_interval_hours")) cacheIntervalHours = o.getLong("cache_interval_hours")
+        // optInt/optLong (not getInt/getLong) so a hand-corrupted value can't
+        // throw mid-restore — the caller's import phase 2 must stay throw-free.
+        cloudClearThreshold = o.optInt("cloud_clear_threshold", cloudClearThreshold)
+        cacheIntervalHours = o.optLong("cache_interval_hours", cacheIntervalHours)
         load()
     }
 

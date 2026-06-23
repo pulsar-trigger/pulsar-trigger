@@ -1172,6 +1172,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  the connection to when recording [lastConnection]. */
     @Volatile private var pendingBleConnectMac: String? = null
 
+    // device.name needs BLUETOOTH_CONNECT; connectTo is only reachable after a
+    // scan, which already required (and was granted) that permission.
+    @android.annotation.SuppressLint("MissingPermission")
     fun connectTo(device: BluetoothDevice) {
         // Hang up any active session so transports stay single-valued.
         // disconnectCanonBle runs unconditionally — see its KDoc; a Canon
@@ -2736,7 +2739,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         val uiPrefs = getApplication<Application>().getSharedPreferences("pulsar_ui", Context.MODE_PRIVATE)
         json.put("ui", org.json.JSONObject().apply {
             uiPrefs.getString("visual_style", null)?.let { put("visual_style", it) }
-            uiPrefs.getString("theme", null)?.let { put("theme", it) }
             put("disconnect_no_confirm", uiPrefs.getBoolean("disconnect_no_confirm", false))
         })
         // Planner data — events, sessions, and the planner tunables.
@@ -2808,8 +2810,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 .getSharedPreferences("pulsar_ui", Context.MODE_PRIVATE).edit().apply {
                     ui.optString("visual_style").takeIf { it.isNotEmpty() }
                         ?.let { putString("visual_style", it) }
-                    ui.optString("theme").takeIf { it.isNotEmpty() }
-                        ?.let { putString("theme", it) }
                     if (ui.has("disconnect_no_confirm"))
                         putBoolean("disconnect_no_confirm", ui.getBoolean("disconnect_no_confirm"))
                 }.apply()
