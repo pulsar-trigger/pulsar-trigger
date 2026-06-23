@@ -313,6 +313,7 @@
     <string name="preset_name">Preset name</string>
     <string name="preset_saved">Preset saved</string>
     <string name="preset_limit">Preset limit reached (max %1$d)</string>
+    <string name="preset_exists">Preset “%1$s” already exists</string>
     <string name="sessions_group_toggle">Group by mode</string>
     <string name="disconnect">Disconnect</string>
 

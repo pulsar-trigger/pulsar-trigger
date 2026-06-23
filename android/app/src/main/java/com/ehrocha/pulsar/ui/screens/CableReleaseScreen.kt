@@ -35,7 +35,13 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -65,6 +71,24 @@ fun CableReleaseScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     val connected = LocalDeviceConnected.current
     val title = stringResource(R.string.mode_cable_release)
     val helpText = stringResource(R.string.mode_cable_release_help)
+
+    // Cable release is a single instantaneous shot (no held state like Manual
+    // Bulb), so flash the button white on each fire — a camera-shutter cue that
+    // makes it obvious the tap registered and a frame was taken.
+    var fireTick by remember { mutableIntStateOf(0) }
+    var firing by remember { mutableStateOf(false) }
+    LaunchedEffect(fireTick) {
+        if (fireTick > 0) {
+            firing = true
+            kotlinx.coroutines.delay(280)
+            firing = false
+        }
+    }
+    val flashAlpha by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (firing) 0.6f else 0f,
+        animationSpec = androidx.compose.animation.core.tween(if (firing) 50 else 260),
+        label = "cableFlash",
+    )
 
     Column(
         modifier = Modifier
@@ -182,10 +206,20 @@ fun CableReleaseScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                 )
                 .pointerInput(connected) {
                     if (!connected) return@pointerInput
-                    detectTapGestures(onTap = { vm.fireSingle() })
+                    detectTapGestures(onTap = { vm.fireSingle(); fireTick++ })
                 },
         ) {
-            Box(contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                if (flashAlpha > 0f) {
+                    Box(
+                        Modifier
+                            .matchParentSize()
+                            .background(
+                                androidx.compose.ui.graphics.Color.White.copy(alpha = flashAlpha),
+                                RoundedCornerShape(20.dp),
+                            ),
+                    )
+                }
                 Text(
                     stringResource(R.string.btn_single_shot),
                     style = MaterialTheme.typography.titleMedium,

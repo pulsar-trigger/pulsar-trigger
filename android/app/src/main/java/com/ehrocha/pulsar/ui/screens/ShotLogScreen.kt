@@ -62,6 +62,7 @@ fun ShotLogScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     var savePresetFor by remember { mutableStateOf<ShotLogEntry?>(null) }
     val snackHost = LocalSnackbarHost.current
     val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
     val presetSavedMsg = stringResource(R.string.preset_saved)
     val presetLimitMsg = stringResource(R.string.preset_limit, com.ehrocha.pulsar.model.UserMode.MAX_USER_MODES)
 
@@ -142,8 +143,14 @@ fun ShotLogScreen(vm: PulsarViewModel, onBack: () -> Unit) {
             onSave = { name ->
                 val msg = entry.presetStep?.let { step ->
                     bodyFromStep(step)?.let { body ->
-                        if (vm.upsertUserMode(UserMode(name = name, body = body))) presetSavedMsg
-                        else presetLimitMsg
+                        // Don't create a second preset with identical settings —
+                        // tell the user which existing one already matches.
+                        val dup = vm.userModes.value.firstOrNull { it.body == body }
+                        when {
+                            dup != null -> context.getString(R.string.preset_exists, dup.name)
+                            vm.upsertUserMode(UserMode(name = name, body = body)) -> presetSavedMsg
+                            else -> presetLimitMsg
+                        }
                     }
                 }
                 if (msg != null) scope.launch { snackHost.showSnackbar(msg) }
