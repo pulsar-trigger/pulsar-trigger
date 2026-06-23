@@ -650,6 +650,7 @@ fun PulsarNavHost(
                     onMeteorCalendarSelected = { currentScreen = AppScreen.MeteorCalendar },
                     onStarFocusSelected = { currentScreen = AppScreen.StarFocus },
                     onPhotoTransferSelected = { currentScreen = AppScreen.PhotoTransfer },
+                    onCatalogSelected = { currentScreen = AppScreen.Catalog },
                     onTestCameraSelected = { currentScreen = AppScreen.TestCamera },
                     onAircraftWatchSelected = { currentScreen = AppScreen.AircraftWatch },
                     onNdCalcSelected = { currentScreen = AppScreen.NdCalculator },
@@ -774,6 +775,13 @@ fun PulsarNavHost(
             AppScreen.PhotoTransfer -> {
                 BackHandler { currentScreen = AppScreen.Menu }
                 com.ehrocha.pulsar.ui.screens.PhotoTransferScreen(
+                    vm = vm,
+                    onBack = { currentScreen = AppScreen.Menu },
+                )
+            }
+            AppScreen.Catalog -> {
+                BackHandler { currentScreen = AppScreen.Menu }
+                com.ehrocha.pulsar.ui.screens.CatalogScreen(
                     vm = vm,
                     onBack = { currentScreen = AppScreen.Menu },
                 )
@@ -946,6 +954,7 @@ private sealed class AppScreen {
     data object ShotLog : AppScreen()
     data object StarFocus : AppScreen()
     data object PhotoTransfer : AppScreen()
+    data object Catalog : AppScreen()
     data object TestCamera : AppScreen()
     data object AircraftWatch : AppScreen()
     data object SpottingLog : AppScreen()

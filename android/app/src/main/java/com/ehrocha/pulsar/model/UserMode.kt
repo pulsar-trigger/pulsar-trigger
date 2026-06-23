@@ -53,7 +53,28 @@ data class UserMode(
         val iso: String? = null,
         val aperture: String? = null,
         val shutterSpeed: String? = null,
-    )
+    ) {
+        /** Clamp every numeric field to its supported range. Applied on IMPORT
+         *  (catalog / shared file) so an untrusted entry can't introduce
+         *  out-of-range or unsupported settings. Idempotent for valid data.
+         *  Camera-side strings (iso/aperture/shutter) are left as-is — the
+         *  transport layer reports unsupported ones via SettingsApplyResult. */
+        fun sanitized(): Body = copy(
+            intervalMs = intervalMs.coerceIn(AppConfig.MIN_INTERVAL_MS, 86_400_000L), // ≤ 24 h
+            exposureMs = exposureMs.coerceIn(AppConfig.MIN_EXPOSURE_MS, 3_600_000L),   // ≤ 1 h
+            shotCount = shotCount.coerceIn(AppConfig.MIN_SHOT_COUNT, 100_000),
+            delayMs = delayMs.coerceIn(0L, 86_400_000L),
+            focalLength = focalLength.coerceIn(AppConfig.MIN_FOCAL_LENGTH, AppConfig.MAX_FOCAL_LENGTH),
+            cropFactor = cropFactor.coerceIn(1f, 3f),
+            ruleDivisor = ruleDivisor.coerceIn(0, 1000),
+            rampStartExposureMs = rampStartExposureMs.coerceIn(AppConfig.MIN_EXPOSURE_MS, 3_600_000L),
+            rampEndExposureMs = rampEndExposureMs.coerceIn(AppConfig.MIN_EXPOSURE_MS, 3_600_000L),
+            rampSteps = rampSteps.coerceIn(1, 1000),
+        )
+    }
+
+    /** This preset with its [Body] clamped to supported ranges — for import. */
+    fun sanitized(): UserMode = copy(body = body.sanitized())
 
     fun toJson(): JSONObject = JSONObject().apply {
         put("schema", SCHEMA_ID)

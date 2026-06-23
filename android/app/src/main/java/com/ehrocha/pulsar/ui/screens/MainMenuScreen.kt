@@ -37,6 +37,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CenterFocusStrong
@@ -101,6 +102,7 @@ fun MainMenuScreen(
     onMeteorCalendarSelected: () -> Unit = {},
     onStarFocusSelected: () -> Unit = {},
     onPhotoTransferSelected: () -> Unit = {},
+    onCatalogSelected: () -> Unit = {},
     onTestCameraSelected: () -> Unit = {},
     onAircraftWatchSelected: () -> Unit = {},
     onNdCalcSelected: () -> Unit = {},
@@ -276,6 +278,7 @@ fun MainMenuScreen(
             onMeteorCalendarSelected = onMeteorCalendarSelected,
             onStarFocusSelected = onStarFocusSelected,
             onPhotoTransferSelected = onPhotoTransferSelected,
+            onCatalogSelected = onCatalogSelected,
             onTestCameraSelected = onTestCameraSelected,
             onAircraftWatchSelected = onAircraftWatchSelected,
             onNdCalcSelected = onNdCalcSelected,
@@ -492,6 +495,7 @@ private fun MenuPageContent(
     onMeteorCalendarSelected: () -> Unit,
     onStarFocusSelected: () -> Unit,
     onPhotoTransferSelected: () -> Unit,
+    onCatalogSelected: () -> Unit,
     onTestCameraSelected: () -> Unit,
     onAircraftWatchSelected: () -> Unit,
     onNdCalcSelected: () -> Unit,
@@ -681,6 +685,13 @@ private fun MenuPageContent(
                             Icons.Default.FlightTakeoff,
                         ) { onAircraftWatchSelected() },
                     )
+                    // Network preset/flow catalog — browse + import (apt-style).
+                    val libraryTools = listOf(
+                        launcherItem(
+                            R.string.catalog_title,
+                            Icons.Default.CloudDownload,
+                        ) { onCatalogSelected() },
+                    )
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -688,6 +699,9 @@ private fun MenuPageContent(
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.Top),
                     ) {
+                        SectionContainer(title = stringResource(R.string.tools_section_library)) {
+                            SectionGrid(libraryTools)
+                        }
                         SectionContainer(title = stringResource(R.string.tools_section_astro)) {
                             SectionGrid(astroTools)
                         }

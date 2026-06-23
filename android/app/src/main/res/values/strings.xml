@@ -276,6 +276,19 @@
     <string name="preset_saved">Preset saved</string>
     <string name="preset_limit">Preset limit reached (max %1$d)</string>
     <string name="preset_exists">Preset “%1$s” already exists</string>
+    <string name="catalog_title">Library</string>
+    <string name="tools_section_library">Presets &amp; flows</string>
+    <string name="catalog_update">Update</string>
+    <string name="catalog_updated">Updated %1$s</string>
+    <string name="catalog_never">Pull Update to fetch the catalog</string>
+    <string name="catalog_loading">Fetching catalog…</string>
+    <string name="catalog_empty">Nothing here yet</string>
+    <string name="catalog_error">Error: %1$s</string>
+    <string name="catalog_install">Install</string>
+    <string name="catalog_installed">Installed</string>
+    <string name="catalog_installed_toast">Installed “%1$s”</string>
+    <string name="catalog_kind_flow">Flow</string>
+    <string name="catalog_kind_preset">Preset</string>
     <string name="sessions_group_toggle">Group by mode</string>
     <string name="disconnect">Disconnect</string>
 

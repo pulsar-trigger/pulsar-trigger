@@ -884,6 +884,9 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     // ── Planner ──────────────────────────────────────────────────────
     val plannerManager = com.ehrocha.pulsar.planner.PlannerManager(app)
 
+    // ── Preset/flow catalog (network library) ────────────────────────
+    val catalogManager = com.ehrocha.pulsar.catalog.CatalogManager(app)
+
     // ── Firmware OTA ─────────────────────────────────────────────────
     val firmwareManager = FirmwareUpdateManager(bleManager, viewModelScope)
 
@@ -908,6 +911,30 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         _userModes.value = after
         return after.any { it.id == mode.id }
     }
+
+    /** Fetch + import a catalog entry (already sanitized by the manager), then
+     *  mark it installed. Mode presets adopt the catalog id so a re-install
+     *  upserts in place; flows dedupe by name via [addSavedFlow]. */
+    suspend fun installCatalogEntry(
+        entry: com.ehrocha.pulsar.model.CatalogEntry,
+    ): com.ehrocha.pulsar.catalog.CatalogInstallResult =
+        when (val p = catalogManager.fetchEntry(entry)) {
+            is com.ehrocha.pulsar.catalog.CatalogManager.Payload.Mode -> {
+                if (upsertUserMode(p.mode.copy(id = entry.id))) {
+                    catalogManager.markInstalled(entry.id, entry.version)
+                    com.ehrocha.pulsar.catalog.CatalogInstallResult.Ok
+                } else {
+                    com.ehrocha.pulsar.catalog.CatalogInstallResult.LimitReached
+                }
+            }
+            is com.ehrocha.pulsar.catalog.CatalogManager.Payload.Flow -> {
+                addSavedFlow(p.flow)
+                catalogManager.markInstalled(entry.id, entry.version)
+                com.ehrocha.pulsar.catalog.CatalogInstallResult.Ok
+            }
+            is com.ehrocha.pulsar.catalog.CatalogManager.Payload.Error ->
+                com.ehrocha.pulsar.catalog.CatalogInstallResult.Error(p.message)
+        }
 
     fun removeUserMode(id: String) {
         _userModes.value = userModeRepo.remove(id)
@@ -2023,6 +2050,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     fun loadSavedFlow(name: String) {
         val flow = _savedFlows.value.firstOrNull { it.name == name } ?: return
         saveFlowSteps(flow.steps)
+    }
+
+    /** Add a complete SavedFlow (e.g. a catalog import), replacing any existing
+     *  flow of the same name so a re-install is idempotent. */
+    fun addSavedFlow(flow: SavedFlow) {
+        val updated = _savedFlows.value.filter { it.name != flow.name } + flow
+        _savedFlows.value = updated
+        prefs.edit().putString(KEY_SAVED_FLOWS, SavedFlow.serializeList(updated)).apply()
     }
 
     fun deleteSavedFlow(name: String) {

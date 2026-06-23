@@ -22,6 +22,12 @@ object AppConfig {
     const val GITHUB_REPO = "pulsar-trigger/pulsar-trigger"
     const val GITHUB_RELEASES_URL = "https://api.github.com/repos/$GITHUB_REPO/releases"
 
+    /** Base URL of the network preset/flow catalog (raw files on the public
+     *  repo's master). Single source of truth — repoint here if the catalog
+     *  ever moves to a separate public repo (e.g. when source goes private). */
+    const val CATALOG_BASE_URL =
+        "https://raw.githubusercontent.com/$GITHUB_REPO/master/catalog"
+
     // ── Intervalometer defaults ──────────────────────────────────────────
     // These are the factory values applied on first launch and after a
     // "Reset defaults" action. They also serve as SharedPreferences

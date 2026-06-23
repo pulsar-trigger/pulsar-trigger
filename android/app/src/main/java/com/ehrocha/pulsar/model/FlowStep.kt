@@ -119,6 +119,40 @@ sealed class FlowStep {
         override val type get() = FlowStepType.PAUSE
     }
 
+    /** This step with numeric fields clamped to supported ranges. Applied on
+     *  IMPORT so an untrusted catalog/file entry can't carry unsupported
+     *  settings. Idempotent for valid data. */
+    fun sanitized(): FlowStep = when (this) {
+        is Intervalometer -> copy(
+            intervalMs = intervalMs.coerceIn(AppConfig.MIN_INTERVAL_MS, 86_400_000L),
+            exposureMs = exposureMs.coerceIn(AppConfig.MIN_EXPOSURE_MS, 3_600_000L),
+            shotCount = shotCount.coerceIn(AppConfig.MIN_SHOT_COUNT, 100_000),
+            delayMs = delayMs.coerceIn(0L, 86_400_000L),
+        )
+        is Astro -> copy(
+            focalLength = focalLength.coerceIn(AppConfig.MIN_FOCAL_LENGTH, AppConfig.MAX_FOCAL_LENGTH),
+            cropFactor = cropFactor.coerceIn(1f, 3f),
+            ruleDivisor = ruleDivisor.coerceIn(0, 1000),
+            gapMs = gapMs.coerceIn(AppConfig.MIN_ASTRO_GAP_MS, 86_400_000L),
+            shotCount = shotCount.coerceIn(AppConfig.MIN_SHOT_COUNT, 100_000),
+            delayMs = delayMs.coerceIn(0L, 86_400_000L),
+        )
+        is DarkFrame -> copy(
+            exposureMs = exposureMs.coerceIn(AppConfig.MIN_EXPOSURE_MS, 3_600_000L),
+            shotCount = shotCount.coerceIn(AppConfig.MIN_SHOT_COUNT, 100_000),
+            gapMs = gapMs.coerceIn(AppConfig.MIN_ASTRO_GAP_MS, 86_400_000L),
+            delayMs = delayMs.coerceIn(0L, 86_400_000L),
+        )
+        is Ramp -> copy(
+            startExposureMs = startExposureMs.coerceIn(AppConfig.MIN_EXPOSURE_MS, 3_600_000L),
+            endExposureMs = endExposureMs.coerceIn(AppConfig.MIN_EXPOSURE_MS, 3_600_000L),
+            steps = steps.coerceIn(1, 1000),
+            intervalMs = intervalMs.coerceIn(AppConfig.MIN_INTERVAL_MS, 86_400_000L),
+            delayMs = delayMs.coerceIn(0L, 86_400_000L),
+        )
+        is Pause -> this
+    }
+
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
         put("type", type.name)
@@ -299,16 +333,15 @@ fun FlowStepType.displayName(context: Context): String = when (this) {
 
 // ── Saved Flow (named flow preset) ──────────────────────────────────────────
 
-/** Built-in NPF-rule presets for common focal lengths.
- *  Uses [AppConfig.astroExposureMs] with [AppConfig.NPF_RULE_DIVISOR] to compute
- *  scientifically grounded exposure times based on sensor pixel pitch. */
-
 data class SavedFlow(
     val name: String,
     val steps: List<FlowStep>,
     val favorite: Boolean = false,
     val tags: List<String> = emptyList(),
 ) {
+    /** This flow with every step clamped to supported ranges (import use). */
+    fun sanitized(): SavedFlow = copy(steps = steps.map { it.sanitized() })
+
     fun toJson(): JSONObject = JSONObject().apply {
         put("schema", SCHEMA_ID)
         put("name", name)
