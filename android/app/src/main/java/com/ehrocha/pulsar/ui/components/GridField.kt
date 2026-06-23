@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.ui.theme.PulsarTheme
+import kotlin.math.sin
 
 /**
  * "Grid" visual-style backdrop — a neon perspective floor receding to a glowing
@@ -136,6 +137,42 @@ fun GridField(modifier: Modifier = Modifier, animated: Boolean = true) {
             val dr = minOf(w, h) * 0.045f
             drawCircle(glowB.copy(alpha = 0.5f), radius = dr, center = dc, style = Stroke(2.dp.toPx()))
             drawCircle(glowB.copy(alpha = 0.16f), radius = dr * 0.7f, center = dc)
+
+            // I/O tower — a beam of light rising from the vanishing point, pulsing
+            val beam = 0.45f + 0.35f * sin(timeS * 1.6f)
+            val beamTop = horizon * 0.12f
+            drawLine(
+                brush = Brush.verticalGradient(
+                    listOf(Color.Transparent, glowA.copy(alpha = 0.55f * beam)),
+                    startY = beamTop, endY = horizon,
+                ),
+                start = Offset(vpx, beamTop), end = Offset(vpx, horizon),
+                strokeWidth = 3.dp.toPx(),
+            )
+            drawLine(
+                brush = Brush.verticalGradient(
+                    listOf(Color.Transparent, glowA.copy(alpha = 0.16f * beam)),
+                    startY = beamTop, endY = horizon,
+                ),
+                start = Offset(vpx, beamTop), end = Offset(vpx, horizon),
+                strokeWidth = 11.dp.toPx(),
+            )
+
+            // recognizers — sentinels drifting the sky: a top block + two end
+            // legs, the iconic hollow-centred silhouette.
+            for (i in 0 until 2) {
+                val rp = ((timeS * (0.02f + 0.007f * i)) + i * 0.55f).mod(1.35f)
+                if (rp <= 1f) {
+                    val rx = rp * w
+                    val ry = horizon * (0.26f + 0.20f * i)
+                    val rw = w * 0.085f
+                    val rh = rw * 0.6f
+                    val col = line.copy(alpha = 0.20f)
+                    drawRect(col, topLeft = Offset(rx - rw / 2f, ry), size = Size(rw, rh * 0.34f))
+                    drawRect(col, topLeft = Offset(rx - rw / 2f, ry), size = Size(rw * 0.22f, rh))
+                    drawRect(col, topLeft = Offset(rx + rw / 2f - rw * 0.22f, ry), size = Size(rw * 0.22f, rh))
+                }
+            }
         }
     }
 }

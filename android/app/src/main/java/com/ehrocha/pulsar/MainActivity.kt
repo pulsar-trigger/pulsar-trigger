@@ -541,21 +541,36 @@ fun PulsarNavHost(
             Box(Modifier.matchParentSize().background(MaterialTheme.colorScheme.background.copy(alpha = 0.4f)))
         }
         // SIGNAL motion: screens enter with a fast fade + 1/24-height rise,
-        // exit with a quicker fade — the app stops hard-cutting between
-        // surfaces. State (currentScreen) is unchanged; this only wraps
-        // the existing dispatch.
+        // exit with a quicker fade. For GRID, a Tron "derez" instead — the old
+        // surface scales up + fades fast (dissolving into the grid) while the new
+        // one resolves in from slightly enlarged. State (currentScreen) unchanged.
+        val derezNav = LocalVisualStyle.current.value == VisualStyle.GRID
         androidx.compose.animation.AnimatedContent(
             targetState = currentScreen,
             transitionSpec = {
-                (androidx.compose.animation.fadeIn(
-                    androidx.compose.animation.core.tween(180),
-                ) + androidx.compose.animation.slideInVertically(
-                    androidx.compose.animation.core.tween(220),
-                ) { it / 24 }).togetherWith(
-                    androidx.compose.animation.fadeOut(
-                        androidx.compose.animation.core.tween(110),
-                    ),
-                )
+                if (derezNav) {
+                    (androidx.compose.animation.fadeIn(
+                        androidx.compose.animation.core.tween(200),
+                    ) + androidx.compose.animation.scaleIn(
+                        androidx.compose.animation.core.tween(220), initialScale = 1.06f,
+                    )).togetherWith(
+                        androidx.compose.animation.fadeOut(
+                            androidx.compose.animation.core.tween(130),
+                        ) + androidx.compose.animation.scaleOut(
+                            androidx.compose.animation.core.tween(150), targetScale = 1.12f,
+                        ),
+                    )
+                } else {
+                    (androidx.compose.animation.fadeIn(
+                        androidx.compose.animation.core.tween(180),
+                    ) + androidx.compose.animation.slideInVertically(
+                        androidx.compose.animation.core.tween(220),
+                    ) { it / 24 }).togetherWith(
+                        androidx.compose.animation.fadeOut(
+                            androidx.compose.animation.core.tween(110),
+                        ),
+                    )
+                }
             },
             label = "screenTransition",
         ) { screen ->
