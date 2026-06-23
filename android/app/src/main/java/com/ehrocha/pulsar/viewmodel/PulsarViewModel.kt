@@ -18,7 +18,6 @@ import com.ehrocha.pulsar.AppConfig
 import com.ehrocha.pulsar.ble.*
 import com.ehrocha.pulsar.model.FlowStep
 import com.ehrocha.pulsar.model.FlowStepType
-import com.ehrocha.pulsar.model.FlowPresets
 import com.ehrocha.pulsar.model.RunState
 import com.ehrocha.pulsar.model.SavedFlow
 import com.ehrocha.pulsar.ptp.attemptPtpIpReconnect
@@ -988,9 +987,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val _flowSteps = MutableStateFlow<List<FlowStep>>(emptyList())
     val flowSteps: StateFlow<List<FlowStep>> = _flowSteps
     private val _savedFlows = MutableStateFlow<List<SavedFlow>>(emptyList())
-    val savedFlows: StateFlow<List<SavedFlow>>
-        get() = _combinedFlows
-    private val _combinedFlows = MutableStateFlow<List<SavedFlow>>(FlowPresets.ALL)
+    val savedFlows: StateFlow<List<SavedFlow>> = _savedFlows
     private val _flowRunning = MutableStateFlow(false)
     val flowRunning: StateFlow<Boolean> = _flowRunning
 
@@ -1113,7 +1110,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         _savedFlows.value = try {
             SavedFlow.deserializeList(prefs.getString(KEY_SAVED_FLOWS, "") ?: "")
         } catch (_: Exception) { emptyList() }
-        _combinedFlows.value = FlowPresets.ALL + _savedFlows.value
 
         // App-update check fires once on app launch (independent of any
         // connection). Previously this was gated on _connected.collect, which
@@ -2021,19 +2017,17 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         )
         val updated = _savedFlows.value.filter { it.name != name } + flow
         _savedFlows.value = updated
-        _combinedFlows.value = FlowPresets.ALL + updated
         prefs.edit().putString(KEY_SAVED_FLOWS, SavedFlow.serializeList(updated)).apply()
     }
 
     fun loadSavedFlow(name: String) {
-        val flow = _combinedFlows.value.firstOrNull { it.name == name } ?: return
+        val flow = _savedFlows.value.firstOrNull { it.name == name } ?: return
         saveFlowSteps(flow.steps)
     }
 
     fun deleteSavedFlow(name: String) {
         val updated = _savedFlows.value.filter { it.name != name }
         _savedFlows.value = updated
-        _combinedFlows.value = FlowPresets.ALL + updated
         prefs.edit().putString(KEY_SAVED_FLOWS, SavedFlow.serializeList(updated)).apply()
     }
 
@@ -2042,7 +2036,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             if (it.name == name) it.copy(favorite = !it.favorite) else it
         }
         _savedFlows.value = updated
-        _combinedFlows.value = FlowPresets.ALL + updated
         prefs.edit().putString(KEY_SAVED_FLOWS, SavedFlow.serializeList(updated)).apply()
     }
 
@@ -2051,12 +2044,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             if (it.name == name) it.copy(tags = tags) else it
         }
         _savedFlows.value = updated
-        _combinedFlows.value = FlowPresets.ALL + updated
         prefs.edit().putString(KEY_SAVED_FLOWS, SavedFlow.serializeList(updated)).apply()
     }
 
-    /** All unique tags across built-in and user flows. */
-    val allTags: StateFlow<List<String>> = _combinedFlows
+    /** All unique tags across the user's saved flows. */
+    val allTags: StateFlow<List<String>> = _savedFlows
         .map { flows -> flows.flatMap { it.tags }.distinct().sorted() }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
@@ -2798,7 +2790,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         if (flowSteps != null) saveFlowSteps(flowSteps)
         if (savedFlows != null) {
             _savedFlows.value = savedFlows
-            _combinedFlows.value = FlowPresets.ALL + savedFlows
             prefs.edit().putString(KEY_SAVED_FLOWS, SavedFlow.serializeList(savedFlows)).apply()
         }
         if (userModes != null) {

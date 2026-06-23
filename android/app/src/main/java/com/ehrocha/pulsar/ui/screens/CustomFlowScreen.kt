@@ -10,8 +10,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -58,7 +56,6 @@ import com.ehrocha.pulsar.ui.theme.StatusRed
 import java.text.DateFormat
 import java.util.Date
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 private enum class FlowScreenState { LIBRARY, EDITOR }
 
@@ -145,7 +142,6 @@ fun CustomFlowScreen(
     var editingFlowName by remember { mutableStateOf<String?>(null) }
     var savedSnapshot by remember { mutableStateOf<List<FlowStep>>(emptyList()) }
     // Remember which library tab the user was on so back navigation restores it
-    var lastLibraryTab by remember { mutableIntStateOf(0) }
 
     // When a flow is running, always show the editor
     // When quick-launched flow finishes, return to previous screen
@@ -179,8 +175,6 @@ fun CustomFlowScreen(
         FlowScreenState.LIBRARY -> FlowLibraryView(
             vm = vm,
             saved = saved,
-            initialTab = lastLibraryTab,
-            onTabChanged = { lastLibraryTab = it },
             onBack = onBack,
             onNewFlow = {
                 vm.saveFlowSteps(emptyList())
@@ -279,8 +273,6 @@ fun CustomFlowScreen(
 private fun FlowLibraryView(
     vm: PulsarViewModel,
     saved: List<SavedFlow>,
-    initialTab: Int = 0,
-    onTabChanged: (Int) -> Unit = {},
     onBack: () -> Unit,
     onNewFlow: () -> Unit,
     onEditFlow: (SavedFlow) -> Unit,
@@ -294,8 +286,7 @@ private fun FlowLibraryView(
     var activeTagFilter by remember { mutableStateOf<String?>(null) }
     var showFavoritesOnly by remember { mutableStateOf(false) }
 
-    val presets = saved.filter { it.builtIn }
-    val userFlows = saved.filter { !it.builtIn }
+    val userFlows = saved
     val hasFavorites = remember(userFlows) { userFlows.any { it.favorite } }
 
     // Sort: favorites first, then alphabetical
@@ -308,22 +299,6 @@ private fun FlowLibraryView(
         sortedUserFlows
             .let { list -> if (showFavoritesOnly) list.filter { it.favorite } else list }
             .let { list -> if (activeTagFilter != null) list.filter { activeTagFilter in it.tags } else list }
-    }
-    val filteredPresets = remember(presets, activeTagFilter) {
-        if (activeTagFilter == null) presets
-        else presets.filter { activeTagFilter in it.tags }
-    }
-
-    val tabs = listOf(
-        stringResource(R.string.flow_tab_my_flows),
-        stringResource(R.string.flow_tab_recommended),
-    )
-    val pagerState = rememberPagerState(initialPage = initialTab) { tabs.size }
-    val coroutineScope = rememberCoroutineScope()
-
-    // Notify parent when the settled page changes so it survives LIBRARY↔EDITOR transitions
-    LaunchedEffect(pagerState.currentPage) {
-        onTabChanged(pagerState.currentPage)
     }
 
     Column(
@@ -344,20 +319,6 @@ private fun FlowLibraryView(
         }
 
         Spacer(Modifier.height(8.dp))
-
-        // ── Tab row (synced with pager) ─────────────────────────────────
-        TabRow(
-            selectedTabIndex = pagerState.currentPage,
-            containerColor = MaterialTheme.colorScheme.surface,
-        ) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = pagerState.currentPage == index,
-                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
-                    text = { Text(title) },
-                )
-            }
-        }
 
         // ── Filter chips (favorites + tags) ─────────────────────────────
         if (allTags.isNotEmpty() || hasFavorites) {
@@ -416,54 +377,30 @@ private fun FlowLibraryView(
 
         Spacer(Modifier.height(12.dp))
 
-        // ── Swipeable tab content ───────────────────────────────────────
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.weight(1f),
-        ) { page ->
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                tonalElevation = 1.dp,
-                modifier = Modifier.fillMaxSize(),
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = 1.dp,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    when (page) {
-                        0 -> { // My Flows (user-created)
-                            if (filteredUserFlows.isEmpty()) {
-                                FlowEmptyState()
-                            } else {
-                                filteredUserFlows.forEach { flow ->
-                                    SavedFlowCard(
-                                        flow = flow,
-                                        onEdit = { onEditFlow(flow) },
-                                        onDelete = { confirmDelete = flow.name },
-                                        onRun = { onRunFlow(flow) },
-                                        onToggleFavorite = { vm.toggleFavorite(flow.name) },
-                                        onEditTags = { editTagsFlow = flow },
-                                    )
-                                }
-                            }
-                        }
-                        1 -> { // Out of box (built-in presets)
-                            if (filteredPresets.isEmpty()) {
-                                FlowEmptyState()
-                            } else {
-                                filteredPresets.forEach { flow ->
-                                    SavedFlowCard(
-                                        flow = flow,
-                                        onEdit = { onEditFlow(flow) },
-                                        onDelete = { },
-                                        onRun = { onRunFlow(flow) },
-                                    )
-                                }
-                            }
-                        }
+                if (filteredUserFlows.isEmpty()) {
+                    FlowEmptyState()
+                } else {
+                    filteredUserFlows.forEach { flow ->
+                        SavedFlowCard(
+                            flow = flow,
+                            onEdit = { onEditFlow(flow) },
+                            onDelete = { confirmDelete = flow.name },
+                            onRun = { onRunFlow(flow) },
+                            onToggleFavorite = { vm.toggleFavorite(flow.name) },
+                            onEditTags = { editTagsFlow = flow },
+                        )
                     }
                 }
             }
@@ -708,22 +645,20 @@ private fun SavedFlowCard(
                         }
                     }
                 }
-                if (!flow.builtIn) {
-                    if (onEditTags != null) {
-                        IconButton(onClick = onEditTags, modifier = Modifier.size(36.dp)) {
-                            Icon(Icons.AutoMirrored.Filled.Label, contentDescription = stringResource(R.string.label_tags), modifier = Modifier.size(20.dp))
-                        }
+                if (onEditTags != null) {
+                    IconButton(onClick = onEditTags, modifier = Modifier.size(36.dp)) {
+                        Icon(Icons.AutoMirrored.Filled.Label, contentDescription = stringResource(R.string.label_tags), modifier = Modifier.size(20.dp))
                     }
-                    IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
-                        Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit), modifier = Modifier.size(20.dp))
-                    }
-                    IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
-                        Icon(
-                            Icons.Default.Delete, contentDescription = stringResource(R.string.delete),
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.error,
-                        )
-                    }
+                }
+                IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.edit), modifier = Modifier.size(20.dp))
+                }
+                IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        Icons.Default.Delete, contentDescription = stringResource(R.string.delete),
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.error,
+                    )
                 }
                 IconButton(
                     onClick = onRun,

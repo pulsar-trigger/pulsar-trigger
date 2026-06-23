@@ -302,68 +302,10 @@ fun FlowStepType.displayName(context: Context): String = when (this) {
 /** Built-in NPF-rule presets for common focal lengths.
  *  Uses [AppConfig.astroExposureMs] with [AppConfig.NPF_RULE_DIVISOR] to compute
  *  scientifically grounded exposure times based on sensor pixel pitch. */
-object FlowPresets {
-    private fun astroPreset(focalLengthMm: Int, cropFactor: Float = 1.0f): SavedFlow {
-        val label = if (cropFactor == 1.0f) "NPF – ${focalLengthMm}mm FF"
-                    else "NPF – ${focalLengthMm}mm (${cropFactor}×)"
-        return SavedFlow(
-            name = label,
-            steps = listOf(
-                FlowStep.Pause(
-                    label = "Confirm focus and adjust camera settings",
-                    wakeOnPause = true,
-                ),
-                FlowStep.Astro(
-                    focalLength = focalLengthMm,
-                    cropFactor = cropFactor,
-                    ruleDivisor = AppConfig.NPF_RULE_DIVISOR,
-                    gapMs = AppConfig.DEFAULT_ASTRO_GAP_MS,
-                    shotCount = 100,
-                    delayMs = AppConfig.DEFAULT_ASTRO_DELAY_MS,
-                ),
-            ),
-            builtIn = true,
-            tags = listOf("Astro"),
-        )
-    }
-
-    private fun darkFramePreset(exposureMs: Long, count: Int, label: String): SavedFlow {
-        return SavedFlow(
-            name = label,
-            steps = listOf(
-                FlowStep.Pause(
-                    label = "Put the lens cap on and keep the same temperature",
-                    wakeOnPause = true,
-                ),
-                FlowStep.DarkFrame(
-                    shotCount = count,
-                    exposureMs = exposureMs,
-                    gapMs = AppConfig.DEFAULT_ASTRO_GAP_MS,
-                ),
-            ),
-            builtIn = true,
-            tags = listOf("Dark Frames"),
-        )
-    }
-
-    val ALL: List<SavedFlow> = listOf(
-        astroPreset(14),
-        astroPreset(24),
-        astroPreset(50),
-        astroPreset(85),
-        astroPreset(135),
-        astroPreset(200),
-        darkFramePreset(exposureMs = 15_000L, count = 20, label = "Dark Frames – 15s"),
-        darkFramePreset(exposureMs = 30_000L, count = 20, label = "Dark Frames – 30s"),
-        darkFramePreset(exposureMs = 60_000L, count = 20, label = "Dark Frames – 60s"),
-        darkFramePreset(exposureMs = 120_000L, count = 20, label = "Dark Frames – 120s"),
-    )
-}
 
 data class SavedFlow(
     val name: String,
     val steps: List<FlowStep>,
-    val builtIn: Boolean = false,
     val favorite: Boolean = false,
     val tags: List<String> = emptyList(),
 ) {
