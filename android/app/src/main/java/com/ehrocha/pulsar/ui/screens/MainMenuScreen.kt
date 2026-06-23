@@ -518,7 +518,6 @@ private fun MenuPageContent(
             )
         }
         DEST_TRIGGER -> {
-                    val userModes by vm.userModes.collectAsState()
                     val canonCcapiTransport by vm.canonCcapiTransport.collectAsState()
                     val canonCcapiReconnecting by vm.canonCcapiReconnecting.collectAsState()
                     val ptpTransport by vm.ptpTransport.collectAsState()

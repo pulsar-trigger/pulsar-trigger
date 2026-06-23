@@ -11,8 +11,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material3.*
@@ -79,7 +77,6 @@ fun PresetPickerScreen(
                     PresetRow(
                         preset = preset,
                         onClick = { onPresetSelected(preset) },
-                        onToggleBookmark = { vm.toggleUserModeBookmark(preset.id) },
                         onDelete = { confirmDelete = preset },
                     )
                 }
@@ -190,7 +187,6 @@ private fun BrowseLibraryCard(onClick: () -> Unit) {
 private fun PresetRow(
     preset: UserMode,
     onClick: () -> Unit,
-    onToggleBookmark: () -> Unit,
     onDelete: () -> Unit,
 ) {
     Surface(
@@ -213,17 +209,6 @@ private fun PresetRow(
                     presetSummary(preset),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            IconButton(onClick = onToggleBookmark) {
-                Icon(
-                    if (preset.bookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                    contentDescription = stringResource(
-                        if (preset.bookmarked) R.string.preset_picker_unbookmark
-                        else R.string.preset_picker_bookmark,
-                    ),
-                    tint = if (preset.bookmarked) MaterialTheme.colorScheme.primary
-                           else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             IconButton(onClick = onDelete) {

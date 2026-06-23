@@ -9,9 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -239,25 +237,6 @@ fun AstroMode2Screen(
                 title = stringResource(R.string.mode_astro),
                 onBack = onBack,
                 actions = {
-                    if (editingPreset != null) {
-                        IconButton(onClick = { vm.toggleUserModeBookmark(editingPreset.id) }) {
-                            Icon(
-                                if (editingPreset.bookmarked)
-                                    Icons.Default.Bookmark
-                                else
-                                    Icons.Default.BookmarkBorder,
-                                contentDescription = stringResource(
-                                    if (editingPreset.bookmarked)
-                                        R.string.preset_picker_unbookmark
-                                    else
-                                        R.string.preset_picker_bookmark,
-                                ),
-                                tint = if (editingPreset.bookmarked)
-                                    MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
                     IconButton(
                         onClick = { showSaveDialog = true },
                         enabled = canSave && !running,

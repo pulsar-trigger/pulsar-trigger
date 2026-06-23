@@ -946,10 +946,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Flip the bookmark flag for a user mode by id. Bookmarked modes
      *  show up as quick-launch tiles in the Trigger tab. */
-    fun toggleUserModeBookmark(id: String) {
-        val existing = _userModes.value.firstOrNull { it.id == id } ?: return
-        upsertUserMode(existing.copy(bookmarked = !existing.bookmarked))
-    }
 
     internal val _deviceName = MutableStateFlow("Pulsar")
     val deviceName: StateFlow<String> = _deviceName

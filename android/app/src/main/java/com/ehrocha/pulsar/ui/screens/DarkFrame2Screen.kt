@@ -8,8 +8,6 @@ package com.ehrocha.pulsar.ui.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LensBlur
 import androidx.compose.material.icons.filled.Save
@@ -132,20 +130,6 @@ fun DarkFrame2Screen(
                 title = stringResource(R.string.mode_dark_frame),
                 onBack = onBack,
                 actions = {
-                    if (editingPreset != null) {
-                        IconButton(onClick = { vm.toggleUserModeBookmark(editingPreset.id) }) {
-                            Icon(
-                                if (editingPreset.bookmarked) Icons.Default.Bookmark
-                                else Icons.Default.BookmarkBorder,
-                                contentDescription = stringResource(
-                                    if (editingPreset.bookmarked) R.string.preset_picker_unbookmark
-                                    else R.string.preset_picker_bookmark,
-                                ),
-                                tint = if (editingPreset.bookmarked) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
                     IconButton(onClick = { showSaveDialog = true }, enabled = canSave && !running) {
                         Icon(
                             Icons.Default.Save,
