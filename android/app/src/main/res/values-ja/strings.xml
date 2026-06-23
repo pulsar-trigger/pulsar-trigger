@@ -1,7 +1,5 @@
 <resources>
     <string name="app_name">Pulsar</string>
-    <string name="app_tagline">BLE リモートトリガー</string>
-    <string name="section_canon_cameras">Canon カメラ (WiFi)</string>
     <string name="canon_camera_subtitle">Canon CCAPI</string>
     <string name="canon_camera_join_wifi_hint">カメラの WiFi または同じ LAN に接続してください</string>
     <string name="cd_canon_camera">Canon カメラ (CCAPI)</string>
@@ -24,7 +22,6 @@
     <string name="canon_rename_title">カメラの名称変更</string>
     <string name="canon_rename_subtitle">%1$s のニックネームを入力してください。空欄で削除します。</string>
     <string name="canon_rename_label">ニックネーム</string>
-    <string name="canon_on_wifi">現在の Wi-Fi: %1$s</string>
     <string name="canon_manual_add_button">IP で追加</string>
     <string name="canon_manual_add_title">IP でカメラを追加</string>
     <string name="canon_manual_add_subtitle">SSDP でカメラが見つからないとき (AP がマルチキャストをブロック / 機体が UPnP を出さない) は、カメラの IP (および 8080 以外のポート) を入力してください。Pulsar は /ccapi に直接問い合わせます — ブラウザで開ける URL と同じです。</string>
@@ -63,11 +60,9 @@
     <string name="star_focus_starting">ライブビューを開始中…</string>
     <string name="star_focus_start_failed">ライブビューを開始できません。カメラがバルブモードになっていないか、他のアプリが接続していないかご確認ください。</string>
     <string name="star_focus_liveview_cd">カメラのライブビュー</string>
-    <string name="star_focus_tap_to_mark">追跡する星をタップ</string>
     <string name="star_focus_sharpness_label">ROI 内のピーク輝度</string>
     <string name="star_focus_near">近</string>
     <string name="star_focus_far">遠</string>
-    <string name="star_focus_lens_hint">ボディのスイッチでレンズを AF に — モーターは AF 時のみ反応します。ピントが合ったら MF に切り替えて固定できます。</string>
     <string name="star_focus_step_prep">準備</string>
     <string name="star_focus_step_aim">指定</string>
     <string name="star_focus_step_focus">合焦</string>
@@ -92,7 +87,6 @@
     <string name="astro2_lens_detected_prime">単焦点 · %1$d mm</string>
     <string name="astro2_lens_detected_zoom">ズーム · %1$d-%2$d mm — 現在の値を入力してください</string>
     <string name="astro2_lens_detected_unknown">カメラから検出</string>
-    <string name="astro2_lens_use_focal">%1$d mm を使用</string>
     <string name="astro2_lens_not_mounted">カメラにレンズが装着されていません。</string>
     <string name="astro2_lens_detect">レンズを検出</string>
     <string name="astro2_lens_detecting">検出中…</string>
@@ -108,7 +102,6 @@
     <string name="widget_empty_state">アプリを開いてウィジェットを更新</string>
     <string name="widget_empty_state_title">Pulsar — アストロダッシュボード</string>
     <string name="widget_loading">読み込み中…</string>
-    <string name="widget_updated_prefix">更新</string>
     <string name="widget_stale_prefix">期限切れ ·</string>
     <string name="widget_refresh_content_description">更新</string>
     <string name="section_background">バックグラウンド動作</string>
@@ -117,31 +110,7 @@
     <string name="background_status_blocked">バックグラウンド動作: 制限あり</string>
     <string name="background_status_hint">画面が長時間オフのとき、Doze が BLE 通知や CCAPI ポーリングを一時停止することがあります。</string>
     <string name="background_request_btn">バックグラウンド動作を許可</string>
-    <string name="canon_setup_title">Camera Control API を有効化</string>
-    <string name="canon_setup_intro">Pulsar を使うには CCAPI を有効にする必要があります。多くの R シリーズでは一度だけ以下の設定が必要です:</string>
-    <string name="canon_setup_step_1">1. キヤノンの開発者ポータルから CCAPI Activation Tool をダウンロードします。</string>
-    <string name="canon_setup_step_2">2. カメラを USB で PC に接続し、ツールを起動して指示に従います。</string>
-    <string name="canon_setup_step_3">3. カメラ側でメニュー → 通信機能 → Wi-Fi 設定を開きます。</string>
-    <string name="canon_setup_step_4">4. Camera Control API を選び、ネットワーク (カメラ AP または LAN) を作成 / 参加します。</string>
-    <string name="canon_setup_step_5">5. スマートフォンを同じネットワークに接続し、再スキャンしてください。</string>
-    <string name="canon_setup_long_runs">数時間に及ぶ天体撮影では、カメラの「自動電源オフ」を「切」に設定してください (メニュー → セットアップ)。撮影の合間にカメラがスリープしないようにします。</string>
-    <string name="canon_setup_battery_tip">バッテリー: CCAPI + WiFi は通常の約 2 倍消費します。RP の LP-E17 1 本で約 2 時間が目安。長時間の撮影では USB-C 給電 (DR-E18 カプラー) を使ってください。</string>
-    <string name="canon_setup_button">セットアップヘルプ</string>
-    <string name="available_devices">利用可能なデバイス</string>
-    <string name="select_device_prompt">下に引いて対応デバイスをスキャン: Pulsar ESP32 トリガー、CCAPI 対応 Canon カメラ、または USB PTP カメラ。</string>
-    <string name="scan_compatible_devices_link">対応デバイス</string>
-    <string name="scan_help_title">対応デバイス</string>
-    <string name="scan_help_esp_title">Pulsar ESP32 トリガー</string>
-    <string name="scan_help_esp_body">Pulsar ファームウェアを搭載した ESP32 ボード。カメラの有線リモートレリーズ端子に接続します。リモート端子のあるカメラに対応。</string>
-    <string name="scan_help_ccapi_title">CCAPI カメラ</string>
-    <string name="scan_help_ccapi_body">CCAPI を有効化した Canon EOS R シリーズ。Wi-Fi で接続。有効化には Canon の PC ツールが必要 — カメラ設定ヘルプ参照。</string>
-    <string name="scan_help_ptp_title">USB PTP カメラ</string>
-    <string name="scan_help_ptp_body">PTP 対応の任意のカメラ（Canon、Nikon、Sony など）を USB-C ケーブルで接続。CCAPI 非対応機に便利。</string>
-    <string name="section_usb_cameras">USBカメラ</string>
-    <string name="usb_cameras_subtitle">USB-C で接続</string>
     <string name="usb_camera_subtitle">USB 経由の PTP</string>
-    <string name="section_canon_ble_remotes">Canon BLE リモコン</string>
-    <string name="canon_ble_remotes_subtitle">カメラを Bluetooth ペアリングモードにすると、ここに表示されます</string>
     <string name="canon_ble_camera_subtitle">Canon ボディを Bluetooth で — 追加ハードウェア不要</string>
     <string name="canon_ble_camera_fallback_name">Canon BLE カメラ</string>
     <string name="canon_ble_err_connect_failed">Canon BLE カメラに接続できませんでした。ボディのペアリングモードを確認してもう一度お試しください。</string>
@@ -151,7 +120,6 @@
     <string name="canon_ble_reconnecting_hint">Canon BLE のリンクが切れました — カメラの再アドバタイズを待っています。電源を入れる/スリープを解除すると自動的に再接続します。</string>
     <string name="ptp_connected_hint">USB 接続中 — Pulsar が PTP セッションを保持している間、カメラの設定は固定されます。本体のバルブ／マニュアル切替には一旦切断してください。</string>
     <string name="mode_test_camera">カメラテスト</string>
-    <string name="mode_compat_report">互換性レポート</string>
     <string name="test_camera_title">カメラテスト</string>
     <string name="test_camera_blurb">Canon トランスポートでは: 互換性レポートと設定プローブ (読み取り専用) を実行してから、5 つのモードで合計 25 ショットを撮影します。アクティブなトランスポートをエンドツーエンドで検証。機能・レンズ・電池・ISO/絞り/シャッターの一覧・タイミングはすべて Diagnostics に記録されます。</string>
     <string name="test_camera_blurb_timelapse_only">タイムラプスで 1 ショットを撮影します。接続中のカメラがこのトランスポートでバルブをサポートしないため、バルブベースのモード (インターバロメーター-バルブ、天体、ダークフレーム、ランプ) はスキップされます。</string>
@@ -175,8 +143,6 @@
     <string name="test_camera_dial_bulb_title">ダイヤルを Bulb に設定</string>
     <string name="test_camera_dial_bulb_body">フェーズ 2: press-and-hold タイミングのバルブ撮影 4 枚 (インターバロメーター-バルブ、アストロ、ダークフレーム、ランプ)。ダイヤルを Bulb に合わせて続行を押してください。</string>
     <string name="test_camera_start">テスト実行</string>
-    <string name="test_camera_settings_probe">カメラ設定をプローブ (ISO/絞り/シャッター)</string>
-    <string name="test_camera_settings_probe_running">プローブ中… (ログ参照)</string>
     <string name="tools_collect_diagnostics">診断を収集</string>
     <string name="tools_collect_diagnostics_hint">最近の Canon BLE 接続ログを共有できるファイルに書き出します — ペアリング失敗後に使用してください。</string>
     <string name="tools_view_logs">ログを表示</string>
@@ -196,9 +162,6 @@
     <string name="ptp_err_open_failed">USB カメラを開けませんでした。ケーブルを抜き差ししてみてください。</string>
     <string name="ptp_err_session_failed">カメラを検出しましたが PTP セッションを開始できません。他のアプリがカメラを使用していないかご確認ください。</string>
     <string name="ptp_err_generic">USB カメラエラー (%1$s)。</string>
-    <string name="use_simulator">シミュレーターを使用</string>
-    <string name="simulator_description">実機なしでアプリを体験できます</string>
-    <string name="unknown_device">不明なデバイス</string>
     <string name="mode_intervalometer">インターバロメーター</string>
     <string name="mode_astro">天体撮影</string>
     <string name="mode_manual">マニュアル</string>
@@ -255,14 +218,10 @@
     <string name="edit">編集</string>
     <string name="run">実行</string>
     <string name="continue_label">続行</string>
-    <string name="cd_collapse">折りたたむ</string>
-    <string name="cd_expand">展開</string>
     <string name="cd_move_up">上に移動</string>
     <string name="cd_move_down">下に移動</string>
     <string name="btn_stop">停止</string>
     <string name="btn_start">開始</string>
-    <string name="status_sequence_running">シーケンス実行中…</string>
-    <string name="status_ready_start">シーケンス開始準備完了</string>
     <string name="chip_hold_mode">ホールドモード</string>
     <string name="chip_lock_mode">ロックモード</string>
     <string name="btn_hold_shutter">シャッターを押し続ける</string>
@@ -276,27 +235,11 @@
     <string name="status_tap_toggle">ボタンをタップして切り替え</string>
     <string name="chip_500_rule">500 ルール</string>
     <string name="chip_400_rule">400 ルール</string>
-    <string name="btn_stop_astro">天体撮影停止</string>
-    <string name="btn_start_astro">天体撮影開始</string>
-    <string name="status_capturing_stars">星を撮影中…</string>
-    <string name="status_ready_astro">天体撮影シーケンス準備完了</string>
-    <string name="label_shots">ショット数</string>
-    <string name="label_total_duration">合計時間</string>
     <string name="label_interval">インターバル</string>
     <string name="label_exposure">露出</string>
-    <string name="label_start_delay">開始遅延</string>
-    <string name="label_number_of_shots">撮影枚数</string>
     <string name="panel_manual_tip">下のアクションエリアのチップで動作を切り替えます。</string>
     <string name="panel_manual_lock_info">ロック: 中央ボタンを一度タップしてシャッターを開き、もう一度タップして閉じます。長時間バルブ露出に最適です。</string>
     <string name="panel_manual_hold_info">ホールド: 中央ボタンを押している間、シャッターが開きます。素早い連続撮影に最適です。</string>
-    <string name="label_effective_focal">有効焦点距離 %1$smm</string>
-    <string name="label_max_exposure">最大露出時間</string>
-    <string name="label_astro_formula">計算式: %1$d / (%2$d mm × %3$sx) = %4$ss</string>
-    <string name="preset_full_frame">Full Frame</string>
-    <string name="preset_aps_c_canon">APS-C (Canon)</string>
-    <string name="preset_aps_c_nikon_sony">APS-C (Nikon/Sony)</string>
-    <string name="preset_micro_43">Micro 4/3</string>
-    <string name="label_focal_length">レンズ焦点距離</string>
     <string name="section_language">言語</string>
     <string name="lang_system_default">システムのデフォルト</string>
     <string name="section_device">デバイス</string>
@@ -351,7 +294,6 @@
     <string name="aircraft_alert_notable">注目機をアラート</string>
     <string name="aircraft_keep_screen_on">画面を点灯したままにする</string>
     <string name="aircraft_display_settings">表示とアラート</string>
-    <string name="aircraft_detail_elevation">仰角</string>
     <string name="aircraft_detail_closest">最接近</string>
     <string name="aircraft_closest_in">%1$d 秒後（~%2$s km）</string>
     <string name="aircraft_closest_receding">現在 / 遠ざかり中（~%1$s km）</string>
@@ -449,7 +391,6 @@
     <string name="update_app_available">アプリ v%1$s が利用可能です</string>
     <string name="btn_go_to_settings">設定へ</string>
     <string name="status_fetching_data">位置情報＆データを取得中…</string>
-    <string name="card_summary">サマリー</string>
     <string name="tonight_signal_title">今夜のシグナル</string>
     <string name="sky_dial_excellent">最高</string>
     <string name="sky_dial_good">良好</string>
@@ -480,10 +421,6 @@
 右に向かって上がるラインは、その30分内に条件が改善していること（薄明が深まる、雲が晴れる）を意味し、下がるラインは悪化（雲、月の出、夜明け）を意味します。
 
 高さは「空の暗さ × 晴天 × 明るい月がない × 雨がない」で決まります。光るラインが今夜の最良の瞬間を含み、チャートの下に表示されます。（縦のガイドは各30分の中間点を示し、各行の横のバーはその時間帯の全体的なレベルを表します。）</string>
-    <string name="location_north">北</string>
-    <string name="location_south">南</string>
-    <string name="location_east">東</string>
-    <string name="location_west">西</string>
 
     <!-- Summary verdict chips -->
 
@@ -528,7 +465,6 @@
     <string name="label_dark_window">暗闇の窓</string>
     <string name="mw_season_good">天の川撮影に良い季節</string>
     <string name="mw_season_off">天の川中心部の可視性はオフシーズン</string>
-    <string name="label_rise_set">出没時刻</string>
 
     <!-- Best photo windows -->
     <string name="card_best_windows">最適な撮影時間帯</string>
@@ -622,7 +558,6 @@
     <string name="verdict_poor">悪い</string>
     <string name="verdict_unknown">不明</string>
     <string name="night_mode_toggle">ナイトモード</string>
-    <string name="night_mode_locked">ナイトモード（ロック中 — 長押しで解除）</string>
     <string name="card_dew_point">露点</string>
     <string name="dew_warning">結露リスク — レンズの曇りの可能性</string>
     <string name="dew_critical">高結露リスク — レンズの曇りの可能性大！</string>
@@ -699,8 +634,6 @@
     <string name="btn_discard">破棄</string>
 
     <!-- Flow library tabs & filters -->
-    <string name="flow_tab_recommended">プリセット</string>
-    <string name="flow_tab_my_flows">マイフロー</string>
     <string name="flow_help">異なるモードを連結してマルチステップ撮影シーケンスを作成します。\n\n• インターバロメーター、天体、ダークフレーム、一時停止を組み合わせ\n• フローを保存して再利用\n• 一般的な焦点距離用の NPF プリセット内蔵\n• シーケンス間にウェイクアラート付き一時停止を追加\n\n+ をタップして新規フローを作成するか、プリセットを選択して実行。</string>
     <string name="flow_total_time">合計: %1$s</string>
     <string name="flow_filter_all">すべて</string>
@@ -795,27 +728,17 @@
     <string name="canon_ble_setup_empty">アドバタイズ中の Canon BLE カメラがありません。カメラを「スマートフォンに接続」→「Bluetooth でペアリング」に設定して、「再スキャン」をタップしてください。</string>
 
     <!-- スキャン入口画面（トランスポート選択） -->
-    <string name="scan_landing_pick_transport">トランスポートを選択</string>
-    <string name="scan_landing_subtitle">トランスポートごとにカメラ側の設定が異なります。タップして手順を確認してください。</string>
-    <string name="scan_landing_reconnect_to">%1$s に再接続</string>
-    <string name="scan_landing_reconnecting">%1$s に再接続中…</string>
-    <string name="scan_landing_reconnect_via">最後に接続 · %1$s</string>
     <string name="scan_landing_forget">このデバイスを忘れる</string>
-    <string name="scan_landing_use_simulator">シミュレーターを使用</string>
-    <string name="scan_landing_known_devices">既知のデバイス</string>
     <string name="scan_section_transports">接続方式</string>
     <string name="scan_tool_diagnostics">診断</string>
     <string name="scan_section_recent">最近</string>
     <string name="scan_section_tools">ツール</string>
     <string name="trigger_section_bulb">バルブモード</string>
-    <string name="trigger_resume_last">続行: %1$s</string>
     <string name="tools_section_astro">天体</string>
     <string name="tools_section_field">フィールド計算機</string>
     <string name="tools_section_spotting">スポッティング</string>
     <string name="trigger_section_standard">標準モード</string>
-    <string name="trigger_section_favorites">お気に入り</string>
     <string name="trigger_section_custom">カスタム</string>
-    <string name="trigger_chip_favorites">お気に入り</string>
     <string name="transport_tile_simulator_title">シミュレーター</string>
     <string name="transport_tile_simulator_subtitle">ハードウェアなしで試す</string>
     <string name="transport_tile_pulsar_ble_title">Pulsar BLE</string>
@@ -846,7 +769,6 @@
     <string name="permissions_open_settings">設定を開く</string>
 
     <!-- Scan screen -->
-    <string name="scan_pull_hint">下に引いてデバイスを検索</string>
 
     <string name="ota_notif_downloading">ファームウェアをダウンロード中…</string>
     <string name="ota_notif_uploading">デバイスにアップロード中…</string>
@@ -857,8 +779,6 @@
     <string name="ota_notif_failed">ファームウェアの更新に失敗しました</string>
     <string name="cd_backspace">削除</string>
     <string name="cd_confirm">確認</string>
-    <string name="cd_bluetooth">Bluetooth</string>
-    <string name="cd_simulator">シミュレーター</string>
     <string name="btn_navigate">ナビ</string>
     <!-- Camera one-tap modes -->
     <!-- About: tribute -->
@@ -868,20 +788,9 @@
     <string name="about_tribute_link">Wikipediaで読む</string>
 
     <!-- Sequences / stacking -->
-    <string name="warning_interval_too_short">インターバルが 1 秒未満 — カメラがフレームを書き込む時間が足りない可能性があります</string>
-    <string name="status_hold_to_start">長押しで開始</string>
-    <string name="warning_battery_low">バッテリー残量低下 (%1$d%%) — シーケンスを完了できない可能性</string>
 
     <string name="label_ends_at">終了予定 %1$s</string>
-    <string name="ramp_curve_start">開始: %1$s</string>
-    <string name="ramp_curve_end">終了: %1$s</string>
-    <string name="ramp_curve_ascending">露出はシーケンスを通じて長くなります</string>
-    <string name="ramp_curve_descending">露出はシーケンスを通じて短くなります</string>
 
-    <string name="pairing_protocol_title">ペアリング手順</string>
-    <string name="pairing_step_1">Pulsar トリガーの電源を入れ、ステータス LED が点滅していることを確認してください。</string>
-    <string name="pairing_step_2">スマートフォンを数メートル以内に置き、Bluetooth を有効にしてください。</string>
-    <string name="pairing_step_3">下にスワイプして再スキャン — デバイスが上に表示されます。</string>
 
     <string name="shot_log_title">セッション履歴</string>
     <string name="shot_log_empty">記録された実行はありません。シーケンスを開始するとここに表示されます。</string>
@@ -889,7 +798,6 @@
     <string name="shot_log_clear_body">記録されたすべての実行が削除されます。この操作は取り消せません。</string>
     <string name="shot_log_stat_runs">実行</string>
     <string name="shot_log_stat_shots">撮影</string>
-    <string name="shot_log_stat_success">成功</string>
     <string name="shot_log_row_shots">%1$d / %2$d 枚</string>
     <!-- Backfilled translations (audit 2026-05-25) -->
     <string name="action_dismiss">OK</string>
@@ -906,7 +814,6 @@
     <string name="assessment_unavailable">評価を取得できません</string>
     <string name="astro2_max_exposure_label">最大露光</string>
     <string name="astro2_rule">ルール</string>
-    <string name="astro2_trail_predictor">星の流れ予測</string>
     <string name="astro2_trail_predictor_caption">流れる量に対する最大露光:</string>
     <string name="astro2_trail_px">%d px</string>
     <string name="astro2_sensor_format">センサーサイズ</string>
@@ -962,11 +869,6 @@
     <string name="iv2_tap_to_edit">桁をタップで入力 · 上下スワイプで調整</string>
     <string name="iv2_wizard_next">次へ</string>
     <string name="iv2_wizard_prev">戻る</string>
-    <string name="label_dark_frame_count">フレーム数</string>
-    <string name="label_npf_formula">NPF / (%1$d mm × %2$sx) = %3$ss</string>
-    <string name="label_ramp_end_exposure">終了露光</string>
-    <string name="label_ramp_start_exposure">開始露光</string>
-    <string name="label_ramp_steps">ステップ数</string>
     <string name="last_updated">更新: %1$s</string>
     <string name="mode_alignment">赤道儀アライメント</string>
     <string name="mode_timelapse">タイムラプス</string>
@@ -991,9 +893,6 @@
     <string name="meteor_reason_moon">明るい月が淡い流星をかき消します</string>
     <string name="meteor_reason_low">放射点が低く、流星は少なめ</string>
     <string name="meteor_reason_good">暗い時間帯で放射点も高い</string>
-    <string name="npf_dialog_body">NPF ルールの計算式: (35 × 絞り + 30 × ピクセルピッチ) ÷ (焦点距離 × クロップファクター)。\n\nPulsar はセンサーの正確なスペックを知らないため、クロップファクターから推定します:\n\n• ピクセルピッチ: %1$s μm (このフォーマットの ~24 MP センサーで一般的)\n• 絞り: f/%2$s (天体用レンズで一般的)\n\nほとんどの最新カメラで妥当な値です。高解像度センサー (例: 45–61 MP フルフレーム) では実際のピッチが小さく、推定が少し甘めになり、わずかな線状の流れが見える場合があります。\n\n正確な値が必要な場合は、オンラインの NPF 計算機にカメラとレンズの仕様を入力し、得られた露光時間をインターバロメーターに手入力してください。</string>
-    <string name="npf_dialog_title">NPF ルールの推定</string>
-    <string name="npf_estimation_note">ⓘ これは推定値です — タップで詳細</string>
     <string name="panel_astro_help">星を線状ではなく点として撮影できる最長露光を計算します。\n\n• センサープリセット (クロップ) と焦点距離を選択。\n• 500 ルール: 古典的な式で甘め。最新センサーでは線が出ることも。\n• 400 ルール: より厳しく、高解像度センサー向け。\n• NPF ルール: 最も精密。ピクセルピッチと f/2.8 を使用。\n• 計算式: ルール ÷ (焦点距離 × クロップ) = 最大秒数。\n• 「間隔」は書き込みのためのインターバル。\n• 枚数と遅延はインターバロメーターと同様に設定。</string>
     <string name="panel_intervalometer_help">複雑なタイムラプスや連写を高精度のタイミングで自動化します。\n\n• Pulsar がシャッターを制御できるよう、カメラを Bulb モードに。\n• 間隔は撮影間の待機時間 — 1 枚撮影後、次の撮影までの時間。\n• 露光は 1 枚あたりのシャッター開放時間。\n• 1 フレームのサイクル = 露光 + 間隔。\n• 開始遅延でシーケンス開始前にその場を離れる時間を確保。\n• シーケンス見積もりカードに合計時間と終了予定時刻が表示されます。</string>
     <string name="panel_manual_help">2 モードのシャッター手動制御。\n\n• 押し続け: ボタンを押している間シャッターが開きます。離すと閉じます。短い Bulb 撮影向け。\n• ロック: 1 回タップで開き、もう 1 回で閉じます。ボタンを押し続けたくない長時間露光向け。\n\n切り替えはアクション領域のセグメントボタンから。</string>

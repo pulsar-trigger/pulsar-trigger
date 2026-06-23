@@ -1,7 +1,5 @@
 <resources>
     <string name="app_name">Pulsar</string>
-    <string name="app_tagline">BLE 远程触发器</string>
-    <string name="section_canon_cameras">佳能相机 (WiFi)</string>
     <string name="canon_camera_subtitle">Canon CCAPI</string>
     <string name="canon_camera_join_wifi_hint">请连接相机的 WiFi 或同一局域网</string>
     <string name="cd_canon_camera">佳能相机 (CCAPI)</string>
@@ -24,7 +22,6 @@
     <string name="canon_rename_title">重命名相机</string>
     <string name="canon_rename_subtitle">为 %1$s 设置昵称，留空则清除。</string>
     <string name="canon_rename_label">昵称</string>
-    <string name="canon_on_wifi">当前 Wi-Fi：%1$s</string>
     <string name="canon_manual_add_button">按 IP 添加</string>
     <string name="canon_manual_add_title">按 IP 添加相机</string>
     <string name="canon_manual_add_subtitle">当 SSDP 未能发现相机（AP 屏蔽多播或机身未广播 UPnP）时，请输入相机的 IP（端口不是 8080 时也需指定）。Pulsar 会直接探测 /ccapi，与浏览器中打开的 URL 一致。</string>
@@ -63,11 +60,9 @@
     <string name="star_focus_starting">正在启动实时取景…</string>
     <string name="star_focus_start_failed">无法启动实时取景。请确认相机不在 Bulb 模式（该模式下实时取景被禁用），并且没有其他应用占用相机。</string>
     <string name="star_focus_liveview_cd">相机实时取景</string>
-    <string name="star_focus_tap_to_mark">点选要追踪的星点</string>
     <string name="star_focus_sharpness_label">ROI 内的峰值亮度</string>
     <string name="star_focus_near">近</string>
     <string name="star_focus_far">远</string>
-    <string name="star_focus_lens_hint">请将镜头机身开关拨到 AF — 马达仅在 AF 模式下响应。对好焦后可切到 MF 锁定。</string>
     <string name="star_focus_step_prep">准备</string>
     <string name="star_focus_step_aim">取景</string>
     <string name="star_focus_step_focus">对焦</string>
@@ -92,7 +87,6 @@
     <string name="astro2_lens_detected_prime">定焦 · %1$d mm</string>
     <string name="astro2_lens_detected_zoom">变焦 · %1$d-%2$d mm — 请输入当前焦距</string>
     <string name="astro2_lens_detected_unknown">从相机检测</string>
-    <string name="astro2_lens_use_focal">使用 %1$d mm</string>
     <string name="astro2_lens_not_mounted">相机未检测到镜头。</string>
     <string name="astro2_lens_detect">检测镜头</string>
     <string name="astro2_lens_detecting">检测中…</string>
@@ -108,7 +102,6 @@
     <string name="widget_empty_state">打开应用以填充小部件</string>
     <string name="widget_empty_state_title">Pulsar — 天文仪表盘</string>
     <string name="widget_loading">加载中…</string>
-    <string name="widget_updated_prefix">已更新</string>
     <string name="widget_stale_prefix">过期 ·</string>
     <string name="widget_refresh_content_description">刷新</string>
     <string name="section_background">后台运行</string>
@@ -117,31 +110,7 @@
     <string name="background_status_blocked">后台运行受限</string>
     <string name="background_status_hint">屏幕长时间关闭时，Doze 可能暂停 BLE 通知和 CCAPI 轮询。</string>
     <string name="background_request_btn">允许后台运行</string>
-    <string name="canon_setup_title">启用 Camera Control API</string>
-    <string name="canon_setup_intro">Pulsar 需要相机启用 CCAPI。大多数 R 系列机身需要一次性激活：</string>
-    <string name="canon_setup_step_1">1. 在佳能开发者门户下载 CCAPI Activation Tool。</string>
-    <string name="canon_setup_step_2">2. 通过 USB 将相机连接到电脑，运行工具并按提示操作。</string>
-    <string name="canon_setup_step_3">3. 在相机上打开 菜单 → 通信 → Wi-Fi 设置。</string>
-    <string name="canon_setup_step_4">4. 选择 Camera Control API 并创建 / 加入网络 (相机 AP 或局域网)。</string>
-    <string name="canon_setup_step_5">5. 确认手机连接到相同网络，然后重新扫描。</string>
-    <string name="canon_setup_long_runs">长时间星空拍摄时，请将相机的「自动关机」设为「关」（菜单 → 设置），避免在两次曝光之间相机休眠。</string>
-    <string name="canon_setup_battery_tip">电池：CCAPI + WiFi 大约会让续航减半。RP 用一块 LP-E17 约 2 小时；长时间拍摄请使用 USB-C 供电（DR-E18 假电池）。</string>
-    <string name="canon_setup_button">设置帮助</string>
-    <string name="available_devices">可用设备</string>
-    <string name="select_device_prompt">下拉以扫描兼容设备：Pulsar ESP32 触发器、CCAPI 兼容的 Canon 相机或 USB PTP 相机。</string>
-    <string name="scan_compatible_devices_link">兼容设备</string>
-    <string name="scan_help_title">兼容设备</string>
-    <string name="scan_help_esp_title">Pulsar ESP32 触发器</string>
-    <string name="scan_help_esp_body">运行 Pulsar 固件的 ESP32 板，通过相机的有线遥控接口连接。适用于任何带有遥控接口的相机。</string>
-    <string name="scan_help_ccapi_title">CCAPI 相机</string>
-    <string name="scan_help_ccapi_body">已激活 CCAPI 的 Canon EOS R 系列。通过 Wi-Fi 连接。激活需要 Canon 的 PC 工具——请参阅相机设置帮助。</string>
-    <string name="scan_help_ptp_title">USB PTP 相机</string>
-    <string name="scan_help_ptp_body">任何支持 PTP 的相机（Canon、Nikon、Sony 等）通过 USB-C 线连接到手机。适用于不支持 CCAPI 的机身。</string>
-    <string name="section_usb_cameras">USB相机</string>
-    <string name="usb_cameras_subtitle">通过USB-C连接</string>
     <string name="usb_camera_subtitle">USB上的PTP</string>
-    <string name="section_canon_ble_remotes">佳能 BLE 遥控器</string>
-    <string name="canon_ble_remotes_subtitle">将相机置于蓝牙配对模式以在此处显示</string>
     <string name="canon_ble_camera_subtitle">通过蓝牙连接佳能机身 — 无需额外硬件</string>
     <string name="canon_ble_camera_fallback_name">佳能 BLE 相机</string>
     <string name="canon_ble_err_connect_failed">无法连接到佳能 BLE 相机。请检查机身上的配对模式后重试。</string>
@@ -151,7 +120,6 @@
     <string name="canon_ble_reconnecting_hint">佳能 BLE 连接已断开 — 等待相机重新广播。开启相机或将其唤醒可自动重新连接。</string>
     <string name="ptp_connected_hint">已通过 USB 连接 — Pulsar 持有 PTP 会话时相机设置被锁定。需要在机身上切换 Bulb/手动模式时请先断开连接。</string>
     <string name="mode_test_camera">相机测试</string>
-    <string name="mode_compat_report">兼容性报告</string>
     <string name="test_camera_title">相机测试</string>
     <string name="test_camera_blurb">在 Canon 传输方式上：先运行兼容性报告 + 相机设置探测（只读），再在所有 5 个模式下共拍 25 张照片。端到端验证当前传输。结果（能力、镜头、电池、ISO/光圈/快门清单、时序）都会写入诊断日志。</string>
     <string name="test_camera_blurb_timelapse_only">在 Timelapse 模式下拍 1 张照片。已连接的相机在此传输上不公布 B 门支持，因此基于 B 门的模式（间隔计-B 门、天文、暗场、渐变）将被跳过。</string>
@@ -175,8 +143,6 @@
     <string name="test_camera_dial_bulb_title">将相机模式拨盘设置为 Bulb</string>
     <string name="test_camera_dial_bulb_body">阶段 2：四张 press-and-hold 时序的 B 门拍摄（间隔仪-B 门、天文、暗场、渐变）。将拨盘旋至 Bulb，然后点击继续。</string>
     <string name="test_camera_start">运行测试</string>
-    <string name="test_camera_settings_probe">探测相机设置 (ISO/光圈/快门)</string>
-    <string name="test_camera_settings_probe_running">探测中… (查看日志)</string>
     <string name="tools_collect_diagnostics">收集诊断信息</string>
     <string name="tools_collect_diagnostics_hint">将最近的佳能 BLE 连接日志导出为可分享的文件 — 配对失败后使用。</string>
     <string name="tools_view_logs">查看日志</string>
@@ -196,9 +162,6 @@
     <string name="ptp_err_open_failed">无法打开 USB 相机。请尝试重新插拔数据线。</string>
     <string name="ptp_err_session_failed">已检测到相机但 PTP 会话失败。请确认没有其他应用占用相机。</string>
     <string name="ptp_err_generic">USB 相机错误 (%1$s)。</string>
-    <string name="use_simulator">使用模拟器</string>
-    <string name="simulator_description">无需真实设备即可体验应用</string>
-    <string name="unknown_device">未知设备</string>
     <string name="dest_trigger">触发</string>
     <string name="dest_tools">工具</string>
     <string name="mode_intervalometer">间隔计时器</string>
@@ -257,14 +220,10 @@
     <string name="edit">编辑</string>
     <string name="run">运行</string>
     <string name="continue_label">继续</string>
-    <string name="cd_collapse">折叠</string>
-    <string name="cd_expand">展开</string>
     <string name="cd_move_up">上移</string>
     <string name="cd_move_down">下移</string>
     <string name="btn_stop">停止</string>
     <string name="btn_start">开始</string>
-    <string name="status_sequence_running">序列运行中…</string>
-    <string name="status_ready_start">序列已就绪</string>
     <string name="chip_hold_mode">按住模式</string>
     <string name="chip_lock_mode">锁定模式</string>
     <string name="btn_hold_shutter">按住快门</string>
@@ -278,27 +237,11 @@
     <string name="status_tap_toggle">点按按钮切换</string>
     <string name="chip_500_rule">500 法则</string>
     <string name="chip_400_rule">400 法则</string>
-    <string name="btn_stop_astro">停止天文</string>
-    <string name="btn_start_astro">开始天文</string>
-    <string name="status_capturing_stars">正在拍摄星空…</string>
-    <string name="status_ready_astro">天文序列已就绪</string>
-    <string name="label_shots">拍摄张数</string>
-    <string name="label_total_duration">总时长</string>
     <string name="label_interval">间隔</string>
     <string name="label_exposure">曝光</string>
-    <string name="label_start_delay">启动延迟</string>
-    <string name="label_number_of_shots">拍摄张数</string>
     <string name="panel_manual_tip">使用下方操作区域中的标签切换行为模式。</string>
     <string name="panel_manual_lock_info">锁定：点按中央按钮一次打开快门，再点按一次关闭。适合长时间B门曝光。</string>
     <string name="panel_manual_hold_info">按住：按住中央按钮时快门保持打开。适合快速连拍。</string>
-    <string name="label_effective_focal">%1$smm 等效焦距</string>
-    <string name="label_max_exposure">最大曝光</string>
-    <string name="label_astro_formula">公式：%1$d / (%2$d mm × %3$sx) = %4$ss</string>
-    <string name="preset_full_frame">Full Frame</string>
-    <string name="preset_aps_c_canon">APS-C (Canon)</string>
-    <string name="preset_aps_c_nikon_sony">APS-C (Nikon/Sony)</string>
-    <string name="preset_micro_43">Micro 4/3</string>
-    <string name="label_focal_length">镜头焦距</string>
     <string name="section_language">语言</string>
     <string name="lang_system_default">系统默认</string>
     <string name="section_device">设备</string>
@@ -353,7 +296,6 @@
     <string name="aircraft_alert_notable">特殊机型提醒</string>
     <string name="aircraft_keep_screen_on">保持屏幕常亮</string>
     <string name="aircraft_display_settings">显示与提醒</string>
-    <string name="aircraft_detail_elevation">仰角</string>
     <string name="aircraft_detail_closest">最近接近</string>
     <string name="aircraft_closest_in">%1$d 秒后（~%2$s km）</string>
     <string name="aircraft_closest_receding">现在 / 正在远离（~%1$s km）</string>
@@ -451,7 +393,6 @@
     <string name="update_app_available">应用 v%1$s 可用</string>
     <string name="btn_go_to_settings">前往设置</string>
     <string name="status_fetching_data">正在获取位置 &amp; 数据…</string>
-    <string name="card_summary">摘要</string>
     <string name="tonight_signal_title">今晚的信号</string>
     <string name="sky_dial_excellent">极佳</string>
     <string name="sky_dial_good">良好</string>
@@ -482,10 +423,6 @@
 向右上升的线表示该半小时内条件在改善（暮光加深、云层散开）；下降的线表示在变差（云、月出或黎明）。
 
 高度来自天空黑暗度 × 晴朗 × 无明亮月光 × 无降雨。发光的线包含今晚最佳的时刻——在图表下方标注。（竖向参考线标记每个半小时的中点，每行旁的小条显示其整体水平。）</string>
-    <string name="location_north">北</string>
-    <string name="location_south">南</string>
-    <string name="location_east">东</string>
-    <string name="location_west">西</string>
 
     <!-- Summary verdict chips -->
 
@@ -529,8 +466,7 @@
     <string name="label_core_set">核心落下</string>
     <string name="label_dark_window">黑暗窗口</string>
     <string name="mw_season_good">银河摄影的好季节</string>
-    <string name="mw_season_off">银河核心可见性的淡季</string>    <string name="label_rise_set">升落时间</string>
-    <!-- Best photo windows -->
+    <string name="mw_season_off">银河核心可见性的淡季</string>    <!-- Best photo windows -->
     <string name="card_best_windows">最佳拍摄时段</string>
     <string name="window_excellent">优秀</string>
     <string name="window_good">良好</string>
@@ -622,7 +558,6 @@
     <string name="verdict_poor">较差</string>
     <string name="verdict_unknown">未知</string>
     <string name="night_mode_toggle">夜间模式</string>
-    <string name="night_mode_locked">夜间模式（已锁定 — 长按解锁）</string>
     <string name="card_dew_point">露点</string>
     <string name="dew_warning">结露风险 — 镜头可能起雾</string>
     <string name="dew_critical">高结露风险 — 镜头很可能起雾！</string>
@@ -699,8 +634,6 @@
     <string name="btn_discard">放弃</string>
 
     <!-- Flow library tabs & filters -->
-    <string name="flow_tab_recommended">预置</string>
-    <string name="flow_tab_my_flows">我的流程</string>
     <string name="flow_help">通过串联不同模式创建多步骤拍摄序列。\n\n• 组合间隔计时器、天文、暗帧和暂停步骤\n• 保存流程以便跨会话复用\n• 内置常见焦距的 NPF 预设\n• 在序列间添加带唤醒提醒的暂停\n\n点击 + 创建新流程，或选择预设立即运行。</string>
     <string name="flow_total_time">总计：%1$s</string>
     <string name="flow_filter_all">全部</string>
@@ -795,27 +728,17 @@
     <string name="canon_ble_setup_empty">没有佳能 BLE 相机在广播。请将相机设为"连接到智能手机"→"通过蓝牙配对"，然后点击"重新扫描"。</string>
 
     <!-- 扫描入口屏幕（传输方式选择） -->
-    <string name="scan_landing_pick_transport">选择传输方式</string>
-    <string name="scan_landing_subtitle">每种传输方式在相机端需要不同的设置。点击查看相应说明。</string>
-    <string name="scan_landing_reconnect_to">重新连接到 %1$s</string>
-    <string name="scan_landing_reconnecting">正在重新连接到 %1$s…</string>
-    <string name="scan_landing_reconnect_via">上次连接 · %1$s</string>
     <string name="scan_landing_forget">忘记此设备</string>
-    <string name="scan_landing_use_simulator">使用模拟器</string>
-    <string name="scan_landing_known_devices">已知设备</string>
     <string name="scan_section_transports">连接方式</string>
     <string name="scan_tool_diagnostics">诊断</string>
     <string name="scan_section_recent">最近</string>
     <string name="scan_section_tools">工具</string>
     <string name="trigger_section_bulb">B 门模式</string>
-    <string name="trigger_resume_last">继续：%1$s</string>
     <string name="tools_section_astro">天文</string>
     <string name="tools_section_field">现场计算器</string>
     <string name="tools_section_spotting">观察</string>
     <string name="trigger_section_standard">标准模式</string>
-    <string name="trigger_section_favorites">收藏</string>
     <string name="trigger_section_custom">自定义</string>
-    <string name="trigger_chip_favorites">收藏</string>
     <string name="transport_tile_simulator_title">模拟器</string>
     <string name="transport_tile_simulator_subtitle">无硬件试用</string>
     <string name="transport_tile_pulsar_ble_title">Pulsar BLE</string>
@@ -846,7 +769,6 @@
     <string name="permissions_open_settings">打开设置</string>
 
     <!-- Scan screen -->
-    <string name="scan_pull_hint">下拉搜索设备</string>
 
     <string name="ota_notif_downloading">正在下载固件…</string>
     <string name="ota_notif_uploading">正在上传到设备…</string>
@@ -857,23 +779,10 @@
     <string name="ota_notif_failed">固件更新失败</string>
     <string name="cd_backspace">退格</string>
     <string name="cd_confirm">确认</string>
-    <string name="cd_bluetooth">蓝牙</string>
-    <string name="cd_simulator">模拟器</string>
     <string name="btn_navigate">导航</string>
-    <string name="warning_interval_too_short">间隔小于 1 秒 — 相机可能来不及写入照片</string>
-    <string name="status_hold_to_start">长按以开始</string>
-    <string name="warning_battery_low">电量低 (%1$d%%) — 序列可能无法完成</string>
 
     <string name="label_ends_at">结束于 %1$s</string>
-    <string name="ramp_curve_start">起始：%1$s</string>
-    <string name="ramp_curve_end">结束：%1$s</string>
-    <string name="ramp_curve_ascending">曝光时间在整个序列中递增</string>
-    <string name="ramp_curve_descending">曝光时间在整个序列中递减</string>
 
-    <string name="pairing_protocol_title">配对步骤</string>
-    <string name="pairing_step_1">为 Pulsar 触发器供电，确认状态 LED 正在闪烁。</string>
-    <string name="pairing_step_2">保持手机距离设备几米以内，并已启用蓝牙。</string>
-    <string name="pairing_step_3">下拉刷新 — 你的设备将出现在上方。</string>
 
     <string name="shot_log_title">会话记录</string>
     <string name="shot_log_empty">尚无运行记录。启动一个序列后将显示在此处。</string>
@@ -881,7 +790,6 @@
     <string name="shot_log_clear_body">将删除所有记录的运行。此操作无法撤销。</string>
     <string name="shot_log_stat_runs">运行</string>
     <string name="shot_log_stat_shots">拍摄</string>
-    <string name="shot_log_stat_success">成功</string>
     <string name="shot_log_row_shots">%1$d / %2$d 张</string>
     <!-- Backfilled translations (audit 2026-05-25) -->
     <string name="about_tribute_heading">致敬</string>
@@ -902,7 +810,6 @@
     <string name="assessment_unavailable">评估不可用</string>
     <string name="astro2_max_exposure_label">最大曝光</string>
     <string name="astro2_rule">法则</string>
-    <string name="astro2_trail_predictor">星轨预测</string>
     <string name="astro2_trail_predictor_caption">星轨长度对应最长曝光:</string>
     <string name="astro2_trail_px">%d px</string>
     <string name="astro2_sensor_format">传感器规格</string>
@@ -958,11 +865,6 @@
     <string name="iv2_tap_to_edit">点按数位以输入 · 上下滑动以调整</string>
     <string name="iv2_wizard_next">下一步</string>
     <string name="iv2_wizard_prev">上一步</string>
-    <string name="label_dark_frame_count">帧数</string>
-    <string name="label_npf_formula">NPF / (%1$d mm × %2$sx) = %3$ss</string>
-    <string name="label_ramp_end_exposure">结束曝光</string>
-    <string name="label_ramp_start_exposure">起始曝光</string>
-    <string name="label_ramp_steps">步数</string>
     <string name="last_updated">已更新：%1$s</string>
     <string name="mode_alignment">赤道仪对准</string>
     <string name="mode_timelapse">延时</string>
@@ -987,9 +889,6 @@
     <string name="meteor_reason_moon">明亮月光掩盖暗淡流星</string>
     <string name="meteor_reason_low">辐射点偏低——流星较少</string>
     <string name="meteor_reason_good">暗夜窗口且辐射点高</string>
-    <string name="npf_dialog_body">NPF 法则计算式：(35 × 光圈 + 30 × 像素间距) ÷ (焦距 × 裁剪系数)。\n\n由于 Pulsar 不知道传感器的确切规格，我们根据裁剪系数估算：\n\n• 像素间距：%1$s μm (此规格 ~24 MP 传感器的典型值)\n• 光圈：f/%2$s (天文镜头常见值)\n\n这些假设适用于大多数现代相机。对于高分辨率传感器 (如 45–61 MP 全画幅)，实际间距更小，估算偏宽松，可能出现轻微拖线。\n\n要获得精确结果，请使用在线 NPF 计算器输入您的相机和镜头规格，然后在间隔仪模式中手动输入计算出的曝光时间。</string>
-    <string name="npf_dialog_title">NPF 法则估算</string>
-    <string name="npf_estimation_note">ⓘ 这是估算值 — 点按查看详情</string>
     <string name="panel_astro_help">计算保持星点锐利不出现拖线的最大曝光。\n\n• 选择传感器预设 (裁剪系数) 和焦距。\n• 500 法则：经典公式，宽松 — 现代传感器可能拖线。\n• 400 法则：更严格，适合高分辨率传感器。\n• NPF 法则：最精准 — 使用像素间距和 f/2.8。\n• 公式：法则 ÷ (焦距 × 裁剪) = 最大秒数。\n• 间隔是相机写入存储卡的等待时间。\n• 拍摄张数和延迟同间隔仪模式。</string>
     <string name="panel_intervalometer_help">用精确时序自动执行复杂的延时或连拍。\n\n• 将相机设为 Bulb 模式，让 Pulsar 控制快门。\n• 间隔是两次曝光之间的等待 — 一张拍完到下一张开始的时间。\n• 曝光是每张快门打开的时长。\n• 每帧周期 = 曝光 + 间隔。\n• 起始延迟让您在序列开始前离开。\n• 序列估算卡片显示总时长和结束时间。</string>
     <string name="panel_manual_help">两种模式的快门手动控制。\n\n• 按住：按下按钮期间快门保持打开。松开关闭。适合短 Bulb 拍摄。\n• 锁定：点一下打开，再点一下关闭。适合长曝光，无需按住按钮。\n\n在操作区域的分段按钮中切换按住和锁定。</string>

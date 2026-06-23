@@ -1,7 +1,5 @@
 <resources>
     <string name="app_name">Pulsar</string>
-    <string name="app_tagline">BLE-Fernauslöser</string>
-    <string name="section_canon_cameras">Canon-Kameras (WiFi)</string>
     <string name="canon_camera_subtitle">Canon CCAPI</string>
     <string name="canon_camera_join_wifi_hint">Verbinde dich mit dem WiFi der Kamera oder dem gleichen lokalen Netzwerk</string>
     <string name="cd_canon_camera">Canon-Kamera (CCAPI)</string>
@@ -24,7 +22,6 @@
     <string name="canon_rename_title">Kamera umbenennen</string>
     <string name="canon_rename_subtitle">Wähle einen Spitznamen für %1$s. Leer lassen zum Entfernen.</string>
     <string name="canon_rename_label">Spitzname</string>
-    <string name="canon_on_wifi">Aktuelles WLAN: %1$s</string>
     <string name="canon_manual_add_button">Per IP hinzufügen</string>
     <string name="canon_manual_add_title">Kamera per IP hinzufügen</string>
     <string name="canon_manual_add_subtitle">Wenn SSDP die Kamera nicht findet (AP blockiert Multicast oder der Body bietet kein UPnP), gib die IP ein (und den Port, falls nicht 8080). Pulsar fragt /ccapi direkt ab — dieselbe URL, die im Browser lädt.</string>
@@ -63,11 +60,9 @@
     <string name="star_focus_starting">Live-View wird gestartet…</string>
     <string name="star_focus_start_failed">Live-View konnte nicht gestartet werden. Bulb-Modus deaktiviert Live-View; auch keine andere App verbunden lassen.</string>
     <string name="star_focus_liveview_cd">Live-View der Kamera</string>
-    <string name="star_focus_tap_to_mark">Stern zum Verfolgen antippen</string>
     <string name="star_focus_sharpness_label">Spitzenhelligkeit in der ROI</string>
     <string name="star_focus_near">Nah</string>
     <string name="star_focus_far">Fern</string>
-    <string name="star_focus_lens_hint">Objektiv am Body-Schalter auf AF — der Motor reagiert nur bei aktivem AF. Danach gerne auf MF schalten, um die Schärfe zu fixieren.</string>
     <string name="star_focus_step_prep">Vorb</string>
     <string name="star_focus_step_aim">Zielen</string>
     <string name="star_focus_step_focus">Fokus</string>
@@ -92,7 +87,6 @@
     <string name="astro2_lens_detected_prime">Festbrennweite · %1$d mm</string>
     <string name="astro2_lens_detected_zoom">Zoom · %1$d-%2$d mm — aktuellen Wert eintragen</string>
     <string name="astro2_lens_detected_unknown">Von der Kamera erkannt</string>
-    <string name="astro2_lens_use_focal">%1$d mm verwenden</string>
     <string name="astro2_lens_not_mounted">Kein Objektiv an der Kamera erkannt.</string>
     <string name="astro2_lens_detect">Objektiv erkennen</string>
     <string name="astro2_lens_detecting">Erkennen…</string>
@@ -108,7 +102,6 @@
     <string name="widget_empty_state">Öffne die App, um das Widget zu befüllen</string>
     <string name="widget_empty_state_title">Pulsar — Astro-Dashboard</string>
     <string name="widget_loading">Wird geladen…</string>
-    <string name="widget_updated_prefix">Aktualisiert</string>
     <string name="widget_stale_prefix">Veraltet ·</string>
     <string name="widget_refresh_content_description">Aktualisieren</string>
     <string name="section_background">Hintergrundaktivität</string>
@@ -117,31 +110,7 @@
     <string name="background_status_blocked">Hintergrundaktivität eingeschränkt</string>
     <string name="background_status_hint">Doze kann BLE-Benachrichtigungen und CCAPI-Polling pausieren, wenn der Bildschirm lange aus ist.</string>
     <string name="background_request_btn">Hintergrundaktivität erlauben</string>
-    <string name="canon_setup_title">Camera Control API aktivieren</string>
-    <string name="canon_setup_intro">Pulsar benötigt aktives CCAPI. Die meisten R-Bodies benötigen eine einmalige Aktivierung:</string>
-    <string name="canon_setup_step_1">1. CCAPI Activation Tool aus dem Canon-Entwicklerportal laden.</string>
-    <string name="canon_setup_step_2">2. Kamera per USB an den PC anschließen, Tool starten und Anweisungen folgen.</string>
-    <string name="canon_setup_step_3">3. An der Kamera: Menü → Kommunikation → WLAN-Einstellungen öffnen.</string>
-    <string name="canon_setup_step_4">4. Camera Control API wählen und ein Netzwerk anlegen/beitreten (Kamera-AP oder LAN).</string>
-    <string name="canon_setup_step_5">5. Stelle sicher, dass dein Telefon im selben Netz ist, und scanne erneut.</string>
-    <string name="canon_setup_long_runs">Für mehrstündige Astro-Aufnahmen die automatische Abschaltung der Kamera auf Aus stellen (Menü → Einstellungen), damit sie zwischen den Aufnahmen nicht einschläft.</string>
-    <string name="canon_setup_battery_tip">Akku: CCAPI + WLAN verdoppelt etwa den Verbrauch. ~2 h pro LP-E17 an der RP einplanen; für längere Sessions USB-C-Stromversorgung (DR-E18-Koppler) nutzen.</string>
-    <string name="canon_setup_button">Einrichtungshilfe</string>
-    <string name="available_devices">Verfügbare Geräte</string>
-    <string name="select_device_prompt">Nach unten ziehen, um nach kompatiblen Geräten zu suchen: Pulsar-ESP32-Auslöser, Canon-CCAPI-Kameras oder USB-PTP-Kameras.</string>
-    <string name="scan_compatible_devices_link">Kompatible Geräte</string>
-    <string name="scan_help_title">Kompatible Geräte</string>
-    <string name="scan_help_esp_title">Pulsar-ESP32-Auslöser</string>
-    <string name="scan_help_esp_body">ESP32-Board mit Pulsar-Firmware, am Kabel-Fernauslöser-Anschluss der Kamera. Funktioniert mit jeder Kamera, die einen Fernauslöser-Anschluss hat.</string>
-    <string name="scan_help_ccapi_title">CCAPI-Kamera</string>
-    <string name="scan_help_ccapi_body">Canon-EOS-R-Serie mit aktiviertem CCAPI. Verbindet sich per WLAN. Aktivierung benötigt Canons PC-Tool — siehe Kamera-Einrichtungshilfe.</string>
-    <string name="scan_help_ptp_title">USB-PTP-Kamera</string>
-    <string name="scan_help_ptp_body">Jede PTP-fähige Kamera (Canon, Nikon, Sony usw.) per USB-C-Kabel mit dem Handy verbunden. Nützlich für Bodys ohne CCAPI.</string>
-    <string name="section_usb_cameras">USB-KAMERAS</string>
-    <string name="usb_cameras_subtitle">Per USB-C verbunden</string>
     <string name="usb_camera_subtitle">PTP über USB</string>
-    <string name="section_canon_ble_remotes">CANON-BLE-FERNAUSLÖSER</string>
-    <string name="canon_ble_remotes_subtitle">Setzen Sie die Kamera in den Bluetooth-Pairing-Modus, damit sie hier erscheint</string>
     <string name="canon_ble_camera_subtitle">Canon-Body über Bluetooth — keine Zusatz-Hardware</string>
     <string name="canon_ble_camera_fallback_name">Canon-BLE-Kamera</string>
     <string name="canon_ble_err_connect_failed">Verbindung zur Canon-BLE-Kamera fehlgeschlagen. Prüfen Sie den Pairing-Modus am Gehäuse und versuchen Sie es erneut.</string>
@@ -151,7 +120,6 @@
     <string name="canon_ble_reconnecting_hint">Canon-BLE-Verbindung verloren — warte auf erneutes Advertisement der Kamera. Schalten Sie sie ein bzw. wecken Sie sie auf, um automatisch erneut zu verbinden.</string>
     <string name="ptp_connected_hint">Per USB verbunden — Kameraeinstellungen sind gesperrt, solange Pulsar die PTP-Sitzung hält. Trenne die Verbindung, um Bulb/Manual am Body umzustellen.</string>
     <string name="mode_test_camera">Kameratest</string>
-    <string name="mode_compat_report">Kompatibilitätsbericht</string>
     <string name="test_camera_title">Kameratest</string>
     <string name="test_camera_blurb">Bei Canon-Transports: führt zuerst den Kompatibilitätsbericht + Einstellungs-Sondierung (nur Lesen) aus und löst dann 25 Aufnahmen über alle 5 Modi aus. Durchgängige Prüfung des aktiven Transports. Ergebnisse — Caps, Objektiv, Akku, ISO/Blende/Zeit-Inventar, Timings — gehen in die Diagnose.</string>
     <string name="test_camera_blurb_timelapse_only">Löst 1 Timelapse-Aufnahme aus. Die verbundene Kamera kündigt Bulb auf diesem Transport nicht an, daher werden die Bulb-basierten Modi (Intervallometer-Bulb, Astro, Dark Frame, Rampe) übersprungen.</string>
@@ -175,8 +143,6 @@
     <string name="test_camera_dial_bulb_title">Stelle das Wählrad auf Bulb</string>
     <string name="test_camera_dial_bulb_body">Phase 2: vier Bulb-Aufnahmen (Intervallometer-Bulb, Astro, Dark Frame, Rampe) per press-and-hold. Wählrad auf Bulb stellen, dann Weiter.</string>
     <string name="test_camera_start">Test starten</string>
-    <string name="test_camera_settings_probe">Kameraeinstellungen prüfen (ISO/Blende/Zeit)</string>
-    <string name="test_camera_settings_probe_running">Prüfung läuft… (siehe Logs)</string>
     <string name="tools_collect_diagnostics">Diagnose sammeln</string>
     <string name="tools_collect_diagnostics_hint">Exportiert das aktuelle Canon-BLE-Verbindungsprotokoll in eine teilbare Datei — nach einem fehlgeschlagenen Pairing verwenden.</string>
     <string name="tools_view_logs">Protokoll anzeigen</string>
@@ -196,9 +162,6 @@
     <string name="ptp_err_open_failed">USB-Kamera konnte nicht geöffnet werden. Versuche, das Kabel neu zu verbinden.</string>
     <string name="ptp_err_session_failed">Kamera erkannt, aber PTP-Sitzung fehlgeschlagen. Stelle sicher, dass keine andere App die Kamera nutzt.</string>
     <string name="ptp_err_generic">USB-Kamerafehler (%1$s).</string>
-    <string name="use_simulator">Simulator verwenden</string>
-    <string name="simulator_description">Die App ohne echtes Gerät erkunden</string>
-    <string name="unknown_device">Unbekanntes Gerät</string>
     <string name="mode_intervalometer">Intervalltimer</string>
     <string name="mode_astro">Astro</string>
     <string name="mode_manual">Manuell</string>
@@ -255,14 +218,10 @@
     <string name="edit">Bearbeiten</string>
     <string name="run">Ausführen</string>
     <string name="continue_label">Weiter</string>
-    <string name="cd_collapse">Einklappen</string>
-    <string name="cd_expand">Ausklappen</string>
     <string name="cd_move_up">Nach oben</string>
     <string name="cd_move_down">Nach unten</string>
     <string name="btn_stop">Stopp</string>
     <string name="btn_start">Start</string>
-    <string name="status_sequence_running">Sequenz läuft…</string>
-    <string name="status_ready_start">Bereit zum Starten der Sequenz</string>
     <string name="chip_hold_mode">Haltemodus</string>
     <string name="chip_lock_mode">Sperrmodus</string>
     <string name="btn_hold_shutter">Auslöser halten</string>
@@ -276,27 +235,11 @@
     <string name="status_tap_toggle">Taste tippen zum Umschalten</string>
     <string name="chip_500_rule">500er-REGEL</string>
     <string name="chip_400_rule">400er-REGEL</string>
-    <string name="btn_stop_astro">Astro stoppen</string>
-    <string name="btn_start_astro">Astro starten</string>
-    <string name="status_capturing_stars">Sterne werden aufgenommen…</string>
-    <string name="status_ready_astro">Bereit für Astro-Sequenz</string>
-    <string name="label_shots">Aufnahmen</string>
-    <string name="label_total_duration">Gesamtdauer</string>
     <string name="label_interval">Intervall</string>
     <string name="label_exposure">Belichtung</string>
-    <string name="label_start_delay">Startverzögerung</string>
-    <string name="label_number_of_shots">Anzahl der Aufnahmen</string>
     <string name="panel_manual_tip">Wechsle das Verhalten über die Chips im Aktionsbereich unten.</string>
     <string name="panel_manual_lock_info">SPERREN: Tippe einmal auf die mittlere Taste, um den Verschluss zu öffnen, und erneut, um ihn zu schließen. Ideal für lange Bulb-Belichtungen.</string>
     <string name="panel_manual_hold_info">HALTEN: Der Verschluss bleibt offen, solange die mittlere Taste gedrückt wird. Ideal für schnelle Serienaufnahmen.</string>
-    <string name="label_effective_focal">%1$smm Effektiv</string>
-    <string name="label_max_exposure">Max. belichtung</string>
-    <string name="label_astro_formula">Formel: %1$d / (%2$d mm × %3$sx) = %4$ss</string>
-    <string name="preset_full_frame">Full Frame</string>
-    <string name="preset_aps_c_canon">APS-C (Canon)</string>
-    <string name="preset_aps_c_nikon_sony">APS-C (Nikon/Sony)</string>
-    <string name="preset_micro_43">Micro 4/3</string>
-    <string name="label_focal_length">Brennweite des Objektivs</string>
     <string name="section_language">Sprache</string>
     <string name="lang_system_default">Systemstandard</string>
     <string name="section_device">Gerät</string>
@@ -351,7 +294,6 @@
     <string name="aircraft_alert_notable">Bei besonderen Flugzeugen warnen</string>
     <string name="aircraft_keep_screen_on">Bildschirm anlassen</string>
     <string name="aircraft_display_settings">Anzeige &amp; Alarme</string>
-    <string name="aircraft_detail_elevation">Höhenwinkel</string>
     <string name="aircraft_detail_closest">Nächste Annäherung</string>
     <string name="aircraft_closest_in">in %1$d s (~%2$s km)</string>
     <string name="aircraft_closest_receding">jetzt / entfernt sich (~%1$s km)</string>
@@ -449,7 +391,6 @@
     <string name="update_app_available">App v%1$s ist verfügbar</string>
     <string name="btn_go_to_settings">Zu Einstellungen</string>
     <string name="status_fetching_data">Standort &amp; Daten werden abgerufen…</string>
-    <string name="card_summary">Zusammenfassung</string>
     <string name="tonight_signal_title">Signal heute Nacht</string>
     <string name="sky_dial_excellent">Ausgezeichnet</string>
     <string name="sky_dial_good">Gut</string>
@@ -480,10 +421,6 @@ Die vier Ecken sind Live-Anzeigen — Mond, Ziele, Himmel und Licht — grün / 
 Eine nach rechts steigende Linie bedeutet bessere Bedingungen im Lauf der halben Stunde (Dämmerung vertieft sich, Wolken lösen sich auf); eine fallende Linie bedeutet schlechtere (Wolken, Mondaufgang, Morgendämmerung).
 
 Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond × kein Regen. Die leuchtende Linie hält den besten Moment der Nacht — unter dem Diagramm benannt. Eine senkrechte Hilfslinie markiert die Mitte jeder halben Stunde; der Balken neben jeder Linie zeigt ihr Gesamtniveau.</string>
-    <string name="location_north">N</string>
-    <string name="location_south">S</string>
-    <string name="location_east">O</string>
-    <string name="location_west">W</string>
 
     <!-- Summary verdict chips -->
 
@@ -528,7 +465,6 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="label_dark_window">Dunkelfenster</string>
     <string name="mw_season_good">Gute Saison für Milchstraßenfotografie</string>
     <string name="mw_season_off">Nebensaison für die Sichtbarkeit des Milchstraßenkerns</string>
-    <string name="label_rise_set">Auf- / untergang</string>
 
     <!-- Best photo windows -->
     <string name="card_best_windows">Beste fotofenster</string>
@@ -622,7 +558,6 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="verdict_poor">Schlecht</string>
     <string name="verdict_unknown">Unbekannt</string>
     <string name="night_mode_toggle">Nachtmodus</string>
-    <string name="night_mode_locked">Nachtmodus (gesperrt — lange drücken zum Entsperren)</string>
     <string name="card_dew_point">Taupunkt</string>
     <string name="dew_warning">Taurisiko — Objektivbeschlag möglich</string>
     <string name="dew_critical">Hohes Taurisiko — Beschlag wahrscheinlich!</string>
@@ -699,8 +634,6 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="btn_discard">Verwerfen</string>
 
     <!-- Flow library tabs & filters -->
-    <string name="flow_tab_recommended">Vorinstalliert</string>
-    <string name="flow_tab_my_flows">Meine Abläufe</string>
     <string name="flow_help">Erstelle mehrstufige Aufnahmesequenzen, die verschiedene Modi verketten.\n\n• Kombiniere Intervalltimer, Astro, Dark Frames und Pausen\n• Speichere Abläufe zur Wiederverwendung\n• Integrierte NPF-Voreinstellungen für gängige Brennweiten\n• Füge Pausen mit Weckalarmen zwischen Sequenzen hinzu\n\nTippe auf +, um einen neuen Ablauf zu erstellen, oder wähle eine Vorlage.</string>
     <string name="flow_total_time">Gesamt: %1$s</string>
     <string name="flow_filter_all">Alle</string>
@@ -795,27 +728,17 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="canon_ble_setup_empty">Keine Canon-BLE-Kameras werben. Setze die Kamera auf „Mit Smartphone verbinden" → „Über Bluetooth koppeln", dann „Erneut suchen".</string>
 
     <!-- Such-Landing (Transport-Auswahl) -->
-    <string name="scan_landing_pick_transport">Transport wählen</string>
-    <string name="scan_landing_subtitle">Jeder Transport benötigt eine andere Einrichtung an der Kamera. Tippen Sie einen an, um die Anleitung zu sehen.</string>
-    <string name="scan_landing_reconnect_to">Erneut verbinden mit %1$s</string>
-    <string name="scan_landing_reconnecting">Verbinde erneut mit %1$s…</string>
-    <string name="scan_landing_reconnect_via">zuletzt verbunden · %1$s</string>
     <string name="scan_landing_forget">Dieses Gerät vergessen</string>
-    <string name="scan_landing_use_simulator">Simulator verwenden</string>
-    <string name="scan_landing_known_devices">Bekannte Geräte</string>
     <string name="scan_section_transports">Verbindungen</string>
     <string name="scan_tool_diagnostics">Diagnose</string>
     <string name="scan_section_recent">Zuletzt</string>
     <string name="scan_section_tools">Werkzeuge</string>
     <string name="trigger_section_bulb">Bulb-Modi</string>
-    <string name="trigger_resume_last">Weiter: %1$s</string>
     <string name="tools_section_astro">Astro</string>
     <string name="tools_section_field">Feldrechner</string>
     <string name="tools_section_spotting">Spotting</string>
     <string name="trigger_section_standard">Standardmodi</string>
-    <string name="trigger_section_favorites">Favoriten</string>
     <string name="trigger_section_custom">Benutzerdefiniert</string>
-    <string name="trigger_chip_favorites">Favoriten</string>
     <string name="transport_tile_simulator_title">Simulator</string>
     <string name="transport_tile_simulator_subtitle">Ohne Hardware testen</string>
     <string name="transport_tile_pulsar_ble_title">Pulsar BLE</string>
@@ -846,7 +769,6 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="permissions_open_settings">Einstellungen Öffnen</string>
 
     <!-- Scan screen -->
-    <string name="scan_pull_hint">Nach unten ziehen, um nach Geräten zu suchen</string>
 
     <string name="ota_notif_downloading">Firmware wird heruntergeladen…</string>
     <string name="ota_notif_uploading">Wird auf das Gerät hochgeladen…</string>
@@ -857,8 +779,6 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="ota_notif_failed">Firmware-Aktualisierung fehlgeschlagen</string>
     <string name="cd_backspace">Löschen</string>
     <string name="cd_confirm">Bestätigen</string>
-    <string name="cd_bluetooth">Bluetooth</string>
-    <string name="cd_simulator">Simulator</string>
     <string name="btn_navigate">Navigieren</string>
     <!-- Camera one-tap modes -->
     <!-- About: tribute -->
@@ -868,20 +788,9 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="about_tribute_link">Auf Wikipedia lesen</string>
 
     <!-- Sequences / stacking -->
-    <string name="warning_interval_too_short">Intervall unter 1 s — die Kamera hat evtl. nicht genug Zeit zum Speichern</string>
-    <string name="status_hold_to_start">Zum Starten halten</string>
-    <string name="warning_battery_low">Akku schwach (%1$d%%) — Sequenz endet evtl. nicht</string>
 
     <string name="label_ends_at">Endet um %1$s</string>
-    <string name="ramp_curve_start">Start: %1$s</string>
-    <string name="ramp_curve_end">Ende: %1$s</string>
-    <string name="ramp_curve_ascending">Belichtung steigt im Verlauf der Sequenz</string>
-    <string name="ramp_curve_descending">Belichtung sinkt im Verlauf der Sequenz</string>
 
-    <string name="pairing_protocol_title">PAIRING-PROTOKOLL</string>
-    <string name="pairing_step_1">Pulsar-Auslöser einschalten und prüfen, ob die Status-LED blinkt.</string>
-    <string name="pairing_step_2">Handy in wenigen Metern Entfernung halten, Bluetooth aktiv.</string>
-    <string name="pairing_step_3">Zum Aktualisieren nach unten ziehen — dein Gerät erscheint oben.</string>
 
     <string name="shot_log_title">Sitzungsverlauf</string>
     <string name="shot_log_empty">Noch keine Läufe aufgezeichnet. Starte eine Sequenz, dann erscheint sie hier.</string>
@@ -889,7 +798,6 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="shot_log_clear_body">Alle aufgezeichneten Läufe werden entfernt. Dies kann nicht rückgängig gemacht werden.</string>
     <string name="shot_log_stat_runs">Läufe</string>
     <string name="shot_log_stat_shots">Aufnahmen</string>
-    <string name="shot_log_stat_success">Erfolg</string>
     <string name="shot_log_row_shots">%1$d / %2$d Aufnahmen</string>
     <!-- Backfilled translations (audit 2026-05-25) -->
     <string name="action_dismiss">OK</string>
@@ -906,7 +814,6 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="assessment_unavailable">Bewertung nicht verfügbar</string>
     <string name="astro2_max_exposure_label">MAX. BELICHTUNG</string>
     <string name="astro2_rule">Regel</string>
-    <string name="astro2_trail_predictor">Sternspur-Vorschau</string>
     <string name="astro2_trail_predictor_caption">Max. Belichtung für Spur von:</string>
     <string name="astro2_trail_px">%d px</string>
     <string name="astro2_sensor_format">Sensorformat</string>
@@ -962,11 +869,6 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="iv2_tap_to_edit">Auf eine Ziffer tippen zum Bearbeiten · hoch/runter wischen zum Ändern</string>
     <string name="iv2_wizard_next">Weiter</string>
     <string name="iv2_wizard_prev">Zurück</string>
-    <string name="label_dark_frame_count">Anzahl Frames</string>
-    <string name="label_npf_formula">NPF / (%1$d mm × %2$sx) = %3$ss</string>
-    <string name="label_ramp_end_exposure">End-Belichtung</string>
-    <string name="label_ramp_start_exposure">Start-Belichtung</string>
-    <string name="label_ramp_steps">Anzahl Schritte</string>
     <string name="last_updated">Aktualisiert: %1$s</string>
     <string name="mode_alignment">Tracker-Ausrichtung</string>
     <string name="mode_timelapse">Timelapse</string>
@@ -991,9 +893,6 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="meteor_reason_moon">Heller Mond überstrahlt die schwachen Spuren</string>
     <string name="meteor_reason_low">Radiant bleibt niedrig — weniger Meteore</string>
     <string name="meteor_reason_good">Dunkles Fenster und hoher Radiant</string>
-    <string name="npf_dialog_body">Die NPF-Regel berechnet: (35 × Blende + 30 × Pixelpitch) ÷ (Brennweite × Crop-Faktor).\n\nDa Pulsar die exakten Sensor-Specs nicht kennt, schätzen wir anhand des Crop-Faktors:\n\n• Pixelpitch: %1$s μm (typisch für ~24 MP-Sensoren dieses Formats)\n• Blende: f/%2$s (gängig bei Astro-Optiken)\n\nDie Annahmen passen für die meisten modernen Kameras. Für hochauflösende Sensoren (z. B. 45–61 MP Vollformat) ist der echte Pitch kleiner — die Schätzung ist etwas großzügig, geringfügige Spuren sind möglich.\n\nFür exakte Werte einen Online-NPF-Rechner mit deinen Specs nutzen und die Belichtung manuell im Intervallometer eingeben.</string>
-    <string name="npf_dialog_title">NPF-Regel-Schätzung</string>
-    <string name="npf_estimation_note">ⓘ Dies ist eine Schätzung — tippe für Details</string>
     <string name="panel_astro_help">Berechnet die längste Belichtung, bei der Sterne als scharfe Punkte statt als Striche erscheinen.\n\n• Wähle Sensor-Preset (Crop-Faktor) und Brennweite.\n• 500er-Regel: klassisch, großzügig — bei modernen Sensoren leichte Spuren.\n• 400er-Regel: strenger, besser für hochauflösende Sensoren.\n• NPF-Regel: am genauesten — nutzt Pixelpitch und f/2.8.\n• Formel: Regel ÷ (Brennweite × Crop) = max. Sekunden.\n• Pause = Zeit zwischen Belichtungen zum Schreiben auf die Karte.\n• Aufnahmen und Startverzögerung wie im Intervallometer einstellen.</string>
     <string name="panel_intervalometer_help">Automatisiere komplexe Timelapses oder Serien mit präzisem Timing.\n\n• Kamera auf Bulb stellen, damit Pulsar den Verschluss steuert.\n• Intervall = Pause zwischen Belichtungen — Zeit nach einer Aufnahme bis zur nächsten.\n• Belichtung = wie lange der Verschluss pro Aufnahme offen ist.\n• Zyklus pro Frame = Belichtung + Intervall.\n• Startverzögerung gibt dir Zeit, dich vor dem Sequenzstart zurückzuziehen.\n• Die Karte Sequenz-Schätzung zeigt Gesamtdauer und Endzeit.</string>
     <string name="panel_manual_help">Direkte manuelle Verschlusssteuerung mit zwei Modi.\n\n• HALTEN: Der Verschluss bleibt offen, solange du den Knopf drückst. Loslassen schließt ihn. Ideal für schnelle Bulb-Aufnahmen.\n• SPERREN: Einmal tippen öffnet, erneut tippen schließt. Besser für lange Belichtungen ohne Knopfhalten.\n\nWechsel zwischen Halten und Sperren über die segmentierten Buttons.</string>
