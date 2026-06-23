@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -76,16 +78,38 @@ import kotlin.math.sin
  */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
-    var totalMin by rememberSaveable { mutableIntStateOf(60) }   // session length
-    var subSec by rememberSaveable { mutableIntStateOf(30) }     // per-frame exposure
-    var gapSec by rememberSaveable { mutableIntStateOf(2) }      // write gap
-    var useAutofocus by rememberSaveable { mutableStateOf(false) }
+fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit, initialPresetId: String? = null) {
+    // Preset round-trip: a STAR_TRAILS UserMode stores subSec→exposureMs,
+    // gapSec→intervalMs, frames→shotCount, focalMm→focalLength, sensorIdx→
+    // ruleDivisor. Session length is reconstructed from frames × cycle.
+    val allModes by vm.userModes.collectAsState()
+    val loadedPreset = remember(initialPresetId, allModes) {
+        initialPresetId?.let { id -> allModes.firstOrNull { it.id == id } }
+    }
+    val lp = loadedPreset?.body
+    var editingPresetId by rememberSaveable { mutableStateOf(initialPresetId) }
+    var showSaveDialog by rememberSaveable { mutableStateOf(false) }
+
+    var totalMin by rememberSaveable {
+        mutableIntStateOf(
+            if (lp != null) {
+                val cyc = ((lp.exposureMs + lp.intervalMs) / 1000L).coerceAtLeast(1L)
+                ((lp.shotCount * cyc) / 60L).toInt().coerceIn(10, 240)
+            } else 60,
+        )
+    }
+    var subSec by rememberSaveable {
+        mutableIntStateOf(((lp?.exposureMs ?: 30_000L) / 1000L).toInt().coerceIn(10, 120))
+    }
+    var gapSec by rememberSaveable {
+        mutableIntStateOf(((lp?.intervalMs ?: 2_000L) / 1000L).toInt().coerceAtLeast(1))
+    }
+    var useAutofocus by rememberSaveable { mutableStateOf(lp?.useAutofocus ?: false) }
     // Lens + sensor: the sky arc is focal-length independent (15°/h), but
     // what the arc means IN FRAME isn't — 30° through 16mm is a sweep,
     // through 200mm it exits the frame.
-    var focalMm by rememberSaveable { mutableIntStateOf(24) }
-    var sensorIdx by rememberSaveable { mutableIntStateOf(0) }
+    var focalMm by rememberSaveable { mutableIntStateOf((lp?.focalLength ?: 24).coerceIn(8, 200)) }
+    var sensorIdx by rememberSaveable { mutableIntStateOf((lp?.ruleDivisor ?: 0).coerceIn(0, 2)) }
 
     val runState = LocalRunState.current
     val running = runState !is RunState.Idle
@@ -120,7 +144,18 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     Scaffold(
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
-            PulsarTopBar(title = stringResource(R.string.mode_star_trails), onBack = onBack)
+            PulsarTopBar(
+                title = stringResource(R.string.mode_star_trails),
+                onBack = onBack,
+                actions = {
+                    androidx.compose.material3.IconButton(onClick = { showSaveDialog = true }) {
+                        androidx.compose.material3.Icon(
+                            androidx.compose.material.icons.Icons.Default.Save,
+                            contentDescription = stringResource(R.string.save),
+                        )
+                    }
+                },
+            )
         },
         bottomBar = {
             com.ehrocha.pulsar.ui.components.StartStopBar(
@@ -301,6 +336,32 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
             Spacer(Modifier.height(8.dp))
             }
         }
+    }
+
+    if (showSaveDialog) {
+        val editing = editingPresetId?.let { id -> allModes.firstOrNull { it.id == id } }
+        SavePresetDialog(
+            initialName = editing?.name ?: stringResource(R.string.mode_star_trails),
+            isUpdate = editing != null,
+            onConfirm = { name ->
+                val body = com.ehrocha.pulsar.model.UserMode.Body(
+                    fwMode = com.ehrocha.pulsar.ble.TriggerMode.STAR_TRAILS,
+                    exposureMs = subSec * 1000L,
+                    intervalMs = gapSec * 1000L,
+                    shotCount = frames,
+                    focalLength = focalMm,
+                    ruleDivisor = sensorIdx,
+                    cropFactor = listOf(1.0f, 1.5f, 2.0f)[sensorIdx],
+                    useAutofocus = useAutofocus,
+                )
+                val mode = editing?.copy(name = name.trim(), body = body)
+                    ?: com.ehrocha.pulsar.model.UserMode(name = name.trim(), body = body)
+                vm.upsertUserMode(mode)
+                editingPresetId = mode.id
+                showSaveDialog = false
+            },
+            onDismiss = { showSaveDialog = false },
+        )
     }
 }
 

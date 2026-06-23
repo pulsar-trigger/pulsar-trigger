@@ -114,6 +114,10 @@ enum class TriggerMode(val id: Byte) {
      *  controls the actual exposure. The id byte is a sentinel; nothing
      *  with this value is ever sent over BLE. */
     TIMELAPSE(0x7E.toByte()),
+    /** App-side discriminator (like [TIMELAPSE]). Star Trails runs the
+     *  INTERVALOMETER firmware path (many back-to-back subs); this id is a
+     *  sentinel, never sent over BLE. */
+    STAR_TRAILS(0x7D.toByte()),
     CUSTOM_FLOW(0x7F.toByte()),  // app-orchestrated, never sent to firmware
     ;
 

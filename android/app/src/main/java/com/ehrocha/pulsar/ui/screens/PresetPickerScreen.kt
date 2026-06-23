@@ -240,6 +240,7 @@ private fun titleResFor(fwMode: TriggerMode): Int = when (fwMode) {
     TriggerMode.DARK_FRAME -> R.string.mode_dark_frame
     TriggerMode.RAMP -> R.string.mode_ramp
     TriggerMode.TIMELAPSE -> R.string.mode_timelapse
+    TriggerMode.STAR_TRAILS -> R.string.mode_star_trails
     else -> R.string.mode_intervalometer
 }
 
@@ -265,6 +266,8 @@ private fun presetSummary(preset: UserMode): String {
             "${timeFmt(b.exposureMs)} · ${b.shotCount} frames"
         TriggerMode.RAMP ->
             "${timeFmt(b.rampStartExposureMs)} → ${timeFmt(b.rampEndExposureMs)} · ${b.rampSteps} steps"
+        TriggerMode.STAR_TRAILS ->
+            "${b.focalLength}mm · ${timeFmt(b.exposureMs)} sub · ${b.shotCount} frames"
         else -> ""
     }
 }

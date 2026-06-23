@@ -627,7 +627,7 @@ fun PulsarNavHost(
                     onTimelapseSelected = {
                         currentScreen = AppScreen.PresetPicker(TriggerMode.TIMELAPSE)
                     },
-                    onStarTrailsSelected = { currentScreen = AppScreen.StarTrails },
+                    onStarTrailsSelected = { currentScreen = AppScreen.PresetPicker(TriggerMode.STAR_TRAILS) },
                     onUserModeRun = { mode ->
                         // Bookmarked tile click — fire the preset immediately
                         // instead of re-walking the wizard. The user already
@@ -815,9 +815,13 @@ fun PulsarNavHost(
                 BackHandler { currentScreen = AppScreen.Menu }
                 DofCalculatorScreen(onBack = { currentScreen = AppScreen.Menu })
             }
-            AppScreen.StarTrails -> {
-                BackHandler { currentScreen = AppScreen.Menu }
-                StarTrailsScreen(vm = vm, onBack = { currentScreen = AppScreen.Menu })
+            is AppScreen.StarTrails -> {
+                BackHandler { currentScreen = AppScreen.PresetPicker(TriggerMode.STAR_TRAILS) }
+                StarTrailsScreen(
+                    vm = vm,
+                    onBack = { currentScreen = AppScreen.PresetPicker(TriggerMode.STAR_TRAILS) },
+                    initialPresetId = screen.presetId,
+                )
             }
             AppScreen.Diagnostics -> {
                 BackHandler { currentScreen = AppScreen.Menu }
@@ -853,6 +857,7 @@ fun PulsarNavHost(
                             TriggerMode.TIMELAPSE -> AppScreen.Timelapse()
                             TriggerMode.DARK_FRAME -> AppScreen.DarkFrame2()
                             TriggerMode.RAMP -> AppScreen.Ramp2()
+                            TriggerMode.STAR_TRAILS -> AppScreen.StarTrails()
                             else -> AppScreen.Menu
                         }
                     },
@@ -863,6 +868,7 @@ fun PulsarNavHost(
                             TriggerMode.TIMELAPSE -> AppScreen.Timelapse(preset.id)
                             TriggerMode.DARK_FRAME -> AppScreen.DarkFrame2(preset.id)
                             TriggerMode.RAMP -> AppScreen.Ramp2(preset.id)
+                            TriggerMode.STAR_TRAILS -> AppScreen.StarTrails(preset.id)
                             else -> AppScreen.Menu
                         }
                     },
@@ -963,7 +969,7 @@ private sealed class AppScreen {
     data object SpottingLog : AppScreen()
     data object NdCalculator : AppScreen()
     data object DofCalculator : AppScreen()
-    data object StarTrails : AppScreen()
+    data class StarTrails(val presetId: String? = null) : AppScreen()
     data object Diagnostics : AppScreen()
     /** Manage Devices — reachable only from the Scan landing (pre-connect)
      *  so the user can't accidentally forget the body they're currently

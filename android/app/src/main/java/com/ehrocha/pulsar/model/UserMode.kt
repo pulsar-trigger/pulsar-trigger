@@ -98,7 +98,9 @@ data class UserMode(
                 body.iso?.let { put("iso", it) }
                 body.aperture?.let { put("aperture", it) }
                 body.shutterSpeed?.let { put("shutterSpeed", it) }
-                if (body.fwMode == TriggerMode.ASTRO) {
+                if (body.fwMode == TriggerMode.ASTRO || body.fwMode == TriggerMode.STAR_TRAILS) {
+                    // Star Trails reuses focalLength + cropFactor, and stashes the
+                    // sensor index in ruleDivisor.
                     put("focalLength", body.focalLength)
                     put("cropFactor", body.cropFactor.toDouble())
                     put("ruleDivisor", body.ruleDivisor)
@@ -131,6 +133,7 @@ data class UserMode(
             val allowed = setOf(
                 TriggerMode.INTERVALOMETER, TriggerMode.ASTRO,
                 TriggerMode.DARK_FRAME, TriggerMode.RAMP, TriggerMode.TIMELAPSE,
+                TriggerMode.STAR_TRAILS,
             )
             if (fw !in allowed) return null
             val params = bodyJson.optJSONObject("params") ?: JSONObject()
