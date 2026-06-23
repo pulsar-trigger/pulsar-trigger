@@ -58,6 +58,7 @@ import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.update.AppUpdateState
 import com.ehrocha.pulsar.ui.components.BatteryIndicator
+import com.ehrocha.pulsar.ui.components.GridField
 import com.ehrocha.pulsar.ui.components.LatencyIndicator
 import com.ehrocha.pulsar.ui.components.PcbField
 import com.ehrocha.pulsar.ui.components.SignalStrengthIndicator
@@ -531,6 +532,7 @@ fun PulsarNavHost(
         when (LocalVisualStyle.current.value) {
             VisualStyle.CIRCUIT -> PcbField(Modifier.matchParentSize(), animated = false)
             VisualStyle.SPACE -> SpaceField(Modifier.matchParentSize(), animated = false)
+            VisualStyle.GRID -> GridField(Modifier.matchParentSize(), animated = false)
             VisualStyle.CLASSIC -> Unit
         }
         // Legibility scrim: mute the field so text on the transparent sub-screens

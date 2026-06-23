@@ -118,6 +118,7 @@ private fun visualStyleLabel(v: VisualStyle): Int = when (v) {
     VisualStyle.CIRCUIT -> R.string.visual_style_circuit
     VisualStyle.CLASSIC -> R.string.visual_style_classic
     VisualStyle.SPACE -> R.string.visual_style_space
+    VisualStyle.GRID -> R.string.visual_style_grid
 }
 
 @Composable

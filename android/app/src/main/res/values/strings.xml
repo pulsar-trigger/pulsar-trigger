@@ -254,6 +254,7 @@
     <string name="visual_style_circuit">Circuit</string>
     <string name="visual_style_classic">Classic</string>
     <string name="visual_style_space">Space</string>
+    <string name="visual_style_grid">Grid</string>
     <!-- Short transport labels for the Space orrery (planet captions). -->
     <string name="transport_short_ccapi">CCAPI</string>
     <string name="transport_short_ptp_ip">PTP/IP</string>

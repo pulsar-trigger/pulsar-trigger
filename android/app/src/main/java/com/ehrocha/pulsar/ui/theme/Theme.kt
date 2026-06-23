@@ -18,7 +18,7 @@ enum class ThemeMode { Light, Outdoor, Dark, RedLight }
  *  printed-circuit-board look; CLASSIC is the original card-based SIGNAL look
  *  (SPACE — pulsar + orbits + starfield — is planned as a third). Distinct
  *  from [ThemeMode], which only swaps the colour palette. */
-enum class VisualStyle { CIRCUIT, CLASSIC, SPACE }
+enum class VisualStyle { CIRCUIT, CLASSIC, SPACE, GRID }
 
 // ── SIGNAL palette ──────────────────────────────────────────────────────
 // Carbon surfaces, one electric accent. The violet→magenta gradient is

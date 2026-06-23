@@ -75,6 +75,7 @@ import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.model.LastConnection
 import com.ehrocha.pulsar.transport.TransportKind
+import com.ehrocha.pulsar.ui.components.GridField
 import com.ehrocha.pulsar.ui.components.PcbField
 import com.ehrocha.pulsar.ui.components.SignalSweep
 import com.ehrocha.pulsar.ui.theme.Display
@@ -119,7 +120,9 @@ fun ScanLandingScreen(
             ScanLandingClassic(vm, onTransportSelected, onSimulatorSelected, onConnected, onManageDevicesSelected)
             return
         }
-        VisualStyle.CIRCUIT -> Unit
+        // GRID shares the Driver-IC board layout below; its backdrop swaps to
+        // the neon grid (gated where the board field is drawn).
+        VisualStyle.CIRCUIT, VisualStyle.GRID -> Unit
     }
     val connected by vm.connected.collectAsState()
     val lastConnection by vm.lastConnection.collectAsState()
@@ -260,10 +263,13 @@ private fun TransportBoard(
         val legColor = colors.liveStart.copy(alpha = 0.5f)
         val activeBrush = Brush.linearGradient(listOf(colors.liveStart, colors.liveEnd))
 
-        // Static PCB backdrop (via field, decorative bus, SMD silkscreen). The
-        // IC's own functional traces carry the beacon here, so the decor stays
-        // still — no competing beams on this screen.
-        PcbField(Modifier.matchParentSize(), animated = false)
+        // Static backdrop — PCB field for Circuit, the neon grid for Grid. The
+        // IC's own functional traces carry the beacon, so the decor stays still.
+        if (LocalVisualStyle.current.value == VisualStyle.GRID) {
+            GridField(Modifier.matchParentSize(), animated = false)
+        } else {
+            PcbField(Modifier.matchParentSize(), animated = false)
+        }
 
         // ── IC layer: DIP pins + the six functional traces + the beacon ──────
         Canvas(Modifier.matchParentSize()) {

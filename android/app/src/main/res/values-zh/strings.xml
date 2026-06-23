@@ -177,6 +177,7 @@
     <string name="visual_style_circuit">电路</string>
     <string name="visual_style_classic">经典</string>
     <string name="visual_style_space">太空</string>
+    <string name="visual_style_grid">网格</string>
     <!-- Short transport labels for the Space orrery (planet captions). -->
     <string name="transport_short_ccapi">CCAPI</string>
     <string name="transport_short_ptp_ip">PTP/IP</string>

@@ -76,6 +76,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.model.FlowStepType
+import com.ehrocha.pulsar.ui.components.GridField
 import com.ehrocha.pulsar.ui.components.PcbFieldTiled
 import com.ehrocha.pulsar.ui.components.SectionContainer
 import com.ehrocha.pulsar.ui.components.ConnectionPill
@@ -384,6 +385,7 @@ fun MainMenuScreen(
                 when (LocalVisualStyle.current.value) {
                     VisualStyle.CIRCUIT -> ContinuousPcb(pagerState)
                     VisualStyle.SPACE -> SpaceField(Modifier.fillMaxSize())
+                    VisualStyle.GRID -> GridField(Modifier.fillMaxSize())
                     VisualStyle.CLASSIC -> Unit
                 }
                 // Brand watermark in the lower-right, behind the pager — the

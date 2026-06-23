@@ -175,6 +175,7 @@
     <string name="visual_style_circuit">Schaltkreis</string>
     <string name="visual_style_classic">Klassisch</string>
     <string name="visual_style_space">Weltraum</string>
+    <string name="visual_style_grid">Gitter</string>
     <!-- Short transport labels for the Space orrery (planet captions). -->
     <string name="transport_short_ccapi">CCAPI</string>
     <string name="transport_short_ptp_ip">PTP/IP</string>
