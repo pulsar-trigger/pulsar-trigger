@@ -50,6 +50,12 @@ jobs:
           chmod +x gradlew
           ./gradlew test
 
+      - name: Run lint (blocks the release on lint errors)
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew lintRelease
+
       - name: Build release APK
         run: |
           cd android
