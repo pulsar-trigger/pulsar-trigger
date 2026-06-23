@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
@@ -57,6 +58,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathMeasure
@@ -339,11 +343,16 @@ private fun TransportBoard(
             }
         }
 
-        // ── The DIP chip (package + branding + pulsing mark) — Circuit only ──
-        if (!isGrid) ChipCore(chipW, chipH, versionName, breathe)
+        // ── Centre brand: Circuit's DIP chip, or Grid's Tron-style wordmark ──
+        if (isGrid) GridWordmark(versionName) else ChipCore(chipW, chipH, versionName, breathe)
 
-        // ── The six scattered pads ───────────────────────────────────────────
-        pads.forEach { spec ->
+        // ── The six pads ─────────────────────────────────────────────────────
+        // Circuit scatters them like ICs soldered to a board; Grid docks them as
+        // programs in two clean rows flanking the PULSAR wordmark — live-view
+        // transports up top (toward the I/O tower), local ones along the front.
+        pads.forEachIndexed { gi, spec ->
+            val xf = if (isGrid) 0.17f + 0.33f * (gi % 3) else spec.xf
+            val yf = if (isGrid) (if (gi < 3) 0.20f else 0.80f) else spec.yf
             TransportPad(
                 spec = spec,
                 recent = spec.kind != null && spec.kind == recentKind,
@@ -351,14 +360,52 @@ private fun TransportBoard(
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .offset(
-                        x = (w * spec.xf - padW / 2).coerceIn(0.dp, w - padW),
-                        y = h * spec.yf - padH / 2,
+                        x = (w * xf - padW / 2).coerceIn(0.dp, w - padW),
+                        y = h * yf - padH / 2,
                     )
                     .width(padW)
                     .height(padH),
                 onClick = { onSelect(spec.kind) },
             )
         }
+    }
+}
+
+/** Grid centre brand — a PULSAR wordmark + version framed by two neon rules,
+ *  in the spirit of the Tron logo (glowing, wide-tracked, bar-framed). Replaces
+ *  the DIP [ChipCore] when the Grid style is active. */
+@Composable
+private fun BoxScope.GridWordmark(versionName: String) {
+    val colors = PulsarTheme.colors
+    val rule = Brush.horizontalGradient(
+        listOf(Color.Transparent, colors.liveStart.copy(alpha = 0.7f), Color.Transparent),
+    )
+    Column(
+        modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.8f),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(Modifier.fillMaxWidth().height(1.5.dp).background(rule))
+        Spacer(Modifier.height(10.dp))
+        Text(
+            "PULSAR",
+            fontFamily = Mono,
+            fontWeight = FontWeight.Black,
+            fontSize = 30.sp,
+            letterSpacing = 8.sp,
+            color = colors.liveStart,
+            textAlign = TextAlign.Center,
+            style = TextStyle(shadow = Shadow(colors.liveStart.copy(alpha = 0.85f), Offset.Zero, 22f)),
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "v$versionName",
+            fontFamily = Mono,
+            fontSize = 11.sp,
+            letterSpacing = 5.sp,
+            color = colors.liveEnd.copy(alpha = 0.9f),
+        )
+        Spacer(Modifier.height(10.dp))
+        Box(Modifier.fillMaxWidth().height(1.5.dp).background(rule))
     }
 }
 
@@ -444,12 +491,22 @@ private fun TransportPad(
     onClick: () -> Unit,
 ) {
     val colors = PulsarTheme.colors
+    // Grid standardizes the pad on the same "program" cell as the launcher
+    // tiles: angular cut corner + a glowing neon edge (lit to the live gradient
+    // when recent/connecting). Circuit keeps the soldered SMD look.
+    val isGrid = LocalVisualStyle.current.value == VisualStyle.GRID
+    val lit = recent || connecting
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp,
-        border = if (recent) BorderStroke(1.dp, colors.liveStart.copy(alpha = 0.55f)) else null,
+        shape = if (isGrid) CutCornerShape(topStart = 12.dp, bottomEnd = 12.dp) else RoundedCornerShape(8.dp),
+        color = if (isGrid) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surface,
+        tonalElevation = if (isGrid) 0.dp else 2.dp,
+        border = when {
+            isGrid && lit -> BorderStroke(2.dp, Brush.linearGradient(listOf(colors.liveStart, colors.liveEnd)))
+            isGrid -> BorderStroke(1.5.dp, SolidColor(colors.liveStart.copy(alpha = 0.5f)))
+            recent -> BorderStroke(1.dp, colors.liveStart.copy(alpha = 0.55f))
+            else -> null
+        },
         modifier = modifier,
     ) {
         Box(Modifier.fillMaxSize()) {
@@ -461,7 +518,7 @@ private fun TransportPad(
                 Icon(
                     spec.icon,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = if (isGrid) colors.liveStart else MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(22.dp),
                 )
                 Spacer(Modifier.height(5.dp))

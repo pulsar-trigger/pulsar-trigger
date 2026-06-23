@@ -33,6 +33,18 @@ import kotlin.math.sin
  */
 private val GridCyan = Color(0xFF35E0E8)
 
+/**
+ * Light-cycle paths in normalized floor space (x: 0..1 across, y: 0..1 from
+ * horizon to front). Consecutive points share exactly one coordinate, so every
+ * turn is a hard 90° — the trail bends through the corners like NIBBLES.
+ */
+private val CYCLE_PATHS: List<List<Offset>> = listOf(
+    listOf(Offset(0.04f, 0.18f), Offset(0.04f, 0.85f), Offset(0.42f, 0.85f), Offset(0.42f, 0.42f), Offset(0.97f, 0.42f)),
+    listOf(Offset(0.96f, 0.12f), Offset(0.60f, 0.12f), Offset(0.60f, 0.70f), Offset(0.18f, 0.70f), Offset(0.18f, 0.98f)),
+    listOf(Offset(0.50f, 0.97f), Offset(0.50f, 0.52f), Offset(0.10f, 0.52f), Offset(0.10f, 0.22f), Offset(0.82f, 0.22f), Offset(0.82f, 0.62f)),
+    listOf(Offset(0.30f, 0.10f), Offset(0.30f, 0.45f), Offset(0.72f, 0.45f), Offset(0.72f, 0.90f), Offset(0.95f, 0.90f)),
+)
+
 @Composable
 fun GridField(modifier: Modifier = Modifier, animated: Boolean = true) {
     val line = GridCyan
@@ -106,30 +118,54 @@ fun GridField(modifier: Modifier = Modifier, animated: Boolean = true) {
 
         // ── animated: light cycles running the grid + an identity disc ───────
         if (animated) {
-            val cycles = 5
-            for (i in 0 until cycles) {
-                val rowT = 0.32f + 0.62f * (i / (cycles - 1f))
-                val y = horizon + (h - horizon) * (rowT * rowT)
-                val speed = 0.11f + 0.045f * i
-                val dir = if (i % 2 == 0) 1f else -1f
-                // 0..1.6 — the >1 stretch is the off-screen respawn gap
-                val p = ((timeS * speed) + i * 0.31f).mod(1.6f)
-                if (p <= 1f) {
-                    val headX = if (dir > 0f) p * w else (1f - p) * w
-                    val trailLen = w * (0.18f + 0.04f * (i % 3))
-                    val tailX = headX - dir * trailLen
-                    val col = if (i % 2 == 0) line else glowB  // cyan / magenta runner
-                    drawLine(
-                        brush = Brush.linearGradient(
-                            listOf(Color.Transparent, col.copy(alpha = 0.9f)),
-                            start = Offset(tailX, y), end = Offset(headX, y),
-                        ),
-                        start = Offset(tailX, y), end = Offset(headX, y),
-                        strokeWidth = 2.5.dp.toPx(), cap = StrokeCap.Round,
-                    )
-                    drawCircle(col.copy(alpha = 0.30f), radius = 5.dp.toPx(), center = Offset(headX, y))
-                    drawCircle(col, radius = 2.2.dp.toPx(), center = Offset(headX, y))
+            // Light cycles run the floor like NIBBLES — each follows a fixed
+            // axis-aligned path, turning 90° at corners and dragging a long neon
+            // ribbon that bends through the turns and tapers/fades to the tail.
+            // After a run it parks in a gap, then re-enters.
+            for (i in CYCLE_PATHS.indices) {
+                val sp = CYCLE_PATHS[i].map { Offset(it.x * w, horizon + it.y * (h - horizon)) }
+                val segLens = sp.zipWithNext { a, b -> (b - a).getDistance() }
+                val pathLen = segLens.sum()
+                if (pathLen <= 1f) continue
+                val trailLen = pathLen * 0.5f
+                val gap = pathLen * 0.55f
+                val pxPerSec = (h - horizon) * (0.5f + 0.16f * i)
+                val travel = (timeS * pxPerSec + i * pathLen * 0.37f).mod(pathLen + gap)
+                if (travel > pathLen) continue  // parked in the gap
+                fun pointAt(d: Float): Offset {
+                    var rem = d.coerceIn(0f, pathLen)
+                    for (k in segLens.indices) {
+                        if (rem <= segLens[k] || k == segLens.lastIndex) {
+                            val t = if (segLens[k] > 0f) (rem / segLens[k]).coerceIn(0f, 1f) else 0f
+                            return Offset(
+                                sp[k].x + (sp[k + 1].x - sp[k].x) * t,
+                                sp[k].y + (sp[k + 1].y - sp[k].y) * t,
+                            )
+                        }
+                        rem -= segLens[k]
+                    }
+                    return sp.last()
                 }
+                val tail = (travel - trailLen).coerceAtLeast(0f)
+                val span = (travel - tail).coerceAtLeast(1f)
+                val col = if (i % 2 == 0) line else glowB  // cyan / magenta runners
+                val steps = (span / 7f).toInt().coerceIn(1, 90)
+                var prev = pointAt(tail)
+                for (s in 1..steps) {
+                    val d = tail + span * s / steps
+                    val cur = pointAt(d)
+                    val tf = (d - tail) / span  // 0 at tail → 1 at head
+                    drawLine(
+                        col.copy(alpha = 0.85f * tf * tf),
+                        prev, cur,
+                        strokeWidth = (1.4f + 1.5f * tf).dp.toPx(),
+                        cap = StrokeCap.Round,
+                    )
+                    prev = cur
+                }
+                val hp = pointAt(travel)
+                drawCircle(col.copy(alpha = 0.30f), radius = 5.dp.toPx(), center = hp)
+                drawCircle(col, radius = 2.4.dp.toPx(), center = hp)
             }
             // identity disc — a glowing ring drifting across the sky band
             val dp = (timeS * 0.05f).mod(1f)
