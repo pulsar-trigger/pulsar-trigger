@@ -446,7 +446,7 @@
     <string name="background_status_hint">Doze can pause BLE notifications and CCAPI polling when the screen is off for long stretches.</string>
     <string name="background_request_btn">Allow background activity</string>
     <string name="section_backup_restore">Backup &amp; Restore</string>
-    <string name="backup_restore_help">Save and restore all your Pulsar settings.\n\n• Export creates a JSON file with all preferences, defaults, GPIO config, and planner data.\n• Import loads settings from a previously exported file.\n• Use this to transfer your setup to a new phone or as a safety backup.</string>
+    <string name="backup_restore_help">Save and restore all your Pulsar settings.\n\n• Export creates a JSON file with all preferences, defaults, GPIO config, saved presets, theme, and planner data.\n• Import loads settings from a previously exported file.\n• Use this to transfer your setup to a new phone or as a safety backup.</string>
     <string name="toast_settings_exported">Settings exported</string>
     <string name="toast_export_failed">Export failed: %1$s</string>
     <string name="toast_settings_imported">Settings imported</string>

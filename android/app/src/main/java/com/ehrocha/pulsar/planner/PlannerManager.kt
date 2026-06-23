@@ -50,6 +50,26 @@ class PlannerManager(context: Context) {
         get() = prefs.getInt(KEY_CLOUD_THRESHOLD, AppConfig.CLOUD_COVER_CLEAR_THRESHOLD)
         set(value) { prefs.edit().putInt(KEY_CLOUD_THRESHOLD, value.coerceIn(5, 80)).apply() }
 
+    /** Full planner snapshot for the settings backup — events, sessions, and
+     *  the two tunables. Mirrors the on-disk keys so it round-trips exactly. */
+    fun exportAll(): JSONObject = JSONObject().apply {
+        put("events", prefs.getString(KEY_EVENTS, "[]"))
+        put("sessions", prefs.getString(KEY_SESSIONS, "[]"))
+        put("cloud_clear_threshold", cloudClearThreshold)
+        put("cache_interval_hours", cacheIntervalHours)
+    }
+
+    /** Restore a snapshot from [exportAll]. Replaces the current planner data. */
+    fun importAll(o: JSONObject) {
+        prefs.edit()
+            .putString(KEY_EVENTS, o.optString("events", "[]"))
+            .putString(KEY_SESSIONS, o.optString("sessions", "[]"))
+            .apply()
+        if (o.has("cloud_clear_threshold")) cloudClearThreshold = o.getInt("cloud_clear_threshold")
+        if (o.has("cache_interval_hours")) cacheIntervalHours = o.getLong("cache_interval_hours")
+        load()
+    }
+
     init { load() }
 
     // ── Events ───────────────────────────────────────────────────────

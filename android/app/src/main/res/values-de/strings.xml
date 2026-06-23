@@ -912,7 +912,7 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="astro2_set_lens">Brennweite festlegen, um zu starten</string>
     <string name="astro2_set_lens_and_interval">Brennweite und Intervall festlegen, um zu starten</string>
     <string name="astro2_tab_lens">Objektiv</string>
-    <string name="backup_restore_help">Pulsar-Einstellungen sichern und wiederherstellen.\n\n• Exportieren erstellt eine JSON-Datei mit Voreinstellungen, Defaults, GPIO-Config und Planner-Daten.\n• Importieren lädt die Einstellungen aus einer exportierten Datei.\n• Nützlich zum Übertragen auf ein neues Handy oder als Backup.</string>
+    <string name="backup_restore_help">Pulsar-Einstellungen sichern und wiederherstellen.\n\n• Exportieren erstellt eine JSON-Datei mit Voreinstellungen, Defaults, GPIO-Config, gespeicherte Voreinstellungen, Thema und Planner-Daten.\n• Importieren lädt die Einstellungen aus einer exportierten Datei.\n• Nützlich zum Übertragen auf ein neues Handy oder als Backup.</string>
     <string name="board_esp32_generic">ESP32 (generisch)</string>
     <string name="board_m5core2">M5Stack Core2</string>
     <string name="board_m5stick_s3">M5StickC Plus2 (S3)</string>

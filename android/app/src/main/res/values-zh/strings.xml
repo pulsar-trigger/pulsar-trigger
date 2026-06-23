@@ -908,7 +908,7 @@
     <string name="astro2_set_lens">设置焦距以开始</string>
     <string name="astro2_set_lens_and_interval">设置焦距和间隔以开始</string>
     <string name="astro2_tab_lens">镜头</string>
-    <string name="backup_restore_help">保存和恢复所有 Pulsar 设置。\n\n• 导出会创建一个包含所有偏好、默认值、GPIO 配置和 Planner 数据的 JSON 文件。\n• 导入会从之前导出的文件加载设置。\n• 用于把配置迁移到新手机或作为备份。</string>
+    <string name="backup_restore_help">保存和恢复所有 Pulsar 设置。\n\n• 导出会创建一个包含所有偏好、默认值、GPIO 配置、已保存预设、主题和 Planner 数据的 JSON 文件。\n• 导入会从之前导出的文件加载设置。\n• 用于把配置迁移到新手机或作为备份。</string>
     <string name="board_esp32_generic">ESP32 (通用)</string>
     <string name="board_m5core2">M5Stack Core2</string>
     <string name="board_m5stick_s3">M5StickC Plus2 (S3)</string>

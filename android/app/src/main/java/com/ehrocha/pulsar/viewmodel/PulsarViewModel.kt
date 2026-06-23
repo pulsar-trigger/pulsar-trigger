@@ -2728,6 +2728,19 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         json.put("flow_steps", org.json.JSONArray(_flowSteps.value.map { it.toJson() }))
         // Saved flows library
         json.put("saved_flows", org.json.JSONArray(_savedFlows.value.map { it.toJson() }))
+        // Saved presets (user-authored modes) — added v0.564; absent from
+        // ancient exports, so a restore used to silently drop every preset.
+        json.put("user_modes", org.json.JSONArray(_userModes.value.map { it.toJson() }))
+        // UI / theme preferences (pulsar_ui store): visual style, colour
+        // scheme, and the disconnect-confirm opt-out.
+        val uiPrefs = getApplication<Application>().getSharedPreferences("pulsar_ui", Context.MODE_PRIVATE)
+        json.put("ui", org.json.JSONObject().apply {
+            uiPrefs.getString("visual_style", null)?.let { put("visual_style", it) }
+            uiPrefs.getString("theme", null)?.let { put("theme", it) }
+            put("disconnect_no_confirm", uiPrefs.getBoolean("disconnect_no_confirm", false))
+        })
+        // Planner data — events, sessions, and the planner tunables.
+        json.put("planner", plannerManager.exportAll())
         return json.toString(2)
     }
 
@@ -2765,6 +2778,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         val savedFlows: List<SavedFlow>? = obj.optJSONArray("saved_flows")?.let { arr ->
             (0 until arr.length()).map { SavedFlow.fromJson(arr.getJSONObject(it)) }
         }
+        val userModes: List<com.ehrocha.pulsar.model.UserMode>? =
+            obj.optJSONArray("user_modes")?.let { arr ->
+                (0 until arr.length()).mapNotNull {
+                    com.ehrocha.pulsar.model.UserMode.fromJson(arr.getJSONObject(it))
+                }
+            }
+        val uiObj: org.json.JSONObject? = obj.optJSONObject("ui")
+        val plannerObj: org.json.JSONObject? = obj.optJSONObject("planner")
 
         // Phase 2 — pure assignment, can't throw past here.
         setIntervalMs(intervalMs)
@@ -2778,6 +2799,22 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             _combinedFlows.value = FlowPresets.ALL + savedFlows
             prefs.edit().putString(KEY_SAVED_FLOWS, SavedFlow.serializeList(savedFlows)).apply()
         }
+        if (userModes != null) {
+            userModeRepo.save(userModes)
+            _userModes.value = userModeRepo.load()
+        }
+        uiObj?.let { ui ->
+            getApplication<Application>()
+                .getSharedPreferences("pulsar_ui", Context.MODE_PRIVATE).edit().apply {
+                    ui.optString("visual_style").takeIf { it.isNotEmpty() }
+                        ?.let { putString("visual_style", it) }
+                    ui.optString("theme").takeIf { it.isNotEmpty() }
+                        ?.let { putString("theme", it) }
+                    if (ui.has("disconnect_no_confirm"))
+                        putBoolean("disconnect_no_confirm", ui.getBoolean("disconnect_no_confirm"))
+                }.apply()
+        }
+        plannerObj?.let { plannerManager.importAll(it) }
     }
 
     private fun sendConfig() {

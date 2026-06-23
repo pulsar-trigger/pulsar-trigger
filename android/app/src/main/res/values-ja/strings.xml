@@ -912,7 +912,7 @@
     <string name="astro2_set_lens">焦点距離を設定してください</string>
     <string name="astro2_set_lens_and_interval">焦点距離と間隔を設定してください</string>
     <string name="astro2_tab_lens">レンズ</string>
-    <string name="backup_restore_help">Pulsar の設定を保存・復元します。\n\n• エクスポートで、設定・初期値・GPIO 構成・プランナーデータを含む JSON ファイルを作成します。\n• インポートで、以前にエクスポートしたファイルから設定を読み込みます。\n• 新しいスマートフォンへの移行やバックアップに便利です。</string>
+    <string name="backup_restore_help">Pulsar の設定を保存・復元します。\n\n• エクスポートで、設定・初期値・GPIO 構成・保存済みプリセット・テーマ・プランナーデータを含む JSON ファイルを作成します。\n• インポートで、以前にエクスポートしたファイルから設定を読み込みます。\n• 新しいスマートフォンへの移行やバックアップに便利です。</string>
     <string name="board_esp32_generic">ESP32 (汎用)</string>
     <string name="board_m5core2">M5Stack Core2</string>
     <string name="board_m5stick_s3">M5StickC Plus2 (S3)</string>

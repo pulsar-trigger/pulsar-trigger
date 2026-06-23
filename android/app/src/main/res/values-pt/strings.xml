@@ -912,7 +912,7 @@ A altura vem da escuridão do céu × céu limpo × sem lua brilhante × sem chu
     <string name="astro2_set_lens">Defina a focal para iniciar</string>
     <string name="astro2_set_lens_and_interval">Defina focal e intervalo para iniciar</string>
     <string name="astro2_tab_lens">Lente</string>
-    <string name="backup_restore_help">Salvar e restaurar todas as configurações do Pulsar.\n\n• Exportar cria um arquivo JSON com preferências, padrões, configuração GPIO e dados do planner.\n• Importar carrega configurações de um arquivo previamente exportado.\n• Use para transferir sua configuração para um novo celular ou como backup.</string>
+    <string name="backup_restore_help">Salvar e restaurar todas as configurações do Pulsar.\n\n• Exportar cria um arquivo JSON com preferências, padrões, configuração GPIO, predefinições salvas, tema e dados do planner.\n• Importar carrega configurações de um arquivo previamente exportado.\n• Use para transferir sua configuração para um novo celular ou como backup.</string>
     <string name="board_esp32_generic">ESP32 (genérico)</string>
     <string name="board_m5core2">M5Stack Core2</string>
     <string name="board_m5stick_s3">M5StickC Plus2 (S3)</string>

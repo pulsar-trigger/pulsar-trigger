@@ -225,15 +225,13 @@ fun SettingsScreen(
     val otaProgress by vm.firmwareManager.progress.collectAsState()
     val otaError by vm.firmwareManager.errorMessage.collectAsState()
 
-    // Are we on the Pulsar ESP32 firmware path? Real ESP32 BLE OR the
-    // simulator (which mimics the firmware contract). Used to gate
-    // settings sub-screens that only make sense for the firmware path —
-    // device rename, GPIO pins, auto-shutdown, firmware-OTA, on-board
-    // hardware info. Hidden when on a Canon transport (CCAPI / PTP /
-    // direct BLE) since those have no equivalent settings.
+    // Are we on a REAL Pulsar ESP32 firmware path (a live BLE link)? Gates the
+    // hardware-only settings sub-screens — device rename, GPIO pins,
+    // auto-shutdown, firmware OTA, on-board hardware info. Excluded for the
+    // simulator (no hardware to configure — these settings just confuse) and
+    // for Canon transports (CCAPI / PTP / direct BLE have no equivalent).
     val pulsarBleConnected by vm.bleController.connected.collectAsState()
-    val simulatorActive by vm.simulatorActive.collectAsState()
-    val onEsp = pulsarBleConnected || simulatorActive
+    val onEsp = pulsarBleConnected
 
     var currentSection by remember { mutableStateOf(initialSection) }
 
