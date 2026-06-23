@@ -172,7 +172,9 @@ fun ScanLandingScreen(
         TransportBoard(
             modifier = Modifier.weight(1f).fillMaxWidth(),
             pads = pads,
-            recentKind = lastConnection?.kind,
+            // No "recent" highlight at rest — start with all transports
+            // unselected; only an active reconnect highlights its target.
+            recentKind = null,
             reconnectingKind = if (reconnecting) lastConnection?.kind else null,
             versionName = com.ehrocha.pulsar.BuildConfig.VERSION_NAME,
             onSelect = { kind -> if (kind == null) onSimulatorSelected() else onTransportSelected(kind) },

@@ -164,7 +164,10 @@ fun SpaceScanScreen(
             DecorOrrery(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 planets = planets,
-                recentKind = lastConnection?.kind,
+                // No "recent" highlight at rest — the scan screen starts with
+                // every transport unselected. Only an ACTIVE reconnect glows
+                // its target.
+                recentKind = null,
                 reconnectingKind = if (reconnecting) lastConnection?.kind else null,
             )
 
