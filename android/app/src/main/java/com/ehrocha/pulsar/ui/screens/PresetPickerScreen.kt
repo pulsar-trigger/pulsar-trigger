@@ -53,6 +53,7 @@ fun PresetPickerScreen(
     var confirmDelete by remember { mutableStateOf<UserMode?>(null) }
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = { PulsarTopBar(title = title, onBack = onBack) },
     ) { pad ->
         LazyColumn(

@@ -58,7 +58,11 @@ import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.update.AppUpdateState
 import com.ehrocha.pulsar.ui.components.BatteryIndicator
 import com.ehrocha.pulsar.ui.components.LatencyIndicator
+import com.ehrocha.pulsar.ui.components.PcbField
 import com.ehrocha.pulsar.ui.components.SignalStrengthIndicator
+import com.ehrocha.pulsar.ui.components.SpaceField
+import com.ehrocha.pulsar.ui.theme.LocalVisualStyle
+import com.ehrocha.pulsar.ui.theme.VisualStyle
 import com.ehrocha.pulsar.ui.components.ThemePicker
 import com.ehrocha.pulsar.ui.screens.AircraftWatchScreen
 import com.ehrocha.pulsar.ui.screens.SpottingLogScreen
@@ -503,6 +507,16 @@ fun PulsarNavHost(
         }
         // ── Screen content ───────────────────────────────────────────
         Box(Modifier.weight(1f)) {
+        // ── Themed backdrop ──────────────────────────────────────────
+        // One starfield / circuit-board sits behind every sub-screen, whose
+        // Scaffolds are transparent so it shows through in the gaps. Scan +
+        // Menu paint their own opaque background over this (they carry their
+        // own decoration). Static (animated = false) to stay calm behind forms.
+        when (LocalVisualStyle.current.value) {
+            VisualStyle.CIRCUIT -> PcbField(Modifier.matchParentSize(), animated = false)
+            VisualStyle.SPACE -> SpaceField(Modifier.matchParentSize(), animated = false)
+            VisualStyle.CLASSIC -> Unit
+        }
         // SIGNAL motion: screens enter with a fast fade + 1/24-height rise,
         // exit with a quicker fade — the app stops hard-cutting between
         // surfaces. State (currentScreen) is unchanged; this only wraps

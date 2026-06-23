@@ -74,6 +74,7 @@ fun DofCalculatorScreen(onBack: () -> Unit) {
     val dofMm = if (farInfinite) Double.POSITIVE_INFINITY else farMm - nearMm
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             PulsarTopBar(
                 title = stringResource(R.string.dof_calc_title),

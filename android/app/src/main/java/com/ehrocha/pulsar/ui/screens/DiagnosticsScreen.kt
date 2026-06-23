@@ -45,6 +45,7 @@ fun DiagnosticsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     val clipboard = LocalClipboardManager.current
     var logText by remember { mutableStateOf(vm.canonDiagnosticsText()) }
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             PulsarTopBar(title = stringResource(R.string.mode_diagnostics), onBack = onBack)
         },

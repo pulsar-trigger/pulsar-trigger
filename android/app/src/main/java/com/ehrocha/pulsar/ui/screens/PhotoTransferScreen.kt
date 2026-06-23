@@ -75,6 +75,7 @@ fun PhotoTransferScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     val postSnackbar = rememberSnackbarPoster()
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             PulsarTopBar(
                 title = stringResource(R.string.photo_transfer_title),

@@ -66,6 +66,7 @@ fun NdCalculatorScreen(onBack: () -> Unit) {
     val ndNumber = (Math.pow(2.0, stops.toDouble())).roundToInt()
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             PulsarTopBar(
                 title = stringResource(R.string.nd_calc_title),

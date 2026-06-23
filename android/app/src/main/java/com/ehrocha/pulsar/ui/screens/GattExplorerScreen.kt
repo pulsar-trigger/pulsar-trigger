@@ -100,6 +100,7 @@ fun GattExplorerScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     var selectedCharRef by remember { mutableStateOf<Pair<BluetoothGattService, BluetoothGattCharacteristic>?>(null) }
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             PulsarTopBar(
                 title = stringResource(R.string.gatt_explorer_title),

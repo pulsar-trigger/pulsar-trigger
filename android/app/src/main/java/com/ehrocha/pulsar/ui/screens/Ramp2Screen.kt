@@ -118,6 +118,7 @@ fun Ramp2Screen(
     val canSave = configComplete
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             PulsarTopBar(
                 title = stringResource(R.string.mode_ramp),

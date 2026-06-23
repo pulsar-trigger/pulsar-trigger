@@ -103,6 +103,7 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     val framePct = (arcDeg / hFovDeg * 100.0)
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             PulsarTopBar(title = stringResource(R.string.mode_star_trails), onBack = onBack)
         },

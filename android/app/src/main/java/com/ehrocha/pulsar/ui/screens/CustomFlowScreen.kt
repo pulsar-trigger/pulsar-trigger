@@ -79,6 +79,7 @@ private fun PauseStepWizard(
     var wake by remember { mutableStateOf(initial?.wakeOnPause ?: true) }
     BackHandler(onBack = onCancel)
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             PulsarTopBar(title = stringResource(R.string.step_type_pause), onBack = onCancel)
         },

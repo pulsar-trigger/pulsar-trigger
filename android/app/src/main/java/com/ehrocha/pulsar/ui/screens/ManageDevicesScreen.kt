@@ -36,6 +36,7 @@ import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 @Composable
 fun ManageDevicesScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             PulsarTopBar(
                 title = stringResource(R.string.section_devices),

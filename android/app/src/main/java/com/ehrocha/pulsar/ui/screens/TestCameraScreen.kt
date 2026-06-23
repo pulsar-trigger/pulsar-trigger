@@ -131,6 +131,7 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     }
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             PulsarTopBar(
                 title = stringResource(R.string.test_camera_title),

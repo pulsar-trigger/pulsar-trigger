@@ -66,6 +66,7 @@ fun ShotLogScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     val presetLimitMsg = stringResource(R.string.preset_limit, com.ehrocha.pulsar.model.UserMode.MAX_USER_MODES)
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             PulsarTopBar(
                 title = stringResource(R.string.shot_log_title),

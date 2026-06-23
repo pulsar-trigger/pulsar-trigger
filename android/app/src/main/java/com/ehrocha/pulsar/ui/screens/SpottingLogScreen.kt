@@ -66,6 +66,7 @@ fun SpottingLogScreen(onBack: () -> Unit) {
     var pendingClear by remember { mutableStateOf(false) }
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             PulsarTopBar(
                 title = stringResource(R.string.spotting_log_title),

@@ -233,6 +233,7 @@ fun AstroMode2Screen(
     val canSave = focalLength > 0 && intervalMs > 0L
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
         topBar = {
             PulsarTopBar(
                 title = stringResource(R.string.mode_astro),
