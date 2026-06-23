@@ -291,6 +291,7 @@
     <string name="catalog_kind_preset">Preset</string>
     <string name="catalog_cat_flows">Flows</string>
     <string name="browse_library">Browse the Library</string>
+    <string name="catalog_uninstall">Uninstall</string>
     <string name="sessions_group_toggle">Group by mode</string>
     <string name="disconnect">Disconnect</string>
 

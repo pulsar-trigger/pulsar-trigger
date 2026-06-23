@@ -199,6 +199,16 @@ private fun PresetRow(
             modifier = Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            val imported = preset.catalogId != null
+            if (imported) {
+                Icon(
+                    Icons.Default.CloudDownload,
+                    contentDescription = stringResource(R.string.catalog_title),
+                    tint = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(10.dp))
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     preset.name,
@@ -214,7 +224,9 @@ private fun PresetRow(
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Default.DeleteOutline,
-                    contentDescription = stringResource(R.string.delete),
+                    contentDescription = stringResource(
+                        if (imported) R.string.catalog_uninstall else R.string.delete,
+                    ),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

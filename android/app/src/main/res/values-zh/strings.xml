@@ -214,6 +214,7 @@
     <string name="catalog_kind_preset">预设</string>
     <string name="catalog_cat_flows">流程</string>
     <string name="browse_library">浏览库</string>
+    <string name="catalog_uninstall">卸载</string>
     <string name="sessions_group_toggle">按模式分组</string>
     <string name="disconnect">断开连接</string>
     <string name="back">返回</string>

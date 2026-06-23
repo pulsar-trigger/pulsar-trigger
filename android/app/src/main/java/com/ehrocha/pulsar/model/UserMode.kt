@@ -23,6 +23,12 @@ data class UserMode(
     val name: String,
     val description: String = "",
     val tags: List<String> = emptyList(),
+    /** Set when this preset was imported from the network catalog — the entry
+     *  id + version it came from. Drives the imported badge, the Uninstall
+     *  action, and the catalog's installed/update state (all derived from
+     *  existence, so deleting it self-corrects). Null = user-created. */
+    val catalogId: String? = null,
+    val catalogVersion: Int? = null,
     val body: Body,
 ) {
     data class Body(
@@ -79,6 +85,8 @@ data class UserMode(
         put("name", name)
         if (description.isNotEmpty()) put("description", description)
         if (tags.isNotEmpty()) put("tags", JSONArray().apply { tags.forEach { put(it) } })
+        catalogId?.let { put("catalogId", it) }
+        catalogVersion?.let { put("catalogVersion", it) }
         put("body", JSONObject().apply {
             put("fwMode", body.fwMode.name)
             put("params", JSONObject().apply {
@@ -150,6 +158,8 @@ data class UserMode(
                 tags = json.optJSONArray("tags")?.let { arr ->
                     (0 until arr.length()).map { arr.getString(it) }
                 } ?: emptyList(),
+                catalogId = json.optString("catalogId").takeIf { it.isNotEmpty() },
+                catalogVersion = if (json.has("catalogVersion")) json.optInt("catalogVersion") else null,
                 body = body,
             )
         }

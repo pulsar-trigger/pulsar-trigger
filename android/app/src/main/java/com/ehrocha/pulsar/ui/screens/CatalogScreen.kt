@@ -6,13 +6,17 @@
 package com.ehrocha.pulsar.ui.screens
 
 import android.text.format.DateUtils
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -64,6 +68,13 @@ fun CatalogScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     val context = LocalContext.current
     val limitMsg = stringResource(R.string.preset_limit, UserMode.MAX_USER_MODES)
     val flowsLabel = stringResource(R.string.catalog_cat_flows)
+    // Installed / update state derives from the actual stores (catalogId match),
+    // so deleting an imported preset/flow self-corrects — no separate registry.
+    val userModes by vm.userModes.collectAsState()
+    val savedFlows by vm.savedFlows.collectAsState()
+    fun installedVersionOf(entry: CatalogEntry): Int? =
+        if (entry.isMode) userModes.firstOrNull { it.catalogId == entry.id }?.let { it.catalogVersion ?: 1 }
+        else savedFlows.firstOrNull { it.catalogId == entry.id }?.let { it.catalogVersion ?: 1 }
 
     // Auto-refresh on open when the cache is missing or stale (>12 h) — NOT on
     // every app launch (network-only feature; don't pay the cost unless the
@@ -153,7 +164,7 @@ fun CatalogScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                     items(entries, key = { it.id }) { entry ->
                         CatalogCard(
                             entry = entry,
-                            installedVersion = state.installed[entry.id],
+                            installedVersion = installedVersionOf(entry),
                             onInstall = {
                                 scope.launch {
                                     val msg = when (val r = vm.installCatalogEntry(entry)) {
@@ -182,16 +193,27 @@ private fun CatalogCard(
 ) {
     val updatable = installedVersion != null && installedVersion < entry.version
     val installed = installedVersion != null && !updatable
+    // Signal-lock accent: lit when installed, caution on update, dim otherwise.
+    val accent = when {
+        updatable -> MaterialTheme.colorScheme.tertiary
+        installed -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.outlineVariant
+    }
 
     Surface(
         shape = RoundedCornerShape(12.dp),
-        tonalElevation = 1.dp,
+        tonalElevation = if (installed || updatable) 2.dp else 1.dp,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.height(IntrinsicSize.Min),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            Box(Modifier.width(3.dp).fillMaxHeight().background(accent))
+            Row(
+                modifier = Modifier.weight(1f).padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     entry.name,
@@ -234,6 +256,7 @@ private fun CatalogCard(
                 else -> FilledTonalButton(onClick = onInstall) {
                     Text(stringResource(R.string.catalog_install))
                 }
+            }
             }
         }
     }

@@ -338,6 +338,10 @@ data class SavedFlow(
     val steps: List<FlowStep>,
     val favorite: Boolean = false,
     val tags: List<String> = emptyList(),
+    /** Catalog provenance — see [com.ehrocha.pulsar.model.UserMode.catalogId].
+     *  Null = user-created. */
+    val catalogId: String? = null,
+    val catalogVersion: Int? = null,
 ) {
     /** This flow with every step clamped to supported ranges (import use). */
     fun sanitized(): SavedFlow = copy(steps = steps.map { it.sanitized() })
@@ -352,6 +356,8 @@ data class SavedFlow(
         put("tags", JSONArray().also { arr ->
             tags.forEach { arr.put(it) }
         })
+        catalogId?.let { put("catalogId", it) }
+        catalogVersion?.let { put("catalogVersion", it) }
     }
 
     companion object {
@@ -378,6 +384,8 @@ data class SavedFlow(
                 tags = json.optJSONArray("tags")?.let { arr ->
                     (0 until arr.length()).map { arr.getString(it) }
                 } ?: emptyList(),
+                catalogId = json.optString("catalogId").takeIf { it.isNotEmpty() },
+                catalogVersion = if (json.has("catalogVersion")) json.optInt("catalogVersion") else null,
             )
         }
 

@@ -912,24 +912,23 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         return after.any { it.id == mode.id }
     }
 
-    /** Fetch + import a catalog entry (already sanitized by the manager), then
-     *  mark it installed. Mode presets adopt the catalog id so a re-install
-     *  upserts in place; flows dedupe by name via [addSavedFlow]. */
+    /** Fetch + import a catalog entry (already sanitized by the manager). Mode
+     *  presets adopt the catalog id (idempotent re-install); both stamp
+     *  catalogId/version so the Library derives installed/update from existence
+     *  — deleting an imported item self-corrects (no separate registry). */
     suspend fun installCatalogEntry(
         entry: com.ehrocha.pulsar.model.CatalogEntry,
     ): com.ehrocha.pulsar.catalog.CatalogInstallResult =
         when (val p = catalogManager.fetchEntry(entry)) {
             is com.ehrocha.pulsar.catalog.CatalogManager.Payload.Mode -> {
-                if (upsertUserMode(p.mode.copy(id = entry.id))) {
-                    catalogManager.markInstalled(entry.id, entry.version)
-                    com.ehrocha.pulsar.catalog.CatalogInstallResult.Ok
-                } else {
-                    com.ehrocha.pulsar.catalog.CatalogInstallResult.LimitReached
-                }
+                val mode = p.mode.copy(
+                    id = entry.id, catalogId = entry.id, catalogVersion = entry.version,
+                )
+                if (upsertUserMode(mode)) com.ehrocha.pulsar.catalog.CatalogInstallResult.Ok
+                else com.ehrocha.pulsar.catalog.CatalogInstallResult.LimitReached
             }
             is com.ehrocha.pulsar.catalog.CatalogManager.Payload.Flow -> {
-                addSavedFlow(p.flow)
-                catalogManager.markInstalled(entry.id, entry.version)
+                addSavedFlow(p.flow.copy(catalogId = entry.id, catalogVersion = entry.version))
                 com.ehrocha.pulsar.catalog.CatalogInstallResult.Ok
             }
             is com.ehrocha.pulsar.catalog.CatalogManager.Payload.Error ->

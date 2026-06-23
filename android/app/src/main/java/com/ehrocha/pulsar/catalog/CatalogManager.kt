@@ -43,8 +43,6 @@ class CatalogManager(context: Context) {
 
     data class State(
         val entries: List<CatalogEntry> = emptyList(),
-        /** id → installed version, for installed / update-available badges. */
-        val installed: Map<String, Int> = emptyMap(),
         val lastUpdatedMs: Long? = null,
         val loading: Boolean = false,
         val error: String? = null,
@@ -53,7 +51,6 @@ class CatalogManager(context: Context) {
     private val _state = MutableStateFlow(
         State(
             entries = CatalogEntry.parseIndex(prefs.getString(KEY_INDEX, "") ?: ""),
-            installed = loadRegistry(),
             lastUpdatedMs = prefs.getLong(KEY_UPDATED, 0L).takeIf { it > 0L },
         ),
     )
@@ -89,31 +86,6 @@ class CatalogManager(context: Context) {
         }.getOrElse { Payload.Error(it.message ?: "Download failed") }
     }
 
-    fun markInstalled(id: String, version: Int) {
-        val reg = loadRegistry().toMutableMap().apply { put(id, version) }
-        saveRegistry(reg)
-        _state.update { it.copy(installed = reg) }
-    }
-
-    fun forget(id: String) {
-        val reg = loadRegistry().toMutableMap().apply { remove(id) }
-        saveRegistry(reg)
-        _state.update { it.copy(installed = reg) }
-    }
-
-    // ── registry (id → version JSON map) ─────────────────────────────────────
-    private fun loadRegistry(): Map<String, Int> =
-        runCatching {
-            val o = JSONObject(prefs.getString(KEY_REGISTRY, "{}") ?: "{}")
-            o.keys().asSequence().associateWith { o.getInt(it) }
-        }.getOrDefault(emptyMap())
-
-    private fun saveRegistry(map: Map<String, Int>) {
-        val o = JSONObject()
-        map.forEach { (k, v) -> o.put(k, v) }
-        prefs.edit().putString(KEY_REGISTRY, o.toString()).apply()
-    }
-
     private fun httpGet(urlStr: String): String {
         val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
@@ -134,7 +106,6 @@ class CatalogManager(context: Context) {
         private const val PREFS = "pulsar_catalog"
         private const val KEY_INDEX = "index_json"
         private const val KEY_UPDATED = "updated_ms"
-        private const val KEY_REGISTRY = "installed"
     }
 }
 

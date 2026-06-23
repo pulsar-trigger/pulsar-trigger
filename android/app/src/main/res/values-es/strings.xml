@@ -212,6 +212,7 @@
     <string name="catalog_kind_preset">Preajuste</string>
     <string name="catalog_cat_flows">Flujos</string>
     <string name="browse_library">Abrir la Biblioteca</string>
+    <string name="catalog_uninstall">Desinstalar</string>
     <string name="sessions_group_toggle">Agrupar por modo</string>
     <string name="disconnect">Desconectar</string>
     <string name="back">Atrás</string>

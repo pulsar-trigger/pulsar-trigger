@@ -212,6 +212,7 @@
     <string name="catalog_kind_preset">Voreinstellung</string>
     <string name="catalog_cat_flows">Abläufe</string>
     <string name="browse_library">Bibliothek öffnen</string>
+    <string name="catalog_uninstall">Deinstallieren</string>
     <string name="sessions_group_toggle">Nach Modus gruppieren</string>
     <string name="disconnect">Trennen</string>
     <string name="back">Zurück</string>
