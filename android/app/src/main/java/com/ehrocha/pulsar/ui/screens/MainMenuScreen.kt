@@ -566,6 +566,9 @@ private fun MenuPageContent(
                     val customTiles = listOf(
                         launcherItem(R.string.mode_custom_flow, Icons.AutoMirrored.Filled.ViewList,
                             enabled = !bulbBlocked) { onCustomFlowSelected() },
+                        launcherItem(R.string.catalog_title, Icons.Default.CloudDownload) {
+                            onCatalogSelected()
+                        },
                     )
                     // Every trigger tile records itself as last-used so the
                     // "Continue" row can re-open it next visit.
@@ -684,13 +687,6 @@ private fun MenuPageContent(
                             Icons.Default.FlightTakeoff,
                         ) { onAircraftWatchSelected() },
                     )
-                    // Network preset/flow catalog — browse + import (apt-style).
-                    val libraryTools = listOf(
-                        launcherItem(
-                            R.string.catalog_title,
-                            Icons.Default.CloudDownload,
-                        ) { onCatalogSelected() },
-                    )
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -698,9 +694,6 @@ private fun MenuPageContent(
                             .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.Top),
                     ) {
-                        SectionContainer(title = stringResource(R.string.tools_section_library)) {
-                            SectionGrid(libraryTools)
-                        }
                         SectionContainer(title = stringResource(R.string.tools_section_astro)) {
                             SectionGrid(astroTools)
                         }
