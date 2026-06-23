@@ -639,3 +639,15 @@ Verified on EOS R + EOS RP, likely R-series PTP firmware trait (see [docs/canon-
 ## License
 
 GNU General Public License v3.0 or later (GPL-3.0-or-later). See [LICENSE](LICENSE) for the full text.
+
+---
+
+## Trademarks & Disclaimer
+
+Pulsar is an independent, open-source project. It is **not affiliated with, authorized, sponsored, or endorsed by Canon Inc.** or any other camera manufacturer.
+
+"Canon", "EOS", "Camera Control API" / "CCAPI", and related marks are trademarks of Canon Inc.; "Nikon", "Sony", "Fujifilm", and other manufacturer names are trademarks of their respective owners. These names are used **nominatively** — solely to describe which cameras Pulsar is compatible with — and imply no association.
+
+Canon CCAPI is accessed through Canon's Developer Programme over standard HTTP; no Canon SDK or proprietary binary is bundled or linked. This repository does **not** redistribute Canon's SDK, its documentation, or the CCAPI Activation Tool — users obtain the activation tool from Canon's official Developer Programme themselves. Canon's specification is NDA-covered and kept outside this repository.
+
+Controlling a camera with this software is at your own risk; the authors accept no liability for damage to equipment or missed/lost shots. See [LICENSE](LICENSE) for the full warranty disclaimer.
