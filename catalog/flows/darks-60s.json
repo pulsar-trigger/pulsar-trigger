@@ -1,0 +1,23 @@
+{
+  "schema": "pulsar-flow/1",
+  "name": "Dark Frames – 60s",
+  "steps": [
+    {
+      "type": "PAUSE",
+      "label": "Put the lens cap on and keep the same temperature",
+      "wakeOnPause": true
+    },
+    {
+      "type": "DARK_FRAME",
+      "shotCount": 20,
+      "exposureMs": 60000,
+      "gapMs": 2000,
+      "useAutofocus": false,
+      "delayMs": 0
+    }
+  ],
+  "favorite": false,
+  "tags": [
+    "Dark Frames"
+  ]
+}

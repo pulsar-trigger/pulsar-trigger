@@ -1,0 +1,19 @@
+{
+  "schema": "pulsar-mode/1",
+  "kind": "trigger",
+  "name": "Intervalometer – 2 s × 200",
+  "description": "A steady 2-second interval, 200 frames — a solid timelapse base.",
+  "tags": [
+    "Timelapse"
+  ],
+  "body": {
+    "fwMode": "INTERVALOMETER",
+    "params": {
+      "intervalMs": 2000,
+      "exposureMs": 200,
+      "shotCount": 200,
+      "delayMs": 0,
+      "useAutofocus": false
+    }
+  }
+}

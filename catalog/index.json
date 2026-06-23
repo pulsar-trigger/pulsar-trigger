@@ -1,0 +1,150 @@
+{
+  "schema": "pulsar-catalog/1",
+  "updated": "2026-06-23",
+  "entries": [
+    {
+      "id": "astro-npf-14",
+      "kind": "flow",
+      "mode": "ASTRO",
+      "name": "NPF – 14mm FF",
+      "description": "Untracked Milky Way capture for a 14 mm full-frame lens (NPF rule), 100 frames, with a focus-check pause first.",
+      "tags": [
+        "Astro"
+      ],
+      "version": 1,
+      "file": "flows/astro-npf-14.json"
+    },
+    {
+      "id": "astro-npf-24",
+      "kind": "flow",
+      "mode": "ASTRO",
+      "name": "NPF – 24mm FF",
+      "description": "Untracked Milky Way capture for a 24 mm full-frame lens (NPF rule), 100 frames, with a focus-check pause first.",
+      "tags": [
+        "Astro"
+      ],
+      "version": 1,
+      "file": "flows/astro-npf-24.json"
+    },
+    {
+      "id": "astro-npf-50",
+      "kind": "flow",
+      "mode": "ASTRO",
+      "name": "NPF – 50mm FF",
+      "description": "Untracked Milky Way capture for a 50 mm full-frame lens (NPF rule), 100 frames, with a focus-check pause first.",
+      "tags": [
+        "Astro"
+      ],
+      "version": 1,
+      "file": "flows/astro-npf-50.json"
+    },
+    {
+      "id": "astro-npf-85",
+      "kind": "flow",
+      "mode": "ASTRO",
+      "name": "NPF – 85mm FF",
+      "description": "Untracked Milky Way capture for a 85 mm full-frame lens (NPF rule), 100 frames, with a focus-check pause first.",
+      "tags": [
+        "Astro"
+      ],
+      "version": 1,
+      "file": "flows/astro-npf-85.json"
+    },
+    {
+      "id": "astro-npf-135",
+      "kind": "flow",
+      "mode": "ASTRO",
+      "name": "NPF – 135mm FF",
+      "description": "Untracked Milky Way capture for a 135 mm full-frame lens (NPF rule), 100 frames, with a focus-check pause first.",
+      "tags": [
+        "Astro"
+      ],
+      "version": 1,
+      "file": "flows/astro-npf-135.json"
+    },
+    {
+      "id": "astro-npf-200",
+      "kind": "flow",
+      "mode": "ASTRO",
+      "name": "NPF – 200mm FF",
+      "description": "Untracked Milky Way capture for a 200 mm full-frame lens (NPF rule), 100 frames, with a focus-check pause first.",
+      "tags": [
+        "Astro"
+      ],
+      "version": 1,
+      "file": "flows/astro-npf-200.json"
+    },
+    {
+      "id": "darks-15s",
+      "kind": "flow",
+      "mode": "DARK_FRAME",
+      "name": "Dark Frames – 15s",
+      "description": "20 dark frames at 15s, with a lens-cap pause first — match your light-frame exposure + temperature.",
+      "tags": [
+        "Dark Frames"
+      ],
+      "version": 1,
+      "file": "flows/darks-15s.json"
+    },
+    {
+      "id": "darks-30s",
+      "kind": "flow",
+      "mode": "DARK_FRAME",
+      "name": "Dark Frames – 30s",
+      "description": "20 dark frames at 30s, with a lens-cap pause first — match your light-frame exposure + temperature.",
+      "tags": [
+        "Dark Frames"
+      ],
+      "version": 1,
+      "file": "flows/darks-30s.json"
+    },
+    {
+      "id": "darks-60s",
+      "kind": "flow",
+      "mode": "DARK_FRAME",
+      "name": "Dark Frames – 60s",
+      "description": "20 dark frames at 60s, with a lens-cap pause first — match your light-frame exposure + temperature.",
+      "tags": [
+        "Dark Frames"
+      ],
+      "version": 1,
+      "file": "flows/darks-60s.json"
+    },
+    {
+      "id": "darks-120s",
+      "kind": "flow",
+      "mode": "DARK_FRAME",
+      "name": "Dark Frames – 120s",
+      "description": "20 dark frames at 120s, with a lens-cap pause first — match your light-frame exposure + temperature.",
+      "tags": [
+        "Dark Frames"
+      ],
+      "version": 1,
+      "file": "flows/darks-120s.json"
+    },
+    {
+      "id": "intervalometer-2s-200",
+      "kind": "mode",
+      "mode": "INTERVALOMETER",
+      "name": "Intervalometer – 2 s × 200",
+      "description": "A steady 2-second interval, 200 frames — a solid timelapse base.",
+      "tags": [
+        "Timelapse"
+      ],
+      "version": 1,
+      "file": "modes/intervalometer-2s-200.json"
+    },
+    {
+      "id": "astro-24mm",
+      "kind": "mode",
+      "mode": "ASTRO",
+      "name": "Astro – 24mm Milky Way",
+      "description": "Single Astro mode at 24 mm (NPF rule), 100 frames, 2 s gap.",
+      "tags": [
+        "Astro"
+      ],
+      "version": 1,
+      "file": "modes/astro-24mm.json"
+    }
+  ]
+}

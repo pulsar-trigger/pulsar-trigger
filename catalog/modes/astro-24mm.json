@@ -1,0 +1,21 @@
+{
+  "schema": "pulsar-mode/1",
+  "kind": "trigger",
+  "name": "Astro – 24mm Milky Way",
+  "description": "Single Astro mode at 24 mm (NPF rule), 100 frames, 2 s gap.",
+  "tags": [
+    "Astro"
+  ],
+  "body": {
+    "fwMode": "ASTRO",
+    "params": {
+      "intervalMs": 2000,
+      "shotCount": 100,
+      "delayMs": 5000,
+      "useAutofocus": false,
+      "focalLength": 24,
+      "cropFactor": 1.0,
+      "ruleDivisor": 0
+    }
+  }
+}

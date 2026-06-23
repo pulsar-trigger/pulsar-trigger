@@ -1,0 +1,25 @@
+{
+  "schema": "pulsar-flow/1",
+  "name": "NPF – 50mm FF",
+  "steps": [
+    {
+      "type": "PAUSE",
+      "label": "Confirm focus and adjust camera settings",
+      "wakeOnPause": true
+    },
+    {
+      "type": "ASTRO",
+      "focalLength": 50,
+      "cropFactor": 1.0,
+      "ruleDivisor": 0,
+      "gapMs": 2000,
+      "shotCount": 100,
+      "delayMs": 5000,
+      "useAutofocus": false
+    }
+  ],
+  "favorite": false,
+  "tags": [
+    "Astro"
+  ]
+}
