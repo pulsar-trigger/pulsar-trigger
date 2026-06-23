@@ -210,6 +210,8 @@
     <string name="catalog_installed_toast">「%1$s」をインストールしました</string>
     <string name="catalog_kind_flow">フロー</string>
     <string name="catalog_kind_preset">プリセット</string>
+    <string name="catalog_cat_flows">フロー</string>
+    <string name="browse_library">ライブラリを開く</string>
     <string name="sessions_group_toggle">モードでグループ化</string>
     <string name="disconnect">切断</string>
     <string name="back">戻る</string>

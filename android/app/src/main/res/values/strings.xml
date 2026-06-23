@@ -289,6 +289,8 @@
     <string name="catalog_installed_toast">Installed “%1$s”</string>
     <string name="catalog_kind_flow">Flow</string>
     <string name="catalog_kind_preset">Preset</string>
+    <string name="catalog_cat_flows">Flows</string>
+    <string name="browse_library">Browse the Library</string>
     <string name="sessions_group_toggle">Group by mode</string>
     <string name="disconnect">Disconnect</string>
 

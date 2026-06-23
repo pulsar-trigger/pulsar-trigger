@@ -63,10 +63,16 @@ fun CatalogScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     val snackHost = LocalSnackbarHost.current
     val context = LocalContext.current
     val limitMsg = stringResource(R.string.preset_limit, UserMode.MAX_USER_MODES)
+    val flowsLabel = stringResource(R.string.catalog_cat_flows)
 
-    // First open with no cached index → fetch automatically.
+    // Auto-refresh on open when the cache is missing or stale (>12 h) — NOT on
+    // every app launch (network-only feature; don't pay the cost unless the
+    // user actually opens the Library).
     LaunchedEffect(Unit) {
-        if (state.lastUpdatedMs == null && !state.loading) vm.catalogManager.refresh()
+        val stale = state.lastUpdatedMs?.let {
+            System.currentTimeMillis() - it > 12 * 3_600_000L
+        } ?: true
+        if (stale && !state.loading) vm.catalogManager.refresh()
     }
 
     Column(
@@ -127,11 +133,18 @@ fun CatalogScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                val groups = state.entries.groupBy { it.mode }.toSortedMap()
-                groups.forEach { (mode, entries) ->
-                    item(key = "hdr-$mode") {
+                // Flows are their own category; mode presets group by mode.
+                val grouped = state.entries.groupBy {
+                    if (it.isFlow) flowsLabel else prettyMode(it.mode)
+                }
+                // Mode-preset categories first (alphabetical), Flows last.
+                val keys = grouped.keys.filter { it != flowsLabel }.sorted() +
+                    grouped.keys.filter { it == flowsLabel }
+                keys.forEach { key ->
+                    val entries = grouped.getValue(key)
+                    item(key = "hdr-$key") {
                         Text(
-                            prettyMode(mode),
+                            key,
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(top = 8.dp, start = 4.dp),

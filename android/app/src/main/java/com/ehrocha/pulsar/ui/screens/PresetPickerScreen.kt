@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -46,6 +47,7 @@ fun PresetPickerScreen(
     onBack: () -> Unit,
     onStartFresh: () -> Unit,
     onPresetSelected: (UserMode) -> Unit,
+    onBrowseCatalog: () -> Unit,
 ) {
     val allModes by vm.userModes.collectAsState()
     val presets = remember(allModes, fwMode) { allModes.filter { it.body.fwMode == fwMode } }
@@ -90,6 +92,10 @@ fun PresetPickerScreen(
                         modifier = Modifier.padding(top = 16.dp, start = 4.dp),
                     )
                 }
+            }
+            item {
+                Spacer(Modifier.height(4.dp))
+                BrowseLibraryCard(onClick = onBrowseCatalog)
             }
         }
     }
@@ -146,6 +152,36 @@ private fun StartFreshCard(onClick: () -> Unit) {
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
                 )
             }
+        }
+    }
+}
+
+/** Secondary action — jump to the network Library to import more presets. */
+@Composable
+private fun BrowseLibraryCard(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Default.CloudDownload,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp),
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                stringResource(R.string.browse_library),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }

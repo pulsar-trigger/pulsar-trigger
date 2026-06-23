@@ -210,6 +210,8 @@
     <string name="catalog_installed_toast">“%1$s” instalado</string>
     <string name="catalog_kind_flow">Flujo</string>
     <string name="catalog_kind_preset">Preajuste</string>
+    <string name="catalog_cat_flows">Flujos</string>
+    <string name="browse_library">Abrir la Biblioteca</string>
     <string name="sessions_group_toggle">Agrupar por modo</string>
     <string name="disconnect">Desconectar</string>
     <string name="back">Atrás</string>

@@ -864,6 +864,7 @@ fun PulsarNavHost(
                             else -> AppScreen.Menu
                         }
                     },
+                    onBrowseCatalog = { currentScreen = AppScreen.Catalog },
                 )
             }
             is AppScreen.Timelapse -> {

@@ -210,6 +210,8 @@
     <string name="catalog_installed_toast">« %1$s » installé</string>
     <string name="catalog_kind_flow">Flux</string>
     <string name="catalog_kind_preset">Préréglage</string>
+    <string name="catalog_cat_flows">Flux</string>
+    <string name="browse_library">Ouvrir la Bibliothèque</string>
     <string name="sessions_group_toggle">Grouper par mode</string>
     <string name="disconnect">Déconnecter</string>
     <string name="back">Retour</string>
