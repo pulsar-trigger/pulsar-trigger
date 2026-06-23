@@ -166,7 +166,6 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(pad)
-                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -196,6 +195,14 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                 }
             }
 
+            // Scrollable controls — the pinned arc above stays visible while you
+            // change any variable (every one resizes the sweep).
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
             // Summary card.
             com.ehrocha.pulsar.ui.components.StatPanel {
                 Column(modifier = Modifier.fillMaxWidth()) {
@@ -292,6 +299,7 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit) {
             )
 
             Spacer(Modifier.height(8.dp))
+            }
         }
     }
 }
