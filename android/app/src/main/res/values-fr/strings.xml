@@ -590,6 +590,7 @@ La hauteur vient de l\'obscurité du ciel × ciel dégagé × pas de lune brilla
     <string name="star_trails_tab_sub">Pose</string>
     <string name="star_trails_tab_gap">Écart</string>
     <string name="star_trails_tab_lens">Objectif</string>
+    <string name="star_trails_help">Les étoiles tournent de 15°/h autour du pôle ; le filé correspond à leur déplacement durant la session.\n\n• Session — définit la dimension du filé (plus longue = filé plus grand).\n• Pose — exposition de chaque image ; des poses plus longues donnent moins de poses.\n• Écart — temps entre les poses ; plus grand donne moins de poses.\n• Objectif (focale + capteur) — ne change pas le filé, seulement la part du cadre couverte.\n\nValeurs : nombre de poses, durée totale et part du cadre couverte.</string>
     <string name="star_trails_duration">Durée de session : %1$d min</string>
     <string name="star_trails_sub">Sous-exposition : %1$d s</string>
     <string name="star_trails_gap">Intervalle entre images : %1$d s</string>

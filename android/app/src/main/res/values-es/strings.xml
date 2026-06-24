@@ -588,6 +588,7 @@ La altura proviene de la oscuridad del cielo × cielo despejado × sin luna bril
     <string name="star_trails_tab_sub">Subexp.</string>
     <string name="star_trails_tab_gap">Intervalo</string>
     <string name="star_trails_tab_lens">Objetivo</string>
+    <string name="star_trails_help">Las estrellas giran 15°/h alrededor del polo — el arco es cuánto recorren durante la sesión.\n\n• Sesión — define el tamaño del arco (más larga = arco mayor).\n• Sub — exposición de cada fotograma; subs más largas dan menos fotogramas.\n• Intervalo — tiempo de escritura entre fotogramas; mayor da menos fotogramas.\n• Objetivo (focal + sensor) — no cambia el arco, solo cuánto del encuadre llena.\n\nLecturas: fotogramas, tiempo total y cuánto del encuadre ocupa la estela.</string>
     <string name="star_trails_duration">Duración de sesión: %1$d min</string>
     <string name="star_trails_sub">Subexposición: %1$d s</string>
     <string name="star_trails_gap">Intervalo entre tomas: %1$d s</string>

@@ -161,6 +161,7 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit, initialPresetId: S
             PulsarTopBar(
                 title = stringResource(R.string.mode_star_trails),
                 onBack = onBack,
+                helpText = stringResource(R.string.star_trails_help),
                 actions = {
                     androidx.compose.material3.IconButton(onClick = { showSaveDialog = true }) {
                         androidx.compose.material3.Icon(
@@ -409,6 +410,8 @@ private fun StarTrailScope(arcDeg: Float, modifier: Modifier) {
         val stars = listOf(
             0.30f to 20f, 0.44f to 65f, 0.57f to 110f,
             0.70f to 45f, 0.83f to 92f, 0.95f to 135f,
+            0.37f to 160f, 0.51f to 205f, 0.64f to 250f,
+            0.78f to 295f, 0.90f to 175f,
         )
         stars.forEach { (rf, startA) ->
             val r = maxR * rf

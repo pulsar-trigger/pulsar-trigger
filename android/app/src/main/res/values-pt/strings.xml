@@ -590,6 +590,7 @@ A altura vem da escuridão do céu × céu limpo × sem lua brilhante × sem chu
     <string name="star_trails_tab_sub">Subexp.</string>
     <string name="star_trails_tab_gap">Intervalo</string>
     <string name="star_trails_tab_lens">Lente</string>
+    <string name="star_trails_help">As estrelas giram 15°/h ao redor do polo — o arco é o quanto elas percorrem durante a sessão.\n\n• Sessão — define o tamanho do arco (mais longa = arco maior).\n• Sub — exposição de cada quadro; subs mais longas resultam em menos quadros.\n• Intervalo — tempo de gravação entre quadros; maior resulta em menos quadros.\n• Lente (focal + sensor) — não muda o arco, apenas quanto do quadro ele preenche.\n\nLeituras: quadros, tempo total e quanto do quadro o rastro ocupa.</string>
     <string name="star_trails_duration">Duração da sessão: %1$d min</string>
     <string name="star_trails_sub">Subexposição: %1$d s</string>
     <string name="star_trails_gap">Intervalo entre quadros: %1$d s</string>

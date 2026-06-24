@@ -590,6 +590,7 @@
     <string name="star_trails_tab_sub">サブ</string>
     <string name="star_trails_tab_gap">間隔</string>
     <string name="star_trails_tab_lens">レンズ</string>
+    <string name="star_trails_help">星は天の極を中心に15°/時で回転します。弧はセッション中に星が移動する量です。\n\n• セッション — 弧の大きさを決めます（長いほど弧が大きい）。\n• サブ — 各フレームの露出。長いほどフレーム数は減ります。\n• 間隔 — フレーム間の書き込み時間。長いほどフレーム数は減ります。\n• レンズ（焦点距離＋センサー）— 弧は変わらず、画面に占める割合が変わります。\n\n表示: フレーム数、合計時間、軌跡が画面に占める割合。</string>
     <string name="star_trails_duration">セッション時間: %1$d 分</string>
     <string name="star_trails_sub">サブ露光: %1$d 秒</string>
     <string name="star_trails_gap">フレーム間隔: %1$d 秒</string>

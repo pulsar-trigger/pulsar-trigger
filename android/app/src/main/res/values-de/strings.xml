@@ -590,6 +590,7 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="star_trails_tab_sub">Sub</string>
     <string name="star_trails_tab_gap">Pause</string>
     <string name="star_trails_tab_lens">Objektiv</string>
+    <string name="star_trails_help">Sterne drehen sich mit 15°/h um den Pol — der Bogen ist ihre Wegstrecke während der Session.\n\n• Dauer — bestimmt die Bogengröße (länger = größerer Bogen).\n• Sub — Belichtung je Einzelbild; längere Subs ergeben weniger Bilder.\n• Pause — Schreibzeit zwischen Bildern; größer ergibt weniger Bilder.\n• Objektiv (Brennweite + Sensor) — ändert den Bogen nicht, nur wie viel des Bildfelds er füllt.\n\nWerte: Bildanzahl, Gesamtzeit und der Bildanteil der Spur.</string>
     <string name="star_trails_duration">Sitzungsdauer: %1$d Min</string>
     <string name="star_trails_sub">Teilbelichtung: %1$d s</string>
     <string name="star_trails_gap">Pause zwischen Bildern: %1$d s</string>

@@ -53,6 +53,7 @@ I built this for my own photography, but figured if it's useful to me it might b
 |------|-------------|:---:|:-----:|:----:|:----:|:----:|
 | **Intervalometer** | Bulb timelapse — configurable interval, exposure, shot count, start delay | ✅ | ✅\* | ✅\* | ✅ | ✅\* |
 | **Astro** | Star photography — exposure auto-computed via 500/400/NPF rule from focal length + crop factor, with a detectable-lens auto-fill button on supported transports | ✅ | ✅\* | ✅\* | ✅ | ✅\* |
+| **Star Trails** | Stacked sub-exposures for star-trail arcs (one long exposure cooks the sensor). Stars sweep 15°/h, so **Session** length sets the arc size; **Sub** + **Gap** set how many frames build it; **Lens** (focal + sensor) doesn't change the arc, only how much of the frame it fills. Live tabbed wizard with a pinned arc preview + frames / total-time / frame-share readouts | ✅ | ✅\* | ✅\* | ✅ | ✅\* |
 | **Timelapse** | Camera owns exposure (set shutter speed on the body); Pulsar pulses the shutter on a schedule | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Dark Frame** | Same wire path as Intervalometer-bulb, plus a "pair with last lights" affordance that auto-fills exposure + shot count from the most recent completed light session, and a persistent lens-cap reminder | ✅ | ✅\* | ✅\* | ✅ | ✅\* |
 | **Ramp** | Exposure ramp — linear interpolation from start to end across N steps (sunset / sunrise) | ✅ | ✅\* | ✅\* | ✅ | ✅\* |

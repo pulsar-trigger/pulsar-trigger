@@ -832,6 +832,7 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <string name="star_trails_tab_sub">Sub</string>
     <string name="star_trails_tab_gap">Gap</string>
     <string name="star_trails_tab_lens">Lens</string>
+    <string name="star_trails_help">Stars rotate 15°/h around the pole — the arc is how far they travel during your session.\n\n• Session — sets the arc size (longer = larger arc).\n• Sub — exposure of each frame; longer subs mean fewer frames.\n• Gap — write time between frames; larger means fewer frames.\n• Lens (focal + sensor) — does not change the arc, just how much of the frame it fills.\n\nReadouts: frames, total capture time, and how much of the frame the trail fills.</string>
     <string name="star_trails_duration">Session length: %1$d min</string>
     <string name="star_trails_sub">Sub-exposure: %1$d s</string>
     <string name="star_trails_gap">Gap between frames: %1$d s</string>

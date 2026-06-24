@@ -590,6 +590,7 @@
     <string name="star_trails_tab_sub">子帧</string>
     <string name="star_trails_tab_gap">间隔</string>
     <string name="star_trails_tab_lens">镜头</string>
+    <string name="star_trails_help">恒星以每小时15°绕天极旋转——弧线即它们在整个时段内移动的距离。\n\n• 时段 — 决定弧线大小（越长弧越大）。\n• 子帧 — 每帧的曝光；越长则帧数越少。\n• 间隔 — 帧之间的写入时间；越大则帧数越少。\n• 镜头（焦距＋传感器）— 不改变弧线，只改变它占画面的比例。\n\n读数：帧数、总时长，以及星轨占画面的比例。</string>
     <string name="star_trails_duration">拍摄时长：%1$d 分钟</string>
     <string name="star_trails_sub">子曝光：%1$d 秒</string>
     <string name="star_trails_gap">帧间间隔：%1$d 秒</string>
