@@ -120,7 +120,7 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit, initialPresetId: S
     // what the arc means IN FRAME isn't — 30° through 16mm is a sweep,
     // through 200mm it exits the frame.
     var focalMm by rememberSaveable { mutableIntStateOf((lp?.focalLength ?: 24).coerceIn(8, 200)) }
-    var sensorIdx by rememberSaveable { mutableIntStateOf((lp?.ruleDivisor ?: 0).coerceIn(0, 2)) }
+    var sensorIdx by rememberSaveable { mutableIntStateOf((lp?.ruleDivisor ?: 0).coerceIn(0, 1)) }
     val tabs = StTab.entries
     var tabIdx by rememberSaveable { mutableIntStateOf(0) }
     val tab = tabs.getOrNull(tabIdx) ?: StTab.SESSION
@@ -149,7 +149,7 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit, initialPresetId: S
     val arcDeg = actualTotalSec / 3600.0 * 15.0
     // Horizontal FOV for the chosen glass; trail share computed at the
     // celestial equator (worst case — stars near the pole trail less).
-    val sensorWidthMm = listOf(36.0, 23.5, 17.3)[sensorIdx]
+    val sensorWidthMm = listOf(36.0, 23.5)[sensorIdx]
     val hFovDeg = Math.toDegrees(
         2.0 * Math.atan(sensorWidthMm / (2.0 * focalMm)),
     )
@@ -335,18 +335,18 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit, initialPresetId: S
                             text = stringResource(
                                 R.string.star_trails_focal,
                                 focalMm,
-                                listOf("FF", "APS-C", "MFT")[sensorIdx],
+                                listOf("FF", "APS-C")[sensorIdx],
                             ),
                             value = focalMm.toFloat(),
                             onChange = { focalMm = it.roundToInt() },
                             range = 8f..200f,
                         )
                         SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                            listOf("Full-frame", "APS-C", "MFT").forEachIndexed { i, label ->
+                            listOf("Full-frame", "APS-C").forEachIndexed { i, label ->
                                 SegmentedButton(
                                     selected = sensorIdx == i,
                                     onClick = { sensorIdx = i },
-                                    shape = SegmentedButtonDefaults.itemShape(index = i, count = 3),
+                                    shape = SegmentedButtonDefaults.itemShape(index = i, count = 2),
                                 ) { Text(label, style = MaterialTheme.typography.labelMedium) }
                             }
                         }
@@ -377,7 +377,7 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit, initialPresetId: S
                     shotCount = frames,
                     focalLength = focalMm,
                     ruleDivisor = sensorIdx,
-                    cropFactor = listOf(1.0f, 1.5f, 2.0f)[sensorIdx],
+                    cropFactor = listOf(1.0f, 1.5f)[sensorIdx],
                     useAutofocus = useAutofocus,
                 )
                 val mode = editing?.copy(name = name.trim(), body = body)
