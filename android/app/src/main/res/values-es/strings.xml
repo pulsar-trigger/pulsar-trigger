@@ -584,6 +584,10 @@ La altura proviene de la oscuridad del cielo × cielo despejado × sin luna bril
     <string name="star_trails_frames">Fotogramas</string>
     <string name="star_trails_total">Tiempo total</string>
     <string name="star_trails_arc">Arco de estela</string>
+    <string name="star_trails_tab_session">Sesión</string>
+    <string name="star_trails_tab_sub">Subexp.</string>
+    <string name="star_trails_tab_gap">Intervalo</string>
+    <string name="star_trails_tab_lens">Objetivo</string>
     <string name="star_trails_duration">Duración de sesión: %1$d min</string>
     <string name="star_trails_sub">Subexposición: %1$d s</string>
     <string name="star_trails_gap">Intervalo entre tomas: %1$d s</string>

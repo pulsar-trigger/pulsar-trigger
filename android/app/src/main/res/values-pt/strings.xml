@@ -586,6 +586,10 @@ A altura vem da escuridão do céu × céu limpo × sem lua brilhante × sem chu
     <string name="star_trails_frames">Quadros</string>
     <string name="star_trails_total">Tempo total</string>
     <string name="star_trails_arc">Arco do rastro</string>
+    <string name="star_trails_tab_session">Sessão</string>
+    <string name="star_trails_tab_sub">Subexp.</string>
+    <string name="star_trails_tab_gap">Intervalo</string>
+    <string name="star_trails_tab_lens">Lente</string>
     <string name="star_trails_duration">Duração da sessão: %1$d min</string>
     <string name="star_trails_sub">Subexposição: %1$d s</string>
     <string name="star_trails_gap">Intervalo entre quadros: %1$d s</string>

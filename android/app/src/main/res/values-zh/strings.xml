@@ -586,6 +586,10 @@
     <string name="star_trails_frames">帧数</string>
     <string name="star_trails_total">总时长</string>
     <string name="star_trails_arc">星轨弧度</string>
+    <string name="star_trails_tab_session">时段</string>
+    <string name="star_trails_tab_sub">子帧</string>
+    <string name="star_trails_tab_gap">间隔</string>
+    <string name="star_trails_tab_lens">镜头</string>
     <string name="star_trails_duration">拍摄时长：%1$d 分钟</string>
     <string name="star_trails_sub">子曝光：%1$d 秒</string>
     <string name="star_trails_gap">帧间间隔：%1$d 秒</string>

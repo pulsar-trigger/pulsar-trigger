@@ -27,6 +27,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -65,6 +67,15 @@ import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.roundToInt
 import kotlin.math.sin
+
+/** Tabs for the Star Trails wizard. The Sweep-arc + stats header stays pinned
+ *  above all of them — every tab's value resizes the same arc. */
+private enum class StTab(val labelRes: Int) {
+    SESSION(R.string.star_trails_tab_session),
+    SUB(R.string.star_trails_tab_sub),
+    GAP(R.string.star_trails_tab_gap),
+    LENS(R.string.star_trails_tab_lens),
+}
 
 /**
  * Star Trails wizard — guided front end that produces a stacked
@@ -110,6 +121,9 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit, initialPresetId: S
     // through 200mm it exits the frame.
     var focalMm by rememberSaveable { mutableIntStateOf((lp?.focalLength ?: 24).coerceIn(8, 200)) }
     var sensorIdx by rememberSaveable { mutableIntStateOf((lp?.ruleDivisor ?: 0).coerceIn(0, 2)) }
+    val tabs = StTab.entries
+    var tabIdx by rememberSaveable { mutableIntStateOf(0) }
+    val tab = tabs.getOrNull(tabIdx) ?: StTab.SESSION
 
     val runState = LocalRunState.current
     val running = runState !is RunState.Idle
@@ -161,6 +175,10 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit, initialPresetId: S
             com.ehrocha.pulsar.ui.components.StartStopBar(
                 running = running,
                 canStart = connected,
+                currentTabIdx = tabIdx,
+                tabCount = tabs.size,
+                onPrev = { if (tabIdx > 0) tabIdx-- },
+                onNext = { if (tabIdx < tabs.size - 1) tabIdx++ },
                 hint = if (!connected && !running) {
                     stringResource(R.string.star_trails_not_connected)
                 } else null,
@@ -212,7 +230,7 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit, initialPresetId: S
                 tonalElevation = 1.dp,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Box(modifier = Modifier.fillMaxWidth().aspectRatio(1.7f)) {
+                Box(modifier = Modifier.fillMaxWidth().aspectRatio(2.2f)) {
                     StarTrailScope(arcDeg = arcDeg.toFloat(), modifier = Modifier.fillMaxSize())
                     Column(modifier = Modifier.align(Alignment.TopStart).padding(14.dp)) {
                         Text(
@@ -230,15 +248,8 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit, initialPresetId: S
                 }
             }
 
-            // Scrollable controls — the pinned arc above stays visible while you
-            // change any variable (every one resizes the sweep).
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-            // Summary card.
+            // Pinned stats — frames / total / frame share — stay with the arc
+            // above the tabs, so they update live as you tune any variable.
             com.ehrocha.pulsar.ui.components.StatPanel {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     com.ehrocha.pulsar.ui.components.StatRow(
@@ -255,85 +266,99 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit, initialPresetId: S
                         if (framePct >= 100.0) {
                             stringResource(R.string.star_trails_frame_full)
                         } else {
-                            stringResource(
-                                R.string.star_trails_frame_value,
-                                framePct.roundToInt(),
-                            )
+                            stringResource(R.string.star_trails_frame_value, framePct.roundToInt())
                         },
                     )
                 }
             }
 
-            Spacer(Modifier.height(4.dp))
-            com.ehrocha.pulsar.ui.components.SignalSlider(
-                text = stringResource(R.string.star_trails_duration, totalMin),
-                value = totalMin.toFloat(),
-                onChange = { totalMin = it.roundToInt() },
-                range = 10f..240f,
-            )
-
-            com.ehrocha.pulsar.ui.components.SignalSlider(
-                text = stringResource(R.string.star_trails_sub, subSec),
-                value = subSec.toFloat(),
-                onChange = { subSec = it.roundToInt() },
-                range = 10f..120f,
-            )
-
-            com.ehrocha.pulsar.ui.components.SignalSlider(
-                text = stringResource(R.string.star_trails_gap, gapSec),
-                value = gapSec.toFloat(),
-                onChange = { gapSec = it.roundToInt().coerceAtLeast(minGapSec) },
-                range = minGapSec.toFloat()..8f,
-                steps = (8 - minGapSec - 1).coerceAtLeast(0),
-            )
-            if (onCanonBle) {
-                Text(
-                    stringResource(R.string.star_trails_ble_gap_note),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            com.ehrocha.pulsar.ui.components.SignalSlider(
-                text = stringResource(
-                    R.string.star_trails_focal,
-                    focalMm,
-                    listOf("FF", "APS-C", "MFT")[sensorIdx],
-                ),
-                value = focalMm.toFloat(),
-                onChange = { focalMm = it.roundToInt() },
-                range = 8f..200f,
-            )
-            SingleChoiceSegmentedButtonRow(
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                listOf("Full-frame", "APS-C", "MFT").forEachIndexed { i, label ->
-                    SegmentedButton(
-                        selected = sensorIdx == i,
-                        onClick = { sensorIdx = i },
-                        shape = SegmentedButtonDefaults.itemShape(
-                            index = i, count = 3,
-                        ),
-                    ) { Text(label, style = MaterialTheme.typography.labelMedium) }
+            // ── Tabs: one variable each; the pinned header above reacts live. ─
+            ScrollableTabRow(selectedTabIndex = tabIdx, edgePadding = 0.dp) {
+                tabs.forEachIndexed { i, t ->
+                    Tab(
+                        selected = tabIdx == i,
+                        onClick = { tabIdx = i },
+                        text = { Text(stringResource(t.labelRes), maxLines = 1, softWrap = false) },
+                    )
                 }
             }
 
-            if (canControlAf) {
-                com.ehrocha.pulsar.ui.components.AutofocusToggle(
-                    checked = useAutofocus,
-                    onCheckedChange = { useAutofocus = it },
-                    enabled = !running,
-                )
-            }
-
-            Text(
-                stringResource(R.string.star_trails_hint),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-
-            Spacer(Modifier.height(8.dp))
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Spacer(Modifier.height(4.dp))
+                when (tab) {
+                    StTab.SESSION -> {
+                        com.ehrocha.pulsar.ui.components.SignalSlider(
+                            text = stringResource(R.string.star_trails_duration, totalMin),
+                            value = totalMin.toFloat(),
+                            onChange = { totalMin = it.roundToInt() },
+                            range = 10f..240f,
+                        )
+                        Text(
+                            stringResource(R.string.star_trails_hint),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    StTab.SUB -> {
+                        com.ehrocha.pulsar.ui.components.SignalSlider(
+                            text = stringResource(R.string.star_trails_sub, subSec),
+                            value = subSec.toFloat(),
+                            onChange = { subSec = it.roundToInt() },
+                            range = 10f..120f,
+                        )
+                    }
+                    StTab.GAP -> {
+                        com.ehrocha.pulsar.ui.components.SignalSlider(
+                            text = stringResource(R.string.star_trails_gap, gapSec),
+                            value = gapSec.toFloat(),
+                            onChange = { gapSec = it.roundToInt().coerceAtLeast(minGapSec) },
+                            range = minGapSec.toFloat()..8f,
+                            steps = (8 - minGapSec - 1).coerceAtLeast(0),
+                        )
+                        if (onCanonBle) {
+                            Text(
+                                stringResource(R.string.star_trails_ble_gap_note),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    StTab.LENS -> {
+                        com.ehrocha.pulsar.ui.components.SignalSlider(
+                            text = stringResource(
+                                R.string.star_trails_focal,
+                                focalMm,
+                                listOf("FF", "APS-C", "MFT")[sensorIdx],
+                            ),
+                            value = focalMm.toFloat(),
+                            onChange = { focalMm = it.roundToInt() },
+                            range = 8f..200f,
+                        )
+                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                            listOf("Full-frame", "APS-C", "MFT").forEachIndexed { i, label ->
+                                SegmentedButton(
+                                    selected = sensorIdx == i,
+                                    onClick = { sensorIdx = i },
+                                    shape = SegmentedButtonDefaults.itemShape(index = i, count = 3),
+                                ) { Text(label, style = MaterialTheme.typography.labelMedium) }
+                            }
+                        }
+                        if (canControlAf) {
+                            com.ehrocha.pulsar.ui.components.AutofocusToggle(
+                                checked = useAutofocus,
+                                onCheckedChange = { useAutofocus = it },
+                                enabled = !running,
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
             }
         }
     }

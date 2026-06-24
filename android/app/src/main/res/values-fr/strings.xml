@@ -586,6 +586,10 @@ La hauteur vient de l\'obscurité du ciel × ciel dégagé × pas de lune brilla
     <string name="star_trails_frames">Images</string>
     <string name="star_trails_total">Durée totale</string>
     <string name="star_trails_arc">Arc du filé</string>
+    <string name="star_trails_tab_session">Session</string>
+    <string name="star_trails_tab_sub">Pose</string>
+    <string name="star_trails_tab_gap">Écart</string>
+    <string name="star_trails_tab_lens">Objectif</string>
     <string name="star_trails_duration">Durée de session : %1$d min</string>
     <string name="star_trails_sub">Sous-exposition : %1$d s</string>
     <string name="star_trails_gap">Intervalle entre images : %1$d s</string>

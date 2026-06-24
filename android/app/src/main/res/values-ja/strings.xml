@@ -586,6 +586,10 @@
     <string name="star_trails_frames">フレーム数</string>
     <string name="star_trails_total">合計時間</string>
     <string name="star_trails_arc">軌跡の弧</string>
+    <string name="star_trails_tab_session">セッション</string>
+    <string name="star_trails_tab_sub">サブ</string>
+    <string name="star_trails_tab_gap">間隔</string>
+    <string name="star_trails_tab_lens">レンズ</string>
     <string name="star_trails_duration">セッション時間: %1$d 分</string>
     <string name="star_trails_sub">サブ露光: %1$d 秒</string>
     <string name="star_trails_gap">フレーム間隔: %1$d 秒</string>
