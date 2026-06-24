@@ -76,6 +76,13 @@ class CatalogManager(context: Context) {
      *  caller stores the result; installed state is derived from the stores. */
     suspend fun fetchEntry(entry: CatalogEntry): Payload = withContext(Dispatchers.IO) {
         runCatching {
+            // entry.file comes from the index JSON — keep it a simple relative
+            // path so it can't escape the catalog dir or switch host/scheme.
+            require(
+                entry.file.isNotBlank() &&
+                    !entry.file.contains("..") &&
+                    entry.file.matches(Regex("[\\w./-]+")),
+            ) { "Invalid catalog file path: ${entry.file}" }
             val json = httpGet("${AppConfig.CATALOG_BASE_URL}/${entry.file}")
             val obj = JSONObject(json)
             when {

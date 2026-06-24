@@ -9,6 +9,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -45,8 +46,32 @@ private val CYCLE_PATHS: List<List<Offset>> = listOf(
     listOf(Offset(0.30f, 0.10f), Offset(0.30f, 0.45f), Offset(0.72f, 0.45f), Offset(0.72f, 0.90f), Offset(0.95f, 0.90f)),
 )
 
+/** Per-cycle screen-space geometry (projected points + segment lengths),
+ *  recomputed only when the canvas size changes — NOT every animation frame.
+ *  The trail head/tail move each frame, but these don't. */
+private class CycleGeom(val sp: List<Offset>, val segLens: List<Float>, val pathLen: Float)
+
+private class CycleCache {
+    private var w = -1f
+    private var h = -1f
+    var geoms: List<CycleGeom> = emptyList()
+        private set
+
+    fun update(width: Float, height: Float) {
+        if (width == w && height == h) return
+        w = width; h = height
+        val horizon = height * 0.40f
+        geoms = CYCLE_PATHS.map { path ->
+            val sp = path.map { Offset(it.x * width, horizon + it.y * (height - horizon)) }
+            val segLens = sp.zipWithNext { a, b -> (b - a).getDistance() }
+            CycleGeom(sp, segLens, segLens.sum())
+        }
+    }
+}
+
 @Composable
 fun GridField(modifier: Modifier = Modifier, animated: Boolean = true) {
+    val cycleCache = remember { CycleCache() }
     val line = GridCyan
     val colors = PulsarTheme.colors
     val glowA = colors.liveStart
@@ -122,10 +147,12 @@ fun GridField(modifier: Modifier = Modifier, animated: Boolean = true) {
             // axis-aligned path, turning 90° at corners and dragging a long neon
             // ribbon that bends through the turns and tapers/fades to the tail.
             // After a run it parks in a gap, then re-enters.
-            for (i in CYCLE_PATHS.indices) {
-                val sp = CYCLE_PATHS[i].map { Offset(it.x * w, horizon + it.y * (h - horizon)) }
-                val segLens = sp.zipWithNext { a, b -> (b - a).getDistance() }
-                val pathLen = segLens.sum()
+            cycleCache.update(w, h)
+            for (i in cycleCache.geoms.indices) {
+                val geom = cycleCache.geoms[i]
+                val sp = geom.sp
+                val segLens = geom.segLens
+                val pathLen = geom.pathLen
                 if (pathLen <= 1f) continue
                 val trailLen = pathLen * 0.5f
                 val gap = pathLen * 0.55f
