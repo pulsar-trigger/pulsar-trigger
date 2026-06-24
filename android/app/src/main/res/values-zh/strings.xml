@@ -878,12 +878,6 @@
     <string name="iv2_tab_exposure">曝光</string>
     <string name="iv2_tab_interval">间隔</string>
     <string name="iv2_tab_shots">张数</string>
-    <string name="iv2_tab_camera">相机</string>
-    <string name="iv2_camera_help">可选 — Pulsar 将在首张拍摄前应用到相机。将任一项保持\"维持当前\"即可保留机身现有设置。</string>
-    <string name="iv2_camera_iso">ISO</string>
-    <string name="iv2_camera_aperture">光圈</string>
-    <string name="iv2_camera_leave_as_is">维持机身设置</string>
-    <string name="iv2_camera_preset_skipped">已保存的预设包含当前传输方式无法应用的相机设置 (%1$s)。Pulsar 将使用机身现有设置 — 如需要请在相机上手动调整。</string>
     <string name="iv2_tap_to_edit">点按数位以输入 · 上下滑动以调整</string>
     <string name="iv2_wizard_next">下一步</string>
     <string name="iv2_wizard_prev">上一步</string>

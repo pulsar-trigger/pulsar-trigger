@@ -48,19 +48,10 @@ data class UserMode(
          *  the BLE/ESP32 path. Default off so bulb astro runs don't try to
          *  AF on stars between shots. */
         val useAutofocus: Boolean = false,
-        // Camera-side exposure settings (v0.338). All nullable — null
-        // means "don't manage; use whatever's on the body". Strings to
-        // sidestep the CCAPI-vs-PTP encoding difference; the transport
-        // layer translates per direction.
-        val iso: String? = null,
-        val aperture: String? = null,
-        val shutterSpeed: String? = null,
     ) {
         /** Clamp every numeric field to its supported range. Applied on IMPORT
          *  (catalog / shared file) so an untrusted entry can't introduce
-         *  out-of-range or unsupported settings. Idempotent for valid data.
-         *  Camera-side strings (iso/aperture/shutter) are left as-is — the
-         *  transport layer reports unsupported ones via SettingsApplyResult. */
+         *  out-of-range or unsupported settings. Idempotent for valid data. */
         fun sanitized(): Body = copy(
             intervalMs = intervalMs.coerceIn(AppConfig.MIN_INTERVAL_MS, 86_400_000L), // ≤ 24 h
             exposureMs = exposureMs.coerceIn(AppConfig.MIN_EXPOSURE_MS, 3_600_000L),   // ≤ 1 h
@@ -95,9 +86,6 @@ data class UserMode(
                 put("shotCount", body.shotCount)
                 put("delayMs", body.delayMs)
                 put("useAutofocus", body.useAutofocus)
-                body.iso?.let { put("iso", it) }
-                body.aperture?.let { put("aperture", it) }
-                body.shutterSpeed?.let { put("shutterSpeed", it) }
                 if (body.fwMode == TriggerMode.ASTRO || body.fwMode == TriggerMode.STAR_TRAILS) {
                     // Star Trails reuses focalLength + cropFactor, and stashes the
                     // sensor index in ruleDivisor.
@@ -150,9 +138,6 @@ data class UserMode(
                 rampEndExposureMs = params.optLong("rampEndExposureMs", 10_000L),
                 rampSteps = params.optInt("rampSteps", 50),
                 useAutofocus = params.optBoolean("useAutofocus", false),
-                iso = params.optString("iso").takeIf { it.isNotEmpty() },
-                aperture = params.optString("aperture").takeIf { it.isNotEmpty() },
-                shutterSpeed = params.optString("shutterSpeed").takeIf { it.isNotEmpty() },
             )
             return UserMode(
                 id = json.optString("id").takeIf { it.isNotEmpty() } ?: UUID.randomUUID().toString(),

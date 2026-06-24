@@ -204,7 +204,6 @@ class CanonBleTransport private constructor(
      *  User must put the mode dial on Bulb on the camera itself. */
     override val supportsBulb: Boolean = true
 
-    override val supportsSettings: Boolean = false
     override val supportsLiveView: Boolean = false
     override val supportsLensInfo: Boolean = false
     override val supportsBatteryReadout: Boolean = false

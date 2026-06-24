@@ -2165,7 +2165,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         if (transport != null) {
             viewModelScope.launch {
                 com.ehrocha.pulsar.transport.runCompatibilityReport(transport)
-                probeCameraSettings(transport)
                 startFlow()
             }
         } else {
@@ -2389,36 +2388,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     fun contentTransport(): com.ehrocha.pulsar.transport.CameraTransport? =
         activeCameraTransport()?.takeIf { it.supportsContentTransfer }
 
-    private suspend fun probeCameraSettings(transport: com.ehrocha.pulsar.transport.CameraTransport) {
-        val log = com.ehrocha.pulsar.canonble.CanonBleLog
-        try {
-            log.i("probe", "=== camera-settings probe: ${transport.kind.name} ===")
-            log.i("probe", "supports iso=${transport.supportsIso} av=${transport.supportsAperture} tv=${transport.supportsShutterSpeed}")
-            if (transport.supportsIso) {
-                val v = transport.listIsoValues()
-                log.i("probe", "iso values (${v.size}): ${v.take(8).joinToString()}${if (v.size > 8) " …" else ""}")
-            }
-            if (transport.supportsAperture) {
-                val v = transport.listApertureValues()
-                log.i("probe", "av values (${v.size}): ${v.take(8).joinToString()}${if (v.size > 8) " …" else ""}")
-            }
-            if (transport.supportsShutterSpeed) {
-                val v = transport.listShutterSpeedValues()
-                log.i("probe", "tv values (${v.size}): ${v.take(8).joinToString()}${if (v.size > 8) " …" else ""}")
-            }
-            val cur = transport.readCurrentSettings()
-            log.i("probe", "current iso=${cur.iso ?: "-"} av=${cur.aperture ?: "-"} tv=${cur.shutterSpeed ?: "-"}")
-            if (cur.hasAny) {
-                val r = transport.applySettings(cur)
-                log.i("probe", "round-trip applied=${r.applied.iso ?: "-"}/${r.applied.aperture ?: "-"}/${r.applied.shutterSpeed ?: "-"} " +
-                    "skipped=${r.skipped.iso ?: "-"}/${r.skipped.aperture ?: "-"}/${r.skipped.shutterSpeed ?: "-"}")
-            }
-            log.i("probe", "=== done ===")
-        } catch (t: Throwable) {
-            log.e("probe", "failed: ${t.message}")
-        }
-    }
-
     fun stopFlow() {
         // Hand the BLE stop off immediately (don't wait on cancellation) so
         // the firmware halts ASAP; then await the flow's own finally to settle
@@ -2458,14 +2427,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 val transport = activeCameraTransport()
                 when {
                     transport != null -> {
-                        if (step.cameraSettings.hasAny) {
-                            val result = transport.applySettings(step.cameraSettings)
-                            com.ehrocha.pulsar.canonble.CanonBleLog.i(
-                                "applySettings",
-                                "applied=${result.applied.iso ?: "-"}/${result.applied.aperture ?: "-"}/${result.applied.shutterSpeed ?: "-"} " +
-                                    "skipped=${result.skipped.iso ?: "-"}/${result.skipped.aperture ?: "-"}/${result.skipped.shutterSpeed ?: "-"}"
-                            )
-                        }
                         // Timelapse = single-shot pulses, the camera owns
                         // timing; anything else is a bulb-style run. Routed
                         // on the explicit flag, NOT exposureMs: the default

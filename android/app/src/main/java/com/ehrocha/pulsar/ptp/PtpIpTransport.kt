@@ -177,7 +177,6 @@ class PtpIpTransport private constructor(
     private val canonExtension: Boolean =
         deviceInfo.manufacturer.startsWith("Canon", ignoreCase = true)
     override val supportsBulb: Boolean = canonExtension
-    override val supportsSettings: Boolean = deviceInfo.supportedDeviceProperties.isNotEmpty()
 
     // [_liveViewSupported] / [_batterySupported] start true if the body
     // advertises the relevant op / prop, but get **downgraded at runtime**

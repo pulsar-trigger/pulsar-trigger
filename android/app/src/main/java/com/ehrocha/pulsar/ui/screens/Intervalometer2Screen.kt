@@ -62,10 +62,6 @@ private enum class IvTab(val labelRes: Int, val isTime: Boolean) {
     INTERVAL(R.string.iv2_tab_interval, true),
     DELAY(R.string.iv2_tab_delay, true),
     SHOTS(R.string.iv2_tab_shots, false),
-    /** Camera-side ISO / aperture. Tab is hidden when the active transport
-     *  doesn't support either. Shutter speed isn't here — bulb-flow modes
-     *  have Pulsar owning exposure. */
-    CAMERA(R.string.iv2_tab_camera, false),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -107,14 +103,6 @@ fun Intervalometer2Screen(
     var useAutofocus by rememberSaveable {
         mutableStateOf(stepEditInitial?.useAutofocus ?: loadedPreset?.body?.useAutofocus ?: false)
     }
-    // Camera-side settings (v0.338). null = "don't manage; leave as-is on the body".
-    var iso by rememberSaveable {
-        mutableStateOf(stepEditInitial?.cameraSettings?.iso ?: loadedPreset?.body?.iso)
-    }
-    var aperture by rememberSaveable {
-        mutableStateOf(stepEditInitial?.cameraSettings?.aperture ?: loadedPreset?.body?.aperture)
-    }
-
     // Save dialog state
     var showSaveDialog by remember { mutableStateOf(false) }
 
@@ -127,29 +115,7 @@ fun Intervalometer2Screen(
     val onCanonBle = vm.canonBleTransport.collectAsState().value != null
     val onPtpIp = vm.ptpIpTransport.collectAsState().value != null
     val canControlAf = vm.activeTransportSupportsAf.collectAsState().value
-    // Per-setting camera-side capabilities of the active transport.
-    // Reactive flows so a runtime downgrade (advertised-but-rejected
-    // PUT) flips the tab off without an app restart.
-    val activeTransport = vm.canonCcapiTransport.collectAsState().value
-        ?: vm.ptpTransport.collectAsState().value
-        ?: vm.canonBleTransport.collectAsState().value
-        ?: vm.ptpIpTransport.collectAsState().value
-    val supportsIso = activeTransport?.isoSupportedFlow
-        ?.collectAsState(initial = activeTransport.supportsIso)?.value == true
-    val supportsAperture = activeTransport?.apertureSupportedFlow
-        ?.collectAsState(initial = activeTransport.supportsAperture)?.value == true
-    val showCameraTab = supportsIso || supportsAperture
-    // Hide the Camera tab when the active transport supports neither
-    // setting — keeps the wizard tab strip clean on ESP32 / Canon BLE /
-    // bodies that don't expose iso+av in CCAPI's endpoint matrix.
-    // On a settings-capable body, lead with Camera settings (ISO / aperture)
-    // and keep Shots last — the user dials in the exposure look first, then
-    // confirms count + Start (Eduardo). Without the camera tab the order is the
-    // natural exposure → interval → delay → shots.
-    val visibleTabs = remember(showCameraTab) {
-        if (showCameraTab) listOf(IvTab.CAMERA) + IvTab.entries.filter { it != IvTab.CAMERA }
-        else IvTab.entries.filter { it != IvTab.CAMERA }
-    }
+    val visibleTabs = IvTab.entries
 
     // Jump to the final tab when a preset is loaded — its values are already
     // valid so the user is one tap away from Start.
@@ -174,7 +140,6 @@ fun Intervalometer2Screen(
         IvTab.INTERVAL -> intervalMs > 0L
         IvTab.DELAY -> true
         IvTab.SHOTS -> true
-        IvTab.CAMERA -> true
     }
     // Sub-second host-timed bulb is unreliable on ANY camera transport (the
     // press/release round-trip — WiFi RTT, BLE toggle, or USB — can't bracket
@@ -249,11 +214,6 @@ fun Intervalometer2Screen(
                                 shotCount = shotCount,
                                 delayMs = delayMs,
                                 useAutofocus = useAutofocus,
-                                cameraSettings = com.ehrocha.pulsar.transport
-                                    .CameraSettings(
-                                        iso = iso,
-                                        aperture = aperture,
-                                    ),
                                 timelapse = stepEditInitial?.timelapse ?: false,
                             )
                             if (isStepEdit) {
@@ -299,32 +259,6 @@ fun Intervalometer2Screen(
                     return@Box
                 }
                 Column(modifier = Modifier.fillMaxSize()) {
-                    // Saved-preset has camera settings the active transport
-                    // can't apply — surface what was saved so the user can
-                    // dial it in on the body manually. Banner only shows on
-                    // load + dismissable.
-                    val unsupportedFromPreset = buildList {
-                        if (iso != null && !supportsIso) add("ISO $iso")
-                        if (aperture != null && !supportsAperture) add(aperture!!)
-                    }
-                    if (unsupportedFromPreset.isNotEmpty()) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.tertiaryContainer,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            shape = RoundedCornerShape(8.dp),
-                        ) {
-                            Text(
-                                stringResource(
-                                    R.string.iv2_camera_preset_skipped,
-                                    unsupportedFromPreset.joinToString(" · "),
-                                ),
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.padding(12.dp),
-                            )
-                        }
-                    }
                     com.ehrocha.pulsar.ui.components.WizardWarning(
                         wizardWarning,
                         modifier = Modifier.padding(horizontal = 16.dp),
@@ -365,14 +299,6 @@ fun Intervalometer2Screen(
                                 )
                             }
                         }
-                        IvTab.CAMERA -> CameraSettingsTab(
-                            transport = activeTransport,
-                            supportsIso = supportsIso,
-                            supportsAperture = supportsAperture,
-                            iso = iso, onIsoChange = { iso = it },
-                            aperture = aperture, onApertureChange = { aperture = it },
-                            enabled = !running,
-                        )
                     }
                 }
             }
@@ -398,8 +324,6 @@ fun Intervalometer2Screen(
                     shotCount = shotCount,
                     delayMs = delayMs,
                     useAutofocus = useAutofocus,
-                    iso = iso,
-                    aperture = aperture,
                 )
                 val mode = if (editingPreset != null) {
                     editingPreset.copy(name = name.trim(), body = body)
@@ -1117,157 +1041,3 @@ internal fun iv2FormatEndClock(durationFromNowMs: Long): String {
     return String.format(Locale.US, "%02d:%02d",
         end.get(Calendar.HOUR_OF_DAY), end.get(Calendar.MINUTE))
 }
-
-// ── Camera-params tab (v0.338) ──────────────────────────────────────────
-
-/** Camera-side ISO + aperture editor. Each row is independently gated
- *  on the active transport's per-setting capability; the "Leave as-is on
- *  body" sentinel (null) means "Pulsar doesn't manage this setting".
- *
- *  Reads the body's accepted values via [com.ehrocha.pulsar.transport.CameraTransport.listIsoValues]
- *  on first composition. If the body returns an empty list (i.e. we
- *  can't enumerate) we fall back to a free-text input so the user can
- *  type whatever the body actually accepts.
- */
-@Composable
-private fun CameraSettingsTab(
-    transport: com.ehrocha.pulsar.transport.CameraTransport?,
-    supportsIso: Boolean,
-    supportsAperture: Boolean,
-    iso: String?,
-    onIsoChange: (String?) -> Unit,
-    aperture: String?,
-    onApertureChange: (String?) -> Unit,
-    enabled: Boolean,
-) {
-    var isoOptions by remember(transport, supportsIso) {
-        mutableStateOf<List<String>>(emptyList())
-    }
-    var apertureOptions by remember(transport, supportsAperture) {
-        mutableStateOf<List<String>>(emptyList())
-    }
-    LaunchedEffect(transport, supportsIso, supportsAperture) {
-        if (transport != null && supportsIso) {
-            isoOptions = runCatching { transport.listIsoValues() }.getOrDefault(emptyList())
-        }
-        if (transport != null && supportsAperture) {
-            apertureOptions = runCatching { transport.listApertureValues() }.getOrDefault(emptyList())
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(28.dp),
-    ) {
-        Spacer(Modifier.height(8.dp))
-        if (supportsIso) {
-            SettingRow(
-                label = stringResource(R.string.iv2_camera_iso),
-                current = iso,
-                options = isoOptions,
-                onChange = onIsoChange,
-                enabled = enabled,
-            )
-        }
-        if (supportsAperture) {
-            SettingRow(
-                label = stringResource(R.string.iv2_camera_aperture),
-                current = aperture,
-                options = apertureOptions,
-                onChange = onApertureChange,
-                enabled = enabled,
-            )
-        }
-        Text(
-            stringResource(R.string.iv2_camera_help),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-/** SIGNAL instrument readout for one camera setting: an UPPERCASE label with
- *  the current value beside it in big Mono (a dash when "Leave as-is"), over a
- *  horizontal rail of selectable Mono value chips (the body's accepted values,
- *  led by Leave-as-is). Replaces the consumer-app dropdown — data-forward,
- *  values in Mono, no generic Material picker. Empty `options` (body can't
- *  enumerate) falls back to a free-text field. */
-@Composable
-private fun SettingRow(
-    label: String,
-    current: String?,
-    options: List<String>,
-    onChange: (String?) -> Unit,
-    enabled: Boolean,
-) {
-    val mono = com.ehrocha.pulsar.ui.theme.Mono
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        // Header: setting name + big Mono current value.
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                label.uppercase(),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.weight(1f))
-            Text(
-                current ?: "—",
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    fontFamily = mono,
-                    fontFeatureSettings = "tnum",
-                ),
-                color = if (current != null) MaterialTheme.colorScheme.onSurface
-                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-            )
-        }
-        if (options.isNotEmpty()) {
-            // Position 0 = Leave-as-is (—), 1..N = the accepted values. The
-            // big Mono readout above tracks the selection as you slide, so the
-            // whole enumerated list collapses to one instrument slider instead
-            // of a wall of chips.
-            val currentIdx = if (current == null) 0
-                             else options.indexOf(current).let { if (it >= 0) it + 1 else 0 }
-            Slider(
-                value = currentIdx.toFloat(),
-                onValueChange = { v ->
-                    val idx = v.roundToInt()
-                    onChange(if (idx <= 0) null else options.getOrNull(idx - 1))
-                },
-                valueRange = 0f..options.size.toFloat(),
-                steps = (options.size - 1).coerceAtLeast(0),
-                enabled = enabled,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    "—",
-                    style = MaterialTheme.typography.labelSmall.copy(fontFamily = mono),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    options.last(),
-                    style = MaterialTheme.typography.labelSmall.copy(fontFamily = mono),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        } else {
-            // Body can't enumerate this setting — let the user type what it
-            // accepts. Blank clears back to Leave-as-is.
-            OutlinedTextField(
-                value = current ?: "",
-                onValueChange = { onChange(it.takeIf { s -> s.isNotBlank() }) },
-                enabled = enabled,
-                singleLine = true,
-                placeholder = { Text(stringResource(R.string.iv2_camera_leave_as_is)) },
-                textStyle = androidx.compose.material3.LocalTextStyle.current.copy(fontFamily = mono),
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-    }
-}
-

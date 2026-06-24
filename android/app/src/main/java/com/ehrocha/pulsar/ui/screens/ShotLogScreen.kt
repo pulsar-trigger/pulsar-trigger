@@ -168,8 +168,6 @@ private fun bodyFromStep(step: FlowStep): UserMode.Body? = when (step) {
         fwMode = if (step.timelapse) TriggerMode.TIMELAPSE else TriggerMode.INTERVALOMETER,
         intervalMs = step.intervalMs, exposureMs = step.exposureMs, shotCount = step.shotCount,
         delayMs = step.delayMs, useAutofocus = step.useAutofocus,
-        iso = step.cameraSettings.iso, aperture = step.cameraSettings.aperture,
-        shutterSpeed = step.cameraSettings.shutterSpeed,
     )
     is FlowStep.Astro -> UserMode.Body(
         fwMode = TriggerMode.ASTRO, intervalMs = step.gapMs, shotCount = step.shotCount,

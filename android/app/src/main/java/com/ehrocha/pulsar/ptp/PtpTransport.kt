@@ -189,10 +189,6 @@ class PtpTransport private constructor(
     override val supportsAfToggle: Boolean = true
 
     override val supportsBulb: Boolean = advertisesCanonBulb
-    /** PTP DeviceInfo lists settings as device-properties. Whether Pulsar
-     *  exposes a settings UI is a separate question (camera-params tab is
-     *  parked) — the *transport* can support it. */
-    override val supportsSettings: Boolean = deviceInfo.supportedDeviceProperties.isNotEmpty()
     /** Initial value comes from the advertised op set; **downgraded at
      *  runtime** when [startLiveView] sees `rc=0x200A` (the EOS R lists
      *  GetViewFinderData but rejects SetEvfOutput, for example). Star Focus

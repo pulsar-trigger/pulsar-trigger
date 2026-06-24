@@ -29,7 +29,7 @@ private const val TAG = "Compat"
 suspend fun runCompatibilityReport(transport: CameraTransport) {
     CanonBleLog.i(TAG, "── Compatibility report — start ──")
     CanonBleLog.i(TAG, "transport.kind=${transport.kind}  label=${transport.label.value}")
-    CanonBleLog.i(TAG, "caps: bulb=${transport.supportsBulb} settings=${transport.supportsSettings} " +
+    CanonBleLog.i(TAG, "caps: bulb=${transport.supportsBulb} " +
         "liveView=${transport.supportsLiveView} lensInfo=${transport.supportsLensInfo} " +
         "battery=${transport.supportsBatteryReadout} afToggle=${transport.supportsAfToggle}")
 

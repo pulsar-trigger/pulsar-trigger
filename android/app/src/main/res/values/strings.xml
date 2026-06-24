@@ -199,12 +199,6 @@
     <string name="iv2_tab_interval">Interval</string>
     <string name="iv2_tab_exposure">Exposure</string>
     <string name="iv2_tab_shots">Shots</string>
-    <string name="iv2_tab_camera">Camera</string>
-    <string name="iv2_camera_help">Optional — Pulsar will apply these on the camera before the first shot. Leave any field on \"as-is\" to keep what\'s on the body.</string>
-    <string name="iv2_camera_iso">ISO</string>
-    <string name="iv2_camera_aperture">Aperture</string>
-    <string name="iv2_camera_leave_as_is">Leave as-is on body</string>
-    <string name="iv2_camera_preset_skipped">Saved preset has camera settings (%1$s) the current transport can\'t apply. Pulsar will use what\'s on the body — set these on the camera manually if needed.</string>
     <string name="iv2_tab_delay">Delay</string>
     <string name="iv2_tap_to_edit">Tap any digit to type · swipe up/down to scrub</string>
     <string name="iv2_shots_hint">0 means continuous — runs until you press Stop</string>

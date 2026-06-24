@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.StateFlow
 class FakeTransport(
     override val kind: TransportKind = TransportKind.CCAPI,
     override val supportsBulb: Boolean = true,
-    override val supportsSettings: Boolean = false,
     override val supportsLiveView: Boolean = false,
     override val supportsLensInfo: Boolean = false,
     override val supportsBatteryReadout: Boolean = false,

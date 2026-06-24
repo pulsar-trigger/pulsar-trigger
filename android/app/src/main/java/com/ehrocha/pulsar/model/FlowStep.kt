@@ -52,13 +52,6 @@ sealed class FlowStep {
          *  before each shot). Ignored on the ESP32 path — that one just
          *  pulses the shutter line and AF behaviour is up to the body. */
         val useAutofocus: Boolean = false,
-        /** Optional camera-side ISO / aperture / shutter-speed to apply
-         *  before the first shot of this step. Null means "don't manage".
-         *  Settings the active transport can't apply are reported via
-         *  [com.ehrocha.pulsar.transport.SettingsApplyResult.skipped] and
-         *  shown to the user in a banner. */
-        val cameraSettings: com.ehrocha.pulsar.transport.CameraSettings =
-            com.ehrocha.pulsar.transport.CameraSettings.EMPTY,
         /** True when this step IS a timelapse (single-shot pulses on the
          *  interval). Explicit flag — it cannot be inferred from the
          *  sentinel exposure because DEFAULT_EXPOSURE_MS and
@@ -164,9 +157,6 @@ sealed class FlowStep {
                 put("delayMs", s.delayMs)
                 put("timelapse", s.timelapse)
                 put("useAutofocus", s.useAutofocus)
-                s.cameraSettings.iso?.let { put("iso", it) }
-                s.cameraSettings.aperture?.let { put("aperture", it) }
-                s.cameraSettings.shutterSpeed?.let { put("shutterSpeed", it) }
             }
             is Astro -> {
                 put("focalLength", s.focalLength)
@@ -227,11 +217,6 @@ sealed class FlowStep {
                     delayMs = json.optLong("delayMs", AppConfig.DEFAULT_DELAY_MS),
                     useAutofocus = json.optBoolean("useAutofocus", false),
                     timelapse = json.optBoolean("timelapse", type == FlowStepType.TIMELAPSE),
-                    cameraSettings = com.ehrocha.pulsar.transport.CameraSettings(
-                        iso = json.optString("iso").takeIf { it.isNotEmpty() },
-                        aperture = json.optString("aperture").takeIf { it.isNotEmpty() },
-                        shutterSpeed = json.optString("shutterSpeed").takeIf { it.isNotEmpty() },
-                    ),
                 )
                 FlowStepType.ASTRO -> Astro(
                     id = id,
