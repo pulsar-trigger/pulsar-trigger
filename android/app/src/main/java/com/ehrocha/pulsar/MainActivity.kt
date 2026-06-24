@@ -58,6 +58,7 @@ import com.ehrocha.pulsar.ble.TriggerMode
 import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.update.AppUpdateState
 import com.ehrocha.pulsar.ui.components.BatteryIndicator
+import com.ehrocha.pulsar.ui.components.CrtOverlay
 import com.ehrocha.pulsar.ui.components.GridField
 import com.ehrocha.pulsar.ui.components.LatencyIndicator
 import com.ehrocha.pulsar.ui.components.PcbField
@@ -951,6 +952,11 @@ fun PulsarNavHost(
                 )
             }
         }
+        }
+        // Flynn's Arcade CRT overlay — topmost layer over the content, Grid
+        // only. Non-interactive (a bare Canvas); taps pass through below.
+        if (LocalVisualStyle.current.value == VisualStyle.GRID) {
+            CrtOverlay(Modifier.matchParentSize())
         }
     }
     }
