@@ -201,7 +201,6 @@
     <string name="preset_limit">已达预设上限（最多%1$d个）</string>
     <string name="preset_exists">预设“%1$s”已存在</string>
     <string name="catalog_title">库</string>
-    <string name="tools_section_library">预设与流程</string>
     <string name="catalog_update">更新</string>
     <string name="catalog_updated">已更新 %1$s</string>
     <string name="catalog_never">点按“更新”获取目录</string>
@@ -929,14 +928,12 @@
     <string name="planner_sort_date">按日期排序</string>
     <string name="planner_sort_name">按名称排序</string>
     <string name="planner_sort_verdict">按评估排序</string>
-    <string name="preset_picker_bookmark">收藏到 Trigger 标签</string>
     <string name="preset_picker_delete_body">将删除 \"%1$s\"。无法撤销。</string>
     <string name="preset_picker_delete_title">删除预设？</string>
     <string name="preset_picker_empty">还没有保存的预设。配置新运行后点击保存。</string>
     <string name="preset_picker_saved">已保存的预设</string>
     <string name="preset_picker_start_fresh">从零开始</string>
     <string name="preset_picker_start_fresh_subtitle">从空配置开始</string>
-    <string name="preset_picker_unbookmark">取消收藏</string>
     <string name="preset_save_action">保存预设</string>
     <string name="preset_save_name_label">名称</string>
     <string name="preset_save_new_title">保存预设</string>

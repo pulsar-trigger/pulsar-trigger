@@ -199,7 +199,6 @@
     <string name="preset_limit">Voreinstellungslimit erreicht (max. %1$d)</string>
     <string name="preset_exists">Voreinstellung „%1$s“ existiert bereits</string>
     <string name="catalog_title">Bibliothek</string>
-    <string name="tools_section_library">Voreinstellungen &amp; Abläufe</string>
     <string name="catalog_update">Aktualisieren</string>
     <string name="catalog_updated">Aktualisiert %1$s</string>
     <string name="catalog_never">Auf Aktualisieren tippen, um den Katalog zu laden</string>
@@ -933,14 +932,12 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="planner_sort_date">Nach Datum sortieren</string>
     <string name="planner_sort_name">Nach Name sortieren</string>
     <string name="planner_sort_verdict">Nach Bewertung sortieren</string>
-    <string name="preset_picker_bookmark">Im Trigger-Tab merken</string>
     <string name="preset_picker_delete_body">\"%1$s\" wird entfernt. Das lässt sich nicht rückgängig machen.</string>
     <string name="preset_picker_delete_title">Preset löschen?</string>
     <string name="preset_picker_empty">Noch keine Presets. Konfiguriere einen Lauf und drücke Speichern.</string>
     <string name="preset_picker_saved">GESPEICHERTE PRESETS</string>
     <string name="preset_picker_start_fresh">Bei Null anfangen</string>
     <string name="preset_picker_start_fresh_subtitle">Neue Konfiguration von Grund auf</string>
-    <string name="preset_picker_unbookmark">Aus Lesezeichen entfernen</string>
     <string name="preset_save_action">Preset speichern</string>
     <string name="preset_save_name_label">Name</string>
     <string name="preset_save_new_title">Preset speichern</string>

@@ -199,7 +199,6 @@
     <string name="preset_limit">Limite de préréglages atteinte (max %1$d)</string>
     <string name="preset_exists">Le préréglage « %1$s » existe déjà</string>
     <string name="catalog_title">Bibliothèque</string>
-    <string name="tools_section_library">Préréglages et flux</string>
     <string name="catalog_update">Mettre à jour</string>
     <string name="catalog_updated">Mis à jour %1$s</string>
     <string name="catalog_never">Touchez Mettre à jour pour récupérer le catalogue</string>
@@ -933,14 +932,12 @@ La hauteur vient de l\'obscurité du ciel × ciel dégagé × pas de lune brilla
     <string name="planner_sort_date">Trier par date</string>
     <string name="planner_sort_name">Trier par nom</string>
     <string name="planner_sort_verdict">Trier par verdict</string>
-    <string name="preset_picker_bookmark">Marquer dans l\'onglet Trigger</string>
     <string name="preset_picker_delete_body">\"%1$s\" sera supprimé. Cette action est irréversible.</string>
     <string name="preset_picker_delete_title">Supprimer le preset ?</string>
     <string name="preset_picker_empty">Aucun preset sauvegardé. Configurez une nouvelle séquence puis touchez sauvegarder.</string>
     <string name="preset_picker_saved">PRESETS SAUVEGARDÉS</string>
     <string name="preset_picker_start_fresh">Repartir de zéro</string>
     <string name="preset_picker_start_fresh_subtitle">Nouvelle configuration vide</string>
-    <string name="preset_picker_unbookmark">Retirer des marque-pages</string>
     <string name="preset_save_action">Sauvegarder le preset</string>
     <string name="preset_save_name_label">Nom</string>
     <string name="preset_save_new_title">Sauvegarder le preset</string>

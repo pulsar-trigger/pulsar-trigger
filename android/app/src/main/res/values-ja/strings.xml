@@ -199,7 +199,6 @@
     <string name="preset_limit">プリセットの上限に達しました（最大%1$d）</string>
     <string name="preset_exists">プリセット「%1$s」は既に存在します</string>
     <string name="catalog_title">ライブラリ</string>
-    <string name="tools_section_library">プリセットとフロー</string>
     <string name="catalog_update">更新</string>
     <string name="catalog_updated">更新: %1$s</string>
     <string name="catalog_never">「更新」でカタログを取得</string>
@@ -933,14 +932,12 @@
     <string name="planner_sort_date">日付順</string>
     <string name="planner_sort_name">名前順</string>
     <string name="planner_sort_verdict">評価順</string>
-    <string name="preset_picker_bookmark">Trigger タブにブックマーク</string>
     <string name="preset_picker_delete_body">\"%1$s\" を削除します。元に戻せません。</string>
     <string name="preset_picker_delete_title">プリセットを削除?</string>
     <string name="preset_picker_empty">保存済みのプリセットはありません。新しい設定を作って保存してください。</string>
     <string name="preset_picker_saved">保存済みプリセット</string>
     <string name="preset_picker_start_fresh">最初から</string>
     <string name="preset_picker_start_fresh_subtitle">ゼロから新規設定</string>
-    <string name="preset_picker_unbookmark">ブックマーク解除</string>
     <string name="preset_save_action">プリセットを保存</string>
     <string name="preset_save_name_label">名前</string>
     <string name="preset_save_new_title">プリセットを保存</string>

@@ -222,8 +222,6 @@
     <string name="preset_picker_start_fresh_subtitle">New configuration from zero</string>
     <string name="preset_picker_saved">SAVED PRESETS</string>
     <string name="preset_picker_empty">No saved presets yet. Configure a new run, then tap save to keep it.</string>
-    <string name="preset_picker_bookmark">Bookmark to Trigger tab</string>
-    <string name="preset_picker_unbookmark">Remove bookmark</string>
     <string name="preset_picker_delete_title">Delete preset?</string>
     <string name="preset_picker_delete_body">"%1$s" will be removed. This cannot be undone.</string>
     <string name="preset_save_action">Save preset</string>
@@ -272,7 +270,6 @@
     <string name="preset_limit">Preset limit reached (max %1$d)</string>
     <string name="preset_exists">Preset “%1$s” already exists</string>
     <string name="catalog_title">Library</string>
-    <string name="tools_section_library">Presets &amp; flows</string>
     <string name="catalog_update">Update</string>
     <string name="catalog_updated">Updated %1$s</string>
     <string name="catalog_never">Pull Update to fetch the catalog</string>

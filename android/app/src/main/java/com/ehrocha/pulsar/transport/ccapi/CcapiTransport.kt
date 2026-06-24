@@ -351,26 +351,7 @@ class CcapiTransport(
         }
     }
 
-    // ── Camera-params: ISO / aperture / shutter speed ──────────────────────
-    // Used by the "Adjust camera settings" Pause flow step: list*Values feeds
-    // the editor's value picker (exact body-accepted strings); applySettings
-    // writes them when the flow reaches the step.
-
-    override suspend fun listIsoValues(): List<String> = listAbility(PATH_ISO)
-    override suspend fun listApertureValues(): List<String> = listAbility(PATH_AV)
-    override suspend fun listShutterSpeedValues(): List<String> = listAbility(PATH_TV)
-
-    /** Read the `ability` array from a CCAPI settings endpoint. CCAPI shape:
-     *  `{"value": "1600", "ability": ["AUTO", "100", "200", …]}`. */
-    private suspend fun listAbility(path: String): List<String> {
-        if (!_connected.value || !client.supports(path, "get")) return emptyList()
-        val r = client.get(path)
-        if (r !is CcapiClient.Result.Ok) { logResult("listAbility($path)", r); return emptyList() }
-        return try {
-            val arr = org.json.JSONObject(r.value).optJSONArray("ability") ?: return emptyList()
-            buildList { for (i in 0 until arr.length()) add(arr.optString(i)) }
-        } catch (_: Exception) { emptyList() }
-    }
+    // ── Camera-params: applied by the "Adjust camera settings" Pause step ──
 
     override suspend fun applySettings(
         settings: com.ehrocha.pulsar.transport.CameraSettings,

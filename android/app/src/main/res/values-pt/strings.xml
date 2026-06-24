@@ -199,7 +199,6 @@
     <string name="preset_limit">Limite de predefinições atingido (máx. %1$d)</string>
     <string name="preset_exists">A predefinição “%1$s” já existe</string>
     <string name="catalog_title">Biblioteca</string>
-    <string name="tools_section_library">Predefinições e fluxos</string>
     <string name="catalog_update">Atualizar</string>
     <string name="catalog_updated">Atualizado %1$s</string>
     <string name="catalog_never">Toque em Atualizar para buscar o catálogo</string>
@@ -933,14 +932,12 @@ A altura vem da escuridão do céu × céu limpo × sem lua brilhante × sem chu
     <string name="planner_sort_date">Ordenar por data</string>
     <string name="planner_sort_name">Ordenar por nome</string>
     <string name="planner_sort_verdict">Ordenar por veredito</string>
-    <string name="preset_picker_bookmark">Favoritar na aba Trigger</string>
     <string name="preset_picker_delete_body">\"%1$s\" será removido. Esta ação não pode ser desfeita.</string>
     <string name="preset_picker_delete_title">Apagar preset?</string>
     <string name="preset_picker_empty">Sem presets salvos. Configure um novo run e toque em salvar.</string>
     <string name="preset_picker_saved">PRESETS SALVOS</string>
     <string name="preset_picker_start_fresh">Começar do zero</string>
     <string name="preset_picker_start_fresh_subtitle">Nova configuração do zero</string>
-    <string name="preset_picker_unbookmark">Remover dos favoritos</string>
     <string name="preset_save_action">Salvar preset</string>
     <string name="preset_save_name_label">Nome</string>
     <string name="preset_save_new_title">Salvar preset</string>

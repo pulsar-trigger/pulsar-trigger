@@ -199,7 +199,6 @@
     <string name="preset_limit">Límite de preajustes alcanzado (máx. %1$d)</string>
     <string name="preset_exists">El preajuste «%1$s» ya existe</string>
     <string name="catalog_title">Biblioteca</string>
-    <string name="tools_section_library">Preajustes y flujos</string>
     <string name="catalog_update">Actualizar</string>
     <string name="catalog_updated">Actualizado %1$s</string>
     <string name="catalog_never">Pulsa Actualizar para obtener el catálogo</string>
@@ -931,14 +930,12 @@ La altura proviene de la oscuridad del cielo × cielo despejado × sin luna bril
     <string name="planner_sort_date">Ordenar por fecha</string>
     <string name="planner_sort_name">Ordenar por nombre</string>
     <string name="planner_sort_verdict">Ordenar por veredicto</string>
-    <string name="preset_picker_bookmark">Marcar en pestaña Trigger</string>
     <string name="preset_picker_delete_body">\"%1$s\" se eliminará. Esta acción no se puede deshacer.</string>
     <string name="preset_picker_delete_title">¿Borrar preset?</string>
     <string name="preset_picker_empty">Aún no hay presets. Configura una nueva ejecución y toca guardar.</string>
     <string name="preset_picker_saved">PRESETS GUARDADOS</string>
     <string name="preset_picker_start_fresh">Empezar de cero</string>
     <string name="preset_picker_start_fresh_subtitle">Nueva configuración desde cero</string>
-    <string name="preset_picker_unbookmark">Quitar de marcadores</string>
     <string name="preset_save_action">Guardar preset</string>
     <string name="preset_save_name_label">Nombre</string>
     <string name="preset_save_new_title">Guardar preset</string>

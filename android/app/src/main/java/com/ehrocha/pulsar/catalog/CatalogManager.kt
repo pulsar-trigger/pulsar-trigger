@@ -23,8 +23,9 @@ import java.net.URL
 /**
  * Network catalog of presets/flows, apt-style: [refresh] pulls the index (the
  * "package list") into a local cache; [fetchEntry] downloads one entry's JSON
- * (the "package"), **sanitizes** it, and hands it back for the caller to store;
- * [markInstalled] records id→version so the UI can show installed / update.
+ * (the "package"), **sanitizes** it, and hands it back for the caller to store.
+ * Installed / update state is DERIVED from the stores (does a UserMode/SavedFlow
+ * with this catalog id exist, and at what version) — no separate registry.
  *
  * Content is fetched read-only over HTTPS from [AppConfig.CATALOG_BASE_URL]
  * (a public repo). Nothing is bundled — A = network-only.
@@ -72,7 +73,7 @@ class CatalogManager(context: Context) {
     }
 
     /** apt install (fetch half) — download + parse + sanitize one entry. The
-     *  caller stores the result and then calls [markInstalled]. */
+     *  caller stores the result; installed state is derived from the stores. */
     suspend fun fetchEntry(entry: CatalogEntry): Payload = withContext(Dispatchers.IO) {
         runCatching {
             val json = httpGet("${AppConfig.CATALOG_BASE_URL}/${entry.file}")

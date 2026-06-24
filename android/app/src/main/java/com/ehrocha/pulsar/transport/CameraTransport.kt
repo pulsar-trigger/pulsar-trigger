@@ -89,13 +89,6 @@ interface CameraTransport {
     suspend fun applySettings(settings: CameraSettings): SettingsApplyResult =
         SettingsApplyResult.NOOP
 
-    /** The body's accepted values for a setting, for the editor's value
-     *  picker (CCAPI `…/iso|av|tv.ability`). Empty = "can't enumerate; fall
-     *  back to the app-side standard ladder". */
-    suspend fun listIsoValues(): List<String> = emptyList()
-    suspend fun listApertureValues(): List<String> = emptyList()
-    suspend fun listShutterSpeedValues(): List<String> = emptyList()
-
     /** Transport can serve a live-view JPEG stream. CCAPI: true (used by
      *  Star Focus). For UI gating that needs to react to **runtime
      *  downgrade** (PTP bodies that advertise the op but reject the wire
