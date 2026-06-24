@@ -514,6 +514,13 @@ La hauteur vient de l\'obscurité du ciel × ciel dégagé × pas de lune brilla
     <string name="flow_time_remaining_short">%1$ds restantes</string>
     <string name="flow_waiting_for_user">En attente de l\'utilisateur</string>
     <string name="label_pause_message">Message de pause</string>
+    <string name="pause_camera_toggle">Définir les réglages photo</string>
+    <string name="pause_camera_hint">Applique ISO / ouverture / vitesse à cette pause — ou les affiche pour réglage manuel</string>
+    <string name="pause_camera_iso">ISO</string>
+    <string name="pause_camera_aperture">Ouverture</string>
+    <string name="pause_camera_shutter">Vitesse</string>
+    <string name="pause_camera_applied">Appliqué : %1$s — vérifiez sur le boîtier</string>
+    <string name="pause_camera_manual">À régler sur le boîtier : %1$s</string>
     <string name="pause_message_hint">Affiché lorsque la séquence atteint cette étape</string>
     <string name="dialog_save_flow">Enregistrer la séquence</string>
     <string name="label_flow_name">Nom de la séquence</string>

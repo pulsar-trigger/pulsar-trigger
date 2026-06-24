@@ -75,6 +75,26 @@ interface CameraTransport {
      *  tiles are dimmed; only Timelapse + Manual still work. */
     val supportsBulb: Boolean
 
+    /** Transport can WRITE camera-side exposure settings (ISO / aperture /
+     *  shutter) programmatically — i.e. [applySettings] actually does
+     *  something. Default false; only CCAPI overrides it true today (a real
+     *  PTP `SetDevicePropValue` apply is a planned fast-follow). The "Adjust
+     *  camera settings" Pause step uses this to choose apply-then-verify
+     *  (true) vs. show-and-set-manually (false). */
+    val supportsSettings: Boolean get() = false
+
+    /** Apply the non-null fields of [settings] to the body. Returns a
+     *  [SettingsApplyResult] of what was applied vs. skipped (body rejected /
+     *  endpoint absent). Default no-op for transports that can't write. */
+    suspend fun applySettings(settings: CameraSettings): SettingsApplyResult =
+        SettingsApplyResult.NOOP
+
+    /** The body's accepted values for a setting, for the editor's value
+     *  picker (CCAPI `…/iso|av|tv.ability`). Empty = "can't enumerate; fall
+     *  back to the app-side standard ladder". */
+    suspend fun listIsoValues(): List<String> = emptyList()
+    suspend fun listApertureValues(): List<String> = emptyList()
+    suspend fun listShutterSpeedValues(): List<String> = emptyList()
 
     /** Transport can serve a live-view JPEG stream. CCAPI: true (used by
      *  Star Focus). For UI gating that needs to react to **runtime

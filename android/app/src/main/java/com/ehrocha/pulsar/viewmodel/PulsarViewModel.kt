@@ -51,6 +51,17 @@ import kotlinx.coroutines.launch
 import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.withTimeoutOrNull
 
+/** Camera-settings detail for a paused "Adjust camera settings" step:
+ *  [applied] = confirmed-applied on a supporting body, [manual] = the user
+ *  must set these by hand (unsupported transport, or the body rejected them). */
+data class PauseCameraInfo(
+    val applied: List<String>,
+    val manual: List<String>,
+)
+
+private fun com.ehrocha.pulsar.transport.CameraSettings.displayParts(): List<String> =
+    listOfNotNull(iso?.let { "ISO $it" }, aperture, shutterSpeed)
+
 class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     companion object {
@@ -1021,6 +1032,11 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val runCompleted: kotlinx.coroutines.flow.SharedFlow<Int> = _runCompleted
     private val _flowPaused = MutableStateFlow(false)
     val flowPaused: StateFlow<Boolean> = _flowPaused
+    // Camera-settings detail for a paused "Adjust camera settings" step:
+    // what was auto-applied vs. what the user must set by hand. Null = the
+    // current pause carries no camera settings (plain pause).
+    private val _pauseCameraInfo = MutableStateFlow<PauseCameraInfo?>(null)
+    val pauseCameraInfo: StateFlow<PauseCameraInfo?> = _pauseCameraInfo
     private val _flowCurrentStep = MutableStateFlow(-1)
     val flowCurrentStep: StateFlow<Int> = _flowCurrentStep
     private var flowJob: Job? = null
@@ -1918,6 +1934,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         // defensively in case the job was never properly started.
         _flowRunning.value = false
         _flowPaused.value = false
+        _pauseCameraInfo.value = null
         _flowCurrentStep.value = -1
         // Belt-and-braces release. The runner's NonCancellable finally
         // already calls stopBulb — but for paths that bypass it (e.g.,
@@ -2354,6 +2371,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun continueFlow() {
+        _pauseCameraInfo.value = null
         _flowPaused.value = false
     }
 
@@ -2414,6 +2432,19 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun executeFlowStep(step: FlowStep) {
         when (step) {
             is FlowStep.Pause -> {
+                // Camera-settings pause: apply on a supporting body (then ask
+                // the user to VERIFY), otherwise list the targets for manual
+                // entry. Either way we halt until the user taps Continue.
+                val cam = step.camera
+                _pauseCameraInfo.value = if (cam != null && cam.hasAny) {
+                    val transport = activeCameraTransport()
+                    if (transport?.supportsSettings == true) {
+                        val r = transport.applySettings(cam)
+                        PauseCameraInfo(applied = r.applied.displayParts(), manual = r.skipped.displayParts())
+                    } else {
+                        PauseCameraInfo(applied = emptyList(), manual = cam.displayParts())
+                    }
+                } else null
                 _flowPaused.value = true
                 if (step.wakeOnPause) {
                     wakeScreen()
@@ -2422,6 +2453,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     coroutineContext.ensureActive()
                     delay(100)
                 }
+                _pauseCameraInfo.value = null
             }
             is FlowStep.Intervalometer -> {
                 val transport = activeCameraTransport()

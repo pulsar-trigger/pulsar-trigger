@@ -108,6 +108,9 @@ sealed class FlowStep {
         override val id: String = UUID.randomUUID().toString(),
         val label: String = "Adjust camera settings",
         val wakeOnPause: Boolean = true,
+        /** Optional camera-side settings to apply (supported bodies) or show
+         *  for manual entry (unsupported) when the flow reaches this pause. */
+        val camera: com.ehrocha.pulsar.transport.CameraSettings? = null,
     ) : FlowStep() {
         override val type get() = FlowStepType.PAUSE
     }
@@ -185,6 +188,11 @@ sealed class FlowStep {
             is Pause -> {
                 put("label", s.label)
                 put("wakeOnPause", s.wakeOnPause)
+                s.camera?.let { c ->
+                    c.iso?.let { put("iso", it) }
+                    c.aperture?.let { put("aperture", it) }
+                    c.shutterSpeed?.let { put("shutterSpeed", it) }
+                }
             }
         }
     }
@@ -271,6 +279,11 @@ sealed class FlowStep {
                     label = json.optString("label",
                         json.optString("pauseLabel", "Adjust camera settings")),
                     wakeOnPause = json.optBoolean("wakeOnPause", true),
+                    camera = com.ehrocha.pulsar.transport.CameraSettings(
+                        iso = json.optString("iso").takeIf { it.isNotEmpty() },
+                        aperture = json.optString("aperture").takeIf { it.isNotEmpty() },
+                        shutterSpeed = json.optString("shutterSpeed").takeIf { it.isNotEmpty() },
+                    ).takeIf { it.hasAny },
                 )
             }
         }
@@ -302,7 +315,10 @@ fun FlowStep.summaryLabel(context: Context): String = when (this) {
         val expS = AppConfig.astroExposureS(focalLength, cropFactor, ruleDivisor)
         context.getString(R.string.step_summary_astro, shotCount, "%.1f".format(expS), focalLength)
     }
-    is FlowStep.Pause -> label
+    is FlowStep.Pause -> camera?.let { c ->
+        val parts = listOfNotNull(c.iso?.let { "ISO $it" }, c.aperture, c.shutterSpeed)
+        if (parts.isEmpty()) label else "$label — ${parts.joinToString(" · ")}"
+    } ?: label
     is FlowStep.DarkFrame -> context.getString(R.string.step_summary_dark_frame, shotCount, exposureMs)
     is FlowStep.Ramp -> context.getString(R.string.step_summary_ramp, steps, startExposureMs, endExposureMs)
 }

@@ -31,6 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import kotlin.math.roundToInt
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -46,6 +47,7 @@ import com.ehrocha.pulsar.model.FlowStepType
 import com.ehrocha.pulsar.model.SavedFlow
 import com.ehrocha.pulsar.model.displayName
 import com.ehrocha.pulsar.model.summaryLabel
+import com.ehrocha.pulsar.viewmodel.PauseCameraInfo
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 
 import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
@@ -74,6 +76,10 @@ private fun PauseStepWizard(
 ) {
     var label by remember { mutableStateOf(initial?.label ?: "") }
     var wake by remember { mutableStateOf(initial?.wakeOnPause ?: true) }
+    var setCamera by remember { mutableStateOf(initial?.camera != null) }
+    var iso by remember { mutableStateOf(initial?.camera?.iso) }
+    var aperture by remember { mutableStateOf(initial?.camera?.aperture) }
+    var shutter by remember { mutableStateOf(initial?.camera?.shutterSpeed) }
     BackHandler(onBack = onCancel)
     Scaffold(
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
@@ -85,7 +91,13 @@ private fun PauseStepWizard(
                 running = false,
                 canStart = true,
                 startLabel = stringResource(R.string.save),
-                onStart = { onSave(FlowStep.Pause(label = label, wakeOnPause = wake)) },
+                onStart = {
+                    val cam = if (setCamera) {
+                        com.ehrocha.pulsar.transport.CameraSettings(iso, aperture, shutter)
+                            .takeIf { it.hasAny }
+                    } else null
+                    onSave(FlowStep.Pause(label = label, wakeOnPause = wake, camera = cam))
+                },
                 onStop = {},
             )
         },
@@ -122,7 +134,79 @@ private fun PauseStepWizard(
                 }
                 Switch(checked = wake, onCheckedChange = { wake = it })
             }
+
+            HorizontalDivider()
+
+            // Optional camera-side settings. On a CCAPI body these are applied
+            // when the flow reaches this pause (then the user verifies); on
+            // other transports they're shown for manual entry.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.pause_camera_toggle),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Text(
+                        stringResource(R.string.pause_camera_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(checked = setCamera, onCheckedChange = { setCamera = it })
+            }
+            if (setCamera) {
+                CameraValueSlider(stringResource(R.string.pause_camera_iso), iso,
+                    com.ehrocha.pulsar.transport.CameraSettingValues.ISO) { iso = it }
+                CameraValueSlider(stringResource(R.string.pause_camera_aperture), aperture,
+                    com.ehrocha.pulsar.transport.CameraSettingValues.APERTURE) { aperture = it }
+                CameraValueSlider(stringResource(R.string.pause_camera_shutter), shutter,
+                    com.ehrocha.pulsar.transport.CameraSettingValues.SHUTTER) { shutter = it }
+            }
         }
+    }
+}
+
+/** One camera setting as an instrument slider over its value ladder. Position
+ *  0 = "leave as-is" (null, shown as —); 1..N = the values. The big Mono
+ *  readout tracks the selection, so a long ladder collapses to one control. */
+@Composable
+private fun CameraValueSlider(
+    label: String,
+    current: String?,
+    options: List<String>,
+    onChange: (String?) -> Unit,
+) {
+    val mono = com.ehrocha.pulsar.ui.theme.Mono
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                label.uppercase(),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.weight(1f))
+            Text(
+                current ?: "—",
+                style = MaterialTheme.typography.titleLarge.copy(fontFamily = mono),
+                color = if (current != null) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            )
+        }
+        val idx = if (current == null) 0
+                  else options.indexOf(current).let { if (it >= 0) it + 1 else 0 }
+        Slider(
+            value = idx.toFloat(),
+            onValueChange = { v ->
+                val i = v.roundToInt()
+                onChange(if (i <= 0) null else options.getOrNull(i - 1))
+            },
+            valueRange = 0f..options.size.toFloat(),
+            steps = (options.size - 1).coerceAtLeast(0),
+        )
     }
 }
 
@@ -780,6 +864,7 @@ private fun FlowEditorView(
 ) {
     val connected = LocalDeviceConnected.current
     val status = LocalDeviceStatus.current
+    val pauseCam by vm.pauseCameraInfo.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var showSaveDialog by remember { mutableStateOf(false) }
     // Step being edited in the reused full wizard (null = not editing).
@@ -912,6 +997,24 @@ private fun FlowEditorView(
                                 textAlign = TextAlign.Center,
                             )
                         }
+                        pauseCam?.let { info ->
+                            if (info.applied.isNotEmpty()) {
+                                Text(
+                                    stringResource(R.string.pause_camera_applied, info.applied.joinToString(" · ")),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                            if (info.manual.isNotEmpty()) {
+                                Text(
+                                    stringResource(R.string.pause_camera_manual, info.manual.joinToString(" · ")),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = StatusOrange,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                        }
                         Button(
                             onClick = { vm.continueFlow() },
                             modifier = Modifier.fillMaxWidth(),
@@ -1026,6 +1129,7 @@ private fun FlowEditorView(
                         isCurrent = isCurrent,
                         isDone = isDone,
                         isPaused = isCurrent && paused,
+                        pauseCamera = if (isCurrent && paused) pauseCam else null,
                         enabled = !running,
                         onEdit = {
                             stepWizard = StepWizardTarget(index = index, step = step)
@@ -1173,6 +1277,7 @@ private fun FlowStepCard(
     isCurrent: Boolean,
     isDone: Boolean,
     isPaused: Boolean,
+    pauseCamera: PauseCameraInfo?,
     enabled: Boolean,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -1515,6 +1620,27 @@ private fun FlowStepCard(
                         color = StatusOrange,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                     )
+                }
+
+                // Adjust-camera-settings detail: what was auto-applied (verify
+                // it on the body) vs. what to set by hand before continuing.
+                pauseCamera?.let { info ->
+                    if (info.applied.isNotEmpty()) {
+                        Text(
+                            stringResource(R.string.pause_camera_applied, info.applied.joinToString(" · ")),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(bottom = 4.dp),
+                        )
+                    }
+                    if (info.manual.isNotEmpty()) {
+                        Text(
+                            stringResource(R.string.pause_camera_manual, info.manual.joinToString(" · ")),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = StatusOrange,
+                            modifier = Modifier.padding(bottom = 4.dp),
+                        )
+                    }
                 }
 
                 Button(

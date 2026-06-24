@@ -514,6 +514,13 @@ A altura vem da escuridão do céu × céu limpo × sem lua brilhante × sem chu
     <string name="flow_time_remaining_short">%1$ds restantes</string>
     <string name="flow_waiting_for_user">Aguardando o usuário</string>
     <string name="label_pause_message">Mensagem de pausa</string>
+    <string name="pause_camera_toggle">Definir parâmetros da câmera</string>
+    <string name="pause_camera_hint">Aplica ISO / abertura / obturador nesta pausa — ou os exibe para ajuste manual</string>
+    <string name="pause_camera_iso">ISO</string>
+    <string name="pause_camera_aperture">Abertura</string>
+    <string name="pause_camera_shutter">Obturador</string>
+    <string name="pause_camera_applied">Aplicado: %1$s — verifique na câmera</string>
+    <string name="pause_camera_manual">Ajuste na câmera: %1$s</string>
     <string name="pause_message_hint">Exibida quando o fluxo chega a esta etapa</string>
     <string name="dialog_save_flow">Salvar Fluxo</string>
     <string name="label_flow_name">Nome do fluxo</string>

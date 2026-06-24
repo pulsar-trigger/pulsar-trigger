@@ -514,6 +514,13 @@
     <string name="flow_time_remaining_short">残り %1$d秒</string>
     <string name="flow_waiting_for_user">ユーザーの操作を待っています</string>
     <string name="label_pause_message">一時停止メッセージ</string>
+    <string name="pause_camera_toggle">カメラ設定を行う</string>
+    <string name="pause_camera_hint">この一時停止でISO／絞り／シャッターを適用、または手動設定用に表示します</string>
+    <string name="pause_camera_iso">ISO</string>
+    <string name="pause_camera_aperture">絞り</string>
+    <string name="pause_camera_shutter">シャッター</string>
+    <string name="pause_camera_applied">適用: %1$s — カメラで確認してください</string>
+    <string name="pause_camera_manual">カメラで設定: %1$s</string>
     <string name="pause_message_hint">フローがこのステップに到達した時に表示されます</string>
     <string name="dialog_save_flow">フローを保存</string>
     <string name="label_flow_name">フロー名</string>

@@ -512,6 +512,13 @@ La altura proviene de la oscuridad del cielo × cielo despejado × sin luna bril
     <string name="flow_time_remaining_short">%1$ds restantes</string>
     <string name="flow_waiting_for_user">Esperando al usuario</string>
     <string name="label_pause_message">Mensaje de pausa</string>
+    <string name="pause_camera_toggle">Ajustar parámetros de cámara</string>
+    <string name="pause_camera_hint">Aplica ISO / diafragma / obturador en esta pausa — o los muestra para ajuste manual</string>
+    <string name="pause_camera_iso">ISO</string>
+    <string name="pause_camera_aperture">Diafragma</string>
+    <string name="pause_camera_shutter">Obturador</string>
+    <string name="pause_camera_applied">Aplicado: %1$s — verifica en la cámara</string>
+    <string name="pause_camera_manual">Ajusta en la cámara: %1$s</string>
     <string name="pause_message_hint">Se muestra cuando el flujo llega a este paso</string>
     <string name="dialog_save_flow">Guardar Flujo</string>
     <string name="label_flow_name">Nombre del flujo</string>

@@ -514,6 +514,13 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="flow_time_remaining_short">%1$ds verbleibend</string>
     <string name="flow_waiting_for_user">Warte auf Benutzer</string>
     <string name="label_pause_message">Pausennachricht</string>
+    <string name="pause_camera_toggle">Kameraeinstellungen setzen</string>
+    <string name="pause_camera_hint">Wendet ISO / Blende / Belichtungszeit an dieser Pause an — oder zeigt sie zur manuellen Eingabe</string>
+    <string name="pause_camera_iso">ISO</string>
+    <string name="pause_camera_aperture">Blende</string>
+    <string name="pause_camera_shutter">Verschluss</string>
+    <string name="pause_camera_applied">Angewendet: %1$s — an der Kamera prüfen</string>
+    <string name="pause_camera_manual">An der Kamera einstellen: %1$s</string>
     <string name="pause_message_hint">Wird angezeigt, wenn der Ablauf diesen Schritt erreicht</string>
     <string name="dialog_save_flow">Ablauf speichern</string>
     <string name="label_flow_name">Ablaufname</string>

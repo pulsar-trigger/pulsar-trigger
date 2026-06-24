@@ -44,6 +44,10 @@ class CcapiTransport(
         private const val PATH_LIVEVIEW = "/shooting/liveview"
         private const val PATH_LIVEVIEW_FLIP = "/shooting/liveview/flip"
         private const val PATH_DRIVE_FOCUS = "/shooting/control/drivefocus"
+        // Camera-side exposure settings (Adjust-camera-settings Pause step).
+        private const val PATH_ISO = "/shooting/settings/iso"
+        private const val PATH_AV = "/shooting/settings/av"
+        private const val PATH_TV = "/shooting/settings/tv"
     }
 
     override val kind = TransportKind.CCAPI
@@ -77,6 +81,7 @@ class CcapiTransport(
     override val supportsLiveView: Boolean = true
     override val supportsLensInfo: Boolean = true
     override val supportsBatteryReadout: Boolean = true
+    override val supportsSettings: Boolean = true
 
     /** Probe `GET /ccapi`, pin version, cache endpoints. Returns the client's
      *  [CcapiClient.Result] verbatim so callers can route 401 / network errors. */
@@ -344,6 +349,52 @@ class CcapiTransport(
             is CcapiClient.Result.NeedsAuth -> CanonBleLog.w(TAG, "$tag needs auth")
             is CcapiClient.Result.Network -> CanonBleLog.w(TAG, "$tag network: ${r.cause.message}")
         }
+    }
+
+    // ── Camera-params: ISO / aperture / shutter speed ──────────────────────
+    // Used by the "Adjust camera settings" Pause flow step: list*Values feeds
+    // the editor's value picker (exact body-accepted strings); applySettings
+    // writes them when the flow reaches the step.
+
+    override suspend fun listIsoValues(): List<String> = listAbility(PATH_ISO)
+    override suspend fun listApertureValues(): List<String> = listAbility(PATH_AV)
+    override suspend fun listShutterSpeedValues(): List<String> = listAbility(PATH_TV)
+
+    /** Read the `ability` array from a CCAPI settings endpoint. CCAPI shape:
+     *  `{"value": "1600", "ability": ["AUTO", "100", "200", …]}`. */
+    private suspend fun listAbility(path: String): List<String> {
+        if (!_connected.value || !client.supports(path, "get")) return emptyList()
+        val r = client.get(path)
+        if (r !is CcapiClient.Result.Ok) { logResult("listAbility($path)", r); return emptyList() }
+        return try {
+            val arr = org.json.JSONObject(r.value).optJSONArray("ability") ?: return emptyList()
+            buildList { for (i in 0 until arr.length()) add(arr.optString(i)) }
+        } catch (_: Exception) { emptyList() }
+    }
+
+    override suspend fun applySettings(
+        settings: com.ehrocha.pulsar.transport.CameraSettings,
+    ): com.ehrocha.pulsar.transport.SettingsApplyResult {
+        if (!_connected.value || !settings.hasAny) {
+            return com.ehrocha.pulsar.transport.SettingsApplyResult.NOOP
+        }
+        var appliedIso: String? = null; var skippedIso: String? = null
+        var appliedAv: String? = null; var skippedAv: String? = null
+        var appliedTv: String? = null; var skippedTv: String? = null
+        settings.iso?.let { v -> if (writeValue(PATH_ISO, v)) appliedIso = v else skippedIso = v }
+        settings.aperture?.let { v -> if (writeValue(PATH_AV, v)) appliedAv = v else skippedAv = v }
+        settings.shutterSpeed?.let { v -> if (writeValue(PATH_TV, v)) appliedTv = v else skippedTv = v }
+        return com.ehrocha.pulsar.transport.SettingsApplyResult(
+            applied = com.ehrocha.pulsar.transport.CameraSettings(appliedIso, appliedAv, appliedTv),
+            skipped = com.ehrocha.pulsar.transport.CameraSettings(skippedIso, skippedAv, skippedTv),
+        )
+    }
+
+    private suspend fun writeValue(path: String, value: String): Boolean {
+        if (!client.supports(path, "put")) return false
+        val r = client.put(path, org.json.JSONObject().put("value", value))
+        logResult("PUT $path=$value", r)
+        return r is CcapiClient.Result.Ok
     }
 
     // ── Photo transfer ──────────────────────────────────────────────────
