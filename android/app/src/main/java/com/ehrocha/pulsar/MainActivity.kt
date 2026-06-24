@@ -644,23 +644,6 @@ fun PulsarNavHost(
                         currentScreen = AppScreen.PresetPicker(TriggerMode.TIMELAPSE)
                     },
                     onStarTrailsSelected = { currentScreen = AppScreen.PresetPicker(TriggerMode.STAR_TRAILS) },
-                    onUserModeRun = { mode ->
-                        // Bookmarked tile click — fire the preset immediately
-                        // instead of re-walking the wizard. The user already
-                        // committed to these params by bookmarking. Land them
-                        // on the matching wizard so the in-progress RunningView
-                        // is shown (the wizard reacts to `_flowRunning`); user
-                        // can stop via the Stop button if they tapped wrong.
-                        vm.runUserModeNow(mode)
-                        currentScreen = when (mode.body.fwMode) {
-                            TriggerMode.INTERVALOMETER -> AppScreen.Intervalometer2(mode.id)
-                            TriggerMode.ASTRO -> AppScreen.AstroMode2(mode.id)
-                            TriggerMode.TIMELAPSE -> AppScreen.Timelapse(mode.id)
-                            TriggerMode.DARK_FRAME -> AppScreen.DarkFrame2(mode.id)
-                            TriggerMode.RAMP -> AppScreen.Ramp2(mode.id)
-                            else -> AppScreen.Menu
-                        }
-                    },
                     onCustomFlowSelected = { currentScreen = AppScreen.CustomFlow() },
                     onPlannerSelected = { currentScreen = AppScreen.Planner },
                     onAlignmentSelected = { currentScreen = AppScreen.Alignment },

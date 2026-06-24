@@ -630,6 +630,16 @@ private fun SavedFlowCard(
                         fontWeight = FontWeight.Bold,
                     )
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Imported-from-Library badge (matches the PresetPicker).
+                        if (flow.catalogId != null) {
+                            Icon(
+                                Icons.Default.CloudDownload,
+                                contentDescription = stringResource(R.string.catalog_title),
+                                tint = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.size(14.dp),
+                            )
+                            Spacer(Modifier.width(4.dp))
+                        }
                         Text(
                             if (flow.steps.size != 1) stringResource(R.string.flow_step_count_plural, flow.steps.size)
                             else stringResource(R.string.flow_step_count, flow.steps.size),
