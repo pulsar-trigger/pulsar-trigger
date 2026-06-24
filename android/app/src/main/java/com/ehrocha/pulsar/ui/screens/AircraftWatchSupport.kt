@@ -53,6 +53,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -197,7 +200,7 @@ internal fun AircraftMap(
     // Bumped each time a new style finishes loading. Changing the style
     // clears all annotations (markers/polylines belong to the style layer),
     // so every effect that adds markers keys on this to re-add them.
-    var styleEpoch by remember { mutableStateOf(0) }
+    var styleEpoch by remember { mutableIntStateOf(0) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -291,7 +294,7 @@ internal fun AircraftMap(
     // known position using heading + ground speed. Snaps back to the real
     // position on the next real poll. When NOT in Live mode, this tick
     // just stays at 0 and markers are placed at the polled positions.
-    var liveTick by remember { mutableStateOf(0L) }
+    var liveTick by remember { mutableLongStateOf(0L) }
     LaunchedEffect(liveMode, sightings) {
         if (!liveMode) {
             liveTick = 0L
@@ -322,12 +325,12 @@ internal fun AircraftMap(
     // don't move fast at map zoom levels — daily motion is ~0.25°/min).
     val sunBmp = remember(ctx) { rotatedAircraftBitmap(ctx, 0f, 1.6f, R.drawable.ic_sun_marker) }
     val moonBmp = remember(ctx) { rotatedAircraftBitmap(ctx, 0f, 1.6f, R.drawable.ic_moon_marker) }
-    var sunMoonTick by remember { mutableStateOf(0L) }
+    var sunMoonTick by remember { mutableLongStateOf(0L) }
     // Tracks the map's current camera centre so we can place sun/moon
     // markers near the *visible* area as the user pans, rather than
     // anchored to the user's lat/lon (would scroll off-screen).
     var mapCenter by remember { mutableStateOf<LatLng?>(null) }
-    var visibleRadiusKm by remember { mutableStateOf(0.0) }
+    var visibleRadiusKm by remember { mutableDoubleStateOf(0.0) }
     LaunchedEffect(showSunMoon) {
         if (!showSunMoon) {
             sunMoonTick = 0L
@@ -1113,8 +1116,8 @@ internal data class DeviceCompass(val azimuth: Int, val accuracy: Int)
 @Composable
 internal fun rememberDeviceCompass(userLat: Double?, userLon: Double?): DeviceCompass {
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    var azimuthBucket by remember { mutableStateOf(0) }
-    var accuracy by remember { mutableStateOf(android.hardware.SensorManager.SENSOR_STATUS_NO_CONTACT) }
+    var azimuthBucket by remember { mutableIntStateOf(0) }
+    var accuracy by remember { mutableIntStateOf(android.hardware.SensorManager.SENSOR_STATUS_NO_CONTACT) }
     // Recompute declination only when the user location changes meaningfully.
     // The world-magnetic-model field varies smoothly — recomputing on every
     // sensor tick would burn cycles for no visible accuracy gain.

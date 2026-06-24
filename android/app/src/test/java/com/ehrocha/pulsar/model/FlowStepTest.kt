@@ -42,6 +42,33 @@ class FlowStepTest {
     }
 
     @Test
+    fun `Pause camera settings round-trip through JSON`() {
+        val cam = com.ehrocha.pulsar.transport.CameraSettings(
+            iso = "1600", aperture = "f/2.8", shutterSpeed = "1/30",
+        )
+        val step = FlowStep.Pause(label = "Adjust", camera = cam)
+        val restored = FlowStep.fromJson(step.toJson()) as FlowStep.Pause
+        assertEquals("1600", restored.camera?.iso)
+        assertEquals("f/2.8", restored.camera?.aperture)
+        assertEquals("1/30", restored.camera?.shutterSpeed)
+    }
+
+    @Test
+    fun `Pause with no camera settings has null camera after round-trip`() {
+        val restored = FlowStep.fromJson(FlowStep.Pause(label = "Just pause").toJson()) as FlowStep.Pause
+        assertNull(restored.camera)
+    }
+
+    @Test
+    fun `Pause camera with only one field keeps the others null`() {
+        val step = FlowStep.Pause(camera = com.ehrocha.pulsar.transport.CameraSettings(iso = "800"))
+        val restored = FlowStep.fromJson(step.toJson()) as FlowStep.Pause
+        assertEquals("800", restored.camera?.iso)
+        assertNull(restored.camera?.aperture)
+        assertNull(restored.camera?.shutterSpeed)
+    }
+
+    @Test
     fun `serializeList preserves variant data`() {
         val steps = listOf<FlowStep>(
             FlowStep.Intervalometer(shotCount = 5),

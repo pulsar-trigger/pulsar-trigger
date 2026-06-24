@@ -38,6 +38,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -97,7 +98,7 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     val ctx = LocalContext.current
     var showLogs by remember { mutableStateOf(false) }
     var phase by remember { mutableStateOf(TestPhase.IDLE) }
-    var probeMark by remember { mutableStateOf(0L) }
+    var probeMark by remember { mutableLongStateOf(0L) }
     var sharePromptText by remember { mutableStateOf<String?>(null) }
 
     // Phase transitions driven by the running flag. CRITICAL: the manual phase
