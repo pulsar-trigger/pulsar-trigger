@@ -192,7 +192,7 @@
     <string name="disconnect_confirm_body">Desconectar da câmera?</string>
     <string name="dialog_dont_ask_again">Não perguntar novamente</string>
     <string name="session_mode_usage">Uso de modos</string>
-    <string name="menu_back_confirm_body">Desconectar e fechar o app?</string>
+    <string name="menu_back_confirm_body">Desconectar e voltar à seleção de dispositivo?</string>
     <string name="save_as_preset">Salvar como predefinição</string>
     <string name="preset_name">Nome da predefinição</string>
     <string name="preset_saved">Predefinição salva</string>

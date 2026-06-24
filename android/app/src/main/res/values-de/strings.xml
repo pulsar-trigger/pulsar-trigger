@@ -192,7 +192,7 @@
     <string name="disconnect_confirm_body">Von der Kamera trennen?</string>
     <string name="dialog_dont_ask_again">Nicht mehr fragen</string>
     <string name="session_mode_usage">Modusnutzung</string>
-    <string name="menu_back_confirm_body">Trennen und App schließen?</string>
+    <string name="menu_back_confirm_body">Trennen und zur Geräteauswahl zurückkehren?</string>
     <string name="save_as_preset">Als Voreinstellung speichern</string>
     <string name="preset_name">Voreinstellungsname</string>
     <string name="preset_saved">Voreinstellung gespeichert</string>

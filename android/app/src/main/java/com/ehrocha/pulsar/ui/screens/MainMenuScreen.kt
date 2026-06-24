@@ -180,8 +180,10 @@ fun MainMenuScreen(
         )
     }
 
-    // Back from the Menu (Dashboard / Trigger / Tools) → confirm disconnect +
-    // close the app, rather than silently dropping out.
+    // Back from the Menu (Dashboard / Trigger / Tools) → confirm disconnect, then
+    // drop to the transport picker. Disconnecting flips `connected`, which routes
+    // the app to ScanLanding; a second Back from there leaves the app. (We do NOT
+    // finish() here — that was closing the app straight from the menu.)
     var showBackConfirm by remember { mutableStateOf(false) }
     BackHandler { showBackConfirm = true }
     if (showBackConfirm) {
@@ -194,7 +196,6 @@ fun MainMenuScreen(
                 TextButton(onClick = {
                     showBackConfirm = false
                     onDisconnect()
-                    (menuCtx as? android.app.Activity)?.finish()
                 }) { Text(stringResource(R.string.disconnect)) }
             },
             dismissButton = {

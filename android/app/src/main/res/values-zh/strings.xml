@@ -194,7 +194,7 @@
     <string name="disconnect_confirm_body">断开相机连接？</string>
     <string name="dialog_dont_ask_again">不再询问</string>
     <string name="session_mode_usage">模式使用情况</string>
-    <string name="menu_back_confirm_body">断开连接并关闭应用？</string>
+    <string name="menu_back_confirm_body">断开连接并返回设备选择？</string>
     <string name="save_as_preset">另存为预设</string>
     <string name="preset_name">预设名称</string>
     <string name="preset_saved">预设已保存</string>
