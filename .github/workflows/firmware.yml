@@ -83,7 +83,7 @@ jobs:
           mkdir -p _site
           
           # ── INJECT GOOGLE INDEXING & BYPASS FILES ───────────────────
-          cp google7dcde31b4a70455f.html _site/
+          cp web/google7dcde31b4a70455f.html _site/
           cp web/index.html _site/
 
           # ── ESP32 binaries ──────────────────────────────────────────
