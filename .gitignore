@@ -34,6 +34,7 @@ CLAUDE.md
 # Claude Code local commands / settings (not for repo)
 .claude/
 
-# Internal audit reports / known-issue lists — not for public disclosure
+# Internal audit reports / known-issue lists / QA matrices — not for public disclosure
 docs/audit-*.md
 docs/parked-audit-items.md
+docs/qa-*.md
