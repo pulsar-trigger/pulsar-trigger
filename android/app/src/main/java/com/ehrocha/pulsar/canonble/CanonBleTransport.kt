@@ -69,6 +69,16 @@ class CanonBleTransport private constructor(
          *  Same value used across ESP32-Canon-BLE-Remote + cbremote. */
         private const val AF_HOLD_MS = 200L
 
+        /** Bulb close-loop: max BR-E1 clicks [ensureShutter] sends to drive the
+         *  shutter to a camera-confirmed state before giving up. One click
+         *  suffices from a known state; the headroom self-corrects a drifted or
+         *  aborted cycle (each click toggles). */
+        private const val MAX_SHUTTER_TAPS = 4
+
+        /** How long to wait for the 00050004 status indication to confirm a bulb
+         *  click landed (the EOS R replies in ~70 ms; margin for slow stacks). */
+        private const val SHUTTER_CONFIRM_MS = 500L
+
         /** Phone-side device name that shows up in the camera's
          *  paired-devices list. Short, brand-aligned, fits Canon's
          *  display width without ellipsis. */
@@ -251,22 +261,41 @@ class CanonBleTransport private constructor(
         client.writeControl(SHUTTER_RELEASE)
     }
 
-    /** Drive the BR-E1 bulb shutter to [wantOpen], using the camera's 00050004
-     *  status indication (0x01 open / 0x03 closed) as ground truth: skip the tap
-     *  if it's already there (idempotent — no stray toggle), otherwise tap and
-     *  confirm the new state. If the indication never arrives (`shutterOpen`
-     *  stays null) this degrades to a plain unconditional toggle — same as
-     *  before, just unconfirmed. BR-E1 only; the smartphone path is unchanged. */
+    /** Drive the BR-E1 bulb shutter to [wantOpen] using the camera's 00050004
+     *  status indication (0x01 open / 0x03 closed) as ground truth.
+     *
+     *  A bulb "tap" (0x8C→0x0C) is one BR-E1 *click*, and clicks toggle the
+     *  shutter open↔closed. A single unconditional click is fragile: if our
+     *  idea of the current state has drifted (a missed indication, an aborted
+     *  cycle), the click flips the WRONG way and the exposure inverts — the
+     *  v0.597 log showed a close click hitting an already-closed shutter,
+     *  re-opening it, then "did not confirm closed" left it open.
+     *
+     *  So this is a **closed loop**: it re-clicks until the camera *confirms*
+     *  the target state, capped at [MAX_SHUTTER_TAPS] (the EOS R was observed
+     *  taking 2–3 clicks to close). Idempotent — clicks nothing if already
+     *  there. If the body never reports a state ([shutterOpen] null) it falls
+     *  back to a single blind toggle (v0.595 behaviour). BR-E1 only; the
+     *  smartphone path is unchanged. */
     private suspend fun ensureShutter(wantOpen: Boolean) {
-        if (client.shutterOpen.value == wantOpen) {
-            CanonBleLog.d(TAG, "bulb: shutter already ${if (wantOpen) "open" else "closed"} — skipping tap")
+        if (client.shutterOpen.value == null) {
+            // No status feedback from this body — can't run the closed loop.
+            // Single blind toggle; trust the caller's open/close alternation.
+            bre1BulbToggle()
             return
         }
-        bre1BulbToggle()
-        val confirmed = withTimeoutOrNull(700) { client.shutterOpen.first { it == wantOpen } } != null
-        if (!confirmed) {
-            CanonBleLog.w(TAG, "bulb: shutter did not confirm ${if (wantOpen) "open" else "closed"} " +
-                "(status=${client.shutterOpen.value}); the tap may have been missed")
+        for (tap in 1..MAX_SHUTTER_TAPS) {
+            if (client.shutterOpen.value == wantOpen) {
+                if (tap > 1) CanonBleLog.d(TAG, "bulb: shutter ${if (wantOpen) "open" else "closed"} " +
+                    "confirmed after ${tap - 1} click(s)")
+                return
+            }
+            bre1BulbToggle()
+            withTimeoutOrNull(SHUTTER_CONFIRM_MS) { client.shutterOpen.first { it == wantOpen } }
+        }
+        if (client.shutterOpen.value != wantOpen) {
+            CanonBleLog.w(TAG, "bulb: shutter did not reach ${if (wantOpen) "open" else "closed"} " +
+                "after $MAX_SHUTTER_TAPS clicks (status=${client.shutterOpen.value})")
         }
     }
 
