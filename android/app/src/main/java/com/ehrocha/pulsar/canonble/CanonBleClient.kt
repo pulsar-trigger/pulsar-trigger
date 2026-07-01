@@ -559,6 +559,29 @@ class CanonBleClient(
         ok
     }
 
+    /** Raw read of the BR-E1 status char (00050004): first byte, or null on
+     *  failure. Used by `startBulb`'s **drop-verify**: the EOS R sometimes ACKS a
+     *  shutter press on the 0x001b indication *without executing it* (the sensor
+     *  stays closed while the ack claims 0x01 — seen as 0.4–0.5 s frames on a 3 s
+     *  intervalometer, 2026-07-01). A read taken mid-exposure tells the truth in
+     *  every case observed. Caveat: an AF half-press pollutes the char to 0x01,
+     *  which can only MASK a drop (fail-safe) — a 0x03/0x00 read is a definite
+     *  drop. Serialized through [opMutex]. */
+    @SuppressLint("MissingPermission")
+    suspend fun readStatusRaw(): Int? = opMutex.withLock {
+        val ch = statusChar ?: return@withLock null
+        val g = gatt ?: return@withLock null
+        val rd = CompletableDeferred<ByteArray?>()
+        readSignal.set(rd)
+        @Suppress("DEPRECATION")
+        if (g.readCharacteristic(ch) != true) {
+            readSignal.set(null)
+            return@withLock null
+        }
+        val v = withTimeoutOrNull(1_500) { rd.await() }
+        if (v == null || v.isEmpty()) null else (v[0].toInt() and 0xFF)
+    }
+
     /** Write a payload to an arbitrary characteristic (WRITE_NO_RESPONSE),
      *  serialized through [opMutex]. Used by the smartphone-mode handshake +
      *  shutter. Returns true once `onCharacteristicWrite` confirms.

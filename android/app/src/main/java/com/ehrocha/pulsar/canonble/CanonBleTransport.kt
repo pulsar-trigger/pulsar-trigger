@@ -82,6 +82,13 @@ class CanonBleTransport private constructor(
          *  we retry. */
         private const val SHUTTER_CONFIRM_MS = 400L
 
+        /** Pause between the open-ack and the drop-verify raw read, giving the
+         *  camera time to commit the press so the read reflects the sensor (reads
+         *  at +900 ms were truthful in direct tests; margin below that). Runs
+         *  inside the already-open exposure, so it adds no camera-side latency —
+         *  only ~this much to the exposure's length. */
+        private const val BULB_OPEN_VERIFY_MS = 700L
+
         /** Phone-side device name that shows up in the camera's
          *  paired-devices list. Short, brand-aligned, fits Canon's
          *  display width without ellipsis. */
@@ -376,7 +383,31 @@ class CanonBleTransport private constructor(
         bulbOpen = true
         // BR-E1: toggle the shutter OPEN (idempotent — no-op if already open). It
         // holds open until the stopBulb click closes it. Smartphone press-holds.
-        if (isSmart) pressShutter() else ensureShutter(true)
+        if (isSmart) { pressShutter(); return }
+        ensureShutter(true)
+        // ── Drop-verify ── The EOS R sometimes ACKS the press on 0x001b without
+        // executing it: the sensor stays closed while the ack claims open, turning
+        // a 3s exposure into a ~0.5s one (the intervalometer short-frame/inversion
+        // bug; intermittent — 3/3 drops in one session, 0/13 in the next, no busy
+        // flag exists on any readable char). The ack lies but a RAW READ taken
+        // mid-exposure has told the truth in every observed case — so verify, and
+        // re-open on a definite drop. An AF half-press pollutes the char to 0x01,
+        // which can only MASK a drop (fail-safe, never a wrong re-press). The read
+        // also refreshes [CanonBleClient.shutterOpen], so recovery just re-runs
+        // ensureShutter. Costs one read inside the already-running exposure.
+        delay(BULB_OPEN_VERIFY_MS)
+        val raw = client.readStatusRaw()
+        when {
+            raw == null -> CanonBleLog.w(TAG, "bulb: open verify read failed — proceeding on the ack")
+            raw != 0x01 -> {
+                CanonBleLog.w(TAG, "bulb: OPEN DROPPED by camera (ack lied; raw=0x%02X) — re-opening".format(raw))
+                ensureShutter(true)   // cache was corrected to closed by the read
+                val raw2 = client.readStatusRaw()
+                CanonBleLog.i(TAG, "bulb: drop recovery %s (raw=0x%02X)".format(
+                    if (raw2 == 0x01) "OK — sensor open" else "FAILED — sensor still closed", raw2 ?: -1))
+            }
+            else -> CanonBleLog.d(TAG, "bulb: open verified by read (sensor open)")
+        }
     }
 
     /** Close the shutter. Always attempts the release — the
