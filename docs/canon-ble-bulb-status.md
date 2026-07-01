@@ -1,110 +1,132 @@
 # Canon BR-E1 BLE — bulb implementation status & handoff
 
-_Snapshot: 2026-07-01. Companion to `docs/canon-ble-research.md` (protocol reference)
-and `docs/canon-ble.md` (user-facing). This file is the "where are we, what's
-broken, what's next" for the BR-E1 **bulb** work._
+_Snapshot: 2026-07-01 (v0.609). Companion to `docs/canon-ble-research.md` (protocol
+reference) and `docs/canon-ble.md` (user-facing). This is the "where are we, what's
+the camera actually doing, what's next" for the BR-E1 **bulb** work. The camera
+model below was **mapped by driving a real EOS R directly from the dev machine**
+(`bleak` over BlueZ), not inferred from app logs — earlier guesses ("silent
+self-close", "dropped toggle") were wrong; this is the ground truth._
 
 ## TL;DR
 
-- **BR-E1 bulb is a TOGGLE.** One `0x8C` press flips the shutter open↔closed; the
-  `0x0C` is inert button-up. Confirmed three ways: (1) Canon's own BR-E1 manual
-  (`~/Downloads/br-e1-im-en.pdf`) groups bulb **with movie** in the indicator-lamp
-  table as a start/stop toggle; (2) nRF sniffer `~/bulb-toggle.pcapng` shows the
-  shutter held open ~5 s between two `0x8C` presses with the `0x0C` doing nothing;
-  (3) every-other-shot came back the moment we tried press-and-hold.
-- **Current app = v0.605.** WORKS: manual "Hold Shutter" bulb, single-shot,
-  2-byte writes, **bonding, auto-reconnect**. BROKEN: **intervalometer / astro —
-  the 2nd exposure self-closes and cascades.**
+- Current app **v0.609**. Bulb (intervalometer / astro), **manual Hold**, single
+  shot, bonding, auto-reconnect, and a safety-close on return to menu are all in
+  and working on the EOS R.
+- **The camera is a toggle with a deterministic PERIOD-3 quirk** (see below). A
+  bulb *close* routinely needs 2 clicks; the extra click fires **no frame**
+  (confirmed by card count). The app absorbs this with a verify-retry loop.
 
 ## Wire protocol (BR-E1, service `00050000-…-d8492fffa821`)
 
 | Char | Handle | Role |
 |---|---|---|
-| `00050002` | pair | arm write `[0x03, "Pulsar"]` (WRITE_NO_RESPONSE), sent every connect |
+| `00050002` | pair | arm write `[0x03, "Pulsar"]` (WRITE_NO_RESPONSE), every connect |
 | `00050003` | 0x0019 | control — **2-byte** writes `[cmd, 0x00]`, `cmd = button \| mode` |
-| `00050004` | 0x001b | status — camera **indicates** `0x01`=open / `0x03`=closed; CCCD 0x001c; also readable |
+| `00050004` | 0x001b | status — camera indicates/serves `0x01`=active, `0x03`=closed, `0x00`=idle |
 
-- `cmd` bytes: shutter `0x8C` (BTN_RELEASE `0x80` \| IMMEDIATE `0x0C`), release `0x0C`,
-  AF half-press `0x4C`, zoom-wide `0x1C`, zoom-tele `0x2C`, movie-record `0x88`.
-  Mode nibble: immediate `0x0C`, 2-sec `0x04`, movie `0x08`. (Matches Ian Douglas's
-  bit map: bit7 shutter, bit6 AF, bit5 T, bit4 W, mode bits 2–3.)
-- **`0x001b` caveat:** the camera indicates `0x01` for an **AF half-press and zoom
-  too**, not just the shutter — so `0x01`/`0x03` is only trustworthy as shutter
-  state when the *last control write was a shutter press* (`0x8C`). This is the
-  v0.601 `lastControlWasShutterPress` gate.
-- **Bulb mechanism:** `0x8C` toggles + indicates; `0x0C` inert; shutter **holds**
-  between clicks. **Bonding is required** for a reliable hold — an unbonded link
-  self-closes the exposure early (fixed v0.602).
+- `cmd`: shutter `0x8C`, release `0x0C`, AF half-press `0x4C`, zoom-wide `0x1C`,
+  zoom-tele `0x2C`, movie `0x88`. Mode nibble: immediate `0x0C`, 2-sec `0x04`,
+  movie `0x08`. (Matches Ian Douglas's bit map + our nRF sniffer.)
+- **2-byte writes matter:** 1-byte control writes toggle *erratically* on the EOS R
+  (period changes); always send the `0x00` trailer, like the app + real remote.
 
-## Version history (what each fix did)
+## THE camera model (definitive, from direct drive 2026-07-01)
+
+Raw one-click-at-a-time, reading the status char before/after each click:
+
+```
+click 0: 0000→0100  TOGGLED
+click 1: 0100→0300  TOGGLED
+click 2: 0300→0100  TOGGLED
+click 3: 0100→0100  DEAD  (no-op)
+click 4: 0100→0300  TOGGLED
+click 5: 0300→0100  TOGGLED
+click 6: 0100→0100  DEAD
+click 7: 0100→0300  TOGGLED
+click 8: 0300→0100  TOGGLED
+click 9: 0100→0100  DEAD
+```
+
+- **Period-3 quirk:** once the shutter is OPEN, the *very next* `0x8C` click is a
+  **DEAD no-op** — it does **not** flip the state, and it **fires no frame**
+  (proved: shooting exactly 3 exposures produced **exactly 3** frames on the card).
+  The click after the dead one closes. So **a close needs 2 clicks** (dead + close);
+  an open needs 1.
+- **`0x0C` is inert** button-up (a lone `0x0C` never closes — that was the original
+  every-other-shot bug).
+- **AF pollutes the raw status char:** an AF half-press `0x4C` sets `00050004` to
+  `0x0100` and it **stays `0x0100`** even after `0x0C`. So a *raw read* of the char
+  right after an AF wrongly says "open".
+- **Bonding matters:** an unbonded link self-closes bulb early; bonded (v0.602) it
+  holds.
+- Manual (single user open→hold→close) is easy; the hard part was **back-to-back
+  automated cycles** keeping open/close in phase through the dead clicks.
+
+## Version history (what each change did)
 
 | ver | change | verdict |
 |---|---|---|
-| v0.594 | 2-byte control writes `[cmd,0x00]` (was 1 byte) | ✅ kept |
-| v0.595 | bulb as toggle (start+stop each a full `0x8C→0x0C` click) | ✅ concept right |
-| v0.596–601 | status-indication **closed-loop state machine** | ❌ reverted (fragile) |
-| v0.600 | `requestConnectionPriority(HIGH)` + status-char read seed | ✅ kept |
-| v0.601 | AF/zoom `0x01` **gating** + seed non-`0x01` as closed | ✅ kept |
-| v0.602 | **bonding** (`createBond`) on BR-E1 connect | ✅ **fixes reconnect + hold** |
-| v0.603 | press-and-hold (from a wrong 3rd-party quote) | ❌ every-other-shot, reverted |
-| v0.604 | raw toggle (no idempotency) | ❌ defensive `stopBulb` inverts; never shipped to test |
-| **v0.605** | **idempotent toggle** — click only when state disagrees | ⏳ manual ✅, intervalometer ❌ |
+| v0.594 | 2-byte control writes `[cmd,0x00]` | ✅ |
+| v0.595 | bulb as a toggle click | ✅ concept |
+| v0.596–601 | status-indication closed-loop state machine | ❌ reverted (AF/self-close fragile) |
+| v0.600 | `requestConnectionPriority(HIGH)` + status seed read | ✅ |
+| v0.601 | AF/zoom `0x01` **gating** on the cached indication + seed→closed | ✅ (key) |
+| v0.602 | **bonding** (`createBond`) on BR-E1 connect | ✅ reconnect + hold |
+| v0.603 | press-and-hold (from a wrong 3rd-party quote) | ❌ every-other-shot |
+| v0.604 | raw toggle, no idempotency | ❌ defensive stopBulb inverts |
+| v0.605 | idempotent single toggle (cached) | ❌ can't recover a dead click |
+| v0.606 | verify-retry via a **raw read** of `00050004` | ⚠️ fixed bulb, broke manual (AF pollutes the raw read) |
+| v0.607 | safety-close on return to main menu | ✅ |
+| v0.608 | (audit M6: security-crypto → stable — unrelated) | ✅ |
+| **v0.609** | verify-retry against the **AF-gated cached indication** | ✅ **current — bulb + manual both work** |
 
-## The open bug (v0.605)
+## Current implementation (v0.609)
 
-**Manual bulb works** (single user-driven open then close). **Intervalometer/astro
-fail on the 2nd exposure:**
+`CanonBleTransport.ensureShutter(wantOpen)`:
+1. If `client.shutterOpen` (the cached indication) already == target → done
+   (idempotent; the runner's defensive `stopBulb` is a safe no-op).
+2. Else `bre1BulbToggle()` (one `0x8C`→`0x0C` click) and `withTimeoutOrNull` wait
+   for the indication to flip `shutterOpen`. A real toggle returns in ~70 ms; a
+   **dead click** leaves it unchanged → times out → retry. Cap `MAX_SHUTTER_ATTEMPTS=4`.
+- **Why the cached indication, not a raw read:** `shutterOpen` is updated from the
+  `0x001b` indication **only when the last control write was a shutter press**
+  (`lastControlWasShutterPress`, v0.601), so AF's `0x0100` is ignored. A raw read
+  isn't gated → it's fooled by AF (the v0.606 manual regression). `readShutterState()`
+  was removed.
+- `startBulb` still does the AF half-press when `af=true` (harmless now — gated).
+- **Safety-close** (v0.607): `MainMenuScreen` `LaunchedEffect` → `vm.ensureShutterSafelyClosed()`
+  → `ensureShutterClosedSafely()` runs `ensureShutter(false)` so no return-to-menu
+  path (finished / stopped / backed-out / un-released manual) leaves the sensor open.
 
-- Frame 1: open (press→`0x01`), hold, close (press→`0x03`). Perfect.
-- Frame 2: open (press→`0x01`), hold … **the camera closes the shutter SILENTLY —
-  no `0x001b` indication** … close press→`0x01` (it re-opens, because the camera
-  was already closed). Our `shutterOpen` was stale-`true`, so `ensureShutter(false)`
-  toggled a *closed* shutter *open* → one long exposure spanning the next interval.
-- Deterministic: 2nd frame, both runs, `0x8C`→status sequence `01,03,01,`**`01`**`,03`.
-- Same open→close-press gap (~2.9 s) as frame 1, so **not** a fixed timeout — some
-  state-dependent camera behavior (silent self-close? ignored toggle? card-write
-  settle?) that the **app log cannot disambiguate**. It is **not** our gating (AF
-  gating verified correct in the log).
+**Known cost:** each close is 1–2 clicks (~0.3–1 s), so exposures run slightly long —
+negligible for astro, minor for short intervalometer. Inherent to the period-3 quirk.
 
-## Next step — `--bulb` host diagnostic
+## Driving the camera directly (dev machine)
 
-The app can't see a *silent* state change; a host-side **read** of `00050004` can.
+Claude/dev runs **native on `orion`** now (not the old Flatpak sandbox), so BlueZ is
+reachable and the camera can be driven live — seconds-long experiments vs an app
+rebuild. This is how the model above was mapped.
 
 ```
-# phone BT OFF (one BLE central), camera Remote mode + dial on BULB
-python3 tools/canon_ble_test.py --bulb --bulb-secs 3
-# bond auth error? →  bluetoothctl pair DC:FE:23:40:0C:02   (or `remove` a stale bond)
+# phone BT OFF (one BLE central), camera → Bluetooth → Remote → Pair, dial on BULB
+python3 tools/canon_ble_test.py --bulb --bulb-secs 3 --mac DC:FE:23:40:0C:02
 ```
+- `--bulb` bonds, arms, subscribes to `00050004`, runs toggle / cycle / hold
+  experiments, reading the char during each hold. `--mac` scans-first (BlueZ can't
+  connect to a bare address). 2-byte writes.
+- **Gotchas:** unbonded connect works once a **stale bond is cleared**
+  (`bluetoothctl remove DC:FE:23:40:0C:02`); the EOS R allows unbonded GATT. Pairing
+  window is short — connect promptly after entering Pair mode. `client.pair()`
+  returns `None` on this BlueZ but the bond still forms.
+- EOS R MAC `DC:FE:23:40:0C:02`; EOS R6 (smartphone mode) `74:38:B7:48:3C:F7`.
+- Ad-hoc characterization was done with inline `python3 - <<PY` scripts (raw
+  click→state mapping, close-hold sweep, countable N-exposure card test) — trivial
+  to reproduce for movie/zoom/timing next.
 
-`--bulb` bonds, arms, subscribes to `00050004`, then runs toggle / 3-cycle /
-press-hold experiments **and reads `00050004` every ~1 s during each hold and each
-interval**. EXP 2 mirrors the intervalometer to reproduce frame 2.
+## Open / next
 
-It answers:
-1. **Does the shutter self-close during a hold, and when?** (`read 0x0004` flips `01`→`00`/`03` mid-hold)
-2. **Does a READ reflect the silent close?** → if yes, the fix is **read-before-decide**
-   in `ensureShutter`; if no, the read channel is stale too and we need another signal.
-3. **Does cycle 2 differ from cycle 1?**
-
-## Candidate fixes (pending `--bulb` data)
-
-1. **Read-before-decide:** `ensureShutter` reads `00050004` fresh before deciding, so a
-   silent self-close is caught and `stopBulb` skips instead of re-opening. Only works
-   if the read reflects the silent close.
-2. **Settle window:** if the camera needs time to finish the previous exposure
-   (card write) before the next open, add a post-close settle and/or don't open until
-   the status reads closed.
-3. **Re-sync each frame:** read the true state at the top of each `startBulb`.
-
-## Environment note
-
-This Claude Code session ran in a **Flatpak sandbox**: it could reach host `tshark`
-(`LD_LIBRARY_PATH=/run/host/usr/lib64 /run/host/usr/bin/tshark`) to decode the pcaps,
-but **not** BlueZ — `bleak` returns `org.bluez … ServiceUnknown` and `bluetoothctl`
-hangs, so it could **not drive the camera directly**. Eduardo is switching to a
-**system (non-containerized) VS Code** so Claude can run `--bulb` itself against `hci0`.
-Memory + repo live on the shared home dir (`/home/ehrocha`), so both carry over.
-
-- EOS R (BR-E1) MAC: `DC:FE:23:40:0C:02`
-- Captures in `~`: `bulb-toggle.pcapng` (real remote, toggle+hold), `camera-cmd-bre1.pcapng`
-  (all buttons/modes), `br-e1-packages.pcapng` (link-layer only).
+- **Awaiting Eduardo's v0.609 on-phone confirm** (manual Hold + intervalometer/astro).
+- Periodic **camera-initiated disconnects** (`status=19`, ~every 2–3 min) — bonding +
+  autoConnect recover each without re-pairing; only a problem if one lands mid-exposure.
+- **Future features** now easy to characterize + wire (sniffer-decoded): movie record
+  `0x88`, power-zoom `0x20`/`0x10`, 2-s self-timer `0x04`.
