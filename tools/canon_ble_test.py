@@ -742,8 +742,16 @@ async def run(args):
         return 0
 
     if args.mac:
-        log(f"connecting to {args.mac} (scan skipped)…")
-        target = args.mac
+        # Resolve the MAC via a scan → a device object. BlueZ can't reliably
+        # connect to a bare address string without having discovered it first
+        # (BleakDeviceNotFoundError), so DON'T skip the scan even with --mac.
+        log(f"resolving {args.mac} via scan ({args.scan_timeout:.0f}s)…")
+        target = await BleakScanner.find_device_by_address(args.mac, timeout=args.scan_timeout)
+        if target is None:
+            log(f"{args.mac} not advertising — set the camera to Bluetooth → Remote → "
+                f"Pair, turn the phone's BT off (one central at a time), then retry.")
+            return 2
+        log(f"→ using {target.address} [{target.name or '(no name)'}]")
     else:
         # --smart needs a smartphone-mode body; BR-E1 modes need a remote-mode
         # body; --dump-only takes whatever single Canon camera is advertising.
