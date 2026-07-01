@@ -38,3 +38,6 @@ CLAUDE.md
 docs/audit-*.md
 docs/parked-audit-items.md
 docs/qa-*.md
+# Python bytecode
+__pycache__/
+*.pyc
