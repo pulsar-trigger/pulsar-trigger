@@ -641,14 +641,28 @@ async def bulb_sequence(client, args):
         await asyncio.sleep(0.2)
         await write(client, CONTROL_UUID, [UP], response=False, label=f"{label} 0x0c")
 
+    async def watch(secs, tag):
+        """Hold `secs`, READING the status char (00050004) every ~1s — so a
+        SILENT self-close (shutter closes with no 0x001b indication, the exact
+        thing the app can't see) shows up as the read flipping 01→00/03."""
+        t_end = time.monotonic() + secs
+        while time.monotonic() < t_end - 0.05:
+            await asyncio.sleep(min(1.0, max(0.1, t_end - time.monotonic())))
+            try:
+                v = await client.read_gatt_char(canon_uuid("00050004"))
+                log(f"{_ts()}   [{tag}] read 0x0004 = {bytes(v).hex()}")
+            except Exception as e:
+                log(f"{_ts()}   [{tag}] read failed: {type(e).__name__}: {e}")
+
     # ── EXPERIMENT 1: TOGGLE bulb ──
     log("")
     log(f"{_ts()} ╔══ EXP 1 — TOGGLE bulb, {secs:.0f}s.  WATCH THE SENSOR ══╗")
     log(f"{_ts()}   click OPEN → hold {secs:.0f}s → click CLOSE. Expect: opens on the")
     log(f"{_ts()}   first click, stays open ~{secs:.0f}s, closes on the second click.")
     await click("OPEN ")
-    log(f"{_ts()}   >>> holding {secs:.0f}s — is the sensor OPEN/exposing the whole time?")
-    await asyncio.sleep(secs)
+    log(f"{_ts()}   >>> holding {secs:.0f}s — is the sensor OPEN the whole time? (reads below")
+    log(f"{_ts()}       show if it self-closes silently: 01=open, 00/03=closed)")
+    await watch(secs, "EXP1")
     await click("CLOSE")
     log(f"{_ts()}   >>> closed now? exposure should be ~{secs:.0f}s, not a blip.")
     await asyncio.sleep(2.0)
@@ -660,11 +674,12 @@ async def bulb_sequence(client, args):
     for i in range(1, 4):
         log(f"{_ts()}   cycle {i} OPEN")
         await click(f"C{i}-OPEN ")
-        await asyncio.sleep(hold)
+        await watch(hold, f"C{i}-exp")            # reads during the exposure
         log(f"{_ts()}   cycle {i} CLOSE")
         await click(f"C{i}-CLOSE")
-        await asyncio.sleep(2.0)
-    log(f"{_ts()}   >>> did you get 3 SEPARATE exposures? (every-other-shot = ~1–2)")
+        await watch(2.0, f"C{i}-wait")            # reads during the interval — should stay closed
+    log(f"{_ts()}   >>> did you get 3 SEPARATE exposures? Watch cycle 2 especially: the app")
+    log(f"{_ts()}       saw it self-close silently on the 2nd exposure — do the reads confirm it?")
 
     # ── EXPERIMENT 3: press-and-hold control ──
     log("")
