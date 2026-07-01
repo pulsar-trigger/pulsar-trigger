@@ -161,6 +161,10 @@ class CanonBleClient(
     private val connectSignal = AtomicReference<CompletableDeferred<Boolean>?>(null)
     private val servicesSignal = AtomicReference<CompletableDeferred<Boolean>?>(null)
     private val writeSignal = AtomicReference<CompletableDeferred<Boolean>?>(null)
+    /** Completed by onDescriptorWrite — lets [enableStatusIndication] wait for
+     *  the CCCD write to finish before releasing [opMutex], so the next GATT op
+     *  (a shutter write) can't land on top of the in-flight descriptor write. */
+    private val descriptorSignal = AtomicReference<CompletableDeferred<Boolean>?>(null)
     /** Completed by the [SMART_NAME_UUID] indication carrying the camera's
      *  pairing-result byte (0x02 accept / 0x03 reject). */
     private val pairResultSignal = AtomicReference<CompletableDeferred<Byte>?>(null)
@@ -186,6 +190,7 @@ class CanonBleClient(
                     connectSignal.getAndSet(null)?.complete(false)
                     servicesSignal.getAndSet(null)?.complete(false)
                     writeSignal.getAndSet(null)?.complete(false)
+                    descriptorSignal.getAndSet(null)?.complete(false)
                     // Distinguish "link drop in flight" (auto-reconnect
                     // candidate) from "caller asked to close" (terminal).
                     if (fullyConnected && !releasedByUser) {
@@ -233,11 +238,13 @@ class CanonBleClient(
                 bre1Service != null -> {
                     controlChar = bre1Service.getCharacteristic(CONTROL_CHAR_UUID)
                     pairChar = bre1Service.getCharacteristic(PAIR_CHAR_UUID)
-                    // Subscribe to the status char (00050004): the camera
-                    // indicates 0x01=open / 0x03=closed after each button event —
-                    // our bulb-state ground truth (see ensureShutter).
+                    // Locate the status char (00050004) but DON'T subscribe here:
+                    // enabling it queues a CCCD descriptor write, and Android allows
+                    // only one GATT op in flight — during service discovery that
+                    // write races the pairing write (writePairName) and breaks
+                    // pairing (regression seen v0.596). The transport calls
+                    // enableStatusIndication() AFTER pairing, when the link is idle.
                     statusChar = bre1Service.getCharacteristic(STATUS_CHAR_UUID)
-                    statusChar?.let { enableIndication(g, it) }
                     protocol = if (controlChar != null && pairChar != null)
                         CanonProtocol.BRE1 else CanonProtocol.NONE
                     ok = protocol == CanonProtocol.BRE1
@@ -306,6 +313,17 @@ class CanonBleClient(
             CanonBleLog.d(TAG, "onCharacteristicWrite[$charName] status=$status " +
                 "(${if (status == BluetoothGatt.GATT_SUCCESS) "GATT_SUCCESS" else "FAILURE"})")
             writeSignal.getAndSet(null)?.complete(status == BluetoothGatt.GATT_SUCCESS)
+        }
+
+        @Deprecated("Old API still used for minSdk 26 compatibility")
+        override fun onDescriptorWrite(
+            g: BluetoothGatt,
+            descriptor: BluetoothGattDescriptor,
+            status: Int,
+        ) {
+            // Only [enableStatusIndication] arms descriptorSignal; the SMART
+            // path's fire-and-forget CCCD write leaves it null (no-op complete).
+            descriptorSignal.getAndSet(null)?.complete(status == BluetoothGatt.GATT_SUCCESS)
         }
     }
 
@@ -444,6 +462,43 @@ class CanonBleClient(
         } catch (e: Exception) {
             CanonBleLog.w(TAG, "enableIndication failed: ${e.message}")
         }
+    }
+
+    /** Subscribe to the BR-E1 status characteristic (00050004) **after** pairing.
+     *  Doing this during service discovery raced the pairing write and broke
+     *  pairing (one GATT op in flight); here the link is idle. Serialized through
+     *  [opMutex] and waits for onDescriptorWrite so the first shutter write can't
+     *  collide with the in-flight CCCD write. Best-effort: a body without the
+     *  status char (or one that never confirms) just leaves [shutterOpen] null and
+     *  the bulb falls back to a plain toggle. Returns true iff the CCCD write
+     *  confirmed. */
+    @SuppressLint("MissingPermission")
+    suspend fun enableStatusIndication(): Boolean = opMutex.withLock {
+        val ch = statusChar ?: return@withLock false
+        val g = gatt ?: return@withLock false
+        val cccd = try {
+            g.setCharacteristicNotification(ch, true)
+            ch.getDescriptor(CCCD_UUID)
+        } catch (e: Exception) {
+            CanonBleLog.w(TAG, "enableStatusIndication: notify setup failed: ${e.message}")
+            null
+        } ?: run {
+            CanonBleLog.w(TAG, "enableStatusIndication: no CCCD on status char — bulb stays unconfirmed")
+            return@withLock false
+        }
+        val deferred = CompletableDeferred<Boolean>()
+        descriptorSignal.set(deferred)
+        @Suppress("DEPRECATION")
+        run { cccd.value = BluetoothGattDescriptor.ENABLE_INDICATION_VALUE }
+        @Suppress("DEPRECATION")
+        if (g.writeDescriptor(cccd) != true) {
+            descriptorSignal.set(null)
+            CanonBleLog.w(TAG, "enableStatusIndication: writeDescriptor() couldn't queue")
+            return@withLock false
+        }
+        val ok = withTimeoutOrNull(3_000) { deferred.await() } ?: false
+        CanonBleLog.d(TAG, "enableStatusIndication: CCCD write confirmed=$ok")
+        ok
     }
 
     /** Write a payload to an arbitrary characteristic (WRITE_NO_RESPONSE),

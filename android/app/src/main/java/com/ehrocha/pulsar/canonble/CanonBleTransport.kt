@@ -121,6 +121,11 @@ class CanonBleTransport private constructor(
                         client.close()
                         return CanonBleConnectResult.Failed
                     }
+                    // Now that pairing is done and the link is idle, subscribe to
+                    // the status char for bulb self-confirmation. Best-effort: a
+                    // failure here just means the bulb toggle runs unconfirmed —
+                    // it must NOT abort the (working) connection.
+                    client.enableStatusIndication()
                 }
                 CanonProtocol.SMART -> {
                     // Already bonded == a reconnect (or a re-pair of a known
