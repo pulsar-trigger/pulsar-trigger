@@ -7,9 +7,50 @@ re-clone or re-search the external reference projects again** — every UUID,
 constant, write semantic, per-project quirk, and every byte observed on real
 hardware is captured below.
 
-It also documents the open bug: **the EOS R / RP pair successfully but will
-not actuate the shutter** for any of the six open-source implementations of
-the *BR-E1 remote* protocol — ours included. The empirical section explains why.
+> **⭐⭐ GROUND TRUTH — nRF Sniffer capture of the real BR-E1 remote (2026-06-30).**
+> We finally sniffed the hardware remote ↔ camera (nRF52840 dongle running the
+> nRF Sniffer + Wireshark). Two headline results:
+>
+> 1. **The "pairs-but-won't-shoot" bug was the camera's DRIVE MODE, not the
+>    protocol.** The body must be in **Remote drive mode** to honour BR-E1 writes.
+>    With that set, **BOTH the EOS R and EOS RP fire over BR-E1.** The earlier
+>    "EOS R has no BLE shutter — use USB/Wi-Fi" verdict was about *smartphone-mode*
+>    only; via BR-E1 the R shoots. Our decode was right all along — it was one
+>    menu setting. (The real remote failed identically until drive mode was set,
+>    which proves the bytes were never the problem.)
+>
+> 2. **Protocol confirmed byte-for-byte.** Control writes hit the control char
+>    (handle `0x0019` on this body) as **two bytes `[cmd, 0x00]`** — we had been
+>    sending one byte; the trailing `0x00` is now matched in
+>    `CanonBleClient.writeControl`. `cmd = button | mode`:
+>
+>    | | idle | Wide `0x10` | Tele `0x20` | Focus `0x40` | Shutter `0x80` |
+>    |---|---|---|---|---|---|
+>    | **Immediate `0x0c`** | `0c` | `1c` | `2c` | `4c` | `8c` |
+>    | **2-s timer `0x04`**  | `04` | `14` | `24` | `44` | `84` |
+>    | **Movie `0x08`**      | `08` | `18` | `28` | `48` | `88` |
+>
+>    Each press is followed by an idle write (the mode byte alone) = release.
+>
+> 3. **NEW — the camera indicates back on `0x001b`** (we'd assumed BR-E1 was
+>    one-way). Photo shutter/AF → indication `0x0100`; movie → `0x0500`. A
+>    shot-confirmation channel we could subscribe to (BR-E1 has been
+>    fire-and-forget for us until now).
+>
+> 4. **Unused capabilities in the same protocol we already speak:** movie record
+>    (`0x88`), 2-second self-timer (mode `0x04`), power-zoom tele/wide
+>    (`0x20`/`0x10`).
+>
+> Capture files: `~/br-e1-*.pcapng`. This **supersedes any LLM-sourced byte
+> table** (e.g. a table claiming shutter `0x01` / focus `0x40` / movie `0x0a` is
+> wrong — `0x01` is the *smartphone-mode* byte; the hardware remote sends the
+> nibble scheme above).
+
+It also documents the (now-resolved) bug: **the EOS R / RP pair successfully but
+would not actuate the shutter** for any of the six open-source implementations of
+the *BR-E1 remote* protocol — ours included — **because the body wasn't in Remote
+drive mode** (see ground-truth note above). The empirical section below is why we
+thought it was protocol-level.
 
 > **⭐ ANSWER (confirmed firing 2026-05-28): use the smartphone-mode protocol.**
 > There is a SECOND Canon BLE protocol (`gkoh/furble`'s smartphone-mode, services

@@ -358,8 +358,13 @@ class CanonBleClient(
         ok
     }
 
-    /** Send one byte to the control characteristic (WRITE_NO_RESPONSE).
-     *  Used for every shutter press, release, focus, video toggle. */
+    /** Send the BR-E1 control word to the control characteristic
+     *  (WRITE_NO_RESPONSE). The real BR-E1 remote writes **two** bytes — the
+     *  command byte plus a trailing `0x00` — confirmed by an nRF Sniffer capture
+     *  of the hardware remote (2026-06-30). A bare 1-byte write does fire the
+     *  RP/R, but the 2-byte form is exactly what Canon's remote sends and is the
+     *  more compatible shape. Used for every shutter press, release, focus,
+     *  video toggle. */
     @SuppressLint("MissingPermission")
     suspend fun writeControl(byte: Byte): Boolean = opMutex.withLock {
         val ch = controlChar ?: run {
@@ -369,7 +374,9 @@ class CanonBleClient(
         val g = gatt ?: return@withLock false
         @Suppress("DEPRECATION")
         run {
-            ch.value = byteArrayOf(byte)
+            // Two-byte control word [cmd, 0x00] — matches the hardware BR-E1
+            // remote (nRF Sniffer, 2026-06-30). The trailing byte is always 0x00.
+            ch.value = byteArrayOf(byte, 0x00)
             ch.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
         }
         val deferred = CompletableDeferred<Boolean>()
