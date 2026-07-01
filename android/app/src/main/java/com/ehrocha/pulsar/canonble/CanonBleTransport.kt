@@ -300,7 +300,11 @@ class CanonBleTransport private constructor(
      *  taking 2–3 clicks to close). Idempotent — clicks nothing if already
      *  there. If the body never reports a state ([shutterOpen] null) it falls
      *  back to a single blind toggle (v0.595 behaviour). BR-E1 only; the
-     *  smartphone path is unchanged. */
+     *  smartphone path is unchanged.
+     *
+     *  UNUSED since v0.603 — bulb switched to press-and-hold (see [startBulb]).
+     *  Kept (suppressed) as a fast revert path if the hold model proves wrong. */
+    @Suppress("unused")
     private suspend fun ensureShutter(wantOpen: Boolean) {
         val holdMs = if (wantOpen) BULB_OPEN_HOLD_MS else BULB_CLOSE_HOLD_MS
         if (client.shutterOpen.value == null) {
@@ -381,9 +385,13 @@ class CanonBleTransport private constructor(
             client.writeControl(SHUTTER_RELEASE)
         }
         bulbOpen = true
-        // BR-E1: toggle the bulb OPEN, confirmed via the status indication
-        // (smartphone-mode presses+holds instead).
-        if (isSmart) pressShutter() else ensureShutter(true)
+        // BR-E1 bulb is **press-and-hold**, per the BR-E1 manual: "the shutter
+        // stays open for as long as you hold the button down." So startBulb sends
+        // 0x8C = button DOWN (opens) and HOLDS it — no 0x0C until stopBulb sends
+        // the release. This replaces the v0.595–601 toggle model, whose paired
+        // 0x8C→0x0C "click" was read as a quick TAP (not a held press), giving
+        // short/inconsistent exposures and phase inversion. Smartphone also holds.
+        pressShutter()
     }
 
     /** Close the shutter. Always attempts the release — the
@@ -394,16 +402,15 @@ class CanonBleTransport private constructor(
     override suspend fun stopBulb() {
         val wasOpen = bulbOpen
         bulbOpen = false
-        // BR-E1: toggle the bulb CLOSED, confirmed via the status indication
-        // (a bare 0x0C is inert in bulb).
-        if (isSmart) releaseShutter() else ensureShutter(false)
+        // BR-E1: button UP (0x0C) closes the held bulb exposure. Smartphone up.
+        releaseShutter()
         if (!wasOpen) CanonBleLog.d(TAG, "stopBulb: defensive close (bulbOpen was already false)")
     }
 
     /** Abort whatever's in flight. Used by viewmodel.stopFlow(). */
     override suspend fun stop() {
         if (bulbOpen) {
-            runCatching { if (isSmart) releaseShutter() else ensureShutter(false) }
+            runCatching { releaseShutter() }
             bulbOpen = false
         }
     }
@@ -424,7 +431,7 @@ class CanonBleTransport private constructor(
             // mid-run disconnect doesn't leave the body holding the
             // exposure indefinitely. Suppress errors — the cable / link
             // may already be gone.
-            runCatching { if (isSmart) releaseShutter() else ensureShutter(false) }
+            runCatching { releaseShutter() }
             bulbOpen = false
         }
         client.close()
