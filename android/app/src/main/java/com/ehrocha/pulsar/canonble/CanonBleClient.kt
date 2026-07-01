@@ -165,6 +165,9 @@ class CanonBleClient(
      *  the CCCD write to finish before releasing [opMutex], so the next GATT op
      *  (a shutter write) can't land on top of the in-flight descriptor write. */
     private val descriptorSignal = AtomicReference<CompletableDeferred<Boolean>?>(null)
+    /** Completed by onCharacteristicRead — lets [enableStatusIndication] seed the
+     *  initial shutter state from a one-off read of the status char. */
+    private val readSignal = AtomicReference<CompletableDeferred<ByteArray?>?>(null)
     /** Completed by the [SMART_NAME_UUID] indication carrying the camera's
      *  pairing-result byte (0x02 accept / 0x03 reject). */
     private val pairResultSignal = AtomicReference<CompletableDeferred<Byte>?>(null)
@@ -183,14 +186,21 @@ class CanonBleClient(
             CanonBleLog.d(TAG, "onConnectionStateChange status=$status newState=$newState")
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> {
-                    if (status == BluetoothGatt.GATT_SUCCESS) g.discoverServices()
-                    else connectSignal.getAndSet(null)?.complete(false)
+                    if (status == BluetoothGatt.GATT_SUCCESS) {
+                        // Ask for a fast connection interval. A real BR-E1 remote
+                        // keeps a responsive link; a sluggish power-saving interval
+                        // is a suspect in the camera dropping bulb-hold state
+                        // (shutter self-closes mid-exposure). Best-effort hint.
+                        runCatching { g.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH) }
+                        g.discoverServices()
+                    } else connectSignal.getAndSet(null)?.complete(false)
                 }
                 BluetoothProfile.STATE_DISCONNECTED -> {
                     connectSignal.getAndSet(null)?.complete(false)
                     servicesSignal.getAndSet(null)?.complete(false)
                     writeSignal.getAndSet(null)?.complete(false)
                     descriptorSignal.getAndSet(null)?.complete(false)
+                    readSignal.getAndSet(null)?.complete(null)
                     // Distinguish "link drop in flight" (auto-reconnect
                     // candidate) from "caller asked to close" (terminal).
                     if (fullyConnected && !releasedByUser) {
@@ -324,6 +334,23 @@ class CanonBleClient(
             // Only [enableStatusIndication] arms descriptorSignal; the SMART
             // path's fire-and-forget CCCD write leaves it null (no-op complete).
             descriptorSignal.getAndSet(null)?.complete(status == BluetoothGatt.GATT_SUCCESS)
+        }
+
+        @Deprecated("Old API still used for minSdk 26 compatibility")
+        @Suppress("DEPRECATION")
+        override fun onCharacteristicRead(
+            g: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            status: Int,
+        ) {
+            val value = if (status == BluetoothGatt.GATT_SUCCESS) characteristic.value else null
+            if (characteristic.uuid == STATUS_CHAR_UUID && value != null && value.isNotEmpty()) {
+                when (value[0].toInt() and 0xFF) {
+                    0x01 -> _shutterOpen.value = true
+                    0x03 -> _shutterOpen.value = false
+                }
+            }
+            readSignal.getAndSet(null)?.complete(value)
         }
     }
 
@@ -498,6 +525,20 @@ class CanonBleClient(
         }
         val ok = withTimeoutOrNull(3_000) { deferred.await() } ?: false
         CanonBleLog.d(TAG, "enableStatusIndication: CCCD write confirmed=$ok")
+        // Seed the current shutter state with a one-off read so the first bulb
+        // op starts from a KNOWN position. Without this the session-start
+        // defensive close runs with state=null and blind-toggles — which OPENS a
+        // closed shutter instead of ensuring it closed (the "derail" bug).
+        val rd = CompletableDeferred<ByteArray?>()
+        readSignal.set(rd)
+        @Suppress("DEPRECATION")
+        if (g.readCharacteristic(ch)) {
+            withTimeoutOrNull(2_000) { rd.await() }   // onCharacteristicRead seeds _shutterOpen
+            CanonBleLog.d(TAG, "enableStatusIndication: seeded shutterOpen=${_shutterOpen.value}")
+        } else {
+            readSignal.set(null)
+            CanonBleLog.w(TAG, "enableStatusIndication: status read couldn't queue — state stays unknown")
+        }
         ok
     }
 
