@@ -20,8 +20,8 @@ android {
         applicationId = "com.ehrocha.pulsar"
         minSdk = 26
         targetSdk = 35
-        versionCode = 618
-        versionName = "0.607.0"
+        versionCode = 619
+        versionName = "0.608.0"
     }
 
     signingConfigs {
@@ -87,7 +87,7 @@ dependencies {
     implementation("com.google.accompanist:accompanist-permissions:0.36.0")
 
     // Encrypted prefs for Canon CCAPI digest credentials (keyed via Keystore)
-    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+    implementation("androidx.security:security-crypto:1.1.0")
 
     // WorkManager — periodic background update checks + dashboard widget refresh
     implementation("androidx.work:work-runtime-ktx:2.9.1")
