@@ -559,30 +559,6 @@ class CanonBleClient(
         ok
     }
 
-    /** Fresh read of the BR-E1 status char (00050004): **true** = open (0x01),
-     *  **false** = closed (0x00 idle / 0x03), **null** on failure. This is the
-     *  authoritative real-time shutter state — the cached [shutterOpen] indication
-     *  can't distinguish a MISSED toggle (the EOS R acknowledges a 0x8C press on
-     *  0x001b but sometimes doesn't act on it, re-reporting the unchanged state),
-     *  so `CanonBleTransport.ensureShutter` reads this to verify + retry. Confirmed
-     *  by driving the body directly from a PC (2026-07-01). Serialized through
-     *  [opMutex]. */
-    @SuppressLint("MissingPermission")
-    suspend fun readShutterState(): Boolean? = opMutex.withLock {
-        val ch = statusChar ?: return@withLock null
-        val g = gatt ?: return@withLock null
-        val rd = CompletableDeferred<ByteArray?>()
-        readSignal.set(rd)
-        @Suppress("DEPRECATION")
-        if (g.readCharacteristic(ch) != true) {
-            readSignal.set(null)
-            return@withLock null
-        }
-        val v = withTimeoutOrNull(1_500) { rd.await() }
-        // onCharacteristicRead also refreshes _shutterOpen from this value.
-        if (v == null || v.isEmpty()) null else (v[0].toInt() and 0xFF) == 0x01
-    }
-
     /** Write a payload to an arbitrary characteristic (WRITE_NO_RESPONSE),
      *  serialized through [opMutex]. Used by the smartphone-mode handshake +
      *  shutter. Returns true once `onCharacteristicWrite` confirms.

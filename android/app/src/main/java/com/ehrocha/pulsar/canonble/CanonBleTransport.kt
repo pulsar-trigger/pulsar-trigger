@@ -17,6 +17,8 @@ import com.ehrocha.pulsar.transport.TransportKind
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import java.security.SecureRandom
 
 /** Outcome of [CanonBleTransport.connect]. Distinguishes a plain failure from
@@ -67,15 +69,18 @@ class CanonBleTransport private constructor(
          *  Same value used across ESP32-Canon-BLE-Remote + cbremote. */
         private const val AF_HOLD_MS = 200L
 
-        /** Bulb read-verify-retry: max toggles [ensureShutter] sends to reach the
-         *  wanted state. The EOS R drops a toggle ~half the time on close, so 1
-         *  retry usually suffices; headroom covers a rare double-miss. */
+        /** Bulb verify-retry: max toggles [ensureShutter] sends to reach the
+         *  wanted state. The EOS R has a period-3 quirk — after it opens, the very
+         *  next 0x8C is a DEAD no-op (fires no frame, confirmed by card count) and
+         *  the one after closes — so a close routinely needs 2 clicks. Headroom
+         *  covers a rare double-dead. */
         private const val MAX_SHUTTER_ATTEMPTS = 4
 
-        /** Pause after a bulb toggle before re-reading the status char, so the
-         *  camera has processed the press + refreshed 00050004. Matches the 0.4 s
-         *  that gave 4/4 clean cycles driving the EOS R directly (2026-07-01). */
-        private const val SHUTTER_SETTLE_MS = 400L
+        /** How long to wait for the 0x001b indication to confirm a bulb toggle
+         *  flipped the shutter. A real toggle indicates in ~70 ms (the wait returns
+         *  early); a dead click leaves the state unchanged, so this times out and
+         *  we retry. */
+        private const val SHUTTER_CONFIRM_MS = 400L
 
         /** Phone-side device name that shows up in the camera's
          *  paired-devices list. Short, brand-aligned, fits Canon's
@@ -278,37 +283,38 @@ class CanonBleTransport private constructor(
         client.writeControl(SHUTTER_RELEASE) // 0x0C — button-up (inert)
     }
 
-    /** Drive the BR-E1 bulb shutter to [wantOpen] with **read-verify-retry**.
+    /** Drive the BR-E1 bulb shutter to [wantOpen] with **verify-retry** against the
+     *  **AF-gated cached indication** ([client.shutterOpen]).
      *
-     *  The camera is a toggle (one 0x8C click flips open↔closed), BUT the EOS R
-     *  **occasionally DROPS a toggle** — it acknowledges the 0x8C press on the
-     *  0x001b indication yet doesn't actually flip (verified by driving the body
-     *  directly from a PC, 2026-07-01: the close-toggle missed ~half the time).
-     *  A single blind/idempotent toggle can't recover from a miss, so a dropped
-     *  close leaves the shutter open and the next frame merges into it.
+     *  The camera is a toggle, but the EOS R has a **period-3 quirk** (mapped by
+     *  driving the body directly, 2026-07-01): after it opens, the very next 0x8C
+     *  is a **DEAD no-op** — it fires no frame (confirmed by card count = exactly 3
+     *  for 3 exposures) and doesn't flip the state — and the click after that
+     *  closes. So a close routinely needs 2 clicks. A single toggle can't recover;
+     *  we toggle, wait for the indication, and retry the dead click.
      *
-     *  So: **read the true state** (00050004, authoritative — a missed toggle
-     *  re-reports the OLD state, which the cached indication can't tell apart),
-     *  and if it's not [wantOpen], toggle and re-read, up to [MAX_SHUTTER_ATTEMPTS].
-     *  This is idempotent (no click if already there — the runner's defensive
-     *  close is a safe no-op) AND self-correcting (recovers a dropped toggle, a
-     *  self-close, or a stale flag). Validated **4/4 clean cycles** on the EOS R
-     *  with this exact logic. Falls back to the cached indication if a read fails.
-     *  BR-E1 only; the smartphone path presses/holds instead. */
+     *  We verify against `shutterOpen` (updated from the 0x001b indication, and
+     *  **gated on the last write being a shutter press** — see CanonBleClient) NOT
+     *  a raw char read: an AF half-press (0x4C) pollutes the raw char to 0x01, so a
+     *  raw read makes manual "Hold" think it's already open and skip the open (the
+     *  v0.606 regression). The cached copy ignores AF's 0x01, so both bulb and
+     *  manual work. Idempotent (no click if already there — the runner's defensive
+     *  close is a safe no-op). BR-E1 only; the smartphone path presses/holds. */
     private suspend fun ensureShutter(wantOpen: Boolean) {
         for (att in 0 until MAX_SHUTTER_ATTEMPTS) {
-            val state = client.readShutterState() ?: client.shutterOpen.value ?: false
-            if (state == wantOpen) {
+            if ((client.shutterOpen.value ?: false) == wantOpen) {
                 if (att > 0) CanonBleLog.d(TAG, "bulb: shutter ${if (wantOpen) "open" else "closed"} " +
                     "reached after $att toggle(s)")
                 return
             }
             bre1BulbToggle()
-            delay(SHUTTER_SETTLE_MS)   // let the camera process + refresh 00050004
+            // A real toggle flips shutterOpen → the next check returns immediately;
+            // a period-3 DEAD click leaves it unchanged → this times out → retry.
+            withTimeoutOrNull(SHUTTER_CONFIRM_MS) { client.shutterOpen.first { it == wantOpen } }
         }
-        val final = client.readShutterState() ?: client.shutterOpen.value ?: false
-        if (final != wantOpen) CanonBleLog.w(TAG, "bulb: shutter did not reach " +
-            "${if (wantOpen) "open" else "closed"} after $MAX_SHUTTER_ATTEMPTS toggles (state=$final)")
+        if ((client.shutterOpen.value ?: false) != wantOpen) CanonBleLog.w(TAG,
+            "bulb: shutter did not reach ${if (wantOpen) "open" else "closed"} " +
+            "after $MAX_SHUTTER_ATTEMPTS toggles (state=${client.shutterOpen.value})")
     }
 
     /** Single shot. BR-E1 with AF: half-press → wait → full-press → release.
