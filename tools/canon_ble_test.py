@@ -40,6 +40,10 @@ Usage:
 
     # send a 2-second-timer release instead of immediate (drive-mode probe)
     python3 canon_ble_test.py --delay-mode
+
+    # BULB characterization (camera in REMOTE mode + dial on BULB): toggle vs
+    # press-and-hold, exposure timing, every-other-shot check. Watch the sensor.
+    python3 canon_ble_test.py --bulb --bulb-secs 8
 """
 
 import argparse
@@ -578,6 +582,123 @@ async def smart_sequence(client, shutter_probe=False):
     await _smart_teardown(subscribed, client)
 
 
+async def bulb_sequence(client, args):
+    """BR-E1 BULB characterization — settles toggle-vs-hold and measures real
+    exposure timing, with every 0x001b (00050004) status indication timestamped.
+
+    Precondition: camera in REMOTE Bluetooth mode AND the mode dial on BULB
+    (M → shutter past 30" → 'BULB'). Watch the SENSOR/lens during each step and
+    note when it opens/closes — the log shows what the camera reports on 0x0004.
+
+    Three experiments:
+      1. TOGGLE bulb  — one click OPEN, hold N s, one click CLOSE  (what the app
+         does in v0.604). Confirms a single click opens and holds a full-length
+         exposure, and a single click closes it.
+      2. 3× cycles    — three back-to-back open/close toggles. If you get 3
+         separate exposures → strict alternation is solid; if ~1–2 → the dreaded
+         every-other-shot (a click going the wrong way).
+      3. HOLD control — 0x8C down, hold N s, 0x0C up (no paired click). If the
+         0x0C closes the shutter → the camera is press-and-hold; if it stays open
+         until the next 0x8C → toggle confirmed (0x0C inert).
+    """
+    secs = args.bulb_secs
+    mode = MODE_IMMEDIATE
+    PRESS = mode | BTN_RELEASE   # 0x8C — toggles / button-down
+    UP    = mode | RELEASE_NONE  # 0x0C — button-up
+
+    # 1. Bond — a real BR-E1 remote bonds with the camera; the Android app now
+    #    does too (v0.602) and it's the suspected key to reliable bulb-hold.
+    try:
+        ok = await client.pair()
+        log(f"{_ts()} client.pair() (bond) → {ok}")
+    except Exception as e:
+        log(f"{_ts()} client.pair() unsupported/failed: {type(e).__name__}: {e}")
+        log(f"      if writes fail with auth errors: `bluetoothctl pair {client.address}` first")
+
+    # 2. Subscribe to the status char (00050004) + the other indicate channels.
+    subscribed = []
+    for u in INDICATE_UUIDS:
+        try:
+            await client.start_notify(u, make_indicate_handler(u))
+            subscribed.append(u)
+            log(f"subscribed indicate {_short_uuid(u)}")
+        except Exception as e:
+            log(f"subscribe {_short_uuid(u)} FAILED: {type(e).__name__}: {e}")
+
+    # 3. Arm as the active remote (every session), then read initial status.
+    await write(client, PAIR_UUID, [0x03] + list(DEVICE_NAME.encode("ascii")),
+                response=False, label="ARM pair-name")
+    await asyncio.sleep(1.0)
+    try:
+        v = await client.read_gatt_char(canon_uuid("00050004"))
+        log(f"{_ts()} initial status 0x0004 = {bytes(v).hex()}")
+    except Exception as e:
+        log(f"{_ts()} read 0x0004 failed: {type(e).__name__}: {e}")
+
+    async def click(label):
+        """One full BR-E1 click: 0x8C press, brief hold, 0x0C release."""
+        await write(client, CONTROL_UUID, [PRESS], response=False, label=f"{label} 0x8c")
+        await asyncio.sleep(0.2)
+        await write(client, CONTROL_UUID, [UP], response=False, label=f"{label} 0x0c")
+
+    # ── EXPERIMENT 1: TOGGLE bulb ──
+    log("")
+    log(f"{_ts()} ╔══ EXP 1 — TOGGLE bulb, {secs:.0f}s.  WATCH THE SENSOR ══╗")
+    log(f"{_ts()}   click OPEN → hold {secs:.0f}s → click CLOSE. Expect: opens on the")
+    log(f"{_ts()}   first click, stays open ~{secs:.0f}s, closes on the second click.")
+    await click("OPEN ")
+    log(f"{_ts()}   >>> holding {secs:.0f}s — is the sensor OPEN/exposing the whole time?")
+    await asyncio.sleep(secs)
+    await click("CLOSE")
+    log(f"{_ts()}   >>> closed now? exposure should be ~{secs:.0f}s, not a blip.")
+    await asyncio.sleep(2.0)
+
+    # ── EXPERIMENT 2: 3 back-to-back cycles (every-other-shot check) ──
+    log("")
+    log(f"{_ts()} ╔══ EXP 2 — 3 back-to-back cycles (every-other-shot check) ══╗")
+    hold = min(secs, 4.0)
+    for i in range(1, 4):
+        log(f"{_ts()}   cycle {i} OPEN")
+        await click(f"C{i}-OPEN ")
+        await asyncio.sleep(hold)
+        log(f"{_ts()}   cycle {i} CLOSE")
+        await click(f"C{i}-CLOSE")
+        await asyncio.sleep(2.0)
+    log(f"{_ts()}   >>> did you get 3 SEPARATE exposures? (every-other-shot = ~1–2)")
+
+    # ── EXPERIMENT 3: press-and-hold control ──
+    log("")
+    log(f"{_ts()} ╔══ EXP 3 — HOLD control: 0x8c down, hold {secs:.0f}s, 0x0c up ══╗")
+    await write(client, CONTROL_UUID, [PRESS], response=False, label="HOLD down 0x8c")
+    log(f"{_ts()}   >>> button DOWN, holding {secs:.0f}s — sensor open?")
+    await asyncio.sleep(secs)
+    await write(client, CONTROL_UUID, [UP], response=False, label="HOLD up 0x0c")
+    log(f"{_ts()}   >>> did the 0x0c release CLOSE it? NO → toggle confirmed (0x0c inert).")
+    await asyncio.sleep(2.0)
+    # Leave the shutter closed no matter which model — an extra click closes it
+    # if EXP 3 left it open (toggle), or is a harmless open+wait+... so read first.
+    try:
+        v = await client.read_gatt_char(canon_uuid("00050004"))
+        st = bytes(v).hex()
+        log(f"{_ts()} status after EXP 3 = {st}")
+        if st.startswith("01"):
+            log(f"{_ts()} still OPEN → sending a cleanup click to CLOSE")
+            await click("CLEAN")
+    except Exception as e:
+        log(f"{_ts()} read/cleanup failed: {type(e).__name__}: {e}")
+
+    log(f"{_ts()} listening 3s for trailing indications…")
+    await asyncio.sleep(3.0)
+    for u in subscribed:
+        try:
+            await client.stop_notify(u)
+        except Exception:
+            pass
+    log("")
+    log("REPORT BACK: for EXP1 did the exposure hold the full time? EXP2 how many "
+        "separate frames? EXP3 did 0x0c close it? + paste all the ◀ INDICATE lines.")
+
+
 async def fire_sequence(client, mode, mode_name):
     log(f"using shutter mode = {mode_name} (0x{mode:02x})")
     await write(client, CONTROL_UUID, [mode | BTN_FOCUS],
@@ -648,6 +769,14 @@ async def do_session(client, args):
         # furble CanonEOSSmart — the likely EOS R-series path.
         await smart_sequence(client, shutter_probe=args.shutter_probe)
         log("done. Did the camera fire? (check the body / card)")
+        return 0
+
+    if args.bulb:
+        # BULB characterization: bond, arm, subscribe to the status char, then
+        # run toggle / repeat-cycle / press-and-hold experiments. Camera must be
+        # in REMOTE mode with the dial on BULB. See bulb_sequence().
+        await bulb_sequence(client, args)
+        log("done.")
         return 0
 
     mode = MODE_DELAY if args.delay_mode else MODE_IMMEDIATE
@@ -734,6 +863,14 @@ def main():
                         "command ([00 02] presses but doesn't release on the RP)")
     p.add_argument("--delay-mode", action="store_true",
                    help="use the 2-second-timer mode bit instead of immediate")
+    p.add_argument("--bulb", action="store_true",
+                   help="BULB characterization suite (REMOTE mode, dial on BULB): "
+                        "bond + arm + subscribe to the 00050004 status char, then "
+                        "run TOGGLE / 3×-cycle / press-and-hold experiments with "
+                        "every 0x001b indication timestamped. Settles toggle-vs-hold "
+                        "and measures real exposure timing. Watch the sensor")
+    p.add_argument("--bulb-secs", type=float, default=8.0,
+                   help="exposure hold time for --bulb experiments (default 8s)")
     args = p.parse_args()
     try:
         return asyncio.run(run(args))
