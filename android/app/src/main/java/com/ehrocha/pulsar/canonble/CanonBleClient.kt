@@ -141,6 +141,10 @@ class CanonBleClient(
     @Volatile private var controlChar: BluetoothGattCharacteristic? = null
     @Volatile private var pairChar: BluetoothGattCharacteristic? = null
     @Volatile private var statusChar: BluetoothGattCharacteristic? = null
+    /** True iff the most recent control write was a shutter PRESS (0x8C). The
+     *  status char emits 0x01 for an AF half-press (0x4C) and zoom too, so we
+     *  only trust a 0x01/0x03 indication as shutter state when this is set. */
+    @Volatile private var lastControlWasShutterPress = false
 
     /** BR-E1 shutter state from the 00050004 status indication: null = unknown,
      *  true = open, false = closed. Lets the bulb toggle be idempotent +
@@ -294,13 +298,21 @@ class CanonBleClient(
                 pairResultSignal.getAndSet(null)?.complete(value[0])
             }
             if (characteristic.uuid == STATUS_CHAR_UUID && value.isNotEmpty()) {
-                // BR-E1 status: 0x01 = shutter open/pressed, 0x03 = closed/released.
-                when (value[0].toInt() and 0xFF) {
-                    0x01 -> _shutterOpen.value = true
-                    0x03 -> _shutterOpen.value = false
+                val code = value[0].toInt() and 0xFF
+                // 0x01 ("active") is ALSO emitted by an AF half-press (0x4C) and
+                // by zoom — not just the shutter. Only trust it as a shutter
+                // open/close when the last control write was a shutter press
+                // (0x8C); otherwise AF's 0x01 flips shutterOpen=true and the next
+                // ensureShutter skips the real open (manual "Hold" no-op, verified
+                // in the v0.600 diagnostics: 0x4C → 0x01 → shutterOpen=true).
+                if (lastControlWasShutterPress) {
+                    when (code) {
+                        0x01 -> _shutterOpen.value = true
+                        0x03 -> _shutterOpen.value = false
+                    }
                 }
-                CanonBleLog.d(TAG, "BR-E1 status: 0x%02X → shutterOpen=%s"
-                    .format(value[0].toInt() and 0xFF, _shutterOpen.value))
+                CanonBleLog.d(TAG, "BR-E1 status: 0x%02X (shutterPress=%s) → shutterOpen=%s"
+                    .format(code, lastControlWasShutterPress, _shutterOpen.value))
             }
         }
 
@@ -345,10 +357,11 @@ class CanonBleClient(
         ) {
             val value = if (status == BluetoothGatt.GATT_SUCCESS) characteristic.value else null
             if (characteristic.uuid == STATUS_CHAR_UUID && value != null && value.isNotEmpty()) {
-                when (value[0].toInt() and 0xFF) {
-                    0x01 -> _shutterOpen.value = true
-                    0x03 -> _shutterOpen.value = false
-                }
+                // Seed at connect: the shutter is at rest, so anything but 0x01
+                // (open) means closed — including 0x00 (idle), which the read
+                // returns before any shutter action. Seeding false (not null)
+                // stops the session-start defensive close from blind-toggling OPEN.
+                _shutterOpen.value = (value[0].toInt() and 0xFF) == 0x01
             }
             readSignal.getAndSet(null)?.complete(value)
         }
@@ -445,6 +458,10 @@ class CanonBleClient(
             return@withLock false
         }
         val g = gatt ?: return@withLock false
+        // Mark whether this is a shutter PRESS so the status-indication handler
+        // knows a following 0x01/0x03 reflects the shutter — not an AF half-press
+        // (0x4C) or zoom, which also emit 0x01 on the status char.
+        lastControlWasShutterPress = (byte == SHUTTER_PRESS)
         @Suppress("DEPRECATION")
         run {
             // Two-byte control word [cmd, 0x00] — matches the hardware BR-E1
