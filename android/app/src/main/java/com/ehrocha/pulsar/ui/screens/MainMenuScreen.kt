@@ -126,6 +126,12 @@ fun MainMenuScreen(
     onShotLogSelected: () -> Unit = {},
     nightModeToggle: @Composable () -> Unit = {},
 ) {
+    // Safety: whenever we land on the main menu (run finished, stopped, or the
+    // user backed out mid-run / mid-manual-hold), make sure a Canon BLE body's
+    // sensor isn't left exposing. Reads the true shutter state and closes if
+    // open; no-op on other transports / when already closed.
+    LaunchedEffect(Unit) { vm.ensureShutterSafelyClosed() }
+
     val fwState by vm.firmwareManager.state.collectAsState()
     val appState by vm.appUpdateManager.state.collectAsState()
     val fwRelease by vm.firmwareManager.latestRelease.collectAsState()

@@ -395,6 +395,18 @@ class CanonBleTransport private constructor(
         }
     }
 
+    /** Belt-and-braces safety close, called on return to the main menu. Reads
+     *  the TRUE shutter state and closes it if open — **independent of the
+     *  [bulbOpen] flag**, because a dropped final close-toggle, an un-released
+     *  manual "Hold Shutter", or an aborted run can leave the sensor exposing
+     *  while the flag reads closed. The BR-E1 read-verify-retry means this is a
+     *  cheap no-op when already closed. No-op if disconnected. */
+    suspend fun ensureShutterClosedSafely() {
+        if (!_connected.value) return
+        runCatching { if (isSmart) releaseShutter() else ensureShutter(false) }
+        bulbOpen = false
+    }
+
     /** Called by [CanonBleClient]'s disconnect callback on a spontaneous
      *  link drop. Flips [connected] false so the viewmodel can react;
      *  doesn't release the underlying client (auto-reconnect may want to

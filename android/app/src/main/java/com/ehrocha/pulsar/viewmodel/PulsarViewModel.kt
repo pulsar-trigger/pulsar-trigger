@@ -2429,6 +2429,16 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Safety net for the Canon BLE body: on return to the main menu, make sure
+     *  the sensor isn't left exposing — a dropped final close-toggle, an
+     *  un-released manual "Hold Shutter", or an aborted run can leave the shutter
+     *  open. Reads the TRUE shutter state (00050004) and closes if open; no-op on
+     *  other transports / when disconnected. Cheap (a read) when already closed. */
+    fun ensureShutterSafelyClosed() {
+        val ble = _canonBleTransport.value ?: return
+        viewModelScope.launch { runCatching { ble.ensureShutterClosedSafely() } }
+    }
+
     private suspend fun executeFlowStep(step: FlowStep) {
         when (step) {
             is FlowStep.Pause -> {
