@@ -131,10 +131,24 @@ class CanonBleTransport private constructor(
             // Arm the camera per detected protocol, before any shutter write.
             when (client.protocol) {
                 CanonProtocol.BRE1 -> {
+                    // Bond the link like a real BR-E1 remote does. The link was
+                    // BOND_NONE (writePairName is app-level only, no OS bond),
+                    // which (a) blocks auto-reconnect — Android's autoConnect only
+                    // silently re-attaches to a BONDED device on the camera's
+                    // directed advert, so an unbonded body needs re-pairing to come
+                    // back — and (b) is the suspected cause of the camera
+                    // self-closing bulb on long exposures (safety timeout for an
+                    // unbonded remote). First connect pops the OS pair dialog;
+                    // already-bonded reconnects return immediately. NON-FATAL: if
+                    // the bond doesn't take, basic single-shot/manual firing still
+                    // works unbonded (just no reconnect / long bulb-hold).
+                    if (!client.ensureBonded(onAwaitConfirm)) {
+                        CanonBleLog.w(TAG, "BR-E1: bond not established for ${device.address} — " +
+                            "continuing UNBONDED (fires, but no auto-reconnect / long bulb-hold)")
+                    }
                     // BR-E1: `[0x03, name]` on every connect — the "arm as the
                     // active remote" step the body expects each session (matches
-                    // iebyt/cbremote's onServicesDiscovered). First time this
-                    // also pops the OS pair dialog. See docs/canon-ble.md.
+                    // iebyt/cbremote's onServicesDiscovered). See docs/canon-ble.md.
                     if (!client.writePairName(PAIR_NAME)) {
                         CanonBleLog.w(TAG, "BR-E1 pair/arm write failed for ${device.address}; aborting")
                         client.close()
