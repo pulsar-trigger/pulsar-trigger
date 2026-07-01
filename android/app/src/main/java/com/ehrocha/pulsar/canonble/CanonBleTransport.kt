@@ -17,8 +17,6 @@ import com.ehrocha.pulsar.transport.TransportKind
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withTimeoutOrNull
 import java.security.SecureRandom
 
 /** Outcome of [CanonBleTransport.connect]. Distinguishes a plain failure from
@@ -68,25 +66,6 @@ class CanonBleTransport private constructor(
          *  body needs a beat to lock focus before the shutter fires.
          *  Same value used across ESP32-Canon-BLE-Remote + cbremote. */
         private const val AF_HOLD_MS = 200L
-
-        /** Bulb close-loop: max BR-E1 clicks [ensureShutter] sends to drive the
-         *  shutter to a camera-confirmed state before giving up. One click
-         *  suffices from a known state; the headroom self-corrects a drifted or
-         *  aborted cycle (each click toggles). */
-        private const val MAX_SHUTTER_TAPS = 4
-
-        /** How long to wait for the 00050004 status indication to confirm a bulb
-         *  click landed (the EOS R replies in ~70 ms; margin for slow stacks). */
-        private const val SHUTTER_CONFIRM_MS = 500L
-
-        /** Bulb press-hold before the release, matched to the real BR-E1 remote
-         *  (nRF Sniffer, ~/bulb-toggle.pcapng): the remote held the OPEN press
-         *  ~630–660 ms but tapped the CLOSE press only ~180–270 ms. A short open
-         *  press doesn't reliably LATCH the bulb open — the shutter closes early,
-         *  giving inconsistent exposure length (v0.598 log) — so the open press
-         *  holds long, the close press taps short. */
-        private const val BULB_OPEN_HOLD_MS = 600L
-        private const val BULB_CLOSE_HOLD_MS = 250L
 
         /** Phone-side device name that shows up in the camera's
          *  paired-devices list. Short, brand-aligned, fits Canon's
@@ -271,61 +250,22 @@ class CanonBleTransport private constructor(
         if (isSmart) client.smartShutter(press = false) else client.writeControl(SHUTTER_RELEASE)
     }
 
-    /** BR-E1 bulb is a **toggle** — the hardware remote has no bulb mode, so one
-     *  full click (`0x8C` press → hold [holdMs] → `0x0C` release) OPENS the
-     *  shutter and the next click CLOSES it. The camera toggles on the `0x8C`;
-     *  the `0x0C` is inert button-up (a bare `0x0C` alone was the every-other-
-     *  shot bug — `stopBulb` only sent `0x0C`). Confirmed by nRF Sniffer
-     *  (2026-07-01): the camera reports `0x01` (open) / `0x03` (closed) on the
-     *  `0x001b` indication after each press. [holdMs] mirrors the real remote's
-     *  press duration (long to latch OPEN, short to tap CLOSED). */
-    private suspend fun bre1BulbToggle(holdMs: Long) {
-        client.writeControl(SHUTTER_PRESS)
-        delay(holdMs)
-        client.writeControl(SHUTTER_RELEASE)
-    }
-
-    /** Drive the BR-E1 bulb shutter to [wantOpen] using the camera's 00050004
-     *  status indication (0x01 open / 0x03 closed) as ground truth.
-     *
-     *  A bulb "tap" (0x8C→0x0C) is one BR-E1 *click*, and clicks toggle the
-     *  shutter open↔closed. A single unconditional click is fragile: if our
-     *  idea of the current state has drifted (a missed indication, an aborted
-     *  cycle), the click flips the WRONG way and the exposure inverts — the
-     *  v0.597 log showed a close click hitting an already-closed shutter,
-     *  re-opening it, then "did not confirm closed" left it open.
-     *
-     *  So this is a **closed loop**: it re-clicks until the camera *confirms*
-     *  the target state, capped at [MAX_SHUTTER_TAPS] (the EOS R was observed
-     *  taking 2–3 clicks to close). Idempotent — clicks nothing if already
-     *  there. If the body never reports a state ([shutterOpen] null) it falls
-     *  back to a single blind toggle (v0.595 behaviour). BR-E1 only; the
-     *  smartphone path is unchanged.
-     *
-     *  UNUSED since v0.603 — bulb switched to press-and-hold (see [startBulb]).
-     *  Kept (suppressed) as a fast revert path if the hold model proves wrong. */
-    @Suppress("unused")
-    private suspend fun ensureShutter(wantOpen: Boolean) {
-        val holdMs = if (wantOpen) BULB_OPEN_HOLD_MS else BULB_CLOSE_HOLD_MS
-        if (client.shutterOpen.value == null) {
-            // No status feedback from this body — can't run the closed loop.
-            // Single blind toggle; trust the caller's open/close alternation.
-            bre1BulbToggle(holdMs)
-            return
-        }
-        for (tap in 1..MAX_SHUTTER_TAPS) {
-            if (client.shutterOpen.value == wantOpen) {
-                if (tap > 1) CanonBleLog.d(TAG, "bulb: shutter ${if (wantOpen) "open" else "closed"} " +
-                    "confirmed after ${tap - 1} click(s)")
-                return
-            }
-            bre1BulbToggle(holdMs)
-            withTimeoutOrNull(SHUTTER_CONFIRM_MS) { client.shutterOpen.first { it == wantOpen } }
-        }
-        if (client.shutterOpen.value != wantOpen) {
-            CanonBleLog.w(TAG, "bulb: shutter did not reach ${if (wantOpen) "open" else "closed"} " +
-                "after $MAX_SHUTTER_TAPS clicks (status=${client.shutterOpen.value})")
-        }
+    /** BR-E1 bulb is a **toggle** (Canon BR-E1 manual groups bulb with movie as a
+     *  start/stop toggle; confirmed by nRF Sniffer `~/bulb-toggle.pcapng` AND by
+     *  every-other-shot returning when v0.603 tried press-and-hold). One full
+     *  *click* — `0x8C` press → brief hold → `0x0C` release — toggles the shutter:
+     *  first click OPENS (camera holds it open between clicks, ~5 s in the sniff),
+     *  the next click CLOSES. The camera acts on the `0x8C`; the `0x0C` is inert
+     *  button-up (a lone `0x0C` was the every-other-shot bug). So `startBulb` and
+     *  `stopBulb` each send exactly ONE click — strict open/close alternation
+     *  keeps them in phase, no state tracking needed. The camera echoes state on
+     *  the 0x001b indication (0x01 open / 0x03 closed) — logged for diagnostics,
+     *  not used for control (the v0.596–601 state machine that did was fragile:
+     *  AF's 0x01 corrupted it, see CanonBleClient). BR-E1 only. */
+    private suspend fun bre1BulbToggle() {
+        client.writeControl(SHUTTER_PRESS)   // 0x8C — toggles the shutter
+        delay(SHUTTER_TAP_MS)
+        client.writeControl(SHUTTER_RELEASE) // 0x0C — button-up (inert)
     }
 
     /** Single shot. BR-E1 with AF: half-press → wait → full-press → release.
@@ -385,13 +325,9 @@ class CanonBleTransport private constructor(
             client.writeControl(SHUTTER_RELEASE)
         }
         bulbOpen = true
-        // BR-E1 bulb is **press-and-hold**, per the BR-E1 manual: "the shutter
-        // stays open for as long as you hold the button down." So startBulb sends
-        // 0x8C = button DOWN (opens) and HOLDS it — no 0x0C until stopBulb sends
-        // the release. This replaces the v0.595–601 toggle model, whose paired
-        // 0x8C→0x0C "click" was read as a quick TAP (not a held press), giving
-        // short/inconsistent exposures and phase inversion. Smartphone also holds.
-        pressShutter()
+        // BR-E1: one full click toggles the shutter OPEN (it holds open until the
+        // stopBulb click closes it). Smartphone mode press-holds instead.
+        if (isSmart) pressShutter() else bre1BulbToggle()
     }
 
     /** Close the shutter. Always attempts the release — the
@@ -402,15 +338,15 @@ class CanonBleTransport private constructor(
     override suspend fun stopBulb() {
         val wasOpen = bulbOpen
         bulbOpen = false
-        // BR-E1: button UP (0x0C) closes the held bulb exposure. Smartphone up.
-        releaseShutter()
+        // BR-E1: one full click toggles the shutter CLOSED. Smartphone up.
+        if (isSmart) releaseShutter() else bre1BulbToggle()
         if (!wasOpen) CanonBleLog.d(TAG, "stopBulb: defensive close (bulbOpen was already false)")
     }
 
     /** Abort whatever's in flight. Used by viewmodel.stopFlow(). */
     override suspend fun stop() {
         if (bulbOpen) {
-            runCatching { releaseShutter() }
+            runCatching { if (isSmart) releaseShutter() else bre1BulbToggle() }
             bulbOpen = false
         }
     }
@@ -431,7 +367,7 @@ class CanonBleTransport private constructor(
             // mid-run disconnect doesn't leave the body holding the
             // exposure indefinitely. Suppress errors — the cable / link
             // may already be gone.
-            runCatching { releaseShutter() }
+            runCatching { if (isSmart) releaseShutter() else bre1BulbToggle() }
             bulbOpen = false
         }
         client.close()
