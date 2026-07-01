@@ -268,6 +268,23 @@ class CanonBleTransport private constructor(
         client.writeControl(SHUTTER_RELEASE) // 0x0C — button-up (inert)
     }
 
+    /** Idempotent bulb toggle: click ONLY when the shutter isn't already in the
+     *  wanted state. The camera is a toggle (one 0x8C click flips open↔closed),
+     *  so a *blind* click is unsafe — the runner fires a defensive `stopBulb()`
+     *  at session start, and a blind toggle there would OPEN a closed shutter and
+     *  invert the whole run (v0.604 bug). [client.shutterOpen] is seeded at
+     *  connect and updated from the AF-gated 0x001b indication after each shutter
+     *  press, so it tracks the real state; an unknown (null) state is treated as
+     *  closed so a defensive close can never open the shutter. BR-E1 only. */
+    private suspend fun ensureShutter(wantOpen: Boolean) {
+        val current = client.shutterOpen.value ?: false
+        if (current != wantOpen) {
+            bre1BulbToggle()
+        } else {
+            CanonBleLog.d(TAG, "bulb: shutter already ${if (wantOpen) "open" else "closed"} — no click")
+        }
+    }
+
     /** Single shot. BR-E1 with AF: half-press → wait → full-press → release.
      *  Smartphone mode folds AF into the release, so there's no separate AF
      *  step — just press → brief tap → release.
@@ -325,9 +342,9 @@ class CanonBleTransport private constructor(
             client.writeControl(SHUTTER_RELEASE)
         }
         bulbOpen = true
-        // BR-E1: one full click toggles the shutter OPEN (it holds open until the
-        // stopBulb click closes it). Smartphone mode press-holds instead.
-        if (isSmart) pressShutter() else bre1BulbToggle()
+        // BR-E1: toggle the shutter OPEN (idempotent — no-op if already open). It
+        // holds open until the stopBulb click closes it. Smartphone press-holds.
+        if (isSmart) pressShutter() else ensureShutter(true)
     }
 
     /** Close the shutter. Always attempts the release — the
@@ -338,15 +355,16 @@ class CanonBleTransport private constructor(
     override suspend fun stopBulb() {
         val wasOpen = bulbOpen
         bulbOpen = false
-        // BR-E1: one full click toggles the shutter CLOSED. Smartphone up.
-        if (isSmart) releaseShutter() else bre1BulbToggle()
+        // BR-E1: toggle the shutter CLOSED (idempotent — no-op if already closed,
+        // so the defensive close can't open it). Smartphone up.
+        if (isSmart) releaseShutter() else ensureShutter(false)
         if (!wasOpen) CanonBleLog.d(TAG, "stopBulb: defensive close (bulbOpen was already false)")
     }
 
     /** Abort whatever's in flight. Used by viewmodel.stopFlow(). */
     override suspend fun stop() {
         if (bulbOpen) {
-            runCatching { if (isSmart) releaseShutter() else bre1BulbToggle() }
+            runCatching { if (isSmart) releaseShutter() else ensureShutter(false) }
             bulbOpen = false
         }
     }
@@ -367,7 +385,7 @@ class CanonBleTransport private constructor(
             // mid-run disconnect doesn't leave the body holding the
             // exposure indefinitely. Suppress errors — the cable / link
             // may already be gone.
-            runCatching { if (isSmart) releaseShutter() else bre1BulbToggle() }
+            runCatching { if (isSmart) releaseShutter() else ensureShutter(false) }
             bulbOpen = false
         }
         client.close()
