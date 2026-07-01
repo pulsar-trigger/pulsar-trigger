@@ -15,6 +15,8 @@ import android.bluetooth.BluetoothProfile
 import android.content.Context
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
@@ -81,6 +83,11 @@ class CanonBleClient(
          *  writes with the mode + button bit-mask. */
         val CONTROL_CHAR_UUID: UUID = UUID.fromString("00050003-0000-1000-0000-d8492fffa821")
 
+        /** BR-E1 status characteristic (00050004): the camera **indicates** the
+         *  shutter state here after each button event — `0x01` = shutter
+         *  open/pressed, `0x03` = closed/released. Sniffer-confirmed 2026-07-01. */
+        val STATUS_CHAR_UUID: UUID = UUID.fromString("00050004-0000-1000-0000-d8492fffa821")
+
         // ── Smartphone-mode protocol (service 00010000) ────────────────
         // A second, richer Canon BLE protocol — the only one that fires the
         // EOS R-series (the BR-E1 service above pairs but won't shoot them).
@@ -133,6 +140,13 @@ class CanonBleClient(
     @Volatile private var gatt: BluetoothGatt? = null
     @Volatile private var controlChar: BluetoothGattCharacteristic? = null
     @Volatile private var pairChar: BluetoothGattCharacteristic? = null
+    @Volatile private var statusChar: BluetoothGattCharacteristic? = null
+
+    /** BR-E1 shutter state from the 00050004 status indication: null = unknown,
+     *  true = open, false = closed. Lets the bulb toggle be idempotent +
+     *  self-confirming (see `CanonBleTransport.ensureShutter`). */
+    private val _shutterOpen = MutableStateFlow<Boolean?>(null)
+    val shutterOpen: StateFlow<Boolean?> = _shutterOpen
 
     // ── Smartphone-mode chars (set in onServicesDiscovered when SMART) ──
     @Volatile private var smartNameChar: BluetoothGattCharacteristic? = null
@@ -219,6 +233,11 @@ class CanonBleClient(
                 bre1Service != null -> {
                     controlChar = bre1Service.getCharacteristic(CONTROL_CHAR_UUID)
                     pairChar = bre1Service.getCharacteristic(PAIR_CHAR_UUID)
+                    // Subscribe to the status char (00050004): the camera
+                    // indicates 0x01=open / 0x03=closed after each button event —
+                    // our bulb-state ground truth (see ensureShutter).
+                    statusChar = bre1Service.getCharacteristic(STATUS_CHAR_UUID)
+                    statusChar?.let { enableIndication(g, it) }
                     protocol = if (controlChar != null && pairChar != null)
                         CanonProtocol.BRE1 else CanonProtocol.NONE
                     ok = protocol == CanonProtocol.BRE1
@@ -256,6 +275,15 @@ class CanonBleClient(
             if (characteristic.uuid == SMART_NAME_UUID && value.isNotEmpty()) {
                 CanonBleLog.d(TAG, "smart pairing indication: 0x%02X".format(value[0].toInt() and 0xFF))
                 pairResultSignal.getAndSet(null)?.complete(value[0])
+            }
+            if (characteristic.uuid == STATUS_CHAR_UUID && value.isNotEmpty()) {
+                // BR-E1 status: 0x01 = shutter open/pressed, 0x03 = closed/released.
+                when (value[0].toInt() and 0xFF) {
+                    0x01 -> _shutterOpen.value = true
+                    0x03 -> _shutterOpen.value = false
+                }
+                CanonBleLog.d(TAG, "BR-E1 status: 0x%02X → shutterOpen=%s"
+                    .format(value[0].toInt() and 0xFF, _shutterOpen.value))
             }
         }
 
@@ -596,6 +624,8 @@ class CanonBleClient(
         gatt = null
         controlChar = null
         pairChar = null
+        statusChar = null
+        _shutterOpen.value = null
         smartNameChar = null
         smartIdenChar = null
         smartModeChar = null

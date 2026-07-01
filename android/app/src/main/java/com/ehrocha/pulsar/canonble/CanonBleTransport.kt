@@ -17,6 +17,8 @@ import com.ehrocha.pulsar.transport.TransportKind
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import java.security.SecureRandom
 
 /** Outcome of [CanonBleTransport.connect]. Distinguishes a plain failure from
@@ -244,6 +246,25 @@ class CanonBleTransport private constructor(
         client.writeControl(SHUTTER_RELEASE)
     }
 
+    /** Drive the BR-E1 bulb shutter to [wantOpen], using the camera's 00050004
+     *  status indication (0x01 open / 0x03 closed) as ground truth: skip the tap
+     *  if it's already there (idempotent — no stray toggle), otherwise tap and
+     *  confirm the new state. If the indication never arrives (`shutterOpen`
+     *  stays null) this degrades to a plain unconditional toggle — same as
+     *  before, just unconfirmed. BR-E1 only; the smartphone path is unchanged. */
+    private suspend fun ensureShutter(wantOpen: Boolean) {
+        if (client.shutterOpen.value == wantOpen) {
+            CanonBleLog.d(TAG, "bulb: shutter already ${if (wantOpen) "open" else "closed"} — skipping tap")
+            return
+        }
+        bre1BulbToggle()
+        val confirmed = withTimeoutOrNull(700) { client.shutterOpen.first { it == wantOpen } } != null
+        if (!confirmed) {
+            CanonBleLog.w(TAG, "bulb: shutter did not confirm ${if (wantOpen) "open" else "closed"} " +
+                "(status=${client.shutterOpen.value}); the tap may have been missed")
+        }
+    }
+
     /** Single shot. BR-E1 with AF: half-press → wait → full-press → release.
      *  Smartphone mode folds AF into the release, so there's no separate AF
      *  step — just press → brief tap → release.
@@ -301,8 +322,9 @@ class CanonBleTransport private constructor(
             client.writeControl(SHUTTER_RELEASE)
         }
         bulbOpen = true
-        // BR-E1: a full tap toggles the bulb OPEN (smartphone-mode presses+holds).
-        if (isSmart) pressShutter() else bre1BulbToggle()
+        // BR-E1: toggle the bulb OPEN, confirmed via the status indication
+        // (smartphone-mode presses+holds instead).
+        if (isSmart) pressShutter() else ensureShutter(true)
     }
 
     /** Close the shutter. Always attempts the release — the
@@ -313,15 +335,16 @@ class CanonBleTransport private constructor(
     override suspend fun stopBulb() {
         val wasOpen = bulbOpen
         bulbOpen = false
-        // BR-E1: a second tap toggles the bulb CLOSED (a bare 0x0C is inert).
-        if (isSmart) releaseShutter() else bre1BulbToggle()
+        // BR-E1: toggle the bulb CLOSED, confirmed via the status indication
+        // (a bare 0x0C is inert in bulb).
+        if (isSmart) releaseShutter() else ensureShutter(false)
         if (!wasOpen) CanonBleLog.d(TAG, "stopBulb: defensive close (bulbOpen was already false)")
     }
 
     /** Abort whatever's in flight. Used by viewmodel.stopFlow(). */
     override suspend fun stop() {
         if (bulbOpen) {
-            runCatching { if (isSmart) releaseShutter() else bre1BulbToggle() }
+            runCatching { if (isSmart) releaseShutter() else ensureShutter(false) }
             bulbOpen = false
         }
     }
@@ -342,7 +365,7 @@ class CanonBleTransport private constructor(
             // mid-run disconnect doesn't leave the body holding the
             // exposure indefinitely. Suppress errors — the cable / link
             // may already be gone.
-            runCatching { if (isSmart) releaseShutter() else bre1BulbToggle() }
+            runCatching { if (isSmart) releaseShutter() else ensureShutter(false) }
             bulbOpen = false
         }
         client.close()
