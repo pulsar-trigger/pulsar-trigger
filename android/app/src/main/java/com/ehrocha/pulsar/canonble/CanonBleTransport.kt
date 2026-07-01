@@ -67,6 +67,16 @@ class CanonBleTransport private constructor(
          *  Same value used across ESP32-Canon-BLE-Remote + cbremote. */
         private const val AF_HOLD_MS = 200L
 
+        /** Bulb read-verify-retry: max toggles [ensureShutter] sends to reach the
+         *  wanted state. The EOS R drops a toggle ~half the time on close, so 1
+         *  retry usually suffices; headroom covers a rare double-miss. */
+        private const val MAX_SHUTTER_ATTEMPTS = 4
+
+        /** Pause after a bulb toggle before re-reading the status char, so the
+         *  camera has processed the press + refreshed 00050004. Matches the 0.4 s
+         *  that gave 4/4 clean cycles driving the EOS R directly (2026-07-01). */
+        private const val SHUTTER_SETTLE_MS = 400L
+
         /** Phone-side device name that shows up in the camera's
          *  paired-devices list. Short, brand-aligned, fits Canon's
          *  display width without ellipsis. */
@@ -268,21 +278,37 @@ class CanonBleTransport private constructor(
         client.writeControl(SHUTTER_RELEASE) // 0x0C — button-up (inert)
     }
 
-    /** Idempotent bulb toggle: click ONLY when the shutter isn't already in the
-     *  wanted state. The camera is a toggle (one 0x8C click flips open↔closed),
-     *  so a *blind* click is unsafe — the runner fires a defensive `stopBulb()`
-     *  at session start, and a blind toggle there would OPEN a closed shutter and
-     *  invert the whole run (v0.604 bug). [client.shutterOpen] is seeded at
-     *  connect and updated from the AF-gated 0x001b indication after each shutter
-     *  press, so it tracks the real state; an unknown (null) state is treated as
-     *  closed so a defensive close can never open the shutter. BR-E1 only. */
+    /** Drive the BR-E1 bulb shutter to [wantOpen] with **read-verify-retry**.
+     *
+     *  The camera is a toggle (one 0x8C click flips open↔closed), BUT the EOS R
+     *  **occasionally DROPS a toggle** — it acknowledges the 0x8C press on the
+     *  0x001b indication yet doesn't actually flip (verified by driving the body
+     *  directly from a PC, 2026-07-01: the close-toggle missed ~half the time).
+     *  A single blind/idempotent toggle can't recover from a miss, so a dropped
+     *  close leaves the shutter open and the next frame merges into it.
+     *
+     *  So: **read the true state** (00050004, authoritative — a missed toggle
+     *  re-reports the OLD state, which the cached indication can't tell apart),
+     *  and if it's not [wantOpen], toggle and re-read, up to [MAX_SHUTTER_ATTEMPTS].
+     *  This is idempotent (no click if already there — the runner's defensive
+     *  close is a safe no-op) AND self-correcting (recovers a dropped toggle, a
+     *  self-close, or a stale flag). Validated **4/4 clean cycles** on the EOS R
+     *  with this exact logic. Falls back to the cached indication if a read fails.
+     *  BR-E1 only; the smartphone path presses/holds instead. */
     private suspend fun ensureShutter(wantOpen: Boolean) {
-        val current = client.shutterOpen.value ?: false
-        if (current != wantOpen) {
+        for (att in 0 until MAX_SHUTTER_ATTEMPTS) {
+            val state = client.readShutterState() ?: client.shutterOpen.value ?: false
+            if (state == wantOpen) {
+                if (att > 0) CanonBleLog.d(TAG, "bulb: shutter ${if (wantOpen) "open" else "closed"} " +
+                    "reached after $att toggle(s)")
+                return
+            }
             bre1BulbToggle()
-        } else {
-            CanonBleLog.d(TAG, "bulb: shutter already ${if (wantOpen) "open" else "closed"} — no click")
+            delay(SHUTTER_SETTLE_MS)   // let the camera process + refresh 00050004
         }
+        val final = client.readShutterState() ?: client.shutterOpen.value ?: false
+        if (final != wantOpen) CanonBleLog.w(TAG, "bulb: shutter did not reach " +
+            "${if (wantOpen) "open" else "closed"} after $MAX_SHUTTER_ATTEMPTS toggles (state=$final)")
     }
 
     /** Single shot. BR-E1 with AF: half-press → wait → full-press → release.

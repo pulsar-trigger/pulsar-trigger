@@ -603,8 +603,11 @@ async def bulb_sequence(client, args):
     """
     secs = args.bulb_secs
     mode = MODE_IMMEDIATE
-    PRESS = mode | BTN_RELEASE   # 0x8C — toggles / button-down
-    UP    = mode | RELEASE_NONE  # 0x0C — button-up
+    # 2-byte control words `[cmd, 0x00]` — matches the Android app AND the real
+    # BR-E1 remote (nRF sniffer). 1-byte writes toggled ERRATICALLY on the EOS R
+    # (period-3 01,01,03 — some presses didn't toggle), so always send the trailer.
+    PRESS = [mode | BTN_RELEASE, 0x00]   # 0x8C 00 — toggles / button-down
+    UP    = [mode | RELEASE_NONE, 0x00]  # 0x0C 00 — button-up (inert)
 
     # 1. Bond — a real BR-E1 remote bonds with the camera; the Android app now
     #    does too (v0.602) and it's the suspected key to reliable bulb-hold.
@@ -637,9 +640,9 @@ async def bulb_sequence(client, args):
 
     async def click(label):
         """One full BR-E1 click: 0x8C press, brief hold, 0x0C release."""
-        await write(client, CONTROL_UUID, [PRESS], response=False, label=f"{label} 0x8c")
+        await write(client, CONTROL_UUID, PRESS, response=False, label=f"{label} 0x8c00")
         await asyncio.sleep(0.2)
-        await write(client, CONTROL_UUID, [UP], response=False, label=f"{label} 0x0c")
+        await write(client, CONTROL_UUID, UP, response=False, label=f"{label} 0x0c00")
 
     async def watch(secs, tag):
         """Hold `secs`, READING the status char (00050004) every ~1s — so a
@@ -684,10 +687,10 @@ async def bulb_sequence(client, args):
     # ── EXPERIMENT 3: press-and-hold control ──
     log("")
     log(f"{_ts()} ╔══ EXP 3 — HOLD control: 0x8c down, hold {secs:.0f}s, 0x0c up ══╗")
-    await write(client, CONTROL_UUID, [PRESS], response=False, label="HOLD down 0x8c")
+    await write(client, CONTROL_UUID, PRESS, response=False, label="HOLD down 0x8c00")
     log(f"{_ts()}   >>> button DOWN, holding {secs:.0f}s — sensor open?")
     await asyncio.sleep(secs)
-    await write(client, CONTROL_UUID, [UP], response=False, label="HOLD up 0x0c")
+    await write(client, CONTROL_UUID, UP, response=False, label="HOLD up 0x0c00")
     log(f"{_ts()}   >>> did the 0x0c release CLOSE it? NO → toggle confirmed (0x0c inert).")
     await asyncio.sleep(2.0)
     # Leave the shutter closed no matter which model — an extra click closes it
