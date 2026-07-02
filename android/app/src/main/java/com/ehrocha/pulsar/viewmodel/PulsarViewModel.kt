@@ -1108,9 +1108,18 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  individual `status` / `flowRunning` / `flowPaused` / `flowCurrentStep`
      *  flows. See [RunState]. */
     val runState: StateFlow<RunState> = combine(
-        _status, _flowRunning, _flowPaused, _flowCurrentStep, _flowSteps,
-    ) { status, running, paused, currentStep, steps ->
-        RunState.from(status, running, paused, currentStep, steps)
+        combine(
+            _status, _flowRunning, _flowPaused, _flowCurrentStep, _flowSteps,
+        ) { status, running, paused, currentStep, steps ->
+            RunState.from(status, running, paused, currentStep, steps)
+        },
+        _canonBlePreparing,
+    ) { base, preparing ->
+        // Surface the Canon BLE wake/settle window as a distinct non-Idle
+        // state so the mode screens switch to the run view (and its
+        // "Preparing…" pill) during it. Only upgrade from Idle — never mask an
+        // active frame if the flag lingers.
+        if (preparing && base is RunState.Idle) RunState.Preparing else base
     }.stateIn(viewModelScope, SharingStarted.Eagerly, RunState.Idle)
 
     /** The FlowStep currently executing, or null when no flow is running.

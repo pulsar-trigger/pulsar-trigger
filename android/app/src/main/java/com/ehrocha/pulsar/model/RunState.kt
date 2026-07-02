@@ -18,6 +18,12 @@ sealed class RunState {
     /** Nothing happening. */
     data object Idle : RunState()
 
+    /** Canon BLE only: the run has started but is still waking the body +
+     *  settling before the first frame (the wake-nudge window). Non-Idle so
+     *  the mode screens switch to the run view and show a "Preparing…" state
+     *  instead of leaving the config screen up looking stalled. */
+    data object Preparing : RunState()
+
     /** Firmware reported an error. */
     data class Error(val code: Int) : RunState()
 
