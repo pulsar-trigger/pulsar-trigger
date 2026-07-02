@@ -1020,4 +1020,5 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="photo_transfer_raw_hint_on">Originale (CR3) → Download/Pulsar</string>
     <string name="photo_transfer_raw_hint_off">RAW als JPEG in der Galerie gespeichert</string>
     <string name="camera_drive_single_hint">Tipp: Stell die Kamera auf Einzelbild — Reihenaufnahme kann pro Auslösung zusätzliche Bilder aufnehmen.</string>
+    <string name="canon_ble_interval_raised">Intervall auf 4 s erhöht — Canon BLE benötigt mindestens 4 s zwischen Aufnahmen</string>
 </resources>

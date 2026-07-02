@@ -450,6 +450,16 @@ fun PulsarNavHost(
             )
         }
     }
+    // Canon BLE safety clamp: a sub-4 s interval was raised at run start (the
+    // EOS R drops presses without ~4 s of quiet between exposures). Tell the
+    // user their preset isn't running verbatim.
+    LaunchedEffect(Unit) {
+        vm.canonBleIntervalRaised.collect {
+            snackbarHostLocal.showSnackbar(
+                context.getString(R.string.canon_ble_interval_raised),
+            )
+        }
+    }
     LaunchedEffect(importJson) {
         if (importJson != null) {
             val event = vm.plannerManager.importEvent(importJson)

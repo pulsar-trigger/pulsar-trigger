@@ -349,6 +349,11 @@ class CanonBleTransport private constructor(
             pressShutter()
             delay(SHUTTER_TAP_MS)
             releaseShutter()
+            // Single-shot tap on the (required) non-bulb dial: the 0x01 ack means
+            // "shot fired", not "shutter held open" — reset the cache so the
+            // main-menu safety close doesn't toggle the camera into firing ~2
+            // stray frames after Timelapse / Cable release.
+            client.markShutterClosed()
         }
     }
 

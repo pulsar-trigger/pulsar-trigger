@@ -1020,4 +1020,5 @@
     <string name="photo_transfer_raw_hint_on">原本 (CR3) → Download/Pulsar</string>
     <string name="photo_transfer_raw_hint_off">RAW は JPEG でギャラリーに保存</string>
     <string name="camera_drive_single_hint">ヒント: カメラを1枚撮影モードに設定してください。連続撮影では1回の撮影で余分なコマが撮られることがあります。</string>
+    <string name="canon_ble_interval_raised">インターバルを4秒に引き上げました — Canon BLEは撮影間隔が4秒以上必要です</string>
 </resources>

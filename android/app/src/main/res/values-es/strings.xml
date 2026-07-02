@@ -1018,4 +1018,5 @@ La altura proviene de la oscuridad del cielo × cielo despejado × sin luna bril
     <string name="photo_transfer_raw_hint_on">Originales (CR3) → Download/Pulsar</string>
     <string name="photo_transfer_raw_hint_off">RAW guardado como JPEG en la galería</string>
     <string name="camera_drive_single_hint">Consejo: pon la cámara en modo de disparo único — el disparo continuo puede capturar fotogramas de más por toma.</string>
+    <string name="canon_ble_interval_raised">Intervalo aumentado a 4 s — Canon BLE necesita al menos 4 s entre tomas</string>
 </resources>

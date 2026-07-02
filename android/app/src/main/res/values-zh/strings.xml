@@ -1014,4 +1014,5 @@
     <string name="photo_transfer_raw_hint_on">原始文件 (CR3) → Download/Pulsar</string>
     <string name="photo_transfer_raw_hint_off">RAW 以 JPEG 保存到相册</string>
     <string name="camera_drive_single_hint">提示：将相机设为单张拍摄模式——连续拍摄可能在一次触发中多拍几张。</string>
+    <string name="canon_ble_interval_raised">间隔已提高到 4 秒 — Canon BLE 需要至少 4 秒的拍摄间隔</string>
 </resources>

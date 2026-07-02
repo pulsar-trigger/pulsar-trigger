@@ -1109,4 +1109,5 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <string name="photo_transfer_raw_hint_on">Originals (CR3) → Download/Pulsar</string>
     <string name="photo_transfer_raw_hint_off">RAW saved as JPEG to the gallery</string>
     <string name="camera_drive_single_hint">Tip: set the camera to single-drive mode — continuous drive can capture extra frames per shot.</string>
+    <string name="canon_ble_interval_raised">Interval raised to 4 s — Canon BLE needs at least 4 s between shots</string>
 </resources>

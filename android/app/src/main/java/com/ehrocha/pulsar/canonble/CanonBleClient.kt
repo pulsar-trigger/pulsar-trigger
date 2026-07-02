@@ -559,6 +559,15 @@ class CanonBleClient(
         ok
     }
 
+    /** Reset the cached shutter state to CLOSED. Called by the transport after a
+     *  single-shot TAP (Timelapse / Cable release / Compat test fire): on the
+     *  non-bulb dial those modes require, the 0x01 ack means "shot fired", NOT
+     *  "shutter held open" — leaving the cache 'open' made the main-menu safety
+     *  close toggle the camera and fire ~2 stray frames when leaving those modes
+     *  (Eduardo, 2026-07-01). Any late tap-ack is already ignored because the
+     *  trailing 0x0C write clears [lastControlWasShutterPress]. */
+    fun markShutterClosed() { _shutterOpen.value = false }
+
     /** Raw read of the BR-E1 status char (00050004): first byte, or null on
      *  failure. Used by `startBulb`'s **drop-verify**: the EOS R sometimes ACKS a
      *  shutter press on the 0x001b indication *without executing it* (the sensor

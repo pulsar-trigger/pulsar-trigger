@@ -77,6 +77,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         private const val KEY_SAVED_FLOWS = "saved_flows"
         private const val KEY_AUTO_OFF = "auto_off_minutes"
         private const val NOTIFICATION_THROTTLE_MS = 5_000L
+        /** Canon BLE: minimum interval between exposures. The EOS R needs ~4 s of
+         *  quiet after a frame or it starts ACKING presses without executing them
+         *  (dropped opens → short/inverted exposures). Hardware-swept 2026-07-01:
+         *  3 s intervals intermittently break, 4 s is reliably clean ("the sweet
+         *  spot" per Eduardo's full-mode test pass). Sub-4 s user intervals are
+         *  raised to this at run start, with a snackbar. */
+        private const val CANON_BLE_MIN_INTERVAL_MS = 4_000L
         /** Poll failures before we abandon the long-poll and switch into
          *  reconnect mode. 5× short long-polls (~10 s each at worst) gives
          *  a fast WiFi handoff or short auto-off blip a chance to recover. */
@@ -1030,6 +1037,27 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  success snackbar + haptic — the SIGNAL "one clean pulse". */
     private val _runCompleted = kotlinx.coroutines.flow.MutableSharedFlow<Int>(extraBufferCapacity = 1)
     val runCompleted: kotlinx.coroutines.flow.SharedFlow<Int> = _runCompleted
+
+    /** One-shot event: a Canon BLE run asked for an interval below the safe
+     *  minimum and it was raised to [CANON_BLE_MIN_INTERVAL_MS]. MainActivity
+     *  surfaces the explanatory snackbar (the user should know their saved
+     *  preset isn't running verbatim). */
+    private val _canonBleIntervalRaised = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val canonBleIntervalRaised: kotlinx.coroutines.flow.SharedFlow<Unit> = _canonBleIntervalRaised
+
+    /** Clamp a run's interval/gap for Canon BLE: below ~4 s of quiet between
+     *  exposures the EOS R starts ACKING shutter presses without executing them
+     *  (dropped opens → short/inverted frames; hardware-swept 2026-07-01). Other
+     *  transports pass through untouched. Fires [canonBleIntervalRaised] once so
+     *  the user learns their preset was adjusted. */
+    private fun canonBleSafeInterval(intervalMs: Long): Long {
+        val t = activeCameraTransport() ?: return intervalMs
+        if (t.kind != com.ehrocha.pulsar.transport.TransportKind.CANON_BLE) return intervalMs
+        if (intervalMs >= CANON_BLE_MIN_INTERVAL_MS) return intervalMs
+        Log.i(TAG, "Canon BLE: interval ${intervalMs}ms below safe minimum — raised to ${CANON_BLE_MIN_INTERVAL_MS}ms")
+        _canonBleIntervalRaised.tryEmit(Unit)
+        return CANON_BLE_MIN_INTERVAL_MS
+    }
     private val _flowPaused = MutableStateFlow(false)
     val flowPaused: StateFlow<Boolean> = _flowPaused
     // Camera-settings detail for a paused "Adjust camera settings" step:
@@ -2190,7 +2218,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Phase 2 of the Tools → Test Camera wizard: four bulb-style steps
-     *  (Intervalometer-bulb, Astro, DarkFrame, Ramp) in sequence. The
+     *  (Intervalometer-bulb, Astro, DarkFrame, Ramp) plus a 6-shot
+     *  endurance marathon, in sequence. The
      *  user must set the camera dial to **Bulb** before tapping Continue.
      *  No preflight here — phase 1 already ran it. No-op when the active
      *  transport doesn't advertise bulb.
@@ -2221,6 +2250,16 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             FlowStep.Ramp(
                 startExposureMs = 4_000L, endExposureMs = 4_000L,
                 steps = 1, intervalMs = interStepGapMs, useAutofocus = false,
+            ),
+            // Endurance marathon: 6 back-to-back bulb cycles at the Canon-BLE-safe
+            // cadence (3 s exposure / 4 s gap) — the on-device version of the
+            // direct-drive run that exposed the EOS R's acked-but-dropped presses.
+            // With startBulb's drop-verify, every open self-reports in the wire
+            // log ("open verified" / "OPEN DROPPED → re-opening"). Card pass
+            // criterion: exactly 6 frames of ~3 s.
+            FlowStep.Intervalometer(
+                intervalMs = 4_000L, exposureMs = 3_000L,
+                shotCount = 6, delayMs = interStepGapMs, useAutofocus = false,
             ),
         )
         saveFlowSteps(test)
@@ -2478,14 +2517,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         // awaitReady is a no-op for non-CCAPI transports.
                         if (step.timelapse) {
                             com.ehrocha.pulsar.transport.runCanonTimelapse(
-                                transport, step.shotCount, step.intervalMs, step.delayMs,
+                                transport, step.shotCount, canonBleSafeInterval(step.intervalMs), step.delayMs,
                                 af = step.useAutofocus, status = _status,
                                 awaitReady = { awaitCanonReady(transport) },
                             )
                         } else {
                             com.ehrocha.pulsar.transport.runCanonBulb(
                                 transport, step.shotCount, step.exposureMs,
-                                step.intervalMs, step.delayMs, af = step.useAutofocus,
+                                canonBleSafeInterval(step.intervalMs), step.delayMs, af = step.useAutofocus,
                                 status = _status,
                                 awaitReady = { awaitCanonReady(transport) },
                             )
@@ -2510,7 +2549,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 when {
                     transport != null -> com.ehrocha.pulsar.transport.runCanonBulb(
                         transport, step.shotCount, expMs,
-                        step.gapMs, step.delayMs, af = step.useAutofocus,
+                        canonBleSafeInterval(step.gapMs), step.delayMs, af = step.useAutofocus,
                         status = _status, awaitReady = { awaitCanonReady(transport) },
                     )
                     _simulatorActive.value -> simulateShots(step.shotCount, expMs, step.gapMs, step.delayMs)
@@ -2527,7 +2566,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 when {
                     transport != null -> com.ehrocha.pulsar.transport.runCanonBulb(
                         transport, step.shotCount, step.exposureMs,
-                        step.gapMs, step.delayMs, af = step.useAutofocus,
+                        canonBleSafeInterval(step.gapMs), step.delayMs, af = step.useAutofocus,
                         status = _status, awaitReady = { awaitCanonReady(transport) },
                     )
                     _simulatorActive.value -> simulateShots(step.shotCount, step.exposureMs, step.gapMs, 0L)
@@ -2546,7 +2585,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 val rampSteps = step.steps.coerceAtLeast(2)
                 if (transport != null) {
                     com.ehrocha.pulsar.transport.runCanonRamp(
-                        transport, step, rampSteps, af = step.useAutofocus,
+                        transport, step.copy(intervalMs = canonBleSafeInterval(step.intervalMs)),
+                        rampSteps, af = step.useAutofocus,
                         status = _status, awaitReady = { awaitCanonReady(transport) },
                     )
                 } else {

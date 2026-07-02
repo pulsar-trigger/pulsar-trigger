@@ -1020,4 +1020,5 @@ La hauteur vient de l\'obscurité du ciel × ciel dégagé × pas de lune brilla
     <string name="photo_transfer_raw_hint_on">Originaux (CR3) → Download/Pulsar</string>
     <string name="photo_transfer_raw_hint_off">RAW enregistré en JPEG dans la galerie</string>
     <string name="camera_drive_single_hint">Astuce : réglez l\'appareil en mode vue par vue — le mode rafale peut capturer des images supplémentaires par déclenchement.</string>
+    <string name="canon_ble_interval_raised">Intervalle porté à 4 s — le Canon BLE exige au moins 4 s entre les prises</string>
 </resources>
