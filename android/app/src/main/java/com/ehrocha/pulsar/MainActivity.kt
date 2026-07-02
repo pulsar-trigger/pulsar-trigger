@@ -482,6 +482,7 @@ fun PulsarNavHost(
     val deviceLatency by vm.latencyMs.collectAsState()
     val runState by vm.runState.collectAsState()
     val currentFlowStep by vm.currentFlowStep.collectAsState()
+    val preparing by vm.canonBlePreparing.collectAsState()
 
     // Keep the screen awake while a sequence is running — long timelapses /
     // astro sessions outlast a phone's default sleep timer, and a sleeping
@@ -499,6 +500,7 @@ fun PulsarNavHost(
     CompositionLocalProvider(
         LocalDeviceStatus provides deviceStatus,
         LocalRunState provides runState,
+        com.ehrocha.pulsar.ui.theme.LocalPreparing provides preparing,
         com.ehrocha.pulsar.ui.theme.LocalCurrentFlowStep provides currentFlowStep,
         LocalDeviceConnected provides connected,
         LocalDeviceRssi provides deviceRssi,

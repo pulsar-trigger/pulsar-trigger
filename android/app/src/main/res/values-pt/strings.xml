@@ -879,6 +879,8 @@ A altura vem da escuridão do céu × céu limpo × sem lua brilhante × sem chu
     <string name="iv2_state_error">ERRO</string>
     <string name="iv2_state_exposing">EXPONDO</string>
     <string name="iv2_state_starting">INICIANDO</string>
+    <string name="iv2_state_preparing">PREPARANDO</string>
+    <string name="run_phase_preparing">Preparando a câmera…</string>
     <string name="iv2_state_waiting">AGUARDANDO</string>
     <string name="iv2_summary_continuous">Até parar</string>
     <string name="iv2_summary_ends">Termina %1$s</string>

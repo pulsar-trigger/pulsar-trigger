@@ -1045,6 +1045,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val _canonBleIntervalRaised = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val canonBleIntervalRaised: kotlinx.coroutines.flow.SharedFlow<Unit> = _canonBleIntervalRaised
 
+    /** True while a Canon BLE run is waking the body + settling before the first
+     *  frame. The run screen shows a "Preparing…" state so that ~2 s gap doesn't
+     *  read as a stall. Set by the Canon runner's `onPreparing` callback. */
+    private val _canonBlePreparing = MutableStateFlow(false)
+    val canonBlePreparing: StateFlow<Boolean> = _canonBlePreparing
+
     /** Clamp a run's interval/gap for Canon BLE: below ~4 s of quiet between
      *  exposures the EOS R starts ACKING shutter presses without executing them
      *  (dropped opens → short/inverted frames; hardware-swept 2026-07-01). Other
@@ -1964,6 +1970,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         _flowPaused.value = false
         _pauseCameraInfo.value = null
         _flowCurrentStep.value = -1
+        _canonBlePreparing.value = false
         // Belt-and-braces release. The runner's NonCancellable finally
         // already calls stopBulb — but for paths that bypass it (e.g.,
         // the job was cancelled before it entered the run loop, or
@@ -2378,6 +2385,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     _flowRunning.value = false
                     _flowPaused.value = false
                     _flowCurrentStep.value = -1
+                    _canonBlePreparing.value = false
                 }
             }
         }
@@ -2530,6 +2538,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                                 canonBleSafeInterval(step.intervalMs), step.delayMs, af = step.useAutofocus,
                                 status = _status,
                                 awaitReady = { awaitCanonReady(transport) },
+                                onPreparing = { _canonBlePreparing.value = it },
                             )
                         }
                     }
@@ -2554,6 +2563,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         transport, step.shotCount, expMs,
                         canonBleSafeInterval(step.gapMs), step.delayMs, af = step.useAutofocus,
                         status = _status, awaitReady = { awaitCanonReady(transport) },
+                        onPreparing = { _canonBlePreparing.value = it },
                     )
                     _simulatorActive.value -> simulateShots(step.shotCount, expMs, step.gapMs, step.delayMs)
                     else -> {
@@ -2571,6 +2581,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         transport, step.shotCount, step.exposureMs,
                         canonBleSafeInterval(step.gapMs), step.delayMs, af = step.useAutofocus,
                         status = _status, awaitReady = { awaitCanonReady(transport) },
+                        onPreparing = { _canonBlePreparing.value = it },
                     )
                     _simulatorActive.value -> simulateShots(step.shotCount, step.exposureMs, step.gapMs, 0L)
                     else -> {
@@ -2591,6 +2602,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         transport, step.copy(intervalMs = canonBleSafeInterval(step.intervalMs)),
                         rampSteps, af = step.useAutofocus,
                         status = _status, awaitReady = { awaitCanonReady(transport) },
+                        onPreparing = { _canonBlePreparing.value = it },
                     )
                 } else {
                     // Phone-driven ramp for simulator + ESP32 (the Canon path

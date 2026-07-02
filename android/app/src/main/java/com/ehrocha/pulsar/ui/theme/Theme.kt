@@ -181,6 +181,11 @@ val LocalRunState = compositionLocalOf<com.ehrocha.pulsar.model.RunState> {
  *  each wizard passing them in. */
 val LocalCurrentFlowStep = compositionLocalOf<com.ehrocha.pulsar.model.FlowStep?> { null }
 
+/** True while a Canon BLE run is waking the body and settling before the first
+ *  frame (the wake nudge + settle window). The run screen shows a "Preparing…"
+ *  state so the ~2 s gap before the first exposure doesn't read as a stall. */
+val LocalPreparing = compositionLocalOf { false }
+
 /** Global connection flag — true when a BLE device is connected. */
 val LocalDeviceConnected = compositionLocalOf { false }
 

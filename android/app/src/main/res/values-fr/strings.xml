@@ -879,6 +879,8 @@ La hauteur vient de l\'obscurité du ciel × ciel dégagé × pas de lune brilla
     <string name="iv2_state_error">ERREUR</string>
     <string name="iv2_state_exposing">EN POSE</string>
     <string name="iv2_state_starting">DÉMARRAGE</string>
+    <string name="iv2_state_preparing">PRÉPARATION</string>
+    <string name="run_phase_preparing">Préparation de l\'appareil…</string>
     <string name="iv2_state_waiting">EN ATTENTE</string>
     <string name="iv2_summary_continuous">Jusqu\'à l\'arrêt</string>
     <string name="iv2_summary_ends">Termine %1$s</string>

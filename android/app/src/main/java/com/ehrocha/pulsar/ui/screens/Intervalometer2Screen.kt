@@ -578,6 +578,7 @@ internal fun RunningView(
     shotsOverride: Int? = null,
 ) {
     val status = LocalDeviceStatus.current
+    val preparing = com.ehrocha.pulsar.ui.theme.LocalPreparing.current
     val state = status?.state ?: DeviceState.IDLE
     val shotsTaken = status?.shotsTaken ?: 0
     val statusRemainingMs = status?.timeRemainingMs ?: 0L
@@ -656,11 +657,22 @@ internal fun RunningView(
         verticalArrangement = Arrangement.Center,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            StatusPill(state)
+            StatusPill(state, preparing = preparing)
             if (batteryPct > 0) {
                 Spacer(Modifier.width(12.dp))
                 BatteryChip(pct = batteryPct)
             }
+        }
+        // Caption under the pill during the Canon BLE wake/settle window, so
+        // the ~2 s before the first frame reads as "getting the camera ready"
+        // rather than a frozen screen.
+        if (preparing) {
+            Spacer(Modifier.height(12.dp))
+            Text(
+                stringResource(R.string.run_phase_preparing),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         // Settings chip for the current step — only meaningful inside a
         // multi-step flow run (Camera Test, Custom Flow). Single-step
@@ -807,19 +819,22 @@ private fun BatteryChip(pct: Int) {
 }
 
 @Composable
-private fun StatusPill(state: DeviceState) {
+private fun StatusPill(state: DeviceState, preparing: Boolean = false) {
     // Use the LED palette from the top-bar indicator so RUN-vs-WAIT is
     // unambiguous at a glance: red for exposing (shutter open), orange for
     // the inter-shot gap. The full surface fills with the colour during
     // exposure + a slow pulse animation so the user can tell from across
-    // the room when the shutter is open.
-    val (labelRes, color) = when (state) {
-        DeviceState.RUNNING -> R.string.iv2_state_exposing to StatusRed
-        DeviceState.WAITING -> R.string.iv2_state_waiting to StatusOrange
-        DeviceState.ERROR   -> R.string.iv2_state_error to MaterialTheme.colorScheme.error
-        DeviceState.IDLE    -> R.string.iv2_state_starting to MaterialTheme.colorScheme.onSurfaceVariant
+    // the room when the shutter is open. `preparing` (Canon BLE wake/settle
+    // before the first frame) overrides the state pill so the pre-roll gap
+    // reads as deliberate, not a stall.
+    val (labelRes, color) = when {
+        preparing -> R.string.iv2_state_preparing to StatusOrange
+        state == DeviceState.RUNNING -> R.string.iv2_state_exposing to StatusRed
+        state == DeviceState.WAITING -> R.string.iv2_state_waiting to StatusOrange
+        state == DeviceState.ERROR   -> R.string.iv2_state_error to MaterialTheme.colorScheme.error
+        else                         -> R.string.iv2_state_starting to MaterialTheme.colorScheme.onSurfaceVariant
     }
-    val pulsing = state == DeviceState.RUNNING
+    val pulsing = preparing || state == DeviceState.RUNNING
     val pulseAlpha = if (pulsing) {
         val infinite = rememberInfiniteTransition(label = "exposingPulse")
         val v by infinite.animateFloat(
@@ -833,11 +848,12 @@ private fun StatusPill(state: DeviceState) {
         )
         v
     } else 1f
-    // Fill colour vs background: RUNNING = filled with strong colour (LED on),
-    // WAITING = soft halo, others = original soft halo.
-    val (fillColor, textColor) = when (state) {
-        DeviceState.RUNNING -> color.copy(alpha = pulseAlpha) to androidx.compose.ui.graphics.Color.White
-        else -> color.copy(alpha = 0.15f) to color
+    // Fill colour vs background: RUNNING (and PREPARING) = filled with strong
+    // colour (LED on) + pulse, WAITING/others = soft halo.
+    val (fillColor, textColor) = if (pulsing) {
+        color.copy(alpha = pulseAlpha) to androidx.compose.ui.graphics.Color.White
+    } else {
+        color.copy(alpha = 0.15f) to color
     }
     Surface(
         shape = RoundedCornerShape(20.dp),

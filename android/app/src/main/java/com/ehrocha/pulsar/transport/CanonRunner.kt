@@ -101,6 +101,7 @@ internal suspend fun runCanonBulb(
     af: Boolean,
     status: MutableStateFlow<StatusFrame?>,
     awaitReady: suspend () -> Unit = {},
+    onPreparing: (Boolean) -> Unit = {},
 ) {
     if (!transport.supportsBulb) {
         throw IllegalStateException("Transport ${transport.kind} lacks bulb support")
@@ -109,6 +110,12 @@ internal suspend fun runCanonBulb(
     val plannedTotal = if (continuous) 0L
                        else startDelayMs + shots * (exposureMs + intervalMs) - intervalMs
 
+    // Canon BLE wakes the sleeping body with a nudge and settles for a few
+    // seconds before the first frame — signal "preparing" so the run screen
+    // doesn't read as stalled during that gap. Cleared once we're about to
+    // press. Other transports' setup is instant, so skip the flag for them.
+    val canonBle = transport.kind == com.ehrocha.pulsar.transport.TransportKind.CANON_BLE
+    if (canonBle) onPreparing(true)
     transport.setShutterMode(bulb = true)
     // Defensive release before we start pressing. Belt and braces against a
     // prior session leaving the body stuck DOWN — every transport's
@@ -118,6 +125,7 @@ internal suspend fun runCanonBulb(
     // surprise. Canon BLE additionally settles per [canonBleSettleIfNeeded].
     runCatching { transport.stopBulb() }
     canonBleSettleIfNeeded(transport)
+    if (canonBle) onPreparing(false)
     try {
         if (startDelayMs > 0) {
             status.value = status.value?.copy(
@@ -191,14 +199,19 @@ internal suspend fun runCanonRamp(
     af: Boolean,
     status: MutableStateFlow<StatusFrame?>,
     awaitReady: suspend () -> Unit = {},
+    onPreparing: (Boolean) -> Unit = {},
 ) {
     if (!transport.supportsBulb) {
         throw IllegalStateException("Transport ${transport.kind} lacks bulb support")
     }
+    // See runCanonBulb — Canon BLE wake/settle window shows as "preparing".
+    val canonBle = transport.kind == com.ehrocha.pulsar.transport.TransportKind.CANON_BLE
+    if (canonBle) onPreparing(true)
     transport.setShutterMode(bulb = true)
     // Defensive release — see runCanonBulb for the same pattern.
     runCatching { transport.stopBulb() }
     canonBleSettleIfNeeded(transport)
+    if (canonBle) onPreparing(false)
     try {
         // Start delay before the first shot — used by the Camera Test
         // wizard to enforce a multi-second gap between diagnostic steps

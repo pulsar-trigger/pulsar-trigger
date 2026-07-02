@@ -877,6 +877,8 @@ La altura proviene de la oscuridad del cielo × cielo despejado × sin luna bril
     <string name="iv2_state_error">ERROR</string>
     <string name="iv2_state_exposing">EXPONIENDO</string>
     <string name="iv2_state_starting">INICIANDO</string>
+    <string name="iv2_state_preparing">PREPARANDO</string>
+    <string name="run_phase_preparing">Preparando la cámara…</string>
     <string name="iv2_state_waiting">ESPERANDO</string>
     <string name="iv2_summary_continuous">Hasta detener</string>
     <string name="iv2_summary_ends">Termina %1$s</string>

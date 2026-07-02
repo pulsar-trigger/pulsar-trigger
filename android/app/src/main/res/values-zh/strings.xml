@@ -875,6 +875,8 @@
     <string name="iv2_state_error">错误</string>
     <string name="iv2_state_exposing">曝光中</string>
     <string name="iv2_state_starting">启动中</string>
+    <string name="iv2_state_preparing">准备中</string>
+    <string name="run_phase_preparing">正在准备相机…</string>
     <string name="iv2_state_waiting">等待中</string>
     <string name="iv2_summary_continuous">直到停止</string>
     <string name="iv2_summary_ends">%1$s 结束</string>

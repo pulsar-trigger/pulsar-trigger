@@ -879,6 +879,8 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="iv2_state_error">FEHLER</string>
     <string name="iv2_state_exposing">BELICHTET</string>
     <string name="iv2_state_starting">STARTET</string>
+    <string name="iv2_state_preparing">VORBEREITUNG</string>
+    <string name="run_phase_preparing">Kamera wird vorbereitet…</string>
     <string name="iv2_state_waiting">WARTET</string>
     <string name="iv2_summary_continuous">Bis Stopp</string>
     <string name="iv2_summary_ends">Endet %1$s</string>

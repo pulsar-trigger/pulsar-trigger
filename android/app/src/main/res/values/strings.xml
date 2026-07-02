@@ -216,6 +216,8 @@
     <string name="iv2_state_waiting">WAITING</string>
     <string name="iv2_state_error">ERROR</string>
     <string name="iv2_state_starting">STARTING</string>
+    <string name="iv2_state_preparing">PREPARING</string>
+    <string name="run_phase_preparing">Preparing camera…</string>
 
     <!-- Preset picker + save -->
     <string name="preset_picker_start_fresh">Start fresh</string>
