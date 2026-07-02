@@ -2232,7 +2232,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  whatever the user configured. */
     fun runCameraTestBulbPhase() {
         if (!activeTransportSupportsBulb.value) return
-        val interStepGapMs = 3_000L
+        // 4 s, not 3: a step's FIRST open lands right after the previous step's
+        // frame, and Canon BLE eats presses inside its ~3–4 s post-frame cooldown
+        // (acking them regardless) — same rule as canonBleSafeInterval.
+        val interStepGapMs = 4_000L
         val test = listOf<FlowStep>(
             FlowStep.Intervalometer(
                 intervalMs = 2_000L, exposureMs = 4_000L,

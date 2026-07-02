@@ -568,28 +568,12 @@ class CanonBleClient(
      *  trailing 0x0C write clears [lastControlWasShutterPress]. */
     fun markShutterClosed() { _shutterOpen.value = false }
 
-    /** Raw read of the BR-E1 status char (00050004): first byte, or null on
-     *  failure. Used by `startBulb`'s **drop-verify**: the EOS R sometimes ACKS a
-     *  shutter press on the 0x001b indication *without executing it* (the sensor
-     *  stays closed while the ack claims 0x01 — seen as 0.4–0.5 s frames on a 3 s
-     *  intervalometer, 2026-07-01). A read taken mid-exposure tells the truth in
-     *  every case observed. Caveat: an AF half-press pollutes the char to 0x01,
-     *  which can only MASK a drop (fail-safe) — a 0x03/0x00 read is a definite
-     *  drop. Serialized through [opMutex]. */
-    @SuppressLint("MissingPermission")
-    suspend fun readStatusRaw(): Int? = opMutex.withLock {
-        val ch = statusChar ?: return@withLock null
-        val g = gatt ?: return@withLock null
-        val rd = CompletableDeferred<ByteArray?>()
-        readSignal.set(rd)
-        @Suppress("DEPRECATION")
-        if (g.readCharacteristic(ch) != true) {
-            readSignal.set(null)
-            return@withLock null
-        }
-        val v = withTimeoutOrNull(1_500) { rd.await() }
-        if (v == null || v.isEmpty()) null else (v[0].toInt() and 0xFF)
-    }
+    // NOTE deliberately NO readStatusRaw()-style verification helper: a raw read
+    // of 00050004 reports the same PHANTOM state as the 0x001b ack when the
+    // camera eats a press during its ~3–4 s post-frame cooldown (card-proven
+    // 2026-07-02 — nine "verified open" reads with 0.4–0.5 s frames on the card).
+    // The wire has no truth signal; the defense is the viewmodel's 4 s minimum
+    // interval (canonBleSafeInterval).
 
     /** Write a payload to an arbitrary characteristic (WRITE_NO_RESPONSE),
      *  serialized through [opMutex]. Used by the smartphone-mode handshake +
