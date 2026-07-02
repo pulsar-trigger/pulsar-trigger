@@ -8,6 +8,7 @@ package com.ehrocha.pulsar.canonble
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import android.content.Context
+import android.os.SystemClock
 import com.ehrocha.pulsar.canonble.CanonBleClient.Companion.BUTTON_FOCUS
 import com.ehrocha.pulsar.canonble.CanonBleClient.Companion.BUTTON_WIDE
 import com.ehrocha.pulsar.canonble.CanonBleClient.Companion.MODE_IMMEDIATE
@@ -75,6 +76,14 @@ class CanonBleTransport private constructor(
         /** Settle after the wake nudge, giving a sleeping body time to power its
          *  shooting engine back up before the run's first real press. */
         private const val WAKE_SETTLE_MS = 1_300L
+
+        /** The EOS R eats a shutter press that lands within ~3–4 s of finishing a
+         *  frame (post-frame cooldown; card-proven). The viewmodel clamps intra-run
+         *  intervals to 4 s, but this transport-level floor also covers what that
+         *  misses: STEP BOUNDARIES in a multi-step flow and the first frame of each
+         *  step (their gap is the step's start-delay, often < 4 s). startBulb waits
+         *  out any shortfall since the last real close. Matches CANON_BLE_MIN_INTERVAL_MS. */
+        private const val POST_FRAME_COOLDOWN_MS = 4_000L
 
         /** Bulb verify-retry: max toggles [ensureShutter] sends to reach the
          *  wanted state. The EOS R has a period-3 quirk — after it opens, the very
@@ -259,6 +268,11 @@ class CanonBleTransport private constructor(
      *  if false — guards against double-release after a cable-pull mid-run. */
     @Volatile private var bulbOpen = false
 
+    /** [SystemClock.elapsedRealtime] when the shutter last closed a REAL frame
+     *  (not a defensive no-op) — the anchor for the post-frame cooldown wait in
+     *  [startBulb]. 0 = no frame yet this session (first open is free). */
+    @Volatile private var lastRealCloseElapsed = 0L
+
     /** Serializes the normal-flow shutter ops. The camera is a TOGGLE, so two
      *  callers interleaving presses (v0.613 diag: two stopBulbs racing, pressed
      *  25–100 ms apart) produce stray toggles = phantom frames. ensureShutter's
@@ -373,6 +387,8 @@ class CanonBleTransport private constructor(
             // main-menu safety close doesn't toggle the camera into firing ~2
             // stray frames after Timelapse / Cable release.
             client.markShutterClosed()
+            // A shot just fired — anchor the cooldown so a following bulb open waits.
+            lastRealCloseElapsed = SystemClock.elapsedRealtime()
         }
     }
 
@@ -411,6 +427,18 @@ class CanonBleTransport private constructor(
      *  an already-released camera. */
     override suspend fun startBulb(af: Boolean) = opLock.withLock {
         if (!_connected.value) return@withLock
+        // Post-frame cooldown: don't press until ≥4 s after the last real close, or
+        // the EOS R eats the open (card-proven ~0.5 s frame). Backstops the
+        // viewmodel's per-interval clamp for step boundaries + each step's first
+        // frame. BR-E1 only; the first frame of the session (lastRealClose=0) is free.
+        if (!isSmart && lastRealCloseElapsed != 0L) {
+            val since = SystemClock.elapsedRealtime() - lastRealCloseElapsed
+            if (since in 0 until POST_FRAME_COOLDOWN_MS) {
+                val wait = POST_FRAME_COOLDOWN_MS - since
+                CanonBleLog.d(TAG, "bulb: post-frame cooldown — waiting ${wait}ms before open (${since}ms since last close)")
+                delay(wait)
+            }
+        }
         if (af && !isSmart) {
             client.writeControl((MODE_IMMEDIATE.toInt() or BUTTON_FOCUS.toInt()).toByte())
             delay(AF_HOLD_MS)
@@ -442,7 +470,13 @@ class CanonBleTransport private constructor(
         // BR-E1: toggle the shutter CLOSED (idempotent — no-op if already closed,
         // so the defensive close can't open it). Smartphone up.
         if (isSmart) releaseShutter() else ensureShutter(false)
-        if (!wasOpen) CanonBleLog.d(TAG, "stopBulb: defensive close (bulbOpen was already false)")
+        if (wasOpen) {
+            // A REAL frame just ended — anchor the cooldown (defensive no-op closes
+            // must NOT, or they'd reset the timer and force a needless 4 s wait).
+            lastRealCloseElapsed = SystemClock.elapsedRealtime()
+        } else {
+            CanonBleLog.d(TAG, "stopBulb: defensive close (bulbOpen was already false)")
+        }
     }
 
     /** Abort whatever's in flight. Used by viewmodel.stopFlow(). */
