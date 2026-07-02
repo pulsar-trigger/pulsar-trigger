@@ -9,6 +9,7 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import android.content.Context
 import com.ehrocha.pulsar.canonble.CanonBleClient.Companion.BUTTON_FOCUS
+import com.ehrocha.pulsar.canonble.CanonBleClient.Companion.BUTTON_WIDE
 import com.ehrocha.pulsar.canonble.CanonBleClient.Companion.MODE_IMMEDIATE
 import com.ehrocha.pulsar.canonble.CanonBleClient.Companion.SHUTTER_PRESS
 import com.ehrocha.pulsar.canonble.CanonBleClient.Companion.SHUTTER_RELEASE
@@ -68,6 +69,10 @@ class CanonBleTransport private constructor(
          *  body needs a beat to lock focus before the shutter fires.
          *  Same value used across ESP32-Canon-BLE-Remote + cbremote. */
         private const val AF_HOLD_MS = 200L
+
+        /** Settle after the wake nudge, giving a sleeping body time to power its
+         *  shooting engine back up before the run's first real press. */
+        private const val WAKE_SETTLE_MS = 1_300L
 
         /** Bulb verify-retry: max toggles [ensureShutter] sends to reach the
          *  wanted state. The EOS R has a period-3 quirk — after it opens, the very
@@ -359,11 +364,23 @@ class CanonBleTransport private constructor(
         }
     }
 
-    /** BR-E1 has no body-settings access. The user has to set Bulb on the
-     *  mode dial themselves; we log + no-op so the existing runner code
-     *  that calls this before every bulb flow doesn't have to know. */
+    /** BR-E1 has no body-settings access (the user sets Bulb on the dial), but
+     *  this hook runs once at the start of every bulb run — the right moment for
+     *  the **wake nudge**. The camera EATS the first button press after sleep /
+     *  long idle as its wake (card-proven: 0.5 s first frame after ~30 min idle,
+     *  clean frames after; arm-writes, reads and subscribes do NOT wake it — only
+     *  a button does, and the wake consumes that button). So press the one button
+     *  that's harmless when awake: **zoom-wide** — R-series bodies don't support
+     *  the power-zoom adapter, so awake it's a no-op; asleep it absorbs the wake
+     *  and the run's first real open fires. The nudge write isn't a shutter press,
+     *  so any ack it draws is ignored by the state gate. */
     override suspend fun setShutterMode(bulb: Boolean) {
-        CanonBleLog.d(TAG, "setShutterMode($bulb): no-op on Canon BLE (set Bulb on the body's dial)")
+        if (isSmart) return
+        CanonBleLog.d(TAG, "setShutterMode($bulb): no-op on Canon BLE (dial) — sending wake nudge (zoom-W)")
+        client.writeControl((MODE_IMMEDIATE.toInt() or BUTTON_WIDE.toInt()).toByte())
+        delay(SHUTTER_TAP_MS)
+        client.writeControl(SHUTTER_RELEASE)
+        delay(WAKE_SETTLE_MS)
     }
 
     /** Open the shutter for a bulb exposure. With AF: do a quick AF
