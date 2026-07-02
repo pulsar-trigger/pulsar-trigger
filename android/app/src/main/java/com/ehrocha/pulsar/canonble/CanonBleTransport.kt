@@ -19,6 +19,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import java.security.SecureRandom
 
@@ -257,6 +259,16 @@ class CanonBleTransport private constructor(
      *  if false — guards against double-release after a cable-pull mid-run. */
     @Volatile private var bulbOpen = false
 
+    /** Serializes the normal-flow shutter ops. The camera is a TOGGLE, so two
+     *  callers interleaving presses (v0.613 diag: two stopBulbs racing, pressed
+     *  25–100 ms apart) produce stray toggles = phantom frames. ensureShutter's
+     *  check-press-confirm isn't atomic; this makes each whole op atomic. Held by
+     *  the run-loop ops only (fireShutter/setShutterMode/startBulb/stopBulb/
+     *  ensureShutterClosedSafely). The abort paths [stop]/[release] deliberately
+     *  do NOT lock — they must stay prompt, and their close-vs-close interleave
+     *  with a running op is benign. Private helpers never lock → no nesting. */
+    private val opLock = Mutex()
+
     private val isSmart get() = client.protocol == CanonProtocol.SMART
 
     /** Press the shutter using whichever protocol is active. Bulb path: the
@@ -340,8 +352,8 @@ class CanonBleTransport private constructor(
      *  two `[00,01]`s as "press, press" and leaves the button DOWN
      *  (confirmed on EOS RP via diagnostics log 2026-05-29). Bulb is unaffected
      *  — `startBulb` / `stopBulb` still use the `[00,01]` toggle path. */
-    override suspend fun fireShutter(af: Boolean) {
-        if (!_connected.value) return
+    override suspend fun fireShutter(af: Boolean) = opLock.withLock {
+        if (!_connected.value) return@withLock
         if (af && !isSmart) {
             // BR-E1 only: half-press → camera does AF → release the half-press
             client.writeControl((MODE_IMMEDIATE.toInt() or BUTTON_FOCUS.toInt()).toByte())
@@ -374,8 +386,8 @@ class CanonBleTransport private constructor(
      *  the power-zoom adapter, so awake it's a no-op; asleep it absorbs the wake
      *  and the run's first real open fires. The nudge write isn't a shutter press,
      *  so any ack it draws is ignored by the state gate. */
-    override suspend fun setShutterMode(bulb: Boolean) {
-        if (isSmart) return
+    override suspend fun setShutterMode(bulb: Boolean) = opLock.withLock {
+        if (isSmart) return@withLock
         CanonBleLog.d(TAG, "setShutterMode($bulb): no-op on Canon BLE (dial) — sending wake nudge (zoom-W)")
         client.writeControl((MODE_IMMEDIATE.toInt() or BUTTON_WIDE.toInt()).toByte())
         delay(SHUTTER_TAP_MS)
@@ -397,8 +409,8 @@ class CanonBleTransport private constructor(
      *  ("every-other-shot" diagnostic). Setting the flag conservatively
      *  means the finally always tries the release, which is harmless on
      *  an already-released camera. */
-    override suspend fun startBulb(af: Boolean) {
-        if (!_connected.value) return
+    override suspend fun startBulb(af: Boolean) = opLock.withLock {
+        if (!_connected.value) return@withLock
         if (af && !isSmart) {
             client.writeControl((MODE_IMMEDIATE.toInt() or BUTTON_FOCUS.toInt()).toByte())
             delay(AF_HOLD_MS)
@@ -424,7 +436,7 @@ class CanonBleTransport private constructor(
      *  bug where startBulb's cancellation left the flag false while the
      *  camera was still in DOWN state. An extra `[00,02]` to an already-up
      *  camera is a no-op on every body tested. */
-    override suspend fun stopBulb() {
+    override suspend fun stopBulb() = opLock.withLock {
         val wasOpen = bulbOpen
         bulbOpen = false
         // BR-E1: toggle the shutter CLOSED (idempotent — no-op if already closed,
@@ -447,8 +459,8 @@ class CanonBleTransport private constructor(
      *  manual "Hold Shutter", or an aborted run can leave the sensor exposing
      *  while the flag reads closed. The BR-E1 read-verify-retry means this is a
      *  cheap no-op when already closed. No-op if disconnected. */
-    suspend fun ensureShutterClosedSafely() {
-        if (!_connected.value) return
+    suspend fun ensureShutterClosedSafely() = opLock.withLock {
+        if (!_connected.value) return@withLock
         runCatching { if (isSmart) releaseShutter() else ensureShutter(false) }
         bulbOpen = false
     }

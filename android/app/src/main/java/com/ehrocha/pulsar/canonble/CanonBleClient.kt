@@ -191,11 +191,14 @@ class CanonBleClient(
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> {
                     if (status == BluetoothGatt.GATT_SUCCESS) {
-                        // Ask for a fast connection interval. A real BR-E1 remote
-                        // keeps a responsive link; a sluggish power-saving interval
-                        // is a suspect in the camera dropping bulb-hold state
-                        // (shutter self-closes mid-exposure). Best-effort hint.
-                        runCatching { g.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH) }
+                        // Deliberately NO requestConnectionPriority(HIGH) here. The
+                        // v0.600 fast-interval request was a guess at the bulb-hold
+                        // problem (bonding turned out to be the real fix, v0.602) and
+                        // became the prime suspect for the camera's periodic
+                        // status=19 disconnects every ~2-3 min: the PC (default
+                        // interval) never gets dropped mid-run, the phone (HIGH)
+                        // reliably does — one drop killed an endurance run mid-frame
+                        // (v0.613 diag). Default/balanced matches the real BR-E1.
                         g.discoverServices()
                     } else connectSignal.getAndSet(null)?.complete(false)
                 }
