@@ -389,7 +389,12 @@ private fun ReconnectRow(
         }
     )
     Surface(
-        onClick = { if (!reconnecting) onReconnect() },
+        // Tappable even while a reconnect is in flight — acts as "retry now":
+        // reconnectLast cancels the pending (slow, background) attempt and
+        // starts a fresh direct connect. Gating this off left the user unable
+        // to force a reconnect after waking a slept camera (the passive
+        // autoConnect held canonBleConnecting=true for its whole window).
+        onClick = onReconnect,
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.primaryContainer,
         modifier = Modifier.fillMaxWidth(),

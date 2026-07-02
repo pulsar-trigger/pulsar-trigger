@@ -147,11 +147,12 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                         .padding(pad)
                         .fillMaxSize(),
                 ) {
-                    // Phase 1 = 1 timelapse shot.
-                    // Phase 2 = 5 bulb shots: Intervalometer (1) + Astro (1) +
-                    // DarkFrame (1) + Ramp (FlowStep.Ramp.steps gets coerced
-                    // to a minimum of 2 in executeFlowStep, so 2 ramp shots).
-                    val plannedShots = if (phase == TestPhase.RUNNING_MANUAL) 1 else 5
+                    // Phase 1 = 1 timelapse shot. Phase 2 = the bulb sequence
+                    // (Intervalometer + Astro + DarkFrame + Ramp + endurance
+                    // marathon); the total is derived from the actual step list
+                    // so it never drifts when a step is added/removed.
+                    val plannedShots = if (phase == TestPhase.RUNNING_MANUAL) 1
+                                       else vm.cameraTestBulbShots
                     // Cumulative across the bulb phase's steps so the count
                     // climbs 1→5 instead of resetting per mode.
                     RunningView(plannedShots = plannedShots, shotsOverride = cumulativeShots)

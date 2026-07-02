@@ -345,11 +345,16 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     ?.adapter ?: return
                 val device = runCatching { adapter.getRemoteDevice(last.identifier) }.getOrNull()
                     ?: return
-                // The body may not be advertising the service UUID right now
-                // (registered cameras often re-advertise directed at the bonded
-                // phone) — use OS-managed autoConnect so the reconnect lands
-                // when the camera becomes available, rather than failing fast.
-                connectCanonBle(device, autoReconnect = true)
+                // Direct connect (autoConnect=false), NOT the patient OS-managed
+                // autoConnect: this is a user-initiated retry — they've just
+                // woken the camera and want it to connect NOW. A direct connect
+                // to the bonded address catches the body's directed advertising
+                // in ~1-2 s; OS autoConnect's low-duty background scan can take
+                // tens of seconds even when the camera is awake (the symptom
+                // Eduardo hit: "tile won't reconnect after the camera sleeps").
+                // The passive drop-recovery (onCanonBleLinkDropped) keeps
+                // autoConnect=true for the "camera comes back on its own" case.
+                connectCanonBle(device)
             }
             com.ehrocha.pulsar.transport.TransportKind.PTP_IP -> {
                 // identifier = "name|host|port"; try to reconnect to the
@@ -1846,10 +1851,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         // Smartphone-mode body with no BLE shutter (2018 EOS R):
                         // steer the user to USB / Wi-Fi instead of "failed".
                         _canonBleError.value = "no_ble_shutter"
+                        _canonBleReconnecting.value = false
                         return@launch
                     }
                     com.ehrocha.pulsar.canonble.CanonBleConnectResult.Failed -> {
                         _canonBleError.value = "connect_failed"
+                        // Clear the reconnecting banner — a timed-out patient
+                        // reconnect must not leave it stuck on forever.
+                        _canonBleReconnecting.value = false
                         return@launch
                     }
                 }
@@ -2237,13 +2246,16 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  in bulb-open state after the run ends (verified v0.361). The
      *  larger gap is only needed for the diagnostic — real flows use
      *  whatever the user configured. */
-    fun runCameraTestBulbPhase() {
-        if (!activeTransportSupportsBulb.value) return
+    /** The bulb-phase test sequence. Extracted so the run screen's planned-shot
+     *  total ([cameraTestBulbShots]) is derived from the SAME list that runs —
+     *  add/remove a step (e.g. the endurance marathon) and the "X / N" counter
+     *  stays correct instead of drifting past the total. */
+    private fun cameraTestBulbSteps(): List<FlowStep> {
         // 4 s, not 3: a step's FIRST open lands right after the previous step's
         // frame, and Canon BLE eats presses inside its ~3–4 s post-frame cooldown
         // (acking them regardless) — same rule as canonBleSafeInterval.
         val interStepGapMs = 4_000L
-        val test = listOf<FlowStep>(
+        return listOf<FlowStep>(
             FlowStep.Intervalometer(
                 intervalMs = 2_000L, exposureMs = 4_000L,
                 shotCount = 1, delayMs = 0L, useAutofocus = false,
@@ -2272,7 +2284,20 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 shotCount = 6, delayMs = interStepGapMs, useAutofocus = false,
             ),
         )
-        saveFlowSteps(test)
+    }
+
+    /** Total shots the bulb phase fires — drives the Camera Test "X / N"
+     *  readout. Ramp's `steps` gets coerced to ≥2 in dispatch, so mirror that
+     *  here or the count would undershoot. */
+    val cameraTestBulbShots: Int
+        get() = cameraTestBulbSteps().sumOf { step ->
+            if (step is FlowStep.Ramp) step.steps.coerceAtLeast(2)
+            else plannedShotsFor(step)
+        }
+
+    fun runCameraTestBulbPhase() {
+        if (!activeTransportSupportsBulb.value) return
+        saveFlowSteps(cameraTestBulbSteps())
         startFlow()
     }
 
