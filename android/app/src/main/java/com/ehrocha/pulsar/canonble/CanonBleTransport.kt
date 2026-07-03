@@ -448,9 +448,12 @@ class CanonBleTransport private constructor(
             delay(AF_HOLD_MS)
             client.writeControl(SHUTTER_RELEASE)
         }
+        val wasOpen = bulbOpen
         bulbOpen = true
         // BR-E1: toggle the shutter OPEN (idempotent — no-op if already open). It
-        // holds open until the stopBulb click closes it. Smartphone press-holds.
+        // holds open until the stopBulb click closes it. Smartphone: BULB is a
+        // [00,01] toggle too (open now, stopBulb's [00,01] closes) — send it only
+        // when transitioning closed→open so a stray call can't toggle it shut.
         //
         // NOTE: there is deliberately NO wire-level verification here. The camera
         // has a ~3–4 s post-frame cooldown during which it EATS presses while
@@ -460,7 +463,7 @@ class CanonBleTransport private constructor(
         // the real defense is the 4 s minimum interval enforced by the viewmodel
         // (canonBleSafeInterval). A dropped open leaves its retrospective
         // fingerprint as a 2-toggle close — flagged in [ensureShutter].
-        if (isSmart) pressShutter() else ensureShutter(true)
+        if (isSmart) { if (!wasOpen) client.smartBulbToggle() } else ensureShutter(true)
     }
 
     /** Close the shutter. Always attempts the release — the
@@ -472,8 +475,12 @@ class CanonBleTransport private constructor(
         val wasOpen = bulbOpen
         bulbOpen = false
         // BR-E1: toggle the shutter CLOSED (idempotent — no-op if already closed,
-        // so the defensive close can't open it). Smartphone up.
-        if (isSmart) releaseShutter() else ensureShutter(false)
+        // so the defensive close can't open it). Smartphone: close with the
+        // [00,01] toggle, but ONLY when we believe it's open — a [00,01] on an
+        // already-closed shutter would OPEN it. Defensive closes (wasOpen=false)
+        // send nothing. ([00,02] is inert in Bulb — it never closed the frame,
+        // which was the manual-hold-won't-stop + every-other-shot bug.)
+        if (isSmart) { if (wasOpen) client.smartBulbToggle() } else ensureShutter(false)
         if (wasOpen) {
             // A REAL frame just ended — anchor the cooldown (defensive no-op closes
             // must NOT, or they'd reset the timer and force a needless 4 s wait).
@@ -486,7 +493,7 @@ class CanonBleTransport private constructor(
     /** Abort whatever's in flight. Used by viewmodel.stopFlow(). */
     override suspend fun stop() {
         if (bulbOpen) {
-            runCatching { if (isSmart) releaseShutter() else ensureShutter(false) }
+            runCatching { if (isSmart) client.smartBulbToggle() else ensureShutter(false) }
             bulbOpen = false
         }
     }
@@ -499,7 +506,14 @@ class CanonBleTransport private constructor(
      *  cheap no-op when already closed. No-op if disconnected. */
     suspend fun ensureShutterClosedSafely() = opLock.withLock {
         if (!_connected.value) return@withLock
-        runCatching { if (isSmart) releaseShutter() else ensureShutter(false) }
+        // BR-E1 read-verifies the true state. Smart mode has no wire truth, so
+        // trust the flag: toggle closed with [00,01] ONLY if we believe it's
+        // open — a blind [00,01] would OPEN a closed shutter.
+        if (isSmart) {
+            if (bulbOpen) runCatching { client.smartBulbToggle() }
+        } else {
+            runCatching { ensureShutter(false) }
+        }
         bulbOpen = false
     }
 
@@ -519,7 +533,7 @@ class CanonBleTransport private constructor(
             // mid-run disconnect doesn't leave the body holding the
             // exposure indefinitely. Suppress errors — the cable / link
             // may already be gone.
-            runCatching { if (isSmart) releaseShutter() else ensureShutter(false) }
+            runCatching { if (isSmart) client.smartBulbToggle() else ensureShutter(false) }
             bulbOpen = false
         }
         client.close()

@@ -740,6 +740,23 @@ class CanonBleClient(
         if (press) "smart shutter TAP press [00,01]" else "smart shutter TAP release [00,02]",
     )
 
+    /** Smartphone-mode **BULB toggle** — the dial-on-BULB path. With the RP on
+     *  BULB the shutter is a TOGGLE on `[00,01]` (like BR-E1): one press OPENS,
+     *  the next CLOSES. `[00,02]` is **inert in Bulb** — it fires the release in
+     *  M, but Bulb tracks state on `[00,01]` only and ignores it (card/shutter-
+     *  proven on the RP: press opens, `[00,02]` never stops → the manual-hold-
+     *  won't-close + every-other-shot bug). So Bulb open AND close both send
+     *  `[00,01]`; the transport gates every call on its `bulbOpen` flag so a
+     *  redundant/defensive close can't send a stray `[00,01]` and re-open the
+     *  shutter (that un-gated re-toggle was the old "continuous shooting"
+     *  misdiagnosis). Restores the fc760d3 model. Distinct from
+     *  [smartShutterTap] (`[00,01]`/`[00,02]`, the M-mode single-shot path). */
+    suspend fun smartBulbToggle(): Boolean = writeNoResponse(
+        smartShutterChar,
+        byteArrayOf(0x00, 0x01),
+        "smart bulb toggle [00,01]",
+    )
+
     val address: String get() = device.address
     val name: String? @SuppressLint("MissingPermission") get() = try { device.name } catch (_: SecurityException) { null }
 
