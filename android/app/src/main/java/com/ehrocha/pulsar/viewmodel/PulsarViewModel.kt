@@ -2229,6 +2229,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  uses different shutter codes from bulb on most transports. Also
      *  runs the compat-report + settings-probe preflight on Canon. */
     fun runCameraTestManualPhase() {
+        com.ehrocha.pulsar.canonble.CanonBleLog.i("Flow", "══ CAMERA TEST — manual/single-shot phase (dial on M) ══")
         val test = listOf<FlowStep>(
             FlowStep.Intervalometer(
                 intervalMs = 2_000L,
@@ -2313,6 +2314,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     fun runCameraTestBulbPhase() {
         if (!activeTransportSupportsBulb.value) return
+        com.ehrocha.pulsar.canonble.CanonBleLog.i("Flow", "══ CAMERA TEST — bulb phase (dial on BULB) ══")
         saveFlowSteps(cameraTestBulbSteps())
         startFlow()
     }
@@ -2531,6 +2533,20 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private suspend fun executeFlowStep(step: FlowStep) {
+        // Intention marker in the wire log — makes the diag readable (which mode
+        // fired which shutter writes). Eduardo's ask, 2026-07-03.
+        com.ehrocha.pulsar.canonble.CanonBleLog.i("Flow", "▶ Starting " + when (step) {
+            is FlowStep.Intervalometer ->
+                (if (step.timelapse) "TIMELAPSE" else "INTERVALOMETER") +
+                    " — ${step.shotCount} shot(s), exp ${step.exposureMs}ms, int ${step.intervalMs}ms"
+            is FlowStep.Astro ->
+                "ASTRO — ${step.shotCount} shot(s), gap ${step.gapMs}ms, ${step.focalLength}mm"
+            is FlowStep.DarkFrame ->
+                "DARK FRAME — ${step.shotCount} shot(s), exp ${step.exposureMs}ms, gap ${step.gapMs}ms"
+            is FlowStep.Ramp ->
+                "RAMP — ${step.steps} step(s), ${step.startExposureMs}→${step.endExposureMs}ms"
+            is FlowStep.Pause -> "PAUSE"
+        })
         when (step) {
             is FlowStep.Pause -> {
                 // Camera-settings pause: apply on a supporting body (then ask
@@ -2960,6 +2976,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Press & Hold: shutter open on down */
     fun shutterDown() {
+        com.ehrocha.pulsar.canonble.CanonBleLog.i("Flow", "▶ MANUAL — hold press (shutter down)")
         // Any CameraTransport (CCAPI / PTP / Canon BLE) drives the manual
         // press-and-hold via startBulb; only the ESP32 path uses the BLE
         // start/stop commands. Previously only CCAPI was handled, so manual
@@ -2982,6 +2999,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  CameraTransport (CCAPI / PTP / Canon BLE) does a press+release via
      *  [fireShutter]; the ESP path sends the single-shot SHUTTER opcode. */
     fun fireSingle() {
+        com.ehrocha.pulsar.canonble.CanonBleLog.i("Flow", "▶ MANUAL — single shot")
         val transport = activeCameraTransport()
         if (transport != null) {
             viewModelScope.launch {
@@ -3000,6 +3018,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Press & Hold: shutter close on up */
     fun shutterUp() {
+        com.ehrocha.pulsar.canonble.CanonBleLog.i("Flow", "◀ MANUAL — hold release (shutter up)")
         val transport = activeCameraTransport()
         if (transport != null) {
             viewModelScope.launch { transport.stopBulb() }
