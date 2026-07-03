@@ -123,6 +123,7 @@ fun TimelapseScreen(
         topBar = {
             PulsarTopBar(
                 title = stringResource(R.string.mode_timelapse),
+                helpText = stringResource(R.string.panel_timelapse_help),
                 onBack = onBack,
                 actions = {
                     IconButton(onClick = { showSaveDialog = true }, enabled = canSave && !running) {

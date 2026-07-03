@@ -172,6 +172,7 @@ fun Intervalometer2Screen(
         topBar = {
             PulsarTopBar(
                 title = stringResource(R.string.mode_intervalometer),
+                helpText = stringResource(R.string.panel_intervalometer_help),
                 onBack = onBack,
                 actions = {
                     IconButton(

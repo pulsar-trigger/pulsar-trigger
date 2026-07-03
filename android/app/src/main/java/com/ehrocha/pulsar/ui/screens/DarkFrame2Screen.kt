@@ -128,6 +128,7 @@ fun DarkFrame2Screen(
         topBar = {
             PulsarTopBar(
                 title = stringResource(R.string.mode_dark_frame),
+                helpText = stringResource(R.string.panel_dark_frame_help),
                 onBack = onBack,
                 actions = {
                     IconButton(onClick = { showSaveDialog = true }, enabled = canSave && !running) {

@@ -120,6 +120,7 @@ fun Ramp2Screen(
         topBar = {
             PulsarTopBar(
                 title = stringResource(R.string.mode_ramp),
+                helpText = stringResource(R.string.panel_ramp_help),
                 onBack = onBack,
                 actions = {
                     IconButton(onClick = { showSaveDialog = true }, enabled = canSave && !running) {

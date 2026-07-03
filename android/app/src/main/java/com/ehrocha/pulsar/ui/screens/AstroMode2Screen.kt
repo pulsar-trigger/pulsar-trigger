@@ -235,6 +235,7 @@ fun AstroMode2Screen(
         topBar = {
             PulsarTopBar(
                 title = stringResource(R.string.mode_astro),
+                helpText = stringResource(R.string.panel_astro_help),
                 onBack = onBack,
                 actions = {
                     IconButton(
