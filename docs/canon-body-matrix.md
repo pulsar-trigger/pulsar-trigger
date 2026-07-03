@@ -62,7 +62,13 @@ with all four characteristics (`name`, `iden`, `mode`, `shutter`). Bulb
 + M fire reliably; AF toggle is not honored at the wire level on smart
 mode (Pulsar hides the toggle when `isSmart=true`).
 
-## Expected to work — smartphone-mode BLE (research, not Pulsar-tested)
+> **✅ Pulsar-confirmed on hardware (2026-07-03):** **EOS RP** (smartphone) and
+> **EOS R6** (BOTH BR-E1/Remote *and* smartphone mode) pass the full Camera Test
+> (all bulb modes + manual + timelapse), and the **EOS R** (BR-E1/Remote) too.
+> BR-E1/Remote needs the camera's **drive mode = Remote** to fire; smartphone mode
+> fires regardless. See `canon-ble-bulb-status.md` for the confirmed matrix.
+
+## Expected to work — smartphone-mode BLE (research, mostly not Pulsar-tested)
 
 Cross-referenced 2026-06-03 from
 [intervalometer.app](https://intervalometer.app/) — a commercial competitor
