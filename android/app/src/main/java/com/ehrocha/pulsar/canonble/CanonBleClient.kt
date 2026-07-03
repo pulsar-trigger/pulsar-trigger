@@ -163,7 +163,6 @@ class CanonBleClient(
         private set
 
     private val connectSignal = AtomicReference<CompletableDeferred<Boolean>?>(null)
-    private val servicesSignal = AtomicReference<CompletableDeferred<Boolean>?>(null)
     private val writeSignal = AtomicReference<CompletableDeferred<Boolean>?>(null)
     /** Completed by onDescriptorWrite — lets [enableStatusIndication] wait for
      *  the CCCD write to finish before releasing [opMutex], so the next GATT op
@@ -204,7 +203,6 @@ class CanonBleClient(
                 }
                 BluetoothProfile.STATE_DISCONNECTED -> {
                     connectSignal.getAndSet(null)?.complete(false)
-                    servicesSignal.getAndSet(null)?.complete(false)
                     writeSignal.getAndSet(null)?.complete(false)
                     descriptorSignal.getAndSet(null)?.complete(false)
                     readSignal.getAndSet(null)?.complete(null)
@@ -282,7 +280,6 @@ class CanonBleClient(
                 }
             }
             if (ok) fullyConnected = true
-            servicesSignal.getAndSet(null)?.complete(ok)
             connectSignal.getAndSet(null)?.complete(ok)
         }
 
@@ -378,7 +375,6 @@ class CanonBleClient(
     suspend fun connect(timeoutMs: Long = 30_000, autoConnect: Boolean = false): Boolean {
         val deferred = CompletableDeferred<Boolean>()
         connectSignal.set(deferred)
-        servicesSignal.set(CompletableDeferred())
         // Reset lifecycle flags so a fresh connect on a reused instance
         // (today this class is single-use, but the contract should be
         // robust to future refactors) doesn't inherit prior teardown state.

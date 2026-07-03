@@ -98,10 +98,6 @@ class CanonBleTransport private constructor(
          *  we retry. */
         private const val SHUTTER_CONFIRM_MS = 400L
 
-        /** Phone-side device name that shows up in the camera's
-         *  paired-devices list. Short, brand-aligned, fits Canon's
-         *  display width without ellipsis. */
-        const val PAIR_NAME = "Pulsar"
         /** Per-protocol registration names so the camera's device list shows which
          *  protocol registered Pulsar (the OS bond is shared per-MAC; these only
          *  differ the app-level registration display name). Eduardo, 2026-07-03. */

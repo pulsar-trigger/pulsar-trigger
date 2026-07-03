@@ -17,6 +17,7 @@ import android.os.ParcelUuid
 import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import java.util.UUID
 
 /**
@@ -56,8 +57,8 @@ class CanonBleDiscovery(private val ctx: Context) {
     private val _cameras = MutableStateFlow<List<BluetoothDevice>>(emptyList())
     val cameras: StateFlow<List<BluetoothDevice>> = _cameras
 
+    /** Internal re-entry guard for start()/stop(); not observed externally. */
     private val _scanning = MutableStateFlow(false)
-    val scanning: StateFlow<Boolean> = _scanning
 
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
@@ -70,11 +71,14 @@ class CanonBleDiscovery(private val ctx: Context) {
             } ?: false
             if (!isCanon) return
             val dev = result.device
-            val current = _cameras.value
-            if (current.none { it.address == dev.address }) {
-                _cameras.value = current + dev
-                CanonBleLog.d(TAG, "found Canon BLE camera ${dev.address}")
+            // Atomic update — ScanCallback is normally single-threaded, but the
+            // read-modify-write shouldn't rely on that assumption.
+            var added = false
+            _cameras.update { current ->
+                if (current.any { it.address == dev.address }) current
+                else { added = true; current + dev }
             }
+            if (added) CanonBleLog.d(TAG, "found Canon BLE camera ${dev.address}")
         }
 
         override fun onScanFailed(errorCode: Int) {
