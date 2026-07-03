@@ -20,8 +20,8 @@ android {
         applicationId = "com.ehrocha.pulsar"
         minSdk = 26
         targetSdk = 35
-        versionCode = 652
-        versionName = "0.641.0"
+        versionCode = 653
+        versionName = "0.642.0"
     }
 
     signingConfigs {
@@ -80,8 +80,8 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.8.9")
 
     // BLE
-    implementation("no.nordicsemi.android:ble:2.10.0")
-    implementation("no.nordicsemi.android:ble-ktx:2.10.0")
+    implementation("no.nordicsemi.android:ble:2.11.0")
+    implementation("no.nordicsemi.android:ble-ktx:2.11.0")
 
     // Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.37.3")
@@ -97,7 +97,7 @@ dependencies {
     implementation("androidx.glance:glance-material3:1.1.1")
 
     // MapLibre — map-based location picker
-    implementation("org.maplibre.gl:android-sdk:12.0.0")
+    implementation("org.maplibre.gl:android-sdk:13.3.1")
 
     // Coil — async image loading for Compose. Used by Aircraft Watch's
     // detail dialog to show planespotters.net thumbnails (cached on disk).
@@ -106,7 +106,7 @@ dependencies {
 
     // Testing
     testImplementation("junit:junit:4.13.2")
-    testImplementation("io.mockk:mockk:1.14.2")
-    testImplementation("org.json:json:20231013")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
+    testImplementation("io.mockk:mockk:1.14.11")
+    testImplementation("org.json:json:20260522")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
 }
