@@ -52,7 +52,7 @@ fun AlignmentScreen(
     LaunchedEffect(Unit) { alignVm.acquireLocation() }
 
     // Keep screen awake
-    val activity = androidx.compose.ui.platform.LocalContext.current as? android.app.Activity
+    val activity = androidx.activity.compose.LocalActivity.current
     DisposableEffect(Unit) {
         activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         onDispose {

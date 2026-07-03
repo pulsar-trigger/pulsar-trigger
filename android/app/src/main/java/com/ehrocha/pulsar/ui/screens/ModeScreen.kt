@@ -251,7 +251,7 @@ fun SettingsScreen(
     }
 
     // Keep screen awake during OTA to prevent BLE disconnection
-    val activity = LocalContext.current as? android.app.Activity
+    val activity = androidx.activity.compose.LocalActivity.current
     DisposableEffect(otaActive) {
         if (otaActive && otaState != OtaState.COMPLETE) {
             activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)

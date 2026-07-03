@@ -515,7 +515,7 @@ fun PulsarNavHost(
     // Keep the screen awake while a sequence is running — long timelapses /
     // astro sessions outlast a phone's default sleep timer, and a sleeping
     // screen means the user can't glance progress without unlocking.
-    val activityForWake = LocalContext.current as? android.app.Activity
+    val activityForWake = androidx.activity.compose.LocalActivity.current
     val runActive = runState !is com.ehrocha.pulsar.model.RunState.Idle
     DisposableEffect(runActive) {
         if (runActive) {
