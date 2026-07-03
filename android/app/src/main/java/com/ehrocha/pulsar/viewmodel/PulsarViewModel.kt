@@ -67,10 +67,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     companion object {
         private const val TAG = "PulsarVM"
         private const val PREFS_NAME = "pulsar_settings"
-        private const val KEY_INTV_INTERVAL = "intv_interval_ms"
-        private const val KEY_INTV_EXPOSURE = "intv_exposure_ms"
-        private const val KEY_INTV_COUNT = "intv_shot_count"
-        private const val KEY_INTV_DELAY = "intv_delay_ms"
+        // Intervalometer working-value pref keys (intv_*) moved to ModeParamsStore.
         private const val KEY_PIN_SHUTTER = "pin_shutter"
         private const val KEY_PIN_FOCUS = "pin_focus"
         private const val KEY_FLOW_STEPS = "flow_steps"
@@ -939,52 +936,29 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val deviceName: StateFlow<String> = _deviceName
 
     // ── Mode config state ────────────────────────────────────────────────
-    private val _currentMode = MutableStateFlow(TriggerMode.INTERVALOMETER)
-    val currentMode: StateFlow<TriggerMode> = _currentMode
-
-    // ── Intervalometer params ────────────────────────────────────────────
-    private val _intervalMs = MutableStateFlow(AppConfig.DEFAULT_INTERVAL_MS)
-    val intervalMs: StateFlow<Long> = _intervalMs
-    private val _exposureMs = MutableStateFlow(AppConfig.DEFAULT_EXPOSURE_MS)
-    val exposureMs: StateFlow<Long> = _exposureMs
-    private val _shotCount = MutableStateFlow(AppConfig.DEFAULT_SHOT_COUNT)
-    val shotCount: StateFlow<Int> = _shotCount
-    private val _delayMs = MutableStateFlow(AppConfig.DEFAULT_DELAY_MS)
-    val delayMs: StateFlow<Long> = _delayMs
-
-
-
-    // ── Astro params ─────────────────────────────────────────────────────
-    private val _astroFocalLength = MutableStateFlow(AppConfig.DEFAULT_FOCAL_LENGTH)       // mm
-    val astroFocalLength: StateFlow<Int> = _astroFocalLength
-    private val _astroCropFactor = MutableStateFlow(AppConfig.DEFAULT_CROP_FACTOR)      // Full Frame default
-    val astroCropFactor: StateFlow<Float> = _astroCropFactor
-    private val _astroRuleDivisor = MutableStateFlow(AppConfig.DEFAULT_RULE_DIVISOR)      // 500 or 400
-    val astroRuleDivisor: StateFlow<Int> = _astroRuleDivisor
-    private val _astroShotCount = MutableStateFlow(AppConfig.DEFAULT_SHOT_COUNT)
-    val astroShotCount: StateFlow<Int> = _astroShotCount
-    private val _astroDelayMs = MutableStateFlow(AppConfig.DEFAULT_ASTRO_DELAY_MS)
-    val astroDelayMs: StateFlow<Long> = _astroDelayMs
-    private val _astroGapMs = MutableStateFlow(AppConfig.DEFAULT_ASTRO_GAP_MS)          // gap between shots
-    val astroGapMs: StateFlow<Long> = _astroGapMs
-
-    // ── Dark Frame params ───────────────────────────────────────────────────
-    private val _darkFrameCount = MutableStateFlow(10)
-    val darkFrameCount: StateFlow<Int> = _darkFrameCount
-    private val _darkFrameExposureMs = MutableStateFlow(AppConfig.DEFAULT_EXPOSURE_MS)
-    val darkFrameExposureMs: StateFlow<Long> = _darkFrameExposureMs
-    private val _darkFrameGapMs = MutableStateFlow(AppConfig.DEFAULT_ASTRO_GAP_MS)
-    val darkFrameGapMs: StateFlow<Long> = _darkFrameGapMs
-
-    // ── Exposure Ramp state ─────────────────────────────────────────────
-    private val _rampStartExposureMs = MutableStateFlow(500L)
-    val rampStartExposureMs: StateFlow<Long> = _rampStartExposureMs
-    private val _rampEndExposureMs = MutableStateFlow(10000L)
-    val rampEndExposureMs: StateFlow<Long> = _rampEndExposureMs
-    private val _rampSteps = MutableStateFlow(50)
-    val rampSteps: StateFlow<Int> = _rampSteps
-    private val _rampIntervalMs = MutableStateFlow(AppConfig.DEFAULT_INTERVAL_MS)
-    val rampIntervalMs: StateFlow<Long> = _rampIntervalMs
+    // Selected mode + per-mode params (the ESP32 "simple mode" config
+    // `sendConfig` packs) live in [ModeParamsStore] (audit H1). The VM keeps
+    // its setX/selectMode/flow API by delegating; only intervalometer values
+    // persist. Accessors resolve the store at call time.
+    private val modeParams = ModeParamsStore(prefs)
+    val currentMode: StateFlow<TriggerMode> get() = modeParams.currentMode
+    val intervalMs: StateFlow<Long> get() = modeParams.intervalMs
+    val exposureMs: StateFlow<Long> get() = modeParams.exposureMs
+    val shotCount: StateFlow<Int> get() = modeParams.shotCount
+    val delayMs: StateFlow<Long> get() = modeParams.delayMs
+    val astroFocalLength: StateFlow<Int> get() = modeParams.astroFocalLength
+    val astroCropFactor: StateFlow<Float> get() = modeParams.astroCropFactor
+    val astroRuleDivisor: StateFlow<Int> get() = modeParams.astroRuleDivisor
+    val astroShotCount: StateFlow<Int> get() = modeParams.astroShotCount
+    val astroDelayMs: StateFlow<Long> get() = modeParams.astroDelayMs
+    val astroGapMs: StateFlow<Long> get() = modeParams.astroGapMs
+    val darkFrameCount: StateFlow<Int> get() = modeParams.darkFrameCount
+    val darkFrameExposureMs: StateFlow<Long> get() = modeParams.darkFrameExposureMs
+    val darkFrameGapMs: StateFlow<Long> get() = modeParams.darkFrameGapMs
+    val rampStartExposureMs: StateFlow<Long> get() = modeParams.rampStartExposureMs
+    val rampEndExposureMs: StateFlow<Long> get() = modeParams.rampEndExposureMs
+    val rampSteps: StateFlow<Int> get() = modeParams.rampSteps
+    val rampIntervalMs: StateFlow<Long> get() = modeParams.rampIntervalMs
 
     // ── GPIO pin config ──────────────────────────────────────────────────
     private val _pinShutter = MutableStateFlow(DEFAULT_PIN_SHUTTER)
@@ -1214,11 +1188,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
 
-        // Seed working values from persisted prefs.
-        _intervalMs.value = prefs.getLong(KEY_INTV_INTERVAL, AppConfig.DEFAULT_INTERVAL_MS)
-        _exposureMs.value = prefs.getLong(KEY_INTV_EXPOSURE, AppConfig.DEFAULT_EXPOSURE_MS)
-        _shotCount.value = prefs.getInt(KEY_INTV_COUNT, AppConfig.DEFAULT_SHOT_COUNT)
-        _delayMs.value = prefs.getLong(KEY_INTV_DELAY, AppConfig.DEFAULT_DELAY_MS)
+        // Seed working values from persisted prefs. (Intervalometer values are
+        // seeded inside ModeParamsStore's own init.)
         _pinShutter.value = prefs.getInt(KEY_PIN_SHUTTER, DEFAULT_PIN_SHUTTER)
         _pinFocus.value = prefs.getInt(KEY_PIN_FOCUS, DEFAULT_PIN_FOCUS)
         _autoOffMinutes.value = prefs.getInt(KEY_AUTO_OFF, 5)
@@ -1905,50 +1876,29 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
 
     // ── Field setters (encapsulation) ────────────────────────────────────
-    // Setters persist to prefs so the user's last-edited working values
-    // survive restarts. Previously `saveIntervalometerDefaults` did this via
-    // a now-deleted settings panel; now the working values are themselves
-    // the only persisted state.
-    fun setIntervalMs(v: Long) {
-        val clamped = v.coerceAtLeast(AppConfig.MIN_INTERVAL_MS)
-        _intervalMs.value = clamped
-        prefs.edit().putLong(KEY_INTV_INTERVAL, clamped).apply()
-    }
-    fun setExposureMs(v: Long) {
-        val clamped = v.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS)
-        _exposureMs.value = clamped
-        prefs.edit().putLong(KEY_INTV_EXPOSURE, clamped).apply()
-    }
-    fun setShotCount(v: Int) {
-        // 0 is a sentinel for "continuous — run until STOP". Firmware
-        // treats count==0 as no auto-completion check.
-        val clamped = v.coerceAtLeast(0)
-        _shotCount.value = clamped
-        prefs.edit().putInt(KEY_INTV_COUNT, clamped).apply()
-    }
-    fun setDelayMs(v: Long) {
-        _delayMs.value = v
-        prefs.edit().putLong(KEY_INTV_DELAY, v).apply()
-    }
-    fun setAstroFocalLength(v: Int) { _astroFocalLength.value = v }
-    fun setAstroCropFactor(v: Float) { _astroCropFactor.value = v }
-    fun setAstroRuleDivisor(v: Int) { _astroRuleDivisor.value = v }
-    fun setAstroGapMs(v: Long) { _astroGapMs.value = v.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS) }
-    fun setAstroShotCount(v: Int) { _astroShotCount.value = v.coerceAtLeast(0) }
-    fun setAstroDelayMs(v: Long) { _astroDelayMs.value = v }
-    fun setDarkFrameCount(v: Int) { _darkFrameCount.value = v.coerceAtLeast(AppConfig.MIN_SHOT_COUNT) }
-    fun setDarkFrameExposureMs(v: Long) { _darkFrameExposureMs.value = v.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS) }
-    fun setDarkFrameGapMs(v: Long) { _darkFrameGapMs.value = v.coerceAtLeast(AppConfig.MIN_ASTRO_GAP_MS) }
+    // Per-mode param setters delegate to [modeParams]; intervalometer values
+    // persist there (last-edited working set, also in settings backup).
+    fun setIntervalMs(v: Long) = modeParams.setIntervalMs(v)
+    fun setExposureMs(v: Long) = modeParams.setExposureMs(v)
+    fun setShotCount(v: Int) = modeParams.setShotCount(v)
+    fun setDelayMs(v: Long) = modeParams.setDelayMs(v)
+    fun setAstroFocalLength(v: Int) = modeParams.setAstroFocalLength(v)
+    fun setAstroCropFactor(v: Float) = modeParams.setAstroCropFactor(v)
+    fun setAstroRuleDivisor(v: Int) = modeParams.setAstroRuleDivisor(v)
+    fun setAstroGapMs(v: Long) = modeParams.setAstroGapMs(v)
+    fun setAstroShotCount(v: Int) = modeParams.setAstroShotCount(v)
+    fun setAstroDelayMs(v: Long) = modeParams.setAstroDelayMs(v)
+    fun setDarkFrameCount(v: Int) = modeParams.setDarkFrameCount(v)
+    fun setDarkFrameExposureMs(v: Long) = modeParams.setDarkFrameExposureMs(v)
+    fun setDarkFrameGapMs(v: Long) = modeParams.setDarkFrameGapMs(v)
 
-    fun setRampStartExposureMs(v: Long) { _rampStartExposureMs.value = v.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS) }
-    fun setRampEndExposureMs(v: Long) { _rampEndExposureMs.value = v.coerceAtLeast(AppConfig.MIN_EXPOSURE_MS) }
-    fun setRampSteps(v: Int) { _rampSteps.value = v.coerceAtLeast(2) }
-    fun setRampIntervalMs(v: Long) { _rampIntervalMs.value = v.coerceAtLeast(AppConfig.MIN_INTERVAL_MS) }
+    fun setRampStartExposureMs(v: Long) = modeParams.setRampStartExposureMs(v)
+    fun setRampEndExposureMs(v: Long) = modeParams.setRampEndExposureMs(v)
+    fun setRampSteps(v: Int) = modeParams.setRampSteps(v)
+    fun setRampIntervalMs(v: Long) = modeParams.setRampIntervalMs(v)
 
     // ── Commands ─────────────────────────────────────────────────────────
-    fun selectMode(mode: TriggerMode) {
-        _currentMode.value = mode
-    }
+    fun selectMode(mode: TriggerMode) = modeParams.selectMode(mode)
 
     fun savePins(shutter: Int, focus: Int) {
         _pinShutter.value = shutter
@@ -2678,10 +2628,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         // or removals; additive changes don't require a bump because import
         // already tolerates missing keys.
         json.put("schema", SETTINGS_EXPORT_SCHEMA)
-        json.put("intv_interval_ms", _intervalMs.value)
-        json.put("intv_exposure_ms", _exposureMs.value)
-        json.put("intv_shot_count", _shotCount.value)
-        json.put("intv_delay_ms", _delayMs.value)
+        json.put("intv_interval_ms", modeParams.intervalMs.value)
+        json.put("intv_exposure_ms", modeParams.exposureMs.value)
+        json.put("intv_shot_count", modeParams.shotCount.value)
+        json.put("intv_delay_ms", modeParams.delayMs.value)
         json.put("pin_shutter", _pinShutter.value)
         json.put("pin_focus", _pinFocus.value)
         // Custom flow steps
@@ -2775,18 +2725,18 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun sendConfig() {
         if (_simulatorActive.value) return
-        val packet = when (_currentMode.value) {
+        val packet = when (modeParams.currentMode.value) {
             TriggerMode.INTERVALOMETER -> CommandBuilder.setIntervalometer(
-                _intervalMs.value, _exposureMs.value, _shotCount.value, _delayMs.value
+                modeParams.intervalMs.value, modeParams.exposureMs.value, modeParams.shotCount.value, modeParams.delayMs.value
             )
             TriggerMode.ASTRO -> {
-                val exposureMs = AppConfig.astroExposureMs(_astroFocalLength.value, _astroCropFactor.value, _astroRuleDivisor.value)
+                val exposureMs = AppConfig.astroExposureMs(modeParams.astroFocalLength.value, modeParams.astroCropFactor.value, modeParams.astroRuleDivisor.value)
                 CommandBuilder.setAstro(
-                    _astroGapMs.value, exposureMs, _astroShotCount.value, _astroDelayMs.value
+                    modeParams.astroGapMs.value, exposureMs, modeParams.astroShotCount.value, modeParams.astroDelayMs.value
                 )
             }
             TriggerMode.DARK_FRAME -> CommandBuilder.setDarkFrame(
-                _darkFrameGapMs.value, _darkFrameExposureMs.value, _darkFrameCount.value, 0L
+                modeParams.darkFrameGapMs.value, modeParams.darkFrameExposureMs.value, modeParams.darkFrameCount.value, 0L
             )
             TriggerMode.PRESS_HOLD -> CommandBuilder.setPressHold()
             TriggerMode.PRESS_LOCK -> CommandBuilder.setPressLock()
@@ -2941,25 +2891,25 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun startSimulatorRun() {
         simulatorJob?.cancel()
-        val mode = _currentMode.value
+        val mode = modeParams.currentMode.value
         val totalShots = when (mode) {
-            TriggerMode.INTERVALOMETER -> _shotCount.value
-            TriggerMode.ASTRO -> _astroShotCount.value
+            TriggerMode.INTERVALOMETER -> modeParams.shotCount.value
+            TriggerMode.ASTRO -> modeParams.astroShotCount.value
             else -> 1
         }
         val expMs = when (mode) {
-            TriggerMode.INTERVALOMETER -> _exposureMs.value
-            TriggerMode.ASTRO -> AppConfig.astroExposureMs(_astroFocalLength.value, _astroCropFactor.value, _astroRuleDivisor.value)
-            else -> _exposureMs.value
+            TriggerMode.INTERVALOMETER -> modeParams.exposureMs.value
+            TriggerMode.ASTRO -> AppConfig.astroExposureMs(modeParams.astroFocalLength.value, modeParams.astroCropFactor.value, modeParams.astroRuleDivisor.value)
+            else -> modeParams.exposureMs.value
         }
         val gapMs = when (mode) {
-            TriggerMode.INTERVALOMETER -> _intervalMs.value
-            TriggerMode.ASTRO -> _astroGapMs.value
+            TriggerMode.INTERVALOMETER -> modeParams.intervalMs.value
+            TriggerMode.ASTRO -> modeParams.astroGapMs.value
             else -> 0L
         }
         val startDelayMs = when (mode) {
-            TriggerMode.INTERVALOMETER -> _delayMs.value
-            TriggerMode.ASTRO -> _astroDelayMs.value
+            TriggerMode.INTERVALOMETER -> modeParams.delayMs.value
+            TriggerMode.ASTRO -> modeParams.astroDelayMs.value
             else -> 0L
         }
 
