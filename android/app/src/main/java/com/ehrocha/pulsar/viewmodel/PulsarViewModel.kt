@@ -2227,16 +2227,16 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  runs the compat-report + settings-probe preflight on Canon. */
     fun runCameraTestManualPhase() {
         com.ehrocha.pulsar.canonble.CanonBleLog.i("Flow", "══ CAMERA TEST — manual/single-shot phase (dial on M) ══")
+        val transport = activeCameraTransport()
         val test = listOf<FlowStep>(
             FlowStep.Intervalometer(
                 intervalMs = 2_000L,
                 exposureMs = AppConfig.TIMELAPSE_PULSE_MS,
-                shotCount = 1, delayMs = 0L, useAutofocus = false,
+                shotCount = cameraTestManualShots, delayMs = 0L, useAutofocus = false,
                 timelapse = true,
             ),
         )
         saveFlowSteps(test)
-        val transport = activeCameraTransport()
         if (transport != null) {
             viewModelScope.launch {
                 com.ehrocha.pulsar.transport.runCompatibilityReport(transport)
@@ -2308,6 +2308,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             if (step is FlowStep.Ramp) step.steps.coerceAtLeast(2)
             else plannedShotsFor(step)
         }
+
+    /** The manual/single-shot phase fires 2 shots on Canon BLE (even [00,01]
+     *  count returns the toggle shutter to CLOSED on either dial → a dial-
+     *  mismatched manual phase can't leave the bulb phase desynced/open); 1 on
+     *  transports that aren't a toggle. Also drives the phase's "X / N" counter. */
+    val cameraTestManualShots: Int
+        get() = if (activeCameraTransport()?.kind ==
+            com.ehrocha.pulsar.transport.TransportKind.CANON_BLE) 2 else 1
 
     fun runCameraTestBulbPhase() {
         if (!activeTransportSupportsBulb.value) return

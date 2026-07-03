@@ -152,7 +152,7 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                     // (Intervalometer + Astro + DarkFrame + Ramp + endurance
                     // marathon); the total is derived from the actual step list
                     // so it never drifts when a step is added/removed.
-                    val plannedShots = if (phase == TestPhase.RUNNING_MANUAL) 1
+                    val plannedShots = if (phase == TestPhase.RUNNING_MANUAL) vm.cameraTestManualShots
                                        else vm.cameraTestBulbShots
                     // Cumulative across the bulb phase's steps so the count
                     // climbs 1→5 instead of resetting per mode.
