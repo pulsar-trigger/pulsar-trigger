@@ -184,8 +184,12 @@ themselves.
   nothing when already closed). `fireShutter` (M single-shot) uses
   `smartShutterTap` (`[00,01]`/`[00,02]`). No AF, no wake nudge.
 - **Both:** `canonBleSafeInterval` clamps sub-4 s intervals to 4 s (with a
-  one-shot snackbar); safety-close on return to menu; Camera Test manual phase
-  fires 2 shots on Canon BLE (even parity).
+  one-shot snackbar); the **transport-level post-frame cooldown floor**
+  (`startBulb` waits ≥4 s since the last real close — `lastRealCloseElapsed`)
+  backstops STEP BOUNDARIES for **both** protocols (v0.630 — was `!isSmart`; the
+  RP's Camera Test had ~1 s inter-step opens eaten → sensor left open);
+  safety-close on return to menu; Camera Test manual phase fires 2 shots on Canon
+  BLE (even parity).
 - **`00030031` read** is called at safety-close for **diagnostics only** — we do
   not act on it (it lies).
 
@@ -206,11 +210,25 @@ themselves.
   `tools/canon_ble_test.py` gained `--smart-interval/--smart-exposure/--smart-gap`
   + a direct-address fallback, but they're moot given the auth wall.
 
-## Open / next
+## ✅ CONFIRMED (2026-07-03, v0.630)
 
-- **Awaiting Eduardo's v0.629 on-phone confirm** — Camera Test with the manual
-  phase deliberately on the **Bulb** dial should now end with the sensor **closed**
-  (two `smart shutter TAP` pairs at the start).
+Full Camera Test — **flawless on all three** — including the deliberate dial-mismatch
+(manual phase on the Bulb dial):
+
+- **EOS RP (smartphone)** — the cooldown floor now fires at the ~1 s inter-step
+  boundaries (`post-frame cooldown — waiting 2998ms`); no eaten toggles, sensor
+  ends closed.
+- **EOS R6 (BR-E1 remote)** — first confirmation on R6; clean 1-toggle open/close,
+  wake nudge per step, cooldown floor firing.
+- **EOS R6 (smartphone)** — clean, cooldown floor firing.
+
+**Drive-mode nuance (Eduardo, 2026-07-03):** **BR-E1 / Remote mode requires the
+camera's drive mode = Remote** to honour shutter writes (the "pairs-but-won't-shoot"
+gate). **Smartphone mode does NOT** — it fires regardless of drive mode. A user
+picking the BR-E1 path who forgets Remote drive mode will pair but not shoot;
+smartphone-mode users don't hit this.
+
+## Open / next
 - **Periodic camera-initiated disconnects** (`status=19`, ~every 3 min) — happen on
   both bodies regardless of activity; bonding + autoConnect recover each without
   re-pairing. Only a problem if one lands mid-exposure on a long run; the robust

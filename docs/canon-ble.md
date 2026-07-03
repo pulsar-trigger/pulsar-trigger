@@ -13,14 +13,17 @@ still advertises the BR-E1 UUID), then arms it accordingly:
 
 - **BR-E1 remote** (service `00050000`) — the classic remote protocol; a
   `[0x03, name]` arm-write then single-byte control writes. Fires older DSLR /
-  M-series bodies. **Does not fire the EOS R-series** (they pair but ignore the
-  shutter).
+  M-series bodies **and the R-series** (EOS R + R6 confirmed) — but **only when
+  the camera's drive mode is set to Remote.** Without Remote drive mode the body
+  pairs but ignores the shutter (this was the long-standing "pairs-but-won't-shoot"
+  mystery — it was one menu setting, not the protocol).
 - **Smartphone mode** (service `00010000` + control service `00030000`) —
   Canon's richer "Connect to smartphone" protocol with a registration
   handshake (4 identify writes → you confirm the pairing on the camera body →
-  mode-switch → `[00 01]`/`[00 02]` shutter). **This is the path that fires the
-  EOS RP / R5 / R6 / newer.** A generated 128-bit identity is persisted so
-  re-connects reuse the registration.
+  mode-switch → `[00 01]`/`[00 02]` shutter). Fires the **EOS RP / R5 / R6 /
+  newer** (RP + R6 confirmed). **Does NOT require Remote drive mode** — it fires
+  regardless (the practical reason to prefer this path on R-series bodies). A
+  generated 128-bit identity is persisted so re-connects reuse the registration.
 - **EOS R (2018) exception** — registers in smartphone mode but exposes no
   `00030000`: it has *no BLE shutter at all* (even Canon's Camera Connect needs
   Wi-Fi to fire it). Pulsar detects this and steers the user to USB/Wi-Fi.
