@@ -511,11 +511,19 @@ class CanonBleTransport private constructor(
      *  cheap no-op when already closed. No-op if disconnected. */
     suspend fun ensureShutterClosedSafely() = opLock.withLock {
         if (!_connected.value) return@withLock
-        // BR-E1 read-verifies the true state. Smart mode has no wire truth, so
-        // trust the flag: toggle closed with [00,01] ONLY if we believe it's
-        // open — a blind [00,01] would OPEN a closed shutter.
         if (isSmart) {
-            if (bulbOpen) runCatching { client.smartBulbToggle() }
+            // Guaranteed close via the TRUE state (00030031), independent of the
+            // bulbOpen flag — the flag can't see a parity desync (a single-shot
+            // tap in Bulb, or an eaten toggle → the Camera Test left-sensor-open
+            // bug). Read; if OPEN, toggle; re-read; retry. On unknown/closed we
+            // do NOT blind-toggle (that would OPEN a closed shutter). This is the
+            // smart-mode analog of BR-E1's read-verify ensureShutter(false).
+            for (attempt in 1..3) {
+                val open = runCatching { client.readSmartShutterState() }.getOrNull()
+                if (open != true) break
+                CanonBleLog.d(TAG, "safety close: sensor OPEN (attempt $attempt) — toggling closed")
+                runCatching { client.smartBulbToggle() }
+            }
         } else {
             runCatching { ensureShutter(false) }
         }

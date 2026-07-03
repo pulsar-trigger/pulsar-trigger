@@ -108,6 +108,12 @@ class CanonBleClient(
         val SMART_MODE_UUID: UUID = UUID.fromString("00030010-0000-1000-0000-d8492fffa821")
         /** Shutter char — `[0x00,0x01]` press / `[0x00,0x02]` release. */
         val SMART_SHUTTER_UUID: UUID = UUID.fromString("00030030-0000-1000-0000-d8492fffa821")
+        /** Shutter STATE (READ+NOTIFY partner of 00030030). Byte[1] mirrors BR-E1's
+         *  status: 0x01=OPEN, 0x03=CLOSED (RP diag 2026-07-03: `010101` while a
+         *  Camera Test left the sensor open, `010301` right after a manual close).
+         *  Readable, so we can POLL the true state for a guaranteed close — smart
+         *  mode's missing wire-truth, finally found. */
+        val SMART_SHUTTER_STATE_UUID: UUID = UUID.fromString("00030031-0000-1000-0000-d8492fffa821")
         /** Client Characteristic Configuration descriptor (enable notify/indicate). */
         val CCCD_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
 
@@ -157,6 +163,7 @@ class CanonBleClient(
     @Volatile private var smartIdenChar: BluetoothGattCharacteristic? = null
     @Volatile private var smartModeChar: BluetoothGattCharacteristic? = null
     @Volatile private var smartShutterChar: BluetoothGattCharacteristic? = null
+    @Volatile private var smartShutterStateChar: BluetoothGattCharacteristic? = null
 
     /** Which protocol the connected body speaks. Set in onServicesDiscovered. */
     @Volatile var protocol: CanonProtocol = CanonProtocol.NONE
@@ -234,6 +241,7 @@ class CanonBleClient(
                     val ctrl = g.getService(SMART_CTRL_SERVICE_UUID)
                     smartModeChar = ctrl?.getCharacteristic(SMART_MODE_UUID)
                     smartShutterChar = ctrl?.getCharacteristic(SMART_SHUTTER_UUID)
+                    smartShutterStateChar = ctrl?.getCharacteristic(SMART_SHUTTER_STATE_UUID)
                     val haveIdentity = smartNameChar != null && smartIdenChar != null
                     protocol = when {
                         !haveIdentity -> CanonProtocol.NONE
@@ -578,6 +586,31 @@ class CanonBleClient(
      *  (Eduardo, 2026-07-01). Any late tap-ack is already ignored because the
      *  trailing 0x0C write clears [lastControlWasShutterPress]. */
     fun markShutterClosed() { _shutterOpen.value = false }
+
+    /** Read the smartphone-mode shutter STATE (00030031) — smart mode's wire-truth,
+     *  found on the RP 2026-07-03. Returns true=OPEN, false=CLOSED, null=unknown
+     *  (char missing / read failed / unexpected bytes). Decodes byte[1]: 0x01=open,
+     *  0x03=closed. Serialized through [opMutex]; logs the raw bytes so a wrong
+     *  mapping is immediately visible in the diag. */
+    @SuppressLint("MissingPermission")
+    suspend fun readSmartShutterState(): Boolean? = opMutex.withLock {
+        val ch = smartShutterStateChar ?: return@withLock null
+        val g = gatt ?: return@withLock null
+        val rd = CompletableDeferred<ByteArray?>()
+        readSignal.set(rd)
+        @Suppress("DEPRECATION")
+        if (!g.readCharacteristic(ch)) { readSignal.set(null); return@withLock null }
+        val value = withTimeoutOrNull(2_000) { rd.await() }
+        val state = when (value?.getOrNull(1)?.toInt()?.and(0xFF)) {
+            0x01 -> true
+            0x03 -> false
+            else -> null
+        }
+        CanonBleLog.d(TAG, "smart shutter state read[00030031]: " +
+            (value?.joinToString("") { "%02x".format(it) } ?: "null") + " → " +
+            when (state) { true -> "OPEN"; false -> "CLOSED"; else -> "unknown" })
+        state
+    }
 
     /** DIAGNOSTIC (smartphone mode): subscribe to EVERY notify/indicate-capable
      *  characteristic on the body and log its notifications, to hunt for the
