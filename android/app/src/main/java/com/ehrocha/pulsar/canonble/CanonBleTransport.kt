@@ -512,15 +512,19 @@ class CanonBleTransport private constructor(
     suspend fun ensureShutterClosedSafely() = opLock.withLock {
         if (!_connected.value) return@withLock
         if (isSmart) {
-            // Read the true state (00030031) for DIAGNOSTICS ONLY — the byte
-            // mapping proved ambiguous: at rest a CLOSED shutter read the same as
-            // open, so v0.623's "toggle if open" fired a stray frame at app-open.
-            // Until we can distinguish rest-closed from open, fall back to the
-            // flag: toggle closed ONLY if we believe it's open (never blind-toggle
-            // a closed shutter). The read still logs raw bytes at every menu entry
-            // so we can compare rest-closed vs stuck-open and nail the signal.
-            runCatching { client.readSmartShutterState() }
-            if (bulbOpen) runCatching { client.smartBulbToggle() }
+            // Guaranteed close via the TRUE state (00030031), independent of the
+            // bulbOpen flag — catches a parity desync (a single-shot tap in Bulb,
+            // an eaten toggle, a dial mismatch) that the flag can't see. Byte[1]
+            // 0x01=open / 0x03=closed, BUT at a fresh connect the idle state also
+            // reads 0x01 — so only trust "open" once the shutter's been cycled
+            // this session (client.hasCycledSmartShutter), or we'd toggle a
+            // closed-at-rest shutter and fire a stray frame at app-open (v0.623).
+            for (attempt in 1..3) {
+                val open = runCatching { client.readSmartShutterState() }.getOrNull()
+                if (open != true || !client.hasCycledSmartShutter) break
+                CanonBleLog.d(TAG, "safety close: sensor OPEN (attempt $attempt) — toggling closed")
+                runCatching { client.smartBulbToggle() }
+            }
         } else {
             runCatching { ensureShutter(false) }
         }

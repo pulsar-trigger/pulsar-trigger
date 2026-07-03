@@ -164,6 +164,13 @@ class CanonBleClient(
     @Volatile private var smartModeChar: BluetoothGattCharacteristic? = null
     @Volatile private var smartShutterChar: BluetoothGattCharacteristic? = null
     @Volatile private var smartShutterStateChar: BluetoothGattCharacteristic? = null
+    /** True once we've toggled the smart bulb shutter at least this session.
+     *  Before that, 00030031 reads its IDLE value (byte[1]=0x01, same as OPEN) —
+     *  so a fresh-connect read of 0x01 is CLOSED-at-rest, not open. After a cycle,
+     *  0x01=open / 0x03=closed is trustworthy. Guards the safety-close from
+     *  toggling (and firing a stray frame) at app-open. */
+    @Volatile private var smartCycled = false
+    val hasCycledSmartShutter: Boolean get() = smartCycled
 
     /** Which protocol the connected body speaks. Set in onServicesDiscovered. */
     @Volatile var protocol: CanonProtocol = CanonProtocol.NONE
@@ -401,6 +408,7 @@ class CanonBleClient(
         releasedByUser = false
         fullyConnected = false
         protocol = CanonProtocol.NONE
+        smartCycled = false
         // autoConnect=true is the OS-managed reconnect: the stack completes the
         // connection whenever the (bonded) body becomes available — even via a
         // directed advertisement a service-UUID scan never sees. Used for
@@ -853,11 +861,10 @@ class CanonBleClient(
      *  shutter (that un-gated re-toggle was the old "continuous shooting"
      *  misdiagnosis). Restores the fc760d3 model. Distinct from
      *  [smartShutterTap] (`[00,01]`/`[00,02]`, the M-mode single-shot path). */
-    suspend fun smartBulbToggle(): Boolean = writeNoResponse(
-        smartShutterChar,
-        byteArrayOf(0x00, 0x01),
-        "smart bulb toggle [00,01]",
-    )
+    suspend fun smartBulbToggle(): Boolean {
+        smartCycled = true   // 00030031 now reports meaningful open/closed
+        return writeNoResponse(smartShutterChar, byteArrayOf(0x00, 0x01), "smart bulb toggle [00,01]")
+    }
 
     val address: String get() = device.address
     val name: String? @SuppressLint("MissingPermission") get() = try { device.name } catch (_: SecurityException) { null }
