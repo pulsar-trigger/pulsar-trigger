@@ -517,22 +517,15 @@ class CanonBleTransport private constructor(
     suspend fun ensureShutterClosedSafely() = opLock.withLock {
         if (!_connected.value) return@withLock
         if (isSmart) {
-            // Guaranteed close via the TRUE state (00030031), independent of the
-            // bulbOpen flag — catches a parity desync (a single-shot tap in Bulb,
-            // an eaten toggle, a dial mismatch) that the flag can't see. Byte[1]
-            // 0x01=open / 0x03=closed, BUT at a fresh connect the idle state also
-            // reads 0x01 — so only trust "open" once the shutter's been cycled
-            // this session (client.hasCycledSmartShutter), or we'd toggle a
-            // closed-at-rest shutter and fire a stray frame at app-open (v0.623).
-            for (attempt in 1..3) {
-                val open = runCatching { client.readSmartShutterState() }.getOrNull()
-                if (open != true || !client.hasCycledSmartShutter) break
-                CanonBleLog.d(TAG, "safety close: sensor OPEN (attempt $attempt) — toggling closed")
-                runCatching { client.smartBulbToggle() }
-                // The state read is stale right after a toggle — let it settle
-                // before re-reading, or we'd re-toggle a just-closed shutter.
-                delay(SHUTTER_STATE_SETTLE_MS)
-            }
+            // 00030031 turned out to be UNRELIABLE as a state read: it returns
+            // 010101 ("open") regardless of the real open/closed state (RP diag
+            // 2026-07-03 09:03 — reads said OPEN at connect-rest AND after a clean
+            // run that ended closed). Toggling on it fired stray shots on clean
+            // runs. So DON'T act on the read — keep it log-only for diagnostics,
+            // and fall back to the parity flag: toggle closed ONLY if we believe
+            // it's open (never toggle a closed shutter → no stray).
+            runCatching { client.readSmartShutterState() }
+            if (bulbOpen) runCatching { client.smartBulbToggle() }
         } else {
             runCatching { ensureShutter(false) }
         }

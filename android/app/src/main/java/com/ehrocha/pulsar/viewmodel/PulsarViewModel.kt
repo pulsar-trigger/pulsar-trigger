@@ -1064,13 +1064,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private fun canonBleSafeInterval(intervalMs: Long): Long {
         val t = activeCameraTransport() ?: return intervalMs
         if (t.kind != com.ehrocha.pulsar.transport.TransportKind.CANON_BLE) return intervalMs
-        // Smartphone-mode bodies (RP/R5/R6+) use a positional press/release
-        // shutter, not the BR-E1 toggle — the ~4 s post-frame cooldown that
-        // motivated this clamp was only ever proven on the EOS R (BR-E1). Under
-        // test whether smart mode shares it: for now let smart mode run at the
-        // user's interval; BR-E1 keeps the floor. Flip back if the card shows
-        // smart-mode frames dropping below 4 s.
-        if ((t as? com.ehrocha.pulsar.canonble.CanonBleTransport)?.isSmart == true) return intervalMs
+        // Applies to BOTH BR-E1 and smartphone mode: Eduardo confirmed the RP
+        // ALSO eats presses / skips frames below ~4 s (2026-07-03) — the
+        // cooldown isn't BR-E1-specific after all. (The v0.619 smart-mode bypass
+        // was wrong and is removed.)
         if (intervalMs >= CANON_BLE_MIN_INTERVAL_MS) return intervalMs
         Log.i(TAG, "Canon BLE: interval ${intervalMs}ms below safe minimum — raised to ${CANON_BLE_MIN_INTERVAL_MS}ms")
         _canonBleIntervalRaised.tryEmit(Unit)
@@ -2425,14 +2422,6 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         durationMs = endedAt - startedAt,
                         status = status,
                     )
-                    // Canon BLE: guarantee the sensor is closed BEFORE flowRunning
-                    // goes false (which pops the Camera Test share dialog). A parity
-                    // desync (e.g. the manual-phase tap) can leave it open;
-                    // ensureShutterClosedSafely reads the true state (00030031) and
-                    // closes if needed. NonCancellable so a stop() still closes it.
-                    _canonBleTransport.value?.let { ble ->
-                        withContext(NonCancellable) { runCatching { ble.ensureShutterClosedSafely() } }
-                    }
                     _flowRunning.value = false
                     _flowPaused.value = false
                     _flowCurrentStep.value = -1
