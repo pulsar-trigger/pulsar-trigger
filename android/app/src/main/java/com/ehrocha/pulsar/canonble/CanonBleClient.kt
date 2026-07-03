@@ -108,12 +108,6 @@ class CanonBleClient(
         val SMART_MODE_UUID: UUID = UUID.fromString("00030010-0000-1000-0000-d8492fffa821")
         /** Shutter char — `[0x00,0x01]` press / `[0x00,0x02]` release. */
         val SMART_SHUTTER_UUID: UUID = UUID.fromString("00030030-0000-1000-0000-d8492fffa821")
-        /** Shutter STATE (READ+NOTIFY partner of 00030030). Byte[1] mirrors BR-E1's
-         *  status: 0x01=OPEN, 0x03=CLOSED (RP diag 2026-07-03: `010101` while a
-         *  Camera Test left the sensor open, `010301` right after a manual close).
-         *  Readable, so we can POLL the true state for a guaranteed close — smart
-         *  mode's missing wire-truth, finally found. */
-        val SMART_SHUTTER_STATE_UUID: UUID = UUID.fromString("00030031-0000-1000-0000-d8492fffa821")
         /** Client Characteristic Configuration descriptor (enable notify/indicate). */
         val CCCD_UUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
 
@@ -163,14 +157,6 @@ class CanonBleClient(
     @Volatile private var smartIdenChar: BluetoothGattCharacteristic? = null
     @Volatile private var smartModeChar: BluetoothGattCharacteristic? = null
     @Volatile private var smartShutterChar: BluetoothGattCharacteristic? = null
-    @Volatile private var smartShutterStateChar: BluetoothGattCharacteristic? = null
-    /** True once we've toggled the smart bulb shutter at least this session.
-     *  Before that, 00030031 reads its IDLE value (byte[1]=0x01, same as OPEN) —
-     *  so a fresh-connect read of 0x01 is CLOSED-at-rest, not open. After a cycle,
-     *  0x01=open / 0x03=closed is trustworthy. Guards the safety-close from
-     *  toggling (and firing a stray frame) at app-open. */
-    @Volatile private var smartCycled = false
-    val hasCycledSmartShutter: Boolean get() = smartCycled
 
     /** Which protocol the connected body speaks. Set in onServicesDiscovered. */
     @Volatile var protocol: CanonProtocol = CanonProtocol.NONE
@@ -248,7 +234,6 @@ class CanonBleClient(
                     val ctrl = g.getService(SMART_CTRL_SERVICE_UUID)
                     smartModeChar = ctrl?.getCharacteristic(SMART_MODE_UUID)
                     smartShutterChar = ctrl?.getCharacteristic(SMART_SHUTTER_UUID)
-                    smartShutterStateChar = ctrl?.getCharacteristic(SMART_SHUTTER_STATE_UUID)
                     val haveIdentity = smartNameChar != null && smartIdenChar != null
                     protocol = when {
                         !haveIdentity -> CanonProtocol.NONE
@@ -332,14 +317,6 @@ class CanonBleClient(
                 CanonBleLog.d(TAG, "BR-E1 status: 0x%02X (shutterPress=%s) → shutterOpen=%s"
                     .format(code, lastControlWasShutterPress, _shutterOpen.value))
             }
-            // DIAGNOSTIC: log EVERY smart-mode notification (bytes) so we can
-            // spot which characteristic reflects shutter open/close — correlate
-            // these lines with the "smart bulb toggle" writes. See
-            // subscribeSmartNotifyForDiagnostics().
-            if (protocol == CanonProtocol.SMART) {
-                CanonBleLog.d(TAG, "smart notify[${characteristic.uuid.toString().take(8)}]: " +
-                    value.joinToString("") { "%02x".format(it) })
-            }
         }
 
         @Deprecated("Old API still used for minSdk 26 compatibility")
@@ -408,7 +385,6 @@ class CanonBleClient(
         releasedByUser = false
         fullyConnected = false
         protocol = CanonProtocol.NONE
-        smartCycled = false
         // autoConnect=true is the OS-managed reconnect: the stack completes the
         // connection whenever the (bonded) body becomes available — even via a
         // directed advertisement a service-UUID scan never sees. Used for
@@ -595,92 +571,6 @@ class CanonBleClient(
      *  trailing 0x0C write clears [lastControlWasShutterPress]. */
     fun markShutterClosed() { _shutterOpen.value = false }
 
-    /** Read the smartphone-mode shutter STATE (00030031) — smart mode's wire-truth,
-     *  found on the RP 2026-07-03. Returns true=OPEN, false=CLOSED, null=unknown
-     *  (char missing / read failed / unexpected bytes). Decodes byte[1]: 0x01=open,
-     *  0x03=closed. Serialized through [opMutex]; logs the raw bytes so a wrong
-     *  mapping is immediately visible in the diag. */
-    @SuppressLint("MissingPermission")
-    suspend fun readSmartShutterState(): Boolean? = opMutex.withLock {
-        val ch = smartShutterStateChar ?: return@withLock null
-        val g = gatt ?: return@withLock null
-        val rd = CompletableDeferred<ByteArray?>()
-        readSignal.set(rd)
-        @Suppress("DEPRECATION")
-        if (!g.readCharacteristic(ch)) { readSignal.set(null); return@withLock null }
-        val value = withTimeoutOrNull(2_000) { rd.await() }
-        val state = when (value?.getOrNull(1)?.toInt()?.and(0xFF)) {
-            0x01 -> true
-            0x03 -> false
-            else -> null
-        }
-        CanonBleLog.d(TAG, "smart shutter state read[00030031]: " +
-            (value?.joinToString("") { "%02x".format(it) } ?: "null") + " → " +
-            when (state) { true -> "OPEN"; false -> "CLOSED"; else -> "unknown" })
-        state
-    }
-
-    /** DIAGNOSTIC (smartphone mode): subscribe to EVERY notify/indicate-capable
-     *  characteristic on the body and log its notifications, to hunt for the
-     *  RP's shutter-STATE signal. Smart mode currently has no known state char,
-     *  so a toggle-parity desync (a single-shot tap in Bulb, or an eaten toggle)
-     *  can leave the sensor OPEN with no way to detect it (the Camera Test
-     *  left-sensor-open bug, 2026-07-02). Read-only: subscribing + logging
-     *  changes NO shutter behaviour. Serialized (one CCCD write in flight at a
-     *  time, waiting for onDescriptorWrite) to respect Android's single-GATT-op
-     *  limit. Usage: connect the RP, do a manual **open → wait → close** in Bulb,
-     *  and read the `smart notify[…]` lines — whichever characteristic's bytes
-     *  flip with the shutter is the state signal we wire in next. */
-    @SuppressLint("MissingPermission")
-    suspend fun subscribeSmartNotifyForDiagnostics() = opMutex.withLock {
-        val g = gatt ?: return@withLock
-        // Full GATT dump first — even if nothing notifies, this tells us which
-        // characteristics exist and their props (0x02=READ 0x04=WRITE_NR
-        // 0x08=WRITE 0x10=NOTIFY 0x20=INDICATE), so we can spot a readable/notify
-        // shutter-state char (the tooling hinted at ~0x0011 / 0x0001) to poll or
-        // subscribe for a guaranteed close.
-        for (svc in g.services) {
-            CanonBleLog.d(TAG, "diag GATT: service ${svc.uuid.toString().take(8)}")
-            for (ch in svc.characteristics) {
-                CanonBleLog.d(TAG, "diag GATT:   char ${ch.uuid.toString().take(8)} " +
-                    "props=0x%02x".format(ch.properties))
-            }
-        }
-        val targets = g.services.flatMap { it.characteristics }.filter {
-            (it.properties and (BluetoothGattCharacteristic.PROPERTY_NOTIFY or
-                BluetoothGattCharacteristic.PROPERTY_INDICATE)) != 0
-        }
-        CanonBleLog.d(TAG, "diag: subscribing to ${targets.size} notify/indicate chars " +
-            "for shutter-state discovery")
-        for (ch in targets) {
-            val tag = ch.uuid.toString().take(8)
-            try {
-                g.setCharacteristicNotification(ch, true)
-                val cccd = ch.getDescriptor(CCCD_UUID)
-                if (cccd == null) {
-                    CanonBleLog.d(TAG, "diag: $tag has no CCCD — skipping")
-                } else {
-                    val notify = (ch.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY) != 0
-                    @Suppress("DEPRECATION")
-                    cccd.value = if (notify) BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-                                 else BluetoothGattDescriptor.ENABLE_INDICATION_VALUE
-                    val deferred = CompletableDeferred<Boolean>()
-                    descriptorSignal.set(deferred)
-                    @Suppress("DEPRECATION")
-                    if (g.writeDescriptor(cccd)) {
-                        val ok = withTimeoutOrNull(3_000) { deferred.await() } ?: false
-                        CanonBleLog.d(TAG, "diag: subscribed $tag (notify=$notify) cccd=$ok")
-                    } else {
-                        descriptorSignal.set(null)
-                        CanonBleLog.d(TAG, "diag: $tag CCCD write couldn't queue")
-                    }
-                }
-            } catch (e: Exception) {
-                CanonBleLog.w(TAG, "diag: subscribe $tag failed: ${e.message}")
-            }
-        }
-    }
-
     // NOTE deliberately NO readStatusRaw()-style verification helper: a raw read
     // of 00050004 reports the same PHANTOM state as the 0x001b ack when the
     // camera eats a press during its ~3–4 s post-frame cooldown (card-proven
@@ -815,21 +705,6 @@ class CanonBleClient(
             writeNoResponse(smartModeChar, byteArrayOf(SMART_MODE_SHOOT), "smart MODE_SHOOT")
     }
 
-    /** Smartphone-mode shutter — **bulb path**: explicit press/release
-     *  events. Press = `[0x00,0x01]`, release = `[0x00,0x02]`. Same byte
-     *  pattern as M-mode `smartShutterTap` because the empirical
-     *  "toggle on [00,01]" recipe for Bulb (claimed in v0.290 docs)
-     *  caused continuous shooting on the EOS RP in v0.357 testing —
-     *  the camera treats repeated `[00,01]` as repeated *presses* in
-     *  Bulb too, never registers the release. `[00,02]` is the release
-     *  on both dial settings.
-     *  Used by `startBulb` / `stopBulb`. See docs/canon-ble-research.md §7. */
-    suspend fun smartShutter(press: Boolean): Boolean = writeNoResponse(
-        smartShutterChar,
-        if (press) byteArrayOf(0x00, 0x01) else byteArrayOf(0x00, 0x02),
-        if (press) "smart shutter DOWN [00,01]" else "smart shutter UP [00,02]",
-    )
-
     /** Smartphone-mode shutter — **single-shot path**: distinct press / release
      *  events. Press = `[0x00,0x01]`, release = `[0x00,0x02]`.
      *
@@ -861,10 +736,8 @@ class CanonBleClient(
      *  shutter (that un-gated re-toggle was the old "continuous shooting"
      *  misdiagnosis). Restores the fc760d3 model. Distinct from
      *  [smartShutterTap] (`[00,01]`/`[00,02]`, the M-mode single-shot path). */
-    suspend fun smartBulbToggle(): Boolean {
-        smartCycled = true   // 00030031 now reports meaningful open/closed
-        return writeNoResponse(smartShutterChar, byteArrayOf(0x00, 0x01), "smart bulb toggle [00,01]")
-    }
+    suspend fun smartBulbToggle(): Boolean =
+        writeNoResponse(smartShutterChar, byteArrayOf(0x00, 0x01), "smart bulb toggle [00,01]")
 
     val address: String get() = device.address
     val name: String? @SuppressLint("MissingPermission") get() = try { device.name } catch (_: SecurityException) { null }

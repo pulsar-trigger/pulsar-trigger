@@ -97,12 +97,6 @@ class CanonBleTransport private constructor(
          *  early); a dead click leaves the state unchanged, so this times out and
          *  we retry. */
         private const val SHUTTER_CONFIRM_MS = 400L
-        /** Smart 00030031 read is STALE for ~120 ms right after a toggle (it
-         *  returns the pre-toggle value; card/notify-proven RP 2026-07-03). Wait
-         *  this long before re-reading in the safety-close loop, or a stale "still
-         *  open" read re-toggles and fires a stray frame. */
-        private const val SHUTTER_STATE_SETTLE_MS = 400L
-
 
         /** Phone-side device name that shows up in the camera's
          *  paired-devices list. Short, brand-aligned, fits Canon's
@@ -207,11 +201,6 @@ class CanonBleTransport private constructor(
                         client.close()
                         return CanonBleConnectResult.Failed
                     }
-                    // DIAGNOSTIC (read-only): subscribe to all notify chars to hunt
-                    // the RP's shutter-state signal so we can guarantee-close smart
-                    // bulb (the Camera Test left-sensor-open parity bug). Best-effort
-                    // — a failure here must not block a working connection.
-                    runCatching { client.subscribeSmartNotifyForDiagnostics() }
                 }
                 CanonProtocol.SMART_NO_SHUTTER -> {
                     CanonBleLog.w(TAG, "${device.address} registered in smartphone mode but exposes " +
@@ -312,17 +301,13 @@ class CanonBleTransport private constructor(
      *  clamp applies (under test whether smart mode shares the cooldown). */
     val isSmart get() = client.protocol == CanonProtocol.SMART
 
-    /** Press the shutter using whichever protocol is active. Bulb path: the
-     *  smartphone toggle `[00,01]`; BR-E1 path: `0x8C` full press. */
-    private suspend fun pressShutter() {
-        if (isSmart) client.smartShutter(press = true) else client.writeControl(SHUTTER_PRESS)
-    }
+    /** Press the shutter — BR-E1-only single-shot tap path (`0x8C` full press).
+     *  Smart mode routes taps through [CanonBleClient.smartShutterTap] and bulb
+     *  through [CanonBleClient.smartBulbToggle], never here. */
+    private suspend fun pressShutter() { client.writeControl(SHUTTER_PRESS) }
 
-    /** Release the shutter for a bulb exposure. Smartphone: `[00,01]` toggle
-     *  back to "up" (Bulb tracks shutter state on this byte). BR-E1: `0x0C`. */
-    private suspend fun releaseShutter() {
-        if (isSmart) client.smartShutter(press = false) else client.writeControl(SHUTTER_RELEASE)
-    }
+    /** Release the shutter — BR-E1-only (`0x0C`). See [pressShutter]. */
+    private suspend fun releaseShutter() { client.writeControl(SHUTTER_RELEASE) }
 
     /** BR-E1 bulb is a **toggle** (Canon BR-E1 manual groups bulb with movie as a
      *  start/stop toggle; confirmed by nRF Sniffer `~/bulb-toggle.pcapng` AND by
@@ -538,14 +523,12 @@ class CanonBleTransport private constructor(
     suspend fun ensureShutterClosedSafely() = opLock.withLock {
         if (!_connected.value) return@withLock
         if (isSmart) {
-            // 00030031 turned out to be UNRELIABLE as a state read: it returns
-            // 010101 ("open") regardless of the real open/closed state (RP diag
-            // 2026-07-03 09:03 — reads said OPEN at connect-rest AND after a clean
-            // run that ended closed). Toggling on it fired stray shots on clean
-            // runs. So DON'T act on the read — keep it log-only for diagnostics,
-            // and fall back to the parity flag: toggle closed ONLY if we believe
-            // it's open (never toggle a closed shutter → no stray).
-            runCatching { client.readSmartShutterState() }
+            // Smart mode has no reliable wire-truth for shutter state: 00030031
+            // reads 010101 ("open") regardless of the real open/closed state (RP
+            // diag 2026-07-03 09:03 — OPEN at connect-rest AND after a clean run
+            // that ended closed), so we can't poll it. Fall back to the parity
+            // flag: toggle closed ONLY if we believe it's open (never toggle a
+            // closed shutter → no stray frame).
             if (bulbOpen) runCatching { client.smartBulbToggle() }
         } else {
             runCatching { ensureShutter(false) }
