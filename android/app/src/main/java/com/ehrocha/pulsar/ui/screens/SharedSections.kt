@@ -414,6 +414,7 @@ enum class SettingsSection(val icon: ImageVector, @StringRes val titleRes: Int) 
     USER_GUIDE(Icons.AutoMirrored.Filled.MenuBook, R.string.section_user_guide),
     LANGUAGE(Icons.Default.Language, R.string.section_language),
     DEVICE(Icons.Default.PhoneAndroid, R.string.section_device),
+    CAMERA_BLE(Icons.Default.Bluetooth, R.string.section_camera_ble),
     PLANNER(Icons.Default.CalendarMonth, R.string.section_planner),
     BACKGROUND(Icons.Default.BatteryFull, R.string.section_background),
     BACKUP_RESTORE(Icons.Default.SaveAlt, R.string.section_backup_restore),
@@ -429,6 +430,7 @@ enum class SettingsSection(val icon: ImageVector, @StringRes val titleRes: Int) 
 internal fun SettingsMenu(
     onSectionSelected: (SettingsSection) -> Unit,
     showEspSections: Boolean = true,
+    showCanonBle: Boolean = false,
 ) {
     val sections = SettingsSection.entries.filter { section ->
         when (section) {
@@ -437,6 +439,9 @@ internal fun SettingsMenu(
             // ESP32 path — Canon CCAPI / PTP / direct BLE don't have anything
             // to configure here.
             SettingsSection.DEVICE -> showEspSections
+            // Canon BLE section (cool-down tuning) — only when that transport
+            // is the active one; it's meaningless on the others.
+            SettingsSection.CAMERA_BLE -> showCanonBle
             else -> true
         }
     }
@@ -476,6 +481,88 @@ internal fun SettingsMenu(
 }
 
 // ── Individual settings section content ──────────────────────────────────────
+
+/** Canon BLE settings: post-frame cool-down (drives the interval clamp + the
+ *  transport's step-boundary floor) and the per-protocol registration names. */
+@Composable
+internal fun CanonBleSectionContent(vm: PulsarViewModel) {
+    val cooldownMs by vm.canonBleCooldownMs.collectAsState()
+    val nameRemote by vm.canonBleNameRemote.collectAsState()
+    val nameSmart by vm.canonBleNameSmart.collectAsState()
+    val cooldownS = (cooldownMs / 1000L).toInt()
+
+    androidx.compose.foundation.layout.Column(
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        // ── Cool-down ──
+        Text(stringResource(R.string.canon_ble_cooldown_label),
+            style = MaterialTheme.typography.titleSmall)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedButton(
+                onClick = { vm.setCanonBleCooldownMs((cooldownS - 1) * 1000L) },
+                enabled = cooldownS > 1,
+            ) { Text("−", style = MaterialTheme.typography.titleLarge) }
+            Text(
+                "$cooldownS s",
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.weight(1f),
+            )
+            OutlinedButton(
+                onClick = { vm.setCanonBleCooldownMs((cooldownS + 1) * 1000L) },
+                enabled = cooldownS < 10,
+            ) { Text("+", style = MaterialTheme.typography.titleLarge) }
+        }
+        Text(stringResource(R.string.canon_ble_cooldown_warning),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 4.dp))
+
+        // ── Registration names ──
+        Text(stringResource(R.string.canon_ble_names_label),
+            style = MaterialTheme.typography.titleSmall)
+        var remoteText by remember(nameRemote) { mutableStateOf(nameRemote) }
+        val remoteCollides = remoteText.trim().equals(nameSmart.trim(), ignoreCase = true)
+        androidx.compose.material3.OutlinedTextField(
+            value = remoteText,
+            onValueChange = { remoteText = it.take(20) },
+            label = { Text(stringResource(R.string.canon_ble_name_remote)) },
+            singleLine = true,
+            isError = remoteCollides,
+            modifier = Modifier.fillMaxWidth(),
+            trailingIcon = {
+                if (remoteText != nameRemote && !remoteCollides) TextButton(
+                    onClick = { vm.setCanonBleNameRemote(remoteText) },
+                ) { Text(stringResource(R.string.save)) }
+            },
+        )
+        var smartText by remember(nameSmart) { mutableStateOf(nameSmart) }
+        val smartCollides = smartText.trim().equals(nameRemote.trim(), ignoreCase = true)
+        androidx.compose.material3.OutlinedTextField(
+            value = smartText,
+            onValueChange = { smartText = it.take(20) },
+            label = { Text(stringResource(R.string.canon_ble_name_smart)) },
+            singleLine = true,
+            isError = smartCollides,
+            modifier = Modifier.fillMaxWidth(),
+            trailingIcon = {
+                if (smartText != nameSmart && !smartCollides) TextButton(
+                    onClick = { vm.setCanonBleNameSmart(smartText) },
+                ) { Text(stringResource(R.string.save)) }
+            },
+        )
+        Text(
+            stringResource(
+                if (remoteCollides || smartCollides) R.string.canon_ble_names_distinct
+                else R.string.canon_ble_names_hint
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = if (remoteCollides || smartCollides) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
 
 @Composable
 internal fun LanguageSectionContent() {

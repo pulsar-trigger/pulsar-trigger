@@ -108,6 +108,11 @@ class CanonBleTransport private constructor(
          *  paired-devices list. Short, brand-aligned, fits Canon's
          *  display width without ellipsis. */
         const val PAIR_NAME = "Pulsar"
+        /** Per-protocol registration names so the camera's device list shows which
+         *  protocol registered Pulsar (the OS bond is shared per-MAC; these only
+         *  differ the app-level registration display name). Eduardo, 2026-07-03. */
+        const val PAIR_NAME_BRE1 = "Pulsar-R"
+        const val PAIR_NAME_SMART = "Pulsar-S"
 
         private const val SMART_UUID_PREF = "pulsar_canon_ble"
         private const val SMART_UUID_KEY = "smart_device_uuid"
@@ -133,6 +138,10 @@ class CanonBleTransport private constructor(
              *  window, since the camera may take a while to become available. */
             autoConnect: Boolean = false,
             connectTimeoutMs: Long = 30_000,
+            /** Registration names shown in the camera's device list — user-editable
+             *  in Settings, defaulting to Pulsar-R (BR-E1) / Pulsar-S (smart). */
+            bre1Name: String = PAIR_NAME_BRE1,
+            smartName: String = PAIR_NAME_SMART,
         ): CanonBleConnectResult {
             var transportRef: CanonBleTransport? = null
             val client = CanonBleClient(ctx, device, onSpontaneousDisconnect = {
@@ -165,7 +174,7 @@ class CanonBleTransport private constructor(
                     // BR-E1: `[0x03, name]` on every connect — the "arm as the
                     // active remote" step the body expects each session (matches
                     // iebyt/cbremote's onServicesDiscovered). See docs/canon-ble.md.
-                    if (!client.writePairName(PAIR_NAME)) {
+                    if (!client.writePairName(bre1Name)) {
                         CanonBleLog.w(TAG, "BR-E1 pair/arm write failed for ${device.address}; aborting")
                         client.close()
                         return CanonBleConnectResult.Failed
@@ -193,7 +202,7 @@ class CanonBleTransport private constructor(
                     // Smartphone-mode registration handshake (fires the RP /
                     // R5 / R6 / newer). Needs a persisted identity UUID so
                     // re-connects reuse the same registration.
-                    if (!client.armSmart(PAIR_NAME, deviceUuid(ctx), onAwaitConfirm, freshPair = freshPair)) {
+                    if (!client.armSmart(smartName, deviceUuid(ctx), onAwaitConfirm, freshPair = freshPair)) {
                         CanonBleLog.w(TAG, "smartphone-mode registration failed for ${device.address}")
                         client.close()
                         return CanonBleConnectResult.Failed
@@ -282,6 +291,10 @@ class CanonBleTransport private constructor(
      *  (not a defensive no-op) — the anchor for the post-frame cooldown wait in
      *  [startBulb]. 0 = no frame yet this session (first open is free). */
     @Volatile private var lastRealCloseElapsed = 0L
+    /** Post-frame cool-down floor (ms) — user-configurable via Settings; the
+     *  viewmodel pushes the value on connect + when the setting changes. Below
+     *  this gap the body eats presses. Default = the hardware-proven 4 s. */
+    @Volatile var postFrameCooldownMs = POST_FRAME_COOLDOWN_MS
 
     /** Serializes the normal-flow shutter ops. The camera is a TOGGLE, so two
      *  callers interleaving presses (v0.613 diag: two stopBulbs racing, pressed
@@ -455,8 +468,8 @@ class CanonBleTransport private constructor(
         // session (lastRealClose=0) is free.
         if (lastRealCloseElapsed != 0L) {
             val since = SystemClock.elapsedRealtime() - lastRealCloseElapsed
-            if (since in 0 until POST_FRAME_COOLDOWN_MS) {
-                val wait = POST_FRAME_COOLDOWN_MS - since
+            if (since in 0 until postFrameCooldownMs) {
+                val wait = postFrameCooldownMs - since
                 CanonBleLog.d(TAG, "bulb: post-frame cooldown — waiting ${wait}ms before open (${since}ms since last close)")
                 delay(wait)
             }

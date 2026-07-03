@@ -1023,4 +1023,14 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="photo_transfer_raw_hint_off">RAW als JPEG in der Galerie gespeichert</string>
     <string name="camera_drive_single_hint">Tipp: Stell die Kamera auf Einzelbild — Reihenaufnahme kann pro Auslösung zusätzliche Bilder aufnehmen.</string>
     <string name="canon_ble_interval_raised">Intervall auf 4 s erhöht — Canon BLE benötigt mindestens 4 s zwischen Aufnahmen</string>
+    <string name="section_camera_ble">Canon Bluetooth</string>
+    <string name="canon_ble_cooldown_label">Mindestintervall (Abklingzeit)</string>
+    <string name="canon_ble_cooldown_warning">Die Kamera lässt Aufnahmen aus oder verkürzt sie, wenn schneller ausgelöst wird. 4 s ist der getestete sichere Wert — nur senken, wenn deine Kamera es verträgt.</string>
+    <string name="canon_ble_names_label">Registrierungsnamen</string>
+    <string name="canon_ble_name_remote">Fernauslöser-Name (BR-E1)</string>
+    <string name="canon_ble_name_smart">Smartphone-Name</string>
+    <string name="canon_ble_names_hint">Wird in der Geräteliste der Kamera angezeigt. Gilt ab der nächsten Verbindung.</string>
+    <string name="canon_ble_names_distinct">Die beiden Namen müssen unterschiedlich sein.</string>
+    <string name="canon_ble_dial_bulb">Stelle das Moduswahlrad der Kamera auf BULB</string>
+    <string name="canon_ble_dial_m">Stelle das Moduswahlrad der Kamera auf M</string>
 </resources>

@@ -1112,4 +1112,14 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <string name="photo_transfer_raw_hint_off">RAW saved as JPEG to the gallery</string>
     <string name="camera_drive_single_hint">Tip: set the camera to single-drive mode — continuous drive can capture extra frames per shot.</string>
     <string name="canon_ble_interval_raised">Interval raised to 4 s — Canon BLE needs at least 4 s between shots</string>
+    <string name="section_camera_ble">Canon Bluetooth</string>
+    <string name="canon_ble_cooldown_label">Cool-down (minimum interval)</string>
+    <string name="canon_ble_cooldown_warning">The camera drops or shortens frames if fired faster than this. 4 s is the tested-safe value — lower it only if your body handles it.</string>
+    <string name="canon_ble_names_label">Registration names</string>
+    <string name="canon_ble_name_remote">Remote (BR-E1) name</string>
+    <string name="canon_ble_name_smart">Smartphone name</string>
+    <string name="canon_ble_names_hint">Shown in the camera\'s device list. Applied on the next connect.</string>
+    <string name="canon_ble_names_distinct">The two names must be different.</string>
+    <string name="canon_ble_dial_bulb">Set the camera mode dial to BULB</string>
+    <string name="canon_ble_dial_m">Set the camera mode dial to M</string>
 </resources>

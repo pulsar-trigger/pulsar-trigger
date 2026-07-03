@@ -1023,4 +1023,14 @@
     <string name="photo_transfer_raw_hint_off">RAW は JPEG でギャラリーに保存</string>
     <string name="camera_drive_single_hint">ヒント: カメラを1枚撮影モードに設定してください。連続撮影では1回の撮影で余分なコマが撮られることがあります。</string>
     <string name="canon_ble_interval_raised">インターバルを4秒に引き上げました — Canon BLEは撮影間隔が4秒以上必要です</string>
+    <string name="section_camera_ble">Canon Bluetooth</string>
+    <string name="canon_ble_cooldown_label">最小インターバル（クールダウン）</string>
+    <string name="canon_ble_cooldown_warning">これより速く連写するとカメラがコマを落としたり短くしたりします。4秒は検証済みの安全値です。ボディが対応する場合のみ下げてください。</string>
+    <string name="canon_ble_names_label">登録名</string>
+    <string name="canon_ble_name_remote">リモコン名（BR-E1）</string>
+    <string name="canon_ble_name_smart">スマートフォン名</string>
+    <string name="canon_ble_names_hint">カメラのデバイス一覧に表示されます。次回接続時に適用されます。</string>
+    <string name="canon_ble_names_distinct">2つの名前は異なる必要があります。</string>
+    <string name="canon_ble_dial_bulb">カメラのモードダイヤルを BULB に設定してください</string>
+    <string name="canon_ble_dial_m">カメラのモードダイヤルを M に設定してください</string>
 </resources>

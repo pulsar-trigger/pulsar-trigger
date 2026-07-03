@@ -1023,4 +1023,14 @@ La hauteur vient de l\'obscurité du ciel × ciel dégagé × pas de lune brilla
     <string name="photo_transfer_raw_hint_off">RAW enregistré en JPEG dans la galerie</string>
     <string name="camera_drive_single_hint">Astuce : réglez l\'appareil en mode vue par vue — le mode rafale peut capturer des images supplémentaires par déclenchement.</string>
     <string name="canon_ble_interval_raised">Intervalle porté à 4 s — le Canon BLE exige au moins 4 s entre les prises</string>
+    <string name="section_camera_ble">Canon Bluetooth</string>
+    <string name="canon_ble_cooldown_label">Intervalle minimum (temporisation)</string>
+    <string name="canon_ble_cooldown_warning">L\'appareil rate ou raccourcit des vues s\'il est déclenché plus vite. 4 s est la valeur testée sûre — ne la baissez que si votre boîtier le supporte.</string>
+    <string name="canon_ble_names_label">Noms d\'enregistrement</string>
+    <string name="canon_ble_name_remote">Nom Télécommande (BR-E1)</string>
+    <string name="canon_ble_name_smart">Nom Smartphone</string>
+    <string name="canon_ble_names_hint">Affiché dans la liste des appareils du boîtier. Appliqué à la prochaine connexion.</string>
+    <string name="canon_ble_names_distinct">Les deux noms doivent être différents.</string>
+    <string name="canon_ble_dial_bulb">Réglez le sélecteur de mode sur BULB</string>
+    <string name="canon_ble_dial_m">Réglez le sélecteur de mode sur M</string>
 </resources>

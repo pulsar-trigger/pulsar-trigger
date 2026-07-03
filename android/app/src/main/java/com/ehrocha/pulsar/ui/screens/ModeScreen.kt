@@ -232,6 +232,9 @@ fun SettingsScreen(
     // for Canon transports (CCAPI / PTP / direct BLE have no equivalent).
     val pulsarBleConnected by vm.bleController.connected.collectAsState()
     val onEsp = pulsarBleConnected
+    // Canon BLE direct transport active → show its settings section (cool-down +
+    // per-protocol registration names).
+    val onCanonBle = vm.canonBleTransport.collectAsState().value != null
 
     var currentSection by remember { mutableStateOf(initialSection) }
 
@@ -329,9 +332,11 @@ fun SettingsScreen(
                     null -> SettingsMenu(
                         onSectionSelected = { currentSection = it },
                         showEspSections = onEsp,
+                        showCanonBle = onCanonBle,
                     )
                     SettingsSection.USER_GUIDE -> UserGuideSectionContent()
                     SettingsSection.LANGUAGE -> LanguageSectionContent()
+                    SettingsSection.CAMERA_BLE -> CanonBleSectionContent(vm)
                     SettingsSection.DEVICE -> if (onEsp) {
                         DeviceSectionContent(vm, deviceName)
                         Spacer(Modifier.height(16.dp))

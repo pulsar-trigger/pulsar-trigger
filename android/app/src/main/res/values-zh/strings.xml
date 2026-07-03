@@ -1017,4 +1017,14 @@
     <string name="photo_transfer_raw_hint_off">RAW 以 JPEG 保存到相册</string>
     <string name="camera_drive_single_hint">提示：将相机设为单张拍摄模式——连续拍摄可能在一次触发中多拍几张。</string>
     <string name="canon_ble_interval_raised">间隔已提高到 4 秒 — Canon BLE 需要至少 4 秒的拍摄间隔</string>
+    <string name="section_camera_ble">Canon 蓝牙</string>
+    <string name="canon_ble_cooldown_label">最小间隔（冷却）</string>
+    <string name="canon_ble_cooldown_warning">若拍摄速度快于此值，相机会丢帧或缩短曝光。4 秒是经过测试的安全值——仅在你的机身支持时才调低。</string>
+    <string name="canon_ble_names_label">注册名称</string>
+    <string name="canon_ble_name_remote">遥控（BR-E1）名称</string>
+    <string name="canon_ble_name_smart">智能手机名称</string>
+    <string name="canon_ble_names_hint">显示在相机的设备列表中。将在下次连接时应用。</string>
+    <string name="canon_ble_names_distinct">两个名称必须不同。</string>
+    <string name="canon_ble_dial_bulb">将相机模式转盘设为 BULB</string>
+    <string name="canon_ble_dial_m">将相机模式转盘设为 M</string>
 </resources>

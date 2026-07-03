@@ -359,6 +359,16 @@ fun PulsarNavHost(
     LaunchedEffect(currentScreen, menuDest) {
         com.ehrocha.pulsar.canonble.CanonBleLog.i("Nav", "→ screen=$currentScreen menuTab=$menuDest")
     }
+    // Dial-change reminder (Canon BLE only, dial-dependent): tell the VM this
+    // mode's dial requirement so it can nudge when the user crosses Bulb↔M.
+    LaunchedEffect(currentScreen) {
+        vm.noteModeDial(when (currentScreen) {
+            is AppScreen.AstroMode2, is AppScreen.DarkFrame2, is AppScreen.Ramp2,
+            is AppScreen.StarTrails, is AppScreen.Intervalometer2, is AppScreen.Mode -> true
+            is AppScreen.Timelapse, AppScreen.CableRelease -> false
+            else -> null
+        })
+    }
 
     // Camera-transport link dropped mid-session (phone-driven run loop can't
     // continue, and a bulb may be left exposing) — warn the user prominently.
@@ -465,6 +475,16 @@ fun PulsarNavHost(
         vm.canonBleIntervalRaised.collect {
             snackbarHostLocal.showSnackbar(
                 context.getString(R.string.canon_ble_interval_raised),
+            )
+        }
+    }
+    // Dial-change reminder — the user crossed Bulb↔M modes on Canon BLE.
+    LaunchedEffect(Unit) {
+        vm.canonBleDialReminder.collect { bulbDial ->
+            snackbarHostLocal.showSnackbar(
+                context.getString(
+                    if (bulbDial) R.string.canon_ble_dial_bulb else R.string.canon_ble_dial_m
+                ),
             )
         }
     }

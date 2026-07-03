@@ -1021,4 +1021,14 @@ La altura proviene de la oscuridad del cielo × cielo despejado × sin luna bril
     <string name="photo_transfer_raw_hint_off">RAW guardado como JPEG en la galería</string>
     <string name="camera_drive_single_hint">Consejo: pon la cámara en modo de disparo único — el disparo continuo puede capturar fotogramas de más por toma.</string>
     <string name="canon_ble_interval_raised">Intervalo aumentado a 4 s — Canon BLE necesita al menos 4 s entre tomas</string>
+    <string name="section_camera_ble">Canon Bluetooth</string>
+    <string name="canon_ble_cooldown_label">Intervalo mínimo (enfriamiento)</string>
+    <string name="canon_ble_cooldown_warning">La cámara pierde o acorta fotos si se dispara más rápido que esto. 4 s es el valor probado seguro; redúcelo solo si tu cuerpo lo admite.</string>
+    <string name="canon_ble_names_label">Nombres de registro</string>
+    <string name="canon_ble_name_remote">Nombre Remoto (BR-E1)</string>
+    <string name="canon_ble_name_smart">Nombre Smartphone</string>
+    <string name="canon_ble_names_hint">Se muestra en la lista de dispositivos de la cámara. Se aplica en la próxima conexión.</string>
+    <string name="canon_ble_names_distinct">Los dos nombres deben ser diferentes.</string>
+    <string name="canon_ble_dial_bulb">Pon el dial de modo de la cámara en BULB</string>
+    <string name="canon_ble_dial_m">Pon el dial de modo de la cámara en M</string>
 </resources>
