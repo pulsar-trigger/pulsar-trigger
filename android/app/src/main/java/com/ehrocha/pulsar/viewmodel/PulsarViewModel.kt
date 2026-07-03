@@ -1064,6 +1064,13 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private fun canonBleSafeInterval(intervalMs: Long): Long {
         val t = activeCameraTransport() ?: return intervalMs
         if (t.kind != com.ehrocha.pulsar.transport.TransportKind.CANON_BLE) return intervalMs
+        // Smartphone-mode bodies (RP/R5/R6+) use a positional press/release
+        // shutter, not the BR-E1 toggle — the ~4 s post-frame cooldown that
+        // motivated this clamp was only ever proven on the EOS R (BR-E1). Under
+        // test whether smart mode shares it: for now let smart mode run at the
+        // user's interval; BR-E1 keeps the floor. Flip back if the card shows
+        // smart-mode frames dropping below 4 s.
+        if ((t as? com.ehrocha.pulsar.canonble.CanonBleTransport)?.isSmart == true) return intervalMs
         if (intervalMs >= CANON_BLE_MIN_INTERVAL_MS) return intervalMs
         Log.i(TAG, "Canon BLE: interval ${intervalMs}ms below safe minimum — raised to ${CANON_BLE_MIN_INTERVAL_MS}ms")
         _canonBleIntervalRaised.tryEmit(Unit)

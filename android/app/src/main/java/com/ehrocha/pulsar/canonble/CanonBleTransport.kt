@@ -283,7 +283,11 @@ class CanonBleTransport private constructor(
      *  with a running op is benign. Private helpers never lock → no nesting. */
     private val opLock = Mutex()
 
-    private val isSmart get() = client.protocol == CanonProtocol.SMART
+    /** True for smartphone-mode bodies (RP / R5 / R6 / newer, service 00030000):
+     *  positional press [00,01] / release [00,02] shutter, NOT the BR-E1 toggle.
+     *  Read by the viewmodel to decide whether the BR-E1-derived 4 s interval
+     *  clamp applies (under test whether smart mode shares the cooldown). */
+    val isSmart get() = client.protocol == CanonProtocol.SMART
 
     /** Press the shutter using whichever protocol is active. Bulb path: the
      *  smartphone toggle `[00,01]`; BR-E1 path: `0x8C` full press. */

@@ -474,7 +474,8 @@ async def _smart_teardown(subscribed, client):
             pass
 
 
-async def smart_sequence(client, shutter_probe=False):
+async def smart_sequence(client, shutter_probe=False,
+                         interval_shots=0, exposure_s=3.0, gap_s=2.0):
     # furble's secureConnection() — the handshake needs an encrypted/bonded link.
     try:
         ok = await client.pair()
@@ -543,6 +544,36 @@ async def smart_sequence(client, shutter_probe=False):
     await write(client, mode_uuid, [SMART_MODE_SHOOT], response=False, label="MODE_SHOOT")
     await asyncio.sleep(1.0)
     new = await snapshot(client, readable); diff_snapshots(snap, new, "after MODE_SHOOT"); snap = new
+
+    if interval_shots > 0:
+        # SMARTPHONE-MODE INTERVALOMETER — the direct analog of the BR-E1 bulb
+        # marathon that exposed the EOS R's ~4 s post-frame cooldown (acked-but-
+        # dropped presses → short/missing frames below 4 s of quiet). Fires
+        # `interval_shots` bulb frames at `exposure_s` hold / `gap_s` gap using
+        # the verified RP shutter primitive: press [00,01] → hold → release
+        # [00,02]. Precondition: RP dial on BULB (M → past 30" → BULB).
+        #
+        # CARD-COUNT afterwards: exactly `interval_shots` frames, each ~exposure_s.
+        # Short or missing frames at gap_s < 4 s ⇒ smartphone mode shares the
+        # cooldown pathology and the 4 s clamp is justified for it too. All
+        # full-length ⇒ the clamp can be made BR-E1-only so the RP runs faster.
+        log(f"{_ts()} ╔══ SMART INTERVALOMETER — {interval_shots} frames, "
+            f"{exposure_s:.1f}s hold / {gap_s:.1f}s gap ══╗")
+        for i in range(1, interval_shots + 1):
+            log(f"{_ts()} ── frame {i}/{interval_shots}: OPEN ──")
+            await write(client, shutter_uuid, [0x00, 0x01], response=False,
+                        label=f"  frame {i} press [00,01]")
+            await asyncio.sleep(exposure_s)
+            await write(client, shutter_uuid, [0x00, 0x02], response=False,
+                        label=f"  frame {i} release [00,02]")
+            log(f"{_ts()}   frame {i} closed after {exposure_s:.1f}s hold")
+            if i < interval_shots:
+                await asyncio.sleep(gap_s)
+        log(f"{_ts()} ╚══ intervalometer done — CARD-COUNT NOW "
+            f"({interval_shots} expected, each ~{exposure_s:.1f}s) ══╝")
+        await asyncio.sleep(2.0)
+        await _smart_teardown(subscribed, client)
+        return
 
     if shutter_probe:
         # Find the RP's REAL release command. furble's [00 02] presses/fires
@@ -751,10 +782,15 @@ async def run(args):
         log(f"resolving {args.mac} via scan ({args.scan_timeout:.0f}s)…")
         target = await BleakScanner.find_device_by_address(args.mac, timeout=args.scan_timeout)
         if target is None:
-            log(f"{args.mac} not advertising — set the camera to Bluetooth → Remote → "
-                f"Pair, turn the phone's BT off (one central at a time), then retry.")
-            return 2
-        log(f"→ using {target.address} [{target.name or '(no name)'}]")
+            # Not advertising — but a body already BONDED + CONNECTED to BlueZ
+            # (e.g. after a bluetoothctl pair) won't advertise (one central at a
+            # time). BlueZ can still connect to a known/bonded address directly,
+            # so fall back to the raw MAC instead of giving up.
+            log(f"{args.mac} not advertising — assuming it's already bonded/connected; "
+                f"connecting by address directly.")
+            target = args.mac
+        else:
+            log(f"→ using {target.address} [{target.name or '(no name)'}]")
     else:
         # --smart needs a smartphone-mode body; BR-E1 modes need a remote-mode
         # body; --dump-only takes whatever single Canon camera is advertising.
@@ -793,7 +829,10 @@ async def do_session(client, args):
     if args.smart:
         # Smartphone-mode (service 00010000) registration + fire, per
         # furble CanonEOSSmart — the likely EOS R-series path.
-        await smart_sequence(client, shutter_probe=args.shutter_probe)
+        await smart_sequence(client, shutter_probe=args.shutter_probe,
+                             interval_shots=args.smart_interval,
+                             exposure_s=args.smart_exposure,
+                             gap_s=args.smart_gap)
         log("done. Did the camera fire? (check the body / card)")
         return 0
 
@@ -887,6 +926,16 @@ def main():
                         "press/release byte variants with pauses, logging the "
                         "camera's notify channels — to find the RP's real RELEASE "
                         "command ([00 02] presses but doesn't release on the RP)")
+    p.add_argument("--smart-interval", type=int, default=0, metavar="N",
+                   help="with --smart: after registration, fire N bulb frames "
+                        "(press/hold/release) to card-count sub-4s cadence on the "
+                        "RP — the smartphone-mode analog of the BR-E1 marathon. "
+                        "RP dial on BULB. Use with --smart-exposure / --smart-gap")
+    p.add_argument("--smart-exposure", type=float, default=3.0, metavar="S",
+                   help="with --smart-interval: bulb hold per frame in seconds (default 3)")
+    p.add_argument("--smart-gap", type=float, default=2.0, metavar="S",
+                   help="with --smart-interval: quiet gap between frames in seconds "
+                        "(default 2 — deliberately below the BR-E1 4s floor)")
     p.add_argument("--delay-mode", action="store_true",
                    help="use the 2-second-timer mode bit instead of immediate")
     p.add_argument("--bulb", action="store_true",
