@@ -22,6 +22,10 @@ object CanonBleRules {
     const val COOLDOWN_MIN_MS = 1_000L
     const val COOLDOWN_MAX_MS = 10_000L
 
+    /** Hardware-proven default floor: below ~4 s of quiet the EOS RP / R6 / R
+     *  eat presses / skip frames on both protocols (swept 2026-07-01/03). */
+    const val COOLDOWN_DEFAULT_MS = 4_000L
+
     /** Registration names go into the BR-E1 pair-write / smart identity write,
      *  which are byte-limited; also keep them printable in the camera's list. */
     const val NAME_MAX_LEN = 20

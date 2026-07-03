@@ -77,13 +77,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         private const val KEY_SAVED_FLOWS = "saved_flows"
         private const val KEY_AUTO_OFF = "auto_off_minutes"
         private const val NOTIFICATION_THROTTLE_MS = 5_000L
-        /** Canon BLE: minimum interval between exposures. The EOS R needs ~4 s of
-         *  quiet after a frame or it starts ACKING presses without executing them
-         *  (dropped opens → short/inverted exposures). Hardware-swept 2026-07-01:
-         *  3 s intervals intermittently break, 4 s is reliably clean ("the sweet
-         *  spot" per Eduardo's full-mode test pass). Sub-4 s user intervals are
-         *  raised to this at run start, with a snackbar. */
-        private const val CANON_BLE_MIN_INTERVAL_MS = 4_000L
+        // Canon BLE post-frame cool-down (default/min/max) now lives in
+        // CanonBleRules; the tunable state is in CanonBleSettings.
         /** Poll failures before we abandon the long-poll and switch into
          *  reconnect mode. 5× short long-polls (~10 s each at worst) gives
          *  a fast WiFi handoff or short auto-off blip a chance to recover. */
@@ -1043,12 +1038,29 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val _runCompleted = kotlinx.coroutines.flow.MutableSharedFlow<Int>(extraBufferCapacity = 1)
     val runCompleted: kotlinx.coroutines.flow.SharedFlow<Int> = _runCompleted
 
-    /** One-shot event: a Canon BLE run asked for an interval below the safe
-     *  minimum and it was raised to [CANON_BLE_MIN_INTERVAL_MS]. MainActivity
-     *  surfaces the explanatory snackbar (the user should know their saved
-     *  preset isn't running verbatim). */
-    private val _canonBleIntervalRaised = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    val canonBleIntervalRaised: kotlinx.coroutines.flow.SharedFlow<Unit> = _canonBleIntervalRaised
+    /** Canon BLE user-tunables (cool-down + registration names), the dial-change
+     *  reminder, and the interval-floor clamp — extracted to [CanonBleSettings]
+     *  (audit H1). The VM owns the transport/run loop and delegates the settings
+     *  surface here; the cool-down setter pushes straight to the live transport's
+     *  step-boundary floor. */
+    private val canonBleSettings = com.ehrocha.pulsar.canonble.CanonBleSettings(prefs) { ms ->
+        _canonBleTransport.value?.postFrameCooldownMs = ms
+    }
+    val canonBleIntervalRaised: kotlinx.coroutines.flow.SharedFlow<Unit>
+        get() = canonBleSettings.intervalRaised
+    val canonBleCooldownMs: StateFlow<Long> get() = canonBleSettings.cooldownMs
+    fun setCanonBleCooldownMs(v: Long) = canonBleSettings.setCooldownMs(v)
+    val canonBleNameRemote: StateFlow<String> get() = canonBleSettings.nameRemote
+    fun setCanonBleNameRemote(v: String) = canonBleSettings.setNameRemote(v)
+    val canonBleNameSmart: StateFlow<String> get() = canonBleSettings.nameSmart
+    fun setCanonBleNameSmart(v: String) = canonBleSettings.setNameSmart(v)
+    val canonBleDialReminder: kotlinx.coroutines.flow.SharedFlow<Boolean>
+        get() = canonBleSettings.dialReminder
+
+    /** Called on mode-screen entry with the mode's dial requirement (true = Bulb,
+     *  false = M, null = ignored). Gated on Canon BLE being the active transport. */
+    fun noteModeDial(bulbDial: Boolean?) =
+        canonBleSettings.noteModeDial(bulbDial, _canonBleTransport.value != null)
 
     /** True while a Canon BLE run is waking the body + settling before the first
      *  frame. The run screen shows a "Preparing…" state so that ~2 s gap doesn't
@@ -1056,92 +1068,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private val _canonBlePreparing = MutableStateFlow(false)
     val canonBlePreparing: StateFlow<Boolean> = _canonBlePreparing
 
-    /** Clamp a run's interval/gap for Canon BLE: below ~4 s of quiet between
-     *  exposures the EOS R starts ACKING shutter presses without executing them
-     *  (dropped opens → short/inverted frames; hardware-swept 2026-07-01). Other
-     *  transports pass through untouched. Fires [canonBleIntervalRaised] once so
-     *  the user learns their preset was adjusted. */
-    /** User-configurable Canon BLE post-frame cool-down (ms). Below this gap the
-     *  camera eats presses / skips frames (BOTH BR-E1 and smart), so it drives
-     *  BOTH the interval clamp ([canonBleSafeInterval]) and the transport's
-     *  step-boundary floor (`postFrameCooldownMs`). Default 4 s = the
-     *  hardware-proven floor; advanced users can tune. Clamped 1–10 s. */
-    private val _canonBleCooldownMs = MutableStateFlow(
-        prefs.getLong("canon_ble_cooldown_ms", CANON_BLE_MIN_INTERVAL_MS)
-    )
-    val canonBleCooldownMs: StateFlow<Long> = _canonBleCooldownMs
-    fun setCanonBleCooldownMs(v: Long) {
-        val clamped = com.ehrocha.pulsar.canonble.CanonBleRules.clampCooldown(v)
-        prefs.edit().putLong("canon_ble_cooldown_ms", clamped).apply()
-        _canonBleCooldownMs.value = clamped
-        // Push to a live transport so the step-boundary floor uses it at once.
-        (_canonBleTransport.value)?.postFrameCooldownMs = clamped
-    }
-
-    /** User-editable Canon BLE registration names (default Pulsar-R / Pulsar-S) so
-     *  the two protocols show distinctly in the camera's device list. Sanitized to
-     *  printable ASCII + length-capped (they go into the BR-E1 pair-write / smart
-     *  identity write). Applied on the NEXT connect. */
-    private fun sanitizeBleName(s: String, fallback: String): String =
-        com.ehrocha.pulsar.canonble.CanonBleRules.sanitizeName(s, fallback)
-    private val _canonBleNameRemote = MutableStateFlow(
-        prefs.getString("canon_ble_name_remote", null)
-            ?: com.ehrocha.pulsar.canonble.CanonBleTransport.PAIR_NAME_BRE1
-    )
-    val canonBleNameRemote: StateFlow<String> = _canonBleNameRemote
-    fun setCanonBleNameRemote(v: String) {
-        val name = sanitizeBleName(v, com.ehrocha.pulsar.canonble.CanonBleTransport.PAIR_NAME_BRE1)
-        // Must stay distinct from the smart name — otherwise the two protocols
-        // are indistinguishable in the camera's device list (the whole point).
-        if (!com.ehrocha.pulsar.canonble.CanonBleRules.namesDistinct(name, _canonBleNameSmart.value)) return
-        prefs.edit().putString("canon_ble_name_remote", name).apply()
-        _canonBleNameRemote.value = name
-    }
-    private val _canonBleNameSmart = MutableStateFlow(
-        prefs.getString("canon_ble_name_smart", null)
-            ?: com.ehrocha.pulsar.canonble.CanonBleTransport.PAIR_NAME_SMART
-    )
-    val canonBleNameSmart: StateFlow<String> = _canonBleNameSmart
-    fun setCanonBleNameSmart(v: String) {
-        val name = sanitizeBleName(v, com.ehrocha.pulsar.canonble.CanonBleTransport.PAIR_NAME_SMART)
-        if (!com.ehrocha.pulsar.canonble.CanonBleRules.namesDistinct(name, _canonBleNameRemote.value)) return
-        prefs.edit().putString("canon_ble_name_smart", name).apply()
-        _canonBleNameSmart.value = name
-    }
-
-    /** One-shot: the user switched between a Bulb-dial mode and an M-dial mode
-     *  while on the dial-dependent Canon BLE transport — remind them to move the
-     *  camera's mode dial. Payload: true = set to BULB, false = set to M. */
-    private val _canonBleDialReminder =
-        kotlinx.coroutines.flow.MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
-    val canonBleDialReminder: kotlinx.coroutines.flow.SharedFlow<Boolean> = _canonBleDialReminder
-    @Volatile private var lastModeBulbDial: Boolean? = null
-    /** Called on mode-screen entry with the mode's dial requirement (true = Bulb,
-     *  false = M, null = no dial preference → ignored). Reminds only on an actual
-     *  change and only while Canon BLE is active (the only dial-dependent path). */
-    fun noteModeDial(bulbDial: Boolean?) {
-        if (bulbDial == null) return
-        val prev = lastModeBulbDial
-        lastModeBulbDial = bulbDial
-        if (com.ehrocha.pulsar.canonble.CanonBleRules.shouldRemindDial(
-                prev, bulbDial, _canonBleTransport.value != null)) {
-            _canonBleDialReminder.tryEmit(bulbDial)
-        }
-    }
-
-    private fun canonBleSafeInterval(intervalMs: Long): Long {
-        val t = activeCameraTransport() ?: return intervalMs
-        if (t.kind != com.ehrocha.pulsar.transport.TransportKind.CANON_BLE) return intervalMs
-        // Applies to BOTH BR-E1 and smartphone mode: Eduardo confirmed the RP
-        // ALSO eats presses / skips frames below the cool-down (2026-07-03).
-        val floor = _canonBleCooldownMs.value
-        val safe = com.ehrocha.pulsar.canonble.CanonBleRules.safeInterval(intervalMs, floor)
-        if (safe != intervalMs) {
-            Log.i(TAG, "Canon BLE: interval ${intervalMs}ms below cool-down — raised to ${floor}ms")
-            _canonBleIntervalRaised.tryEmit(Unit)
-        }
-        return safe
-    }
+    /** Clamp a run's interval/gap for Canon BLE (below the cool-down the body
+     *  eats/short-frames presses on both protocols). Gate + delegate to
+     *  [CanonBleSettings]; other transports pass through untouched. */
+    private fun canonBleSafeInterval(intervalMs: Long): Long =
+        canonBleSettings.safeInterval(
+            intervalMs,
+            activeCameraTransport()?.kind == com.ehrocha.pulsar.transport.TransportKind.CANON_BLE,
+        )
     private val _flowPaused = MutableStateFlow(false)
     val flowPaused: StateFlow<Boolean> = _flowPaused
     // Camera-settings detail for a paused "Adjust camera settings" step:
@@ -1925,8 +1859,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                     onAwaitConfirm = { _canonBleAwaitingConfirm.value = true },
                     autoConnect = autoReconnect,
                     connectTimeoutMs = if (autoReconnect) 120_000L else 30_000L,
-                    bre1Name = _canonBleNameRemote.value,
-                    smartName = _canonBleNameSmart.value,
+                    bre1Name = canonBleSettings.nameRemote.value,
+                    smartName = canonBleSettings.nameSmart.value,
                 )
                 _canonBleAwaitingConfirm.value = false
                 val transport = when (result) {
@@ -1946,7 +1880,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         return@launch
                     }
                 }
-                transport.postFrameCooldownMs = _canonBleCooldownMs.value
+                transport.postFrameCooldownMs = canonBleSettings.cooldownMs.value
                 _canonBleTransport.value = transport
                 lastCanonBleAddress = device.address
                 _canonBleReconnecting.value = false
