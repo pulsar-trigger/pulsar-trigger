@@ -400,7 +400,11 @@
     <string name="run_phase_next_shot">Próxima toma</string>
     <string name="run_phase_starting">Iniciando</string>
     <string name="state_waiting">Esperando</string>
-    <string name="status_of_shots">de %1$d fotos</string>
+    <plurals name="status_of_shots">
+        <item quantity="one">de %1$d foto</item>
+        <item quantity="other">de %1$d fotos</item>
+        <item quantity="many">de %1$d fotos</item>
+    </plurals>
     <string name="status_remaining">restante</string>
     <string name="dialog_updates_available">Actualizaciones Disponibles</string>
     <string name="update_firmware_available">Firmware v%1$s está disponible</string>
@@ -430,7 +434,11 @@ Las cuatro esquinas son lecturas en vivo — Luna, Objetivos, Cielo y Luz — co
     <string name="dash_targets">Objetivos</string>
     <string name="dash_timeline">Esta noche</string>
     <string name="tonight_signal_best">Mejor ~%1$s · %2$d%% nubes</string>
-    <string name="run_complete_snack">Sesión completa · %1$d tomas</string>
+    <plurals name="run_complete_snack">
+        <item quantity="one">Sesión completa · %1$d toma</item>
+        <item quantity="other">Sesión completa · %1$d tomas</item>
+        <item quantity="many">Sesión completa · %1$d tomas</item>
+    </plurals>
     <string name="tonight_signal_help_title">Cómo leer la señal</string>
     <string name="tonight_signal_help_body">Cada línea es media hora de esta noche, de arriba (pronto) a abajo (tarde). A lo largo de una línea, de izquierda a derecha están los 30 minutos de esa media hora, y la altura indica qué tan bueno está el cielo en ese momento. Más alto es mejor.
 
@@ -494,8 +502,11 @@ La altura proviene de la oscuridad del cielo × cielo despejado × sin luna bril
     <string name="dialog_delete_flow">Eliminar Flujo</string>
     <string name="dialog_delete_flow_msg">¿Eliminar \"%1$s\"? Esta acción no se puede deshacer.</string>
     <string name="flow_new">Nuevo Flujo</string>
-    <string name="flow_step_count">%1$d paso</string>
-    <string name="flow_step_count_plural">%1$d pasos</string>
+    <plurals name="flow_step_count">
+        <item quantity="one">%1$d paso</item>
+        <item quantity="other">%1$d pasos</item>
+        <item quantity="many">%1$d pasos</item>
+    </plurals>
     <string name="flow_no_steps">Sin pasos aún</string>
     <string name="flow_add_steps_instruction">Añade pasos para construir tu flujo de disparo.\nCombina modos, pausas y presets.</string>
     <string name="btn_add_step">Añadir Paso</string>
@@ -567,7 +578,11 @@ La altura proviene de la oscuridad del cielo × cielo despejado × sin luna bril
     <string name="event_import">Importar</string>
     <string name="event_import_title">Importar evento</string>
     <string name="event_import_hint">Pega el JSON del evento compartido</string>
-    <string name="event_session_count">%1$d sesiones</string>
+    <plurals name="event_session_count">
+        <item quantity="one">%1$d sesión</item>
+        <item quantity="other">%1$d sesiones</item>
+        <item quantity="many">%1$d sesiones</item>
+    </plurals>
     <string name="event_name">Nombre del evento</string>
     <string name="session_add">Añadir sesión</string>
     <string name="session_add_title">Nueva sesión</string>
@@ -898,11 +913,23 @@ La altura proviene de la oscuridad del cielo × cielo despejado × sin luna bril
     <string name="mode_meteor_calendar">Lluvias de Meteoros</string>
     <string name="meteor_title">Lluvias de Meteoros</string>
     <string name="meteor_help">Principales lluvias de meteoros clasificadas para tu ubicación: cuánto sube el radiante, cuándo es el máximo y cuánto interfiere la Luna. Mejor después de medianoche con cielos oscuros.</string>
-    <string name="meteor_count">%1$d lluvias en el próximo año</string>
+    <plurals name="meteor_count">
+        <item quantity="one">%1$d lluvia en el próximo año</item>
+        <item quantity="other">%1$d lluvias en el próximo año</item>
+        <item quantity="many">%1$d lluvias en el próximo año</item>
+    </plurals>
     <string name="meteor_active">activa ahora</string>
     <string name="meteor_peak_tonight">Máximo esta noche</string>
-    <string name="meteor_peak_in">Máximo en %1$d días</string>
-    <string name="meteor_peaked_ago">Máximo hace %1$d días</string>
+    <plurals name="meteor_peak_in">
+        <item quantity="one">Máximo en %1$d día</item>
+        <item quantity="other">Máximo en %1$d días</item>
+        <item quantity="many">Máximo en %1$d días</item>
+    </plurals>
+    <plurals name="meteor_peaked_ago">
+        <item quantity="one">Máximo hace %1$d día</item>
+        <item quantity="other">Máximo hace %1$d días</item>
+        <item quantity="many">Máximo hace %1$d días</item>
+    </plurals>
     <string name="meteor_radiant_label">radiante</string>
     <string name="meteor_rate_line">Máx ~%1$d/h · Luna %2$s %3$d%%</string>
     <string name="meteor_parent">Origen: %1$s</string>
@@ -922,7 +949,11 @@ La altura proviene de la oscuridad del cielo × cielo despejado × sin luna bril
     <string name="panel_intervalometer_help">Automatiza timelapses o ráfagas complejas con timing preciso.\n\n• Pon la cámara en Bulb para que Pulsar controle el obturador.\n• Intervalo es el gap entre exposiciones — el tiempo tras un disparo antes del siguiente.\n• Exposición es cuánto se mantiene abierto el obturador por disparo.\n• Tiempo de ciclo por frame = exposición + intervalo.\n• Retraso inicial te da tiempo para alejarte antes de empezar.\n• La tarjeta Estimación de Secuencia muestra duración y hora de fin.</string>
     <string name="panel_manual_help">Control manual directo del obturador con dos modos.\n\n• MANTENER: El obturador queda abierto mientras pulses el botón. Suelta para cerrar. Ideal para bulb rápidos.\n• BLOQUEO: Pulsa una vez para abrir, pulsa de nuevo para cerrar. Mejor para largas exposiciones.\n\nCambia entre Mantener y Bloqueo con los botones segmentados.</string>
     <string name="planner_bulk_delete">Borrar seleccionadas</string>
-    <string name="planner_bulk_delete_confirm">¿Borrar %1$d sesiones seleccionadas?</string>
+    <plurals name="planner_bulk_delete_confirm">
+        <item quantity="one">¿Borrar %1$d sesión seleccionada?</item>
+        <item quantity="other">¿Borrar %1$d sesiones seleccionadas?</item>
+        <item quantity="many">¿Borrar %1$d sesiones seleccionadas?</item>
+    </plurals>
     <string name="planner_cache_help">Controla la frecuencia con que se actualizan datos del clima y del cielo.\n\n• Los datos del dashboard (clima, fase lunar, nubes) se cachean localmente.\n• Un intervalo menor da datos más frescos pero usa más llamadas a la API.\n• 24 h es un buen equilibrio para sesiones planificadas con un día de antelación.</string>
     <string name="planner_cloud_threshold">Límite de cobertura nubosa</string>
     <string name="planner_cloud_threshold_help">Cobertura máxima de nubes (%) considerada \"despejada\" al evaluar condiciones. Menor = más estricto.</string>
@@ -961,7 +992,11 @@ La altura proviene de la oscuridad del cielo × cielo despejado × sin luna bril
     <string name="whats_up_help">Muestra objetos de cielo profundo (nebulosas, galaxias, cúmulos) actualmente sobre el horizonte en tu ubicación.\n\n• Objetos ordenados por altitud — más alto = mejor posicionado\n• Icono verde: bien posicionado (sobre 30°), ideal para imaging\n• Icono gris: bajo en el cielo (10–30°), posible pero menos ideal\n• Mejores resultados durante la oscuridad astronómica\n\nEl catálogo incluye ~27 objetivos populares de astrofotografía.</string>
     <string name="whats_up_none_visible">Ningún objetivo del catálogo está visible sobre 10° en tu ubicación.</string>
     <string name="whats_up_title">Qué Hay Esta Noche</string>
-    <string name="whats_up_visible_count">%1$d objetivos sobre el horizonte</string>
+    <plurals name="whats_up_visible_count">
+        <item quantity="one">%1$d objetivo sobre el horizonte</item>
+        <item quantity="other">%1$d objetivos sobre el horizonte</item>
+        <item quantity="many">%1$d objetivos sobre el horizonte</item>
+    </plurals>
     <!-- Manage Devices + Developer options + GATT Explorer (audit M2) -->
     <string name="section_devices">Dispositivos</string>
     <string name="devices_help">Dispositivos cuyo estado ha guardado Pulsar: vínculos BLE, credenciales de Canon Wi-Fi y la pista de última conexión. Olvida una fila para borrar su estado con un toque (también elimina el vínculo Bluetooth del sistema).</string>

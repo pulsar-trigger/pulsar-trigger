@@ -400,7 +400,9 @@
     <string name="run_phase_next_shot">次の撮影</string>
     <string name="run_phase_starting">開始</string>
     <string name="state_waiting">待機中</string>
-    <string name="status_of_shots">/ %1$d ショット</string>
+    <plurals name="status_of_shots">
+        <item quantity="other">/ %1$d ショット</item>
+    </plurals>
     <string name="status_remaining">残り</string>
     <string name="dialog_updates_available">アップデートがあります</string>
     <string name="update_firmware_available">ファームウェア v%1$s が利用可能です</string>
@@ -430,7 +432,9 @@
     <string name="dash_targets">対象</string>
     <string name="dash_timeline">今夜</string>
     <string name="tonight_signal_best">ベスト ~%1$s · 雲量 %2$d%%</string>
-    <string name="run_complete_snack">撮影完了 · %1$d 枚</string>
+    <plurals name="run_complete_snack">
+        <item quantity="other">撮影完了 · %1$d 枚</item>
+    </plurals>
     <string name="tonight_signal_help_title">シグナルの読み方</string>
     <string name="tonight_signal_help_body">各ラインは今夜の30分で、上（早い）から下（遅い）へ並びます。ライン上の左から右はその30分間で、高さはその瞬間の空の良さを表します。高いほど良好です。
 
@@ -496,8 +500,9 @@
     <string name="dialog_delete_flow">フローを削除</string>
     <string name="dialog_delete_flow_msg">\"%1$s\" を削除しますか？この操作は元に戻せません。</string>
     <string name="flow_new">新しいフロー</string>
-    <string name="flow_step_count">%1$d ステップ</string>
-    <string name="flow_step_count_plural">%1$d ステップ</string>
+    <plurals name="flow_step_count">
+        <item quantity="other">%1$d ステップ</item>
+    </plurals>
     <string name="flow_no_steps">ステップなし</string>
     <string name="flow_add_steps_instruction">カスタム撮影フローにステップを追加します。\nモード、一時停止、プリセットを組み合わせます。</string>
     <string name="btn_add_step">ステップを追加</string>
@@ -569,7 +574,9 @@
     <string name="event_import">インポート</string>
     <string name="event_import_title">イベントをインポート</string>
     <string name="event_import_hint">共有されたイベントJSONを貼り付け</string>
-    <string name="event_session_count">%1$dセッション</string>
+    <plurals name="event_session_count">
+        <item quantity="other">%1$dセッション</item>
+    </plurals>
     <string name="event_name">イベント名</string>
     <string name="session_add">セッション追加</string>
     <string name="session_add_title">新しいセッション</string>
@@ -900,11 +907,17 @@
     <string name="mode_meteor_calendar">流星群</string>
     <string name="meteor_title">流星群</string>
     <string name="meteor_help">現在地向けに主要な流星群を評価します — 放射点の高さ、極大の時期、月明かりの影響。暗い空で深夜以降が最適です。</string>
-    <string name="meteor_count">今後1年間で%1$d件の流星群</string>
+    <plurals name="meteor_count">
+        <item quantity="other">今後1年間で%1$d件の流星群</item>
+    </plurals>
     <string name="meteor_active">活動中</string>
     <string name="meteor_peak_tonight">今夜が極大</string>
-    <string name="meteor_peak_in">極大まで%1$d日</string>
-    <string name="meteor_peaked_ago">%1$d日前に極大</string>
+    <plurals name="meteor_peak_in">
+        <item quantity="other">極大まで%1$d日</item>
+    </plurals>
+    <plurals name="meteor_peaked_ago">
+        <item quantity="other">%1$d日前に極大</item>
+    </plurals>
     <string name="meteor_radiant_label">放射点</string>
     <string name="meteor_rate_line">極大 ~%1$d/時 · 月 %2$s %3$d%%</string>
     <string name="meteor_parent">母天体: %1$s</string>
@@ -924,7 +937,9 @@
     <string name="panel_intervalometer_help">複雑なタイムラプスや連写を高精度のタイミングで自動化します。\n\n• Pulsar がシャッターを制御できるよう、カメラを Bulb モードに。\n• 間隔は撮影間の待機時間 — 1 枚撮影後、次の撮影までの時間。\n• 露光は 1 枚あたりのシャッター開放時間。\n• 1 フレームのサイクル = 露光 + 間隔。\n• 開始遅延でシーケンス開始前にその場を離れる時間を確保。\n• シーケンス見積もりカードに合計時間と終了予定時刻が表示されます。</string>
     <string name="panel_manual_help">2 モードのシャッター手動制御。\n\n• 押し続け: ボタンを押している間シャッターが開きます。離すと閉じます。短い Bulb 撮影向け。\n• ロック: 1 回タップで開き、もう 1 回で閉じます。ボタンを押し続けたくない長時間露光向け。\n\n切り替えはアクション領域のセグメントボタンから。</string>
     <string name="planner_bulk_delete">選択を削除</string>
-    <string name="planner_bulk_delete_confirm">選択した %1$d 件のセッションを削除しますか?</string>
+    <plurals name="planner_bulk_delete_confirm">
+        <item quantity="other">選択した %1$d 件のセッションを削除しますか?</item>
+    </plurals>
     <string name="planner_cache_help">天気・空模様データの更新頻度を制御します。\n\n• ダッシュボードのデータ (天気・月相・雲量) はローカルにキャッシュされます。\n• 間隔を短くすると最新ですが API 呼び出しが増えます。\n• 24 時間は前日に計画するセッションのバランスが取れた設定です。</string>
     <string name="planner_cloud_threshold">雲量しきい値</string>
     <string name="planner_cloud_threshold_help">「晴れ」と判定する最大雲量 (%)。低いほど厳しい判定。</string>
@@ -963,7 +978,9 @@
     <string name="whats_up_help">現在地で地平線より上にあるディープスカイ天体 (星雲・銀河・星団) を表示します。\n\n• 高度で並べ替え — 高いほど良いポジション\n• 緑アイコン: 30° 以上、撮影に最適\n• 灰色アイコン: 10–30°、撮影可能だがやや低め\n• 天文薄明帯の時間が最適\n\nカタログには天体撮影で人気の ~27 ターゲットを収録。</string>
     <string name="whats_up_none_visible">現在地で地平線から 10° 以上にあるカタログターゲットはありません。</string>
     <string name="whats_up_title">今夜のおすすめ</string>
-    <string name="whats_up_visible_count">%1$d 個のターゲットが地平線上</string>
+    <plurals name="whats_up_visible_count">
+        <item quantity="other">%1$d 個のターゲットが地平線上</item>
+    </plurals>
     <!-- Manage Devices + Developer options + GATT Explorer (audit M2) -->
     <string name="section_devices">デバイス</string>
     <string name="devices_help">Pulsar が状態を保存しているデバイス — BLE ボンド、Canon Wi-Fi 認証情報、最終接続のヒント。行を削除すると、その状態をワンタップで消去します（OS レベルの Bluetooth ボンドも削除されます）。</string>

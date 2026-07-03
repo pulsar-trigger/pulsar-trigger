@@ -400,7 +400,10 @@
     <string name="run_phase_next_shot">Nächste Aufnahme</string>
     <string name="run_phase_starting">Start</string>
     <string name="state_waiting">Warten</string>
-    <string name="status_of_shots">von %1$d Aufnahmen</string>
+    <plurals name="status_of_shots">
+        <item quantity="one">von %1$d Aufnahme</item>
+        <item quantity="other">von %1$d Aufnahmen</item>
+    </plurals>
     <string name="status_remaining">verbleibend</string>
     <string name="dialog_updates_available">Updates verfügbar</string>
     <string name="update_firmware_available">Firmware v%1$s ist verfügbar</string>
@@ -430,7 +433,10 @@ Die vier Ecken sind Live-Anzeigen — Mond, Ziele, Himmel und Licht — grün / 
     <string name="dash_targets">Ziele</string>
     <string name="dash_timeline">Heute Nacht</string>
     <string name="tonight_signal_best">Beste ~%1$s · %2$d%% Wolken</string>
-    <string name="run_complete_snack">Aufnahme abgeschlossen · %1$d Bilder</string>
+    <plurals name="run_complete_snack">
+        <item quantity="one">Aufnahme abgeschlossen · %1$d Bild</item>
+        <item quantity="other">Aufnahme abgeschlossen · %1$d Bilder</item>
+    </plurals>
     <string name="tonight_signal_help_title">So liest du das Signal</string>
     <string name="tonight_signal_help_body">Jede Linie ist eine halbe Stunde der Nacht, oben (bald) bis unten (spät). Entlang einer Linie sind von links nach rechts die 30 Minuten dieser halben Stunde — die Höhe zeigt, wie gut der Himmel in diesem Moment ist. Höher ist besser.
 
@@ -496,8 +502,10 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="dialog_delete_flow">Ablauf löschen</string>
     <string name="dialog_delete_flow_msg">\"%1$s\" löschen? Dies kann nicht rückgängig gemacht werden.</string>
     <string name="flow_new">Neuer Ablauf</string>
-    <string name="flow_step_count">%1$d Schritt</string>
-    <string name="flow_step_count_plural">%1$d Schritte</string>
+    <plurals name="flow_step_count">
+        <item quantity="one">%1$d Schritt</item>
+        <item quantity="other">%1$d Schritte</item>
+    </plurals>
     <string name="flow_no_steps">Noch keine Schritte</string>
     <string name="flow_add_steps_instruction">Füge Schritte hinzu, um deinen benutzerdefinierten\nAufnahmeablauf zu erstellen. Kombiniere Modi, Pausen und Vorlagen.</string>
     <string name="btn_add_step">Schritt hinzufügen</string>
@@ -569,7 +577,10 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="event_import">Importieren</string>
     <string name="event_import_title">Ereignis importieren</string>
     <string name="event_import_hint">Geteiltes Ereignis-JSON einfügen</string>
-    <string name="event_session_count">%1$d Sitzungen</string>
+    <plurals name="event_session_count">
+        <item quantity="one">%1$d Sitzung</item>
+        <item quantity="other">%1$d Sitzungen</item>
+    </plurals>
     <string name="event_name">Veranstaltungsname</string>
     <string name="session_add">Sitzung hinzufügen</string>
     <string name="session_add_title">Neue Sitzung</string>
@@ -900,11 +911,20 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="mode_meteor_calendar">Meteorschauer</string>
     <string name="meteor_title">Meteorschauer</string>
     <string name="meteor_help">Wichtige Meteorschauer für deinen Standort bewertet — wie hoch der Radiant steigt, wann das Maximum ist und wie stark der Mond stört. Am besten nach Mitternacht bei dunklem Himmel.</string>
-    <string name="meteor_count">%1$d Schauer im kommenden Jahr</string>
+    <plurals name="meteor_count">
+        <item quantity="one">%1$d Schauer im kommenden Jahr</item>
+        <item quantity="other">%1$d Schauer im kommenden Jahr</item>
+    </plurals>
     <string name="meteor_active">aktiv</string>
     <string name="meteor_peak_tonight">Maximum heute Nacht</string>
-    <string name="meteor_peak_in">Maximum in %1$d Tagen</string>
-    <string name="meteor_peaked_ago">Maximum vor %1$d Tagen</string>
+    <plurals name="meteor_peak_in">
+        <item quantity="one">Maximum in %1$d Tag</item>
+        <item quantity="other">Maximum in %1$d Tagen</item>
+    </plurals>
+    <plurals name="meteor_peaked_ago">
+        <item quantity="one">Maximum vor %1$d Tag</item>
+        <item quantity="other">Maximum vor %1$d Tagen</item>
+    </plurals>
     <string name="meteor_radiant_label">Radiant</string>
     <string name="meteor_rate_line">Max ~%1$d/h · Mond %2$s %3$d%%</string>
     <string name="meteor_parent">Ursprung: %1$s</string>
@@ -924,7 +944,10 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="panel_intervalometer_help">Automatisiere komplexe Timelapses oder Serien mit präzisem Timing.\n\n• Kamera auf Bulb stellen, damit Pulsar den Verschluss steuert.\n• Intervall = Pause zwischen Belichtungen — Zeit nach einer Aufnahme bis zur nächsten.\n• Belichtung = wie lange der Verschluss pro Aufnahme offen ist.\n• Zyklus pro Frame = Belichtung + Intervall.\n• Startverzögerung gibt dir Zeit, dich vor dem Sequenzstart zurückzuziehen.\n• Die Karte Sequenz-Schätzung zeigt Gesamtdauer und Endzeit.</string>
     <string name="panel_manual_help">Direkte manuelle Verschlusssteuerung mit zwei Modi.\n\n• HALTEN: Der Verschluss bleibt offen, solange du den Knopf drückst. Loslassen schließt ihn. Ideal für schnelle Bulb-Aufnahmen.\n• SPERREN: Einmal tippen öffnet, erneut tippen schließt. Besser für lange Belichtungen ohne Knopfhalten.\n\nWechsel zwischen Halten und Sperren über die segmentierten Buttons.</string>
     <string name="planner_bulk_delete">Auswahl löschen</string>
-    <string name="planner_bulk_delete_confirm">%1$d ausgewählte Sessions löschen?</string>
+    <plurals name="planner_bulk_delete_confirm">
+        <item quantity="one">%1$d ausgewählte Session löschen?</item>
+        <item quantity="other">%1$d ausgewählte Sessions löschen?</item>
+    </plurals>
     <string name="planner_cache_help">Steuert, wie oft Wetter- und Himmelsdaten aktualisiert werden.\n\n• Dashboard-Daten (Wetter, Mond, Wolken) werden lokal gecacht.\n• Kürzeres Intervall = frischere Daten, mehr API-Aufrufe.\n• 24 h ist ein guter Mittelweg für Sessions, die einen Tag im Voraus geplant sind.</string>
     <string name="planner_cloud_threshold">Wolken-Schwellwert</string>
     <string name="planner_cloud_threshold_help">Maximale Wolkenbedeckung (%), die als \"klar\" gilt. Niedriger = strenger.</string>
@@ -963,7 +986,10 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="whats_up_help">Zeigt Deep-Sky-Objekte (Nebel, Galaxien, Sternhaufen), die aktuell über dem Horizont an deinem Standort sind.\n\n• Objekte sortiert nach Höhe — höher = besser positioniert\n• Grünes Icon: gut platziert (über 30°), ideal zum Imaging\n• Graues Icon: niedrig am Himmel (10–30°), möglich aber weniger ideal\n• Beste Ergebnisse während astronomischer Dunkelheit\n\nDer Katalog enthält ~27 beliebte Astrofotografie-Ziele.</string>
     <string name="whats_up_none_visible">Aktuell sind keine Katalog-Ziele über 10° an deinem Standort sichtbar.</string>
     <string name="whats_up_title">Was Steht Heute Nacht</string>
-    <string name="whats_up_visible_count">%1$d Ziele über dem Horizont</string>
+    <plurals name="whats_up_visible_count">
+        <item quantity="one">%1$d Ziel über dem Horizont</item>
+        <item quantity="other">%1$d Ziele über dem Horizont</item>
+    </plurals>
     <!-- Manage Devices + Developer options + GATT Explorer (audit M2) -->
     <string name="section_devices">Geräte</string>
     <string name="devices_help">Geräte, deren Status Pulsar gespeichert hat — BLE-Bindungen, Canon-Wi-Fi-Anmeldedaten und der Hinweis zur letzten Verbindung. Vergiss eine Zeile, um ihren Status mit einem Tippen zu löschen (entfernt auch die Bluetooth-Bindung des Systems).</string>

@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Pulsar</string>
 
     <!-- ScanScreen -->
@@ -44,11 +44,11 @@
     <string name="mode_diagnostics">Diagnostics</string>
     <string name="diagnostics_refresh">Refresh</string>
     <string name="test_camera_stop">Stop test</string>
-    <string name="run_step_timelapse_summary">Timelapse · %1$d shots · %2$s gap</string>
+    <string name="run_step_timelapse_summary" tools:ignore="PluralsCandidate">Timelapse · %1$d shots · %2$s gap</string>
     <string name="run_step_interval_summary">Intervalometer · %1$d × %2$s · %3$s gap</string>
     <string name="run_step_astro_summary">Astro · %1$dmm crop %2$.1f / %3$d-rule · %4$d × %5$s gap</string>
     <string name="run_step_dark_summary">Dark Frame · %1$d × %2$s · %3$s gap</string>
-    <string name="run_step_ramp_summary">Ramp · %1$d steps %2$s→%3$s · %4$s gap</string>
+    <string name="run_step_ramp_summary" tools:ignore="PluralsCandidate">Ramp · %1$d steps %2$s→%3$s · %4$s gap</string>
     <string name="ptp_reconnecting_hint">Reconnecting to USB camera…</string>
     <string name="ptp_err_permission_denied">USB permission denied. Tap the camera again to retry.</string>
     <string name="ptp_err_open_failed">Couldn\'t open the USB camera. Try replugging the cable.</string>
@@ -85,7 +85,7 @@
     <string name="canon_camera_capabilities">Capabilities…</string>
     <string name="canon_capabilities_probing">Probing camera…</string>
     <string name="canon_capabilities_failed">Couldn\'t reach the camera. Check Wi-Fi and credentials.</string>
-    <string name="canon_capabilities_version">CCAPI %1$s — %2$d endpoints</string>
+    <string name="canon_capabilities_version" tools:ignore="PluralsCandidate">CCAPI %1$s — %2$d endpoints</string>
     <string name="canon_cap_bulb">Manual bulb (shutterbutton/manual)</string>
     <string name="canon_cap_shooting_mode">Shooting mode (bulb / m)</string>
     <string name="canon_cap_dial_ignore">Override physical mode dial</string>
@@ -184,7 +184,7 @@
     <string name="notif_run_complete_stopped">Stopped</string>
     <string name="notif_run_complete_error">Failed</string>
     <string name="notif_run_complete_title">%1$s · %2$s</string>
-    <string name="notif_run_complete_body">%1$d / %2$d shots · %3$s</string>
+    <string name="notif_run_complete_body" tools:ignore="PluralsCandidate">%1$d / %2$d shots · %3$s</string>
 
     <!-- Home-screen widget -->
     <string name="widget_dashboard_label">Pulsar Astro Dashboard</string>
@@ -354,7 +354,7 @@
     <string name="shot_log_clear_body">All recorded runs will be removed. This cannot be undone.</string>
     <string name="shot_log_stat_runs">Runs</string>
     <string name="shot_log_stat_shots">Shots</string>
-    <string name="shot_log_row_shots">%1$d / %2$d shots</string>
+    <string name="shot_log_row_shots" tools:ignore="PluralsCandidate">%1$d / %2$d shots</string>
     <string name="label_interval">Interval</string>
     <string name="label_exposure">Exposure</string>
 
@@ -411,7 +411,7 @@
     <string name="dialog_rename_instructions">Enter a custom name. The device will advertise as \"Pulsar-&lt;name&gt;\". Leave empty to reset to \"Pulsar\".</string>
     <string name="label_device_name_input">Device name</string>
     <string name="prefix_pulsar">Pulsar-</string>
-    <string name="char_count">%1$d/%2$d characters</string>
+    <string name="char_count" tools:ignore="PluralsCandidate">%1$d/%2$d characters</string>
 
     <!-- Updates section -->
     <string name="section_updates">Updates</string>
@@ -569,7 +569,7 @@
     <string name="hw_free_heap">Free Heap</string>
     <string name="hw_psram">PSRAM</string>
     <string name="hw_gpio">GPIO Pins</string>
-    <string name="hw_gpio_value">%1$d total, %2$d configurable outputs</string>
+    <string name="hw_gpio_value" tools:ignore="PluralsCandidate">%1$d total, %2$d configurable outputs</string>
     <string name="hw_uptime">Uptime</string>
 
     <!-- GPIO selector -->
@@ -592,7 +592,10 @@
     <string name="run_phase_next_shot">Next shot</string>
     <string name="run_phase_starting">Starting</string>
     <string name="state_waiting">Waiting</string>
-    <string name="status_of_shots">of %1$d shots</string>
+    <plurals name="status_of_shots">
+        <item quantity="one">of %1$d shot</item>
+        <item quantity="other">of %1$d shots</item>
+    </plurals>
     <string name="status_remaining">remaining</string>
     <string name="finishes_at">Finishes at %1$s</string>
     <!-- ModeSettingsScreen -->
@@ -627,7 +630,10 @@ The four corners are live readouts — Moon, Targets, Sky and Light — coloured
     <string name="dash_targets">Targets</string>
     <string name="dash_timeline">Tonight</string>
     <string name="tonight_signal_best">Best ~%1$s · %2$d%% cloud</string>
-    <string name="run_complete_snack">Run complete · %1$d frames</string>
+    <plurals name="run_complete_snack">
+        <item quantity="one">Run complete · %1$d frame</item>
+        <item quantity="other">Run complete · %1$d frames</item>
+    </plurals>
     <string name="tonight_signal_help_title">How to read the signal</string>
     <string name="tonight_signal_help_body">Each line is a half-hour of tonight, top (soonest) to bottom (latest). Across a line, left to right is that half-hour\'s 30 minutes — and the height is how good the sky is at that moment. Taller is better.
 
@@ -695,8 +701,10 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <string name="dialog_delete_flow">Delete Flow</string>
     <string name="dialog_delete_flow_msg">Delete \"%1$s\"? This cannot be undone.</string>
     <string name="flow_new">New Flow</string>
-    <string name="flow_step_count">%1$d step</string>
-    <string name="flow_step_count_plural">%1$d steps</string>
+    <plurals name="flow_step_count">
+        <item quantity="one">%1$d step</item>
+        <item quantity="other">%1$d steps</item>
+    </plurals>
     <string name="flow_no_steps">No steps yet</string>
     <string name="flow_add_steps_instruction">Add steps to build your custom shooting flow.\nMix modes, pauses, and presets.</string>
     <string name="btn_add_step">Add Step</string>
@@ -735,15 +743,15 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <!-- FlowStep model (used via context) -->
     <string name="step_type_intervalometer">Intervalometer</string>
     <string name="step_type_timelapse">Timelapse</string>
-    <string name="step_summary_timelapse">%1$d shots · every %2$d ms</string>
+    <string name="step_summary_timelapse" tools:ignore="PluralsCandidate">%1$d shots · every %2$d ms</string>
     <string name="step_type_astro">Astro</string>
     <string name="step_type_pause">Pause</string>
     <string name="step_type_dark_frame">Dark Frame</string>
     <string name="step_type_ramp">Exposure Ramp</string>
-    <string name="step_summary_intervalometer">%1$d shots, %2$dms exp, %3$dms gap</string>
-    <string name="step_summary_astro">%1$d shots, %2$ss exp (%3$dmm)</string>
-    <string name="step_summary_dark_frame">%1$d frames, %2$dms exposure</string>
-    <string name="step_summary_ramp">%1$d steps, %2$dms → %3$dms</string>
+    <string name="step_summary_intervalometer" tools:ignore="PluralsCandidate">%1$d shots, %2$dms exp, %3$dms gap</string>
+    <string name="step_summary_astro" tools:ignore="PluralsCandidate">%1$d shots, %2$ss exp (%3$dmm)</string>
+    <string name="step_summary_dark_frame" tools:ignore="PluralsCandidate">%1$d frames, %2$dms exposure</string>
+    <string name="step_summary_ramp" tools:ignore="PluralsCandidate">%1$d steps, %2$dms → %3$dms</string>
 
     <!-- LiveStatusPanel -->
     <string name="notif_update_available">Version %1$s is available — open to update</string>
@@ -791,7 +799,10 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <string name="event_import">Import</string>
     <string name="event_import_title">Import event</string>
     <string name="event_import_hint">Paste shared event JSON</string>
-    <string name="event_session_count">%1$d sessions</string>
+    <plurals name="event_session_count">
+        <item quantity="one">%1$d session</item>
+        <item quantity="other">%1$d sessions</item>
+    </plurals>
     <string name="event_name">Event name</string>
     <string name="session_add">Add session</string>
     <string name="session_add_title">New session</string>
@@ -805,7 +816,10 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <string name="planner_sort_name">Sort by name</string>
     <string name="planner_bulk_delete">Delete selected</string>
     <string name="planner_select_all">Select all</string>
-    <string name="planner_bulk_delete_confirm">Delete %1$d selected sessions?</string>
+    <plurals name="planner_bulk_delete_confirm">
+        <item quantity="one">Delete %1$d selected session?</item>
+        <item quantity="other">Delete %1$d selected sessions?</item>
+    </plurals>
 
     <!-- Planner verdicts -->
     <string name="verdict_excellent">Excellent</string>
@@ -849,7 +863,7 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <string name="nd_calc_title">ND Filter</string>
     <string name="nd_calc_result_label">Long exposure time</string>
     <string name="nd_calc_base">Base shutter: %1$s</string>
-    <string name="nd_calc_filter">Filter: ND%1$d (%2$d stops)</string>
+    <string name="nd_calc_filter" tools:ignore="PluralsCandidate">Filter: ND%1$d (%2$d stops)</string>
     <string name="nd_calc_hint">Meter without the filter, then dial in these stops. Times over ~30 s usually need Bulb mode — set up an Intervalometer or Bulb flow with this duration.</string>
     <string name="dof_calc_title">Depth of Field</string>
     <string name="dof_calc_near">Near limit</string>
@@ -934,11 +948,20 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <string name="mode_meteor_calendar">Meteor Showers</string>
     <string name="meteor_title">Meteor Showers</string>
     <string name="meteor_help">Major meteor showers ranked for your location — how high the radiant climbs, when it peaks, and how much the Moon interferes. Best after midnight under dark skies.</string>
-    <string name="meteor_count">%1$d showers in the year ahead</string>
+    <plurals name="meteor_count">
+        <item quantity="one">%1$d shower in the year ahead</item>
+        <item quantity="other">%1$d showers in the year ahead</item>
+    </plurals>
     <string name="meteor_active">active now</string>
     <string name="meteor_peak_tonight">Peaks tonight</string>
-    <string name="meteor_peak_in">Peak in %1$d days</string>
-    <string name="meteor_peaked_ago">Peaked %1$d days ago</string>
+    <plurals name="meteor_peak_in">
+        <item quantity="one">Peak in %1$d day</item>
+        <item quantity="other">Peak in %1$d days</item>
+    </plurals>
+    <plurals name="meteor_peaked_ago">
+        <item quantity="one">Peaked %1$d day ago</item>
+        <item quantity="other">Peaked %1$d days ago</item>
+    </plurals>
     <string name="meteor_radiant_label">radiant</string>
     <string name="meteor_rate_line">Peak ~%1$d/hr · Moon %2$s %3$d%%</string>
     <string name="meteor_parent">Parent: %1$s</string>
@@ -953,7 +976,10 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <string name="meteor_reason_good">Dark window and a high radiant</string>
     <string name="whats_up_title">What\'s Up Tonight</string>
     <string name="whats_up_help">Shows deep-sky objects (nebulae, galaxies, clusters) that are currently above the horizon at your location.\n\n• Objects are sorted by altitude — higher = better positioned\n• Green icon: well-placed (above 30°), ideal for imaging\n• Grey icon: low in the sky (10–30°), possible but less ideal\n• Best results when used during astronomical darkness\n\nThis catalog includes ~27 popular astrophotography targets.</string>
-    <string name="whats_up_visible_count">%1$d targets above the horizon</string>
+    <plurals name="whats_up_visible_count">
+        <item quantity="one">%1$d target above the horizon</item>
+        <item quantity="other">%1$d targets above the horizon</item>
+    </plurals>
     <string name="whats_up_none_visible">No catalog targets are currently visible above 10° from your location.</string>
 
     <!-- User Guide -->
@@ -1106,7 +1132,7 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <string name="photo_transfer_transfer_selected">Transfer %1$d</string>
     <string name="photo_transfer_progress">%1$d / %2$d · %3$s</string>
     <string name="photo_transfer_done">Saved %1$d to the gallery</string>
-    <string name="photo_transfer_done_failed">Saved %1$d · %2$d failed</string>
+    <string name="photo_transfer_done_failed" tools:ignore="PluralsCandidate">Saved %1$d · %2$d failed</string>
     <string name="photo_transfer_raw_badge">RAW</string>
     <string name="photo_transfer_filter_all">All (%1$d)</string>
     <string name="photo_transfer_done_raw">Saved %1$d · RAW in Download/Pulsar</string>

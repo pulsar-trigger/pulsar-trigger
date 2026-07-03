@@ -162,7 +162,8 @@ fun MeteorCalendarScreen(onBack: () -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
-                        stringResource(R.string.meteor_count, views.size),
+                        androidx.compose.ui.res.pluralStringResource(
+                            R.plurals.meteor_count, views.size, views.size),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -254,8 +255,10 @@ private fun ShowerCard(v: ShowerView) {
                 // Timing line — active / tonight / countdown.
                 val timing = when {
                     v.daysToPeak == 0L -> stringResource(R.string.meteor_peak_tonight)
-                    v.daysToPeak < 0L -> stringResource(R.string.meteor_peaked_ago, -v.daysToPeak)
-                    else -> stringResource(R.string.meteor_peak_in, v.daysToPeak)
+                    v.daysToPeak < 0L -> androidx.compose.ui.res.pluralStringResource(
+                        R.plurals.meteor_peaked_ago, (-v.daysToPeak).toInt(), -v.daysToPeak)
+                    else -> androidx.compose.ui.res.pluralStringResource(
+                        R.plurals.meteor_peak_in, v.daysToPeak.toInt(), v.daysToPeak)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(

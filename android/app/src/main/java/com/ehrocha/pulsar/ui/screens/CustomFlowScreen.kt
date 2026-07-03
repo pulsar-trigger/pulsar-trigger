@@ -725,8 +725,8 @@ private fun SavedFlowCard(
                             Spacer(Modifier.width(4.dp))
                         }
                         Text(
-                            if (flow.steps.size != 1) stringResource(R.string.flow_step_count_plural, flow.steps.size)
-                            else stringResource(R.string.flow_step_count, flow.steps.size),
+                            androidx.compose.ui.res.pluralStringResource(
+                                R.plurals.flow_step_count, flow.steps.size, flow.steps.size),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -942,8 +942,8 @@ private fun FlowEditorView(
                 )
                 if (editingFlowName != null) {
                     Text(
-                        if (steps.size != 1) stringResource(R.string.flow_step_count_plural, steps.size)
-                        else stringResource(R.string.flow_step_count, steps.size),
+                        androidx.compose.ui.res.pluralStringResource(
+                            R.plurals.flow_step_count, steps.size, steps.size),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

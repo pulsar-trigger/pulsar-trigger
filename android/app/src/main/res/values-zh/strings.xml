@@ -402,7 +402,9 @@
     <string name="run_phase_next_shot">下一张</string>
     <string name="run_phase_starting">开始</string>
     <string name="state_waiting">等待中</string>
-    <string name="status_of_shots">共 %1$d 张</string>
+    <plurals name="status_of_shots">
+        <item quantity="other">共 %1$d 张</item>
+    </plurals>
     <string name="status_remaining">剩余</string>
     <string name="dialog_updates_available">有可用更新</string>
     <string name="update_firmware_available">固件 v%1$s 可用</string>
@@ -432,7 +434,9 @@
     <string name="dash_targets">目标</string>
     <string name="dash_timeline">今夜</string>
     <string name="tonight_signal_best">最佳 ~%1$s · 云量 %2$d%%</string>
-    <string name="run_complete_snack">拍摄完成 · %1$d 张</string>
+    <plurals name="run_complete_snack">
+        <item quantity="other">拍摄完成 · %1$d 张</item>
+    </plurals>
     <string name="tonight_signal_help_title">如何读懂信号</string>
     <string name="tonight_signal_help_body">每条线代表今晚的半小时，从上（最近）到下（最晚）。沿着一条线，从左到右是该半小时的 30 分钟——高度表示那一刻天空的好坏。越高越好。
 
@@ -496,8 +500,9 @@
     <string name="dialog_delete_flow">删除流程</string>
     <string name="dialog_delete_flow_msg">删除 \"%1$s\"？此操作无法撤销。</string>
     <string name="flow_new">新建流程</string>
-    <string name="flow_step_count">%1$d 个步骤</string>
-    <string name="flow_step_count_plural">%1$d 个步骤</string>
+    <plurals name="flow_step_count">
+        <item quantity="other">%1$d 个步骤</item>
+    </plurals>
     <string name="flow_no_steps">暂无步骤</string>
     <string name="flow_add_steps_instruction">添加步骤以构建自定义拍摄流程。\n可混合使用不同模式、暂停和预设。</string>
     <string name="btn_add_step">添加步骤</string>
@@ -569,7 +574,9 @@
     <string name="event_import">导入</string>
     <string name="event_import_title">导入活动</string>
     <string name="event_import_hint">粘贴共享的活动JSON</string>
-    <string name="event_session_count">%1$d个会话</string>
+    <plurals name="event_session_count">
+        <item quantity="other">%1$d个会话</item>
+    </plurals>
     <string name="event_name">活动名称</string>
     <string name="session_add">添加场次</string>
     <string name="session_add_title">新建场次</string>
@@ -896,11 +903,17 @@
     <string name="mode_meteor_calendar">流星雨</string>
     <string name="meteor_title">流星雨</string>
     <string name="meteor_help">针对你所在位置对主要流星雨进行评估——辐射点的高度、极大日期以及月光的干扰。暗夜午夜后观测最佳。</string>
-    <string name="meteor_count">未来一年共%1$d场流星雨</string>
+    <plurals name="meteor_count">
+        <item quantity="other">未来一年共%1$d场流星雨</item>
+    </plurals>
     <string name="meteor_active">活跃中</string>
     <string name="meteor_peak_tonight">今夜极大</string>
-    <string name="meteor_peak_in">%1$d天后极大</string>
-    <string name="meteor_peaked_ago">%1$d天前极大</string>
+    <plurals name="meteor_peak_in">
+        <item quantity="other">%1$d天后极大</item>
+    </plurals>
+    <plurals name="meteor_peaked_ago">
+        <item quantity="other">%1$d天前极大</item>
+    </plurals>
     <string name="meteor_radiant_label">辐射点</string>
     <string name="meteor_rate_line">极大 ~%1$d/时 · 月 %2$s %3$d%%</string>
     <string name="meteor_parent">母天体：%1$s</string>
@@ -920,7 +933,9 @@
     <string name="panel_intervalometer_help">用精确时序自动执行复杂的延时或连拍。\n\n• 将相机设为 Bulb 模式，让 Pulsar 控制快门。\n• 间隔是两次曝光之间的等待 — 一张拍完到下一张开始的时间。\n• 曝光是每张快门打开的时长。\n• 每帧周期 = 曝光 + 间隔。\n• 起始延迟让您在序列开始前离开。\n• 序列估算卡片显示总时长和结束时间。</string>
     <string name="panel_manual_help">两种模式的快门手动控制。\n\n• 按住：按下按钮期间快门保持打开。松开关闭。适合短 Bulb 拍摄。\n• 锁定：点一下打开，再点一下关闭。适合长曝光，无需按住按钮。\n\n在操作区域的分段按钮中切换按住和锁定。</string>
     <string name="planner_bulk_delete">删除所选</string>
-    <string name="planner_bulk_delete_confirm">删除选中的 %1$d 个会话？</string>
+    <plurals name="planner_bulk_delete_confirm">
+        <item quantity="other">删除选中的 %1$d 个会话？</item>
+    </plurals>
     <string name="planner_cache_help">控制天气和天况数据的刷新频率。\n\n• 仪表盘数据 (天气、月相、云量) 在本地缓存。\n• 间隔短数据新鲜，但 API 调用更多。\n• 24 小时适合提前一天计划的会话。</string>
     <string name="planner_cloud_threshold">云量阈值</string>
     <string name="planner_cloud_threshold_help">评估会话条件时被视为「晴朗」的最大云量 (%)。越低越严格。</string>
@@ -957,7 +972,9 @@
     <string name="whats_up_help">显示当前在您所在位置地平线以上的深空天体 (星云、星系、星团)。\n\n• 按高度排序 — 越高位置越好\n• 绿色图标：位置佳 (高于 30°)，适合拍摄\n• 灰色图标：低空 (10–30°)，可拍但不理想\n• 天文黑夜时段效果最佳\n\n目录包含 ~27 个常用天体摄影目标。</string>
     <string name="whats_up_none_visible">当前在您所在位置没有目录目标高于 10°。</string>
     <string name="whats_up_title">今晚有什么</string>
-    <string name="whats_up_visible_count">%1$d 个目标在地平线之上</string>
+    <plurals name="whats_up_visible_count">
+        <item quantity="other">%1$d 个目标在地平线之上</item>
+    </plurals>
     <!-- Manage Devices + Developer options + GATT Explorer (audit M2) -->
     <string name="section_devices">设备</string>
     <string name="devices_help">Pulsar 已保存状态的设备 — BLE 绑定、Canon Wi-Fi 凭据以及上次连接提示。删除某行可一键清除其状态（同时移除系统级 Bluetooth 绑定）。</string>

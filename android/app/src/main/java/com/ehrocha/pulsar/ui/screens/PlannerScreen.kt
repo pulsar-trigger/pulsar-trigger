@@ -407,7 +407,8 @@ fun EventSessionsScreen(
         AlertDialog(
             onDismissRequest = { showBulkDeleteConfirm = false },
             title = { Text(stringResource(R.string.event_delete_title)) },
-            text = { Text(stringResource(R.string.planner_bulk_delete_confirm, selectedIds.size)) },
+            text = { Text(androidx.compose.ui.res.pluralStringResource(
+                R.plurals.planner_bulk_delete_confirm, selectedIds.size, selectedIds.size)) },
             confirmButton = {
                 TextButton(onClick = {
                     selectedIds.forEach { plannerManager.removeSession(it) }
@@ -755,7 +756,8 @@ private fun EventCard(
                 )
                 Spacer(Modifier.width(12.dp))
                 Text(
-                    stringResource(R.string.event_session_count, sessionCount),
+                    androidx.compose.ui.res.pluralStringResource(
+                        R.plurals.event_session_count, sessionCount, sessionCount),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                 )

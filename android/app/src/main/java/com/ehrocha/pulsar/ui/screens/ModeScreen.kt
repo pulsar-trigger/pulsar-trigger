@@ -644,7 +644,8 @@ private fun RunningStatusContent(
             color = MaterialTheme.colorScheme.primary,
         )
         Text(
-            text = stringResource(R.string.status_of_shots, totalShots),
+            text = androidx.compose.ui.res.pluralStringResource(
+                R.plurals.status_of_shots, totalShots, totalShots),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

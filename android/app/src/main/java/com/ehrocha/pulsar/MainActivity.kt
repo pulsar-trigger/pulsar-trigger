@@ -464,7 +464,7 @@ fun PulsarNavHost(
                 )
             }
             snackbarHostLocal.showSnackbar(
-                context.getString(R.string.run_complete_snack, frames),
+                context.resources.getQuantityString(R.plurals.run_complete_snack, frames, frames),
             )
         }
     }

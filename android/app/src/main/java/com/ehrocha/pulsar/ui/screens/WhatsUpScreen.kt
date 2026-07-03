@@ -163,7 +163,8 @@ fun WhatsUpScreen(onBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
-                    stringResource(R.string.whats_up_visible_count, targets.size),
+                    androidx.compose.ui.res.pluralStringResource(
+                        R.plurals.whats_up_visible_count, targets.size, targets.size),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
