@@ -61,6 +61,10 @@ object MediaStoreSaver {
         }
     }
 
+    /** Insert a pending MediaStore entry and open its `OutputStream`. The stream
+     *  is returned **open by design** — the sole caller (`PhotoTransferController`)
+     *  writes to it inside a `stream.use { }` block and closes it there. */
+    @Suppress("Recycle") // stream intentionally returned open; caller closes via use{}
     private fun openScoped(context: Context, fileName: String, mimeType: String): Pair<Uri, OutputStream>? {
         val resolver = context.contentResolver
         // Two destinations, tried in order. MediaStore's Images collection is
