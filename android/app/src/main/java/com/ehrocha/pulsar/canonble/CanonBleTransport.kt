@@ -193,6 +193,11 @@ class CanonBleTransport private constructor(
                         client.close()
                         return CanonBleConnectResult.Failed
                     }
+                    // DIAGNOSTIC (read-only): subscribe to all notify chars to hunt
+                    // the RP's shutter-state signal so we can guarantee-close smart
+                    // bulb (the Camera Test left-sensor-open parity bug). Best-effort
+                    // — a failure here must not block a working connection.
+                    runCatching { client.subscribeSmartNotifyForDiagnostics() }
                 }
                 CanonProtocol.SMART_NO_SHUTTER -> {
                     CanonBleLog.w(TAG, "${device.address} registered in smartphone mode but exposes " +

@@ -317,6 +317,14 @@ class CanonBleClient(
                 CanonBleLog.d(TAG, "BR-E1 status: 0x%02X (shutterPress=%s) → shutterOpen=%s"
                     .format(code, lastControlWasShutterPress, _shutterOpen.value))
             }
+            // DIAGNOSTIC: log EVERY smart-mode notification (bytes) so we can
+            // spot which characteristic reflects shutter open/close — correlate
+            // these lines with the "smart bulb toggle" writes. See
+            // subscribeSmartNotifyForDiagnostics().
+            if (protocol == CanonProtocol.SMART) {
+                CanonBleLog.d(TAG, "smart notify[${characteristic.uuid.toString().take(8)}]: " +
+                    value.joinToString("") { "%02x".format(it) })
+            }
         }
 
         @Deprecated("Old API still used for minSdk 26 compatibility")
@@ -570,6 +578,55 @@ class CanonBleClient(
      *  (Eduardo, 2026-07-01). Any late tap-ack is already ignored because the
      *  trailing 0x0C write clears [lastControlWasShutterPress]. */
     fun markShutterClosed() { _shutterOpen.value = false }
+
+    /** DIAGNOSTIC (smartphone mode): subscribe to EVERY notify/indicate-capable
+     *  characteristic on the body and log its notifications, to hunt for the
+     *  RP's shutter-STATE signal. Smart mode currently has no known state char,
+     *  so a toggle-parity desync (a single-shot tap in Bulb, or an eaten toggle)
+     *  can leave the sensor OPEN with no way to detect it (the Camera Test
+     *  left-sensor-open bug, 2026-07-02). Read-only: subscribing + logging
+     *  changes NO shutter behaviour. Serialized (one CCCD write in flight at a
+     *  time, waiting for onDescriptorWrite) to respect Android's single-GATT-op
+     *  limit. Usage: connect the RP, do a manual **open → wait → close** in Bulb,
+     *  and read the `smart notify[…]` lines — whichever characteristic's bytes
+     *  flip with the shutter is the state signal we wire in next. */
+    @SuppressLint("MissingPermission")
+    suspend fun subscribeSmartNotifyForDiagnostics() = opMutex.withLock {
+        val g = gatt ?: return@withLock
+        val targets = g.services.flatMap { it.characteristics }.filter {
+            (it.properties and (BluetoothGattCharacteristic.PROPERTY_NOTIFY or
+                BluetoothGattCharacteristic.PROPERTY_INDICATE)) != 0
+        }
+        CanonBleLog.d(TAG, "diag: subscribing to ${targets.size} notify/indicate chars " +
+            "for shutter-state discovery")
+        for (ch in targets) {
+            val tag = ch.uuid.toString().take(8)
+            try {
+                g.setCharacteristicNotification(ch, true)
+                val cccd = ch.getDescriptor(CCCD_UUID)
+                if (cccd == null) {
+                    CanonBleLog.d(TAG, "diag: $tag has no CCCD — skipping")
+                } else {
+                    val notify = (ch.properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY) != 0
+                    @Suppress("DEPRECATION")
+                    cccd.value = if (notify) BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                                 else BluetoothGattDescriptor.ENABLE_INDICATION_VALUE
+                    val deferred = CompletableDeferred<Boolean>()
+                    descriptorSignal.set(deferred)
+                    @Suppress("DEPRECATION")
+                    if (g.writeDescriptor(cccd)) {
+                        val ok = withTimeoutOrNull(3_000) { deferred.await() } ?: false
+                        CanonBleLog.d(TAG, "diag: subscribed $tag (notify=$notify) cccd=$ok")
+                    } else {
+                        descriptorSignal.set(null)
+                        CanonBleLog.d(TAG, "diag: $tag CCCD write couldn't queue")
+                    }
+                }
+            } catch (e: Exception) {
+                CanonBleLog.w(TAG, "diag: subscribe $tag failed: ${e.message}")
+            }
+        }
+    }
 
     // NOTE deliberately NO readStatusRaw()-style verification helper: a raw read
     // of 00050004 reports the same PHANTOM state as the 0x001b ack when the
