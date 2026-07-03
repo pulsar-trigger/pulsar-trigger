@@ -593,6 +593,18 @@ class CanonBleClient(
     @SuppressLint("MissingPermission")
     suspend fun subscribeSmartNotifyForDiagnostics() = opMutex.withLock {
         val g = gatt ?: return@withLock
+        // Full GATT dump first — even if nothing notifies, this tells us which
+        // characteristics exist and their props (0x02=READ 0x04=WRITE_NR
+        // 0x08=WRITE 0x10=NOTIFY 0x20=INDICATE), so we can spot a readable/notify
+        // shutter-state char (the tooling hinted at ~0x0011 / 0x0001) to poll or
+        // subscribe for a guaranteed close.
+        for (svc in g.services) {
+            CanonBleLog.d(TAG, "diag GATT: service ${svc.uuid.toString().take(8)}")
+            for (ch in svc.characteristics) {
+                CanonBleLog.d(TAG, "diag GATT:   char ${ch.uuid.toString().take(8)} " +
+                    "props=0x%02x".format(ch.properties))
+            }
+        }
         val targets = g.services.flatMap { it.characteristics }.filter {
             (it.properties and (BluetoothGattCharacteristic.PROPERTY_NOTIFY or
                 BluetoothGattCharacteristic.PROPERTY_INDICATE)) != 0
