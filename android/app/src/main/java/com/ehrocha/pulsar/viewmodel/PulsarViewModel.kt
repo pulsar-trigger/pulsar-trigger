@@ -2425,6 +2425,14 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                         durationMs = endedAt - startedAt,
                         status = status,
                     )
+                    // Canon BLE: guarantee the sensor is closed BEFORE flowRunning
+                    // goes false (which pops the Camera Test share dialog). A parity
+                    // desync (e.g. the manual-phase tap) can leave it open;
+                    // ensureShutterClosedSafely reads the true state (00030031) and
+                    // closes if needed. NonCancellable so a stop() still closes it.
+                    _canonBleTransport.value?.let { ble ->
+                        withContext(NonCancellable) { runCatching { ble.ensureShutterClosedSafely() } }
+                    }
                     _flowRunning.value = false
                     _flowPaused.value = false
                     _flowCurrentStep.value = -1

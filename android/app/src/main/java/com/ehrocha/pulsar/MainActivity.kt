@@ -353,10 +353,18 @@ fun PulsarNavHost(
     }
     val connected by vm.connected.collectAsState()
 
+    // Navigation + dialog trace in the diagnostics wire log (Eduardo's ask,
+    // 2026-07-03) — so screen changes and dialogs can be correlated with the
+    // shutter events when chasing UI-timing bugs (e.g. the Camera Test share).
+    LaunchedEffect(currentScreen, menuDest) {
+        com.ehrocha.pulsar.canonble.CanonBleLog.i("Nav", "→ screen=$currentScreen menuTab=$menuDest")
+    }
+
     // Camera-transport link dropped mid-session (phone-driven run loop can't
     // continue, and a bulb may be left exposing) — warn the user prominently.
     val sessionInterrupted by vm.sessionInterrupted.collectAsState()
     if (sessionInterrupted) {
+        LaunchedEffect(Unit) { com.ehrocha.pulsar.canonble.CanonBleLog.i("Nav", "◆ Dialog: session interrupted") }
         AlertDialog(
             onDismissRequest = { vm.clearSessionInterrupted() },
             confirmButton = {

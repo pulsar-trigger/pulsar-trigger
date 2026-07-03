@@ -97,6 +97,11 @@ class CanonBleTransport private constructor(
          *  early); a dead click leaves the state unchanged, so this times out and
          *  we retry. */
         private const val SHUTTER_CONFIRM_MS = 400L
+        /** Smart 00030031 read is STALE for ~120 ms right after a toggle (it
+         *  returns the pre-toggle value; card/notify-proven RP 2026-07-03). Wait
+         *  this long before re-reading in the safety-close loop, or a stale "still
+         *  open" read re-toggles and fires a stray frame. */
+        private const val SHUTTER_STATE_SETTLE_MS = 400L
 
 
         /** Phone-side device name that shows up in the camera's
@@ -524,6 +529,9 @@ class CanonBleTransport private constructor(
                 if (open != true || !client.hasCycledSmartShutter) break
                 CanonBleLog.d(TAG, "safety close: sensor OPEN (attempt $attempt) — toggling closed")
                 runCatching { client.smartBulbToggle() }
+                // The state read is stale right after a toggle — let it settle
+                // before re-reading, or we'd re-toggle a just-closed shutter.
+                delay(SHUTTER_STATE_SETTLE_MS)
             }
         } else {
             runCatching { ensureShutter(false) }

@@ -98,6 +98,7 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     val ctx = LocalContext.current
     var showLogs by remember { mutableStateOf(false) }
     var phase by remember { mutableStateOf(TestPhase.IDLE) }
+    LaunchedEffect(phase) { com.ehrocha.pulsar.canonble.CanonBleLog.i("Nav", "◆ Camera Test phase → $phase") }
     var probeMark by remember { mutableLongStateOf(0L) }
     var sharePromptText by remember { mutableStateOf<String?>(null) }
 
@@ -276,6 +277,9 @@ fun TestCameraScreen(vm: PulsarViewModel, onBack: () -> Unit) {
     }
 
     sharePromptText?.let { runLog ->
+        LaunchedEffect(Unit) {
+            com.ehrocha.pulsar.canonble.CanonBleLog.i("Nav", "◆ Dialog: Camera Test — share results")
+        }
         AlertDialog(
             onDismissRequest = { sharePromptText = null },
             title = { Text(stringResource(R.string.test_camera_share_title)) },
