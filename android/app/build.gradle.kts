@@ -20,8 +20,8 @@ android {
         applicationId = "com.ehrocha.pulsar"
         minSdk = 26
         targetSdk = 35
-        versionCode = 647
-        versionName = "0.636.0"
+        versionCode = 648
+        versionName = "0.637.0"
     }
 
     signingConfigs {
@@ -80,8 +80,8 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.8.3")
 
     // BLE
-    implementation("no.nordicsemi.android:ble:2.7.5")
-    implementation("no.nordicsemi.android:ble-ktx:2.7.5")
+    implementation("no.nordicsemi.android:ble:2.10.0")
+    implementation("no.nordicsemi.android:ble-ktx:2.10.0")
 
     // Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.36.0")
