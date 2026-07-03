@@ -28,9 +28,6 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class CanonBleSettings(
     private val prefs: SharedPreferences,
-    /** Push a changed cool-down to the live transport's step-boundary floor
-     *  (`postFrameCooldownMs`) so it takes effect at once; no-op if unconnected. */
-    private val applyCooldownToTransport: (Long) -> Unit,
 ) {
     // --- Post-frame cool-down --------------------------------------------
 
@@ -39,11 +36,13 @@ class CanonBleSettings(
     )
     val cooldownMs: StateFlow<Long> = _cooldownMs.asStateFlow()
 
+    /** Clamp + persist a new cool-down. Applying it to the live transport's
+     *  step-boundary floor is the caller's job (the ViewModel holds the
+     *  transport) — keeps this class free of any transport back-reference. */
     fun setCooldownMs(v: Long) {
         val clamped = CanonBleRules.clampCooldown(v)
         prefs.edit().putLong(KEY_COOLDOWN, clamped).apply()
         _cooldownMs.value = clamped
-        applyCooldownToTransport(clamped)
     }
 
     // --- Registration names (must stay distinct) -------------------------

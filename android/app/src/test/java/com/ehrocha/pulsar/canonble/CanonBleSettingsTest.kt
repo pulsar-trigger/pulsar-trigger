@@ -40,46 +40,43 @@ class CanonBleSettingsTest {
     }
 
     @Test
-    fun `cool-down clamps, persists, and pushes to the live transport`() {
-        var pushed: Long? = null
-        val s = CanonBleSettings(fakePrefs()) { pushed = it }
+    fun `cool-down clamps and persists`() {
+        val s = CanonBleSettings(fakePrefs())
 
         s.setCooldownMs(60_000L) // above max → 10 s
         assertEquals(10_000L, s.cooldownMs.value)
-        assertEquals(10_000L, pushed)
 
         s.setCooldownMs(0L) // below min → 1 s
         assertEquals(1_000L, s.cooldownMs.value)
-        assertEquals(1_000L, pushed)
     }
 
     @Test
     fun `cool-down default is the hardware floor and survives a reload`() {
         val prefs = fakePrefs()
-        assertEquals(CanonBleRules.COOLDOWN_DEFAULT_MS, CanonBleSettings(prefs) {}.cooldownMs.value)
+        assertEquals(CanonBleRules.COOLDOWN_DEFAULT_MS, CanonBleSettings(prefs).cooldownMs.value)
 
-        CanonBleSettings(prefs) {}.setCooldownMs(6_000L)
+        CanonBleSettings(prefs).setCooldownMs(6_000L)
         // A fresh instance on the same prefs reads the persisted value.
-        assertEquals(6_000L, CanonBleSettings(prefs) {}.cooldownMs.value)
+        assertEquals(6_000L, CanonBleSettings(prefs).cooldownMs.value)
     }
 
     @Test
     fun `default names are the two distinct protocol labels`() {
-        val s = CanonBleSettings(fakePrefs()) {}
+        val s = CanonBleSettings(fakePrefs())
         assertEquals(CanonBleTransport.PAIR_NAME_BRE1, s.nameRemote.value)
         assertEquals(CanonBleTransport.PAIR_NAME_SMART, s.nameSmart.value)
     }
 
     @Test
     fun `name setter sanitizes and persists`() {
-        val s = CanonBleSettings(fakePrefs()) {}
+        val s = CanonBleSettings(fakePrefs())
         s.setNameRemote("  My R\tRemote📷  ")
         assertEquals("My RRemote", s.nameRemote.value)
     }
 
     @Test
     fun `a name colliding with the other protocol is rejected`() {
-        val s = CanonBleSettings(fakePrefs()) {}
+        val s = CanonBleSettings(fakePrefs())
         val before = s.nameRemote.value
         s.setNameRemote(s.nameSmart.value) // equals the smart name → no-op
         assertEquals(before, s.nameRemote.value)
@@ -87,7 +84,7 @@ class CanonBleSettingsTest {
 
     @Test
     fun `safeInterval only clamps when Canon BLE is the active transport`() {
-        val s = CanonBleSettings(fakePrefs()) {} // default floor 4 s
+        val s = CanonBleSettings(fakePrefs()) // default floor 4 s
         // Not Canon BLE → passthrough, even below the floor.
         assertEquals(1_000L, s.safeInterval(1_000L, isCanonBle = false))
         // Canon BLE → raised to the floor.

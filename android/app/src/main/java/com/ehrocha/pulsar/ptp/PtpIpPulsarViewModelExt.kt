@@ -95,7 +95,7 @@ internal suspend fun PulsarViewModel.attemptPtpIpReconnect(
         _ptpIpTransport.value = null
         if (!bleController.connected.value && !_simulatorActive.value &&
             _canonCcapiTransport.value == null && _ptpTransport.value == null &&
-            _canonBleTransport.value == null
+            canonBleTransport.value == null
         ) {
             _connected.value = false
             _status.value = null

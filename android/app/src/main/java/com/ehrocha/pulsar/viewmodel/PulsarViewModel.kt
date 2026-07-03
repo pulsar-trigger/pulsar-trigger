@@ -632,36 +632,28 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     //    intervalometer, astro, dark frame, ramp. No live view, no lens
     //    info, no battery — those aren't in the BR-E1 protocol.
     //    See `docs/canon-ble.md` for the wire format.
-    private val canonBleDiscovery =
-        com.ehrocha.pulsar.canonble.CanonBleDiscovery(app)
-    val canonBleCameras: StateFlow<List<android.bluetooth.BluetoothDevice>> =
-        canonBleDiscovery.cameras
-
-    internal val _canonBleTransport =
-        MutableStateFlow<com.ehrocha.pulsar.canonble.CanonBleTransport?>(null)
-    val canonBleTransport: StateFlow<com.ehrocha.pulsar.canonble.CanonBleTransport?> =
-        _canonBleTransport
-
-    private val _canonBleConnecting = MutableStateFlow(false)
-    val canonBleConnecting: StateFlow<Boolean> = _canonBleConnecting
-
-    /** True while the smartphone-mode handshake is waiting for the user to
-     *  confirm the pairing on the camera body. The setup screen surfaces a
-     *  "Confirm the pairing on your camera" prompt off this. */
-    private val _canonBleAwaitingConfirm = MutableStateFlow(false)
-    val canonBleAwaitingConfirm: StateFlow<Boolean> = _canonBleAwaitingConfirm
-
-    private val _canonBleError = MutableStateFlow<String?>(null)
-    val canonBleError: StateFlow<String?> = _canonBleError
-
-    fun clearCanonBleError() { _canonBleError.value = null }
+    /** The Canon BLE connection lifecycle (discovery, connect/reconnect/
+     *  disconnect, the connection flags, last-address memory) lives in
+     *  [com.ehrocha.pulsar.canonble.CanonBleController] (audit H1 slice 2). The
+     *  VM implements its Host for the cross-transport concerns (mutual
+     *  exclusion, shared connected/status state, flow-abort) and exposes the
+     *  same public surface by delegation. The controller is constructed below,
+     *  after [canonBleSettings]; these accessors resolve it at call time. */
+    val canonBleCameras: StateFlow<List<android.bluetooth.BluetoothDevice>>
+        get() = canonBleController.cameras
+    val canonBleTransport: StateFlow<com.ehrocha.pulsar.canonble.CanonBleTransport?>
+        get() = canonBleController.transport
+    val canonBleConnecting: StateFlow<Boolean> get() = canonBleController.connecting
+    val canonBleAwaitingConfirm: StateFlow<Boolean> get() = canonBleController.awaitingConfirm
+    val canonBleError: StateFlow<String?> get() = canonBleController.error
+    fun clearCanonBleError() = canonBleController.clearError()
 
     /** Build a shareable diagnostics report — app/device header, current
      *  transport state, and the captured Canon BLE wire log. Surfaced via
      *  Tools → Collect diagnostics so debugging needs no `adb logcat`. */
     fun canonDiagnosticsText(): String {
         val transport = when {
-            _canonBleTransport.value != null -> "Canon BLE"
+            canonBleController.transport.value != null -> "Canon BLE"
             _canonCcapiTransport.value != null -> "Canon CCAPI"
             _ptpTransport.value != null -> "USB PTP"
             _ptpIpTransport.value != null -> "Wi-Fi PTP/IP"
@@ -681,9 +673,10 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
                 "Android ${android.os.Build.VERSION.RELEASE} (SDK ${android.os.Build.VERSION.SDK_INT})")
             appendLine("time: $ts")
             appendLine("active transport: $transport")
-            appendLine("canonBle: connecting=${_canonBleConnecting.value} " +
-                "awaitingConfirm=${_canonBleAwaitingConfirm.value} " +
-                "reconnecting=${_canonBleReconnecting.value} lastError=${_canonBleError.value}")
+            appendLine("canonBle: connecting=${canonBleController.connecting.value} " +
+                "awaitingConfirm=${canonBleController.awaitingConfirm.value} " +
+                "reconnecting=${canonBleController.reconnecting.value} " +
+                "lastError=${canonBleController.error.value}")
             if (crash != null) {
                 appendLine()
                 appendLine(crash.trim())
@@ -694,38 +687,16 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** True while the previously-connected Canon BLE camera has dropped
-     *  the link (powered off, out of range, app backgrounded too long)
-     *  and Pulsar is waiting for it to advertise again. The UI shows a
-     *  reconnect banner — same pattern as PTP cable replug. */
-    private val _canonBleReconnecting = MutableStateFlow(false)
-    val canonBleReconnecting: StateFlow<Boolean> = _canonBleReconnecting
+    /** True while a previously-connected Canon BLE camera has dropped and
+     *  Pulsar is waiting for it to advertise again (reconnect banner). */
+    val canonBleReconnecting: StateFlow<Boolean> get() = canonBleController.reconnecting
 
-    /** Last Canon BLE [android.bluetooth.BluetoothDevice] we connected to, kept
-     *  so a drop can fire an OS-managed autoConnect reconnect without waiting
-     *  for the body to reappear in a service-UUID scan. */
-    @Volatile private var lastCanonBleDevice: android.bluetooth.BluetoothDevice? = null
-
-    /** MAC address of the last Canon BLE camera we successfully connected
-     *  to. Persisted in plain SharedPrefs (the BLE bond itself is in the
-     *  OS keystore and survives independently). Used to auto-reconnect
-     *  on the same body's re-advertise, including across app restarts.
-     *
-     *  Cached in [_lastCanonBleAddressCache] so the auto-reconnect
-     *  collector — which is invoked on every BLE advertisement, multiple
-     *  times per second — doesn't hit disk on every emission. The setter
-     *  writes through to both the in-memory cache and SharedPrefs. */
-    private val canonBlePrefs = app.getSharedPreferences("pulsar_canon_ble", Context.MODE_PRIVATE)
-    @Volatile private var _lastCanonBleAddressCache: String? =
-        canonBlePrefs.getString("last_address", null)
+    /** MAC of the last Canon BLE body we connected to — owned by
+     *  [canonBleController]; delegated here so `forgetDevice` / `managedDevices`
+     *  can read and clear the reconnect hint. */
     private var lastCanonBleAddress: String?
-        get() = _lastCanonBleAddressCache
-        set(value) {
-            _lastCanonBleAddressCache = value
-            canonBlePrefs.edit().apply {
-                if (value == null) remove("last_address") else putString("last_address", value)
-            }.apply()
-        }
+        get() = canonBleController.lastAddress
+        set(value) { canonBleController.lastAddress = value }
 
     init {
         // PTP discovery collector. Two flows watched on the discovery channel:
@@ -801,7 +772,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             !_simulatorActive.value &&
             _canonCcapiTransport.value == null &&
             _ptpTransport.value == null &&
-            _canonBleTransport.value == null &&
+            canonBleController.transport.value == null &&
             _ptpIpTransport.value == null
 
     /** Per-UDN digest credentials. Each entry lets the next connect to the
@@ -1043,13 +1014,67 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  (audit H1). The VM owns the transport/run loop and delegates the settings
      *  surface here; the cool-down setter pushes straight to the live transport's
      *  step-boundary floor. */
-    private val canonBleSettings = com.ehrocha.pulsar.canonble.CanonBleSettings(prefs) { ms ->
-        _canonBleTransport.value?.postFrameCooldownMs = ms
-    }
+    private val canonBleSettings = com.ehrocha.pulsar.canonble.CanonBleSettings(prefs)
+
+    /** Canon BLE connection lifecycle (H1 slice 2). The VM implements the Host
+     *  for the cross-transport concerns it alone can coordinate. */
+    private val canonBleController = com.ehrocha.pulsar.canonble.CanonBleController(
+        scope = viewModelScope,
+        context = getApplication(),
+        prefs = getApplication<Application>()
+            .getSharedPreferences("pulsar_canon_ble", Context.MODE_PRIVATE),
+        settings = canonBleSettings,
+        host = object : com.ehrocha.pulsar.canonble.CanonBleController.Host {
+            override val simulatorActive: Boolean get() = _simulatorActive.value
+            override fun tearDownSiblingsForCanonBle() {
+                if (bleController.connected.value) bleController.disconnect()
+                if (_canonCcapiTransport.value != null) disconnectCanonCcapi()
+                if (_ptpTransport.value != null) disconnectPtp()
+                if (_ptpIpTransport.value != null) disconnectPtpIp()
+                if (_simulatorActive.value) disconnectSimulator()
+                stopScan()
+            }
+            override fun onCanonBleConnected(
+                transport: com.ehrocha.pulsar.canonble.CanonBleTransport,
+                device: android.bluetooth.BluetoothDevice,
+            ) {
+                _deviceName.value = transport.label.value
+                _connected.value = true
+                recordLastConnection(com.ehrocha.pulsar.model.LastConnection(
+                    kind = com.ehrocha.pulsar.transport.TransportKind.CANON_BLE,
+                    label = transport.label.value,
+                    identifier = device.address,
+                ))
+                _status.value = StatusFrame(
+                    state = DeviceState.IDLE,
+                    mode = TriggerMode.TIMELAPSE.id,
+                    shotsTaken = 0,
+                    timeRemainingMs = 0L,
+                    batteryPct = 0,
+                    errorCode = 0,
+                    fwVersion = "",
+                )
+            }
+            override fun onCanonBleReleased() {
+                if (noTransportActive()) {
+                    _connected.value = false
+                    _status.value = null
+                }
+            }
+            override fun abortFlowOnTransportDrop() =
+                this@PulsarViewModel.abortFlowOnTransportDrop()
+            override fun noTransportActive(): Boolean =
+                this@PulsarViewModel.noTransportActive()
+        },
+    )
     val canonBleIntervalRaised: kotlinx.coroutines.flow.SharedFlow<Unit>
         get() = canonBleSettings.intervalRaised
     val canonBleCooldownMs: StateFlow<Long> get() = canonBleSettings.cooldownMs
-    fun setCanonBleCooldownMs(v: Long) = canonBleSettings.setCooldownMs(v)
+    fun setCanonBleCooldownMs(v: Long) {
+        canonBleSettings.setCooldownMs(v)
+        // Push to a live transport so its step-boundary floor uses it at once.
+        canonBleController.transport.value?.postFrameCooldownMs = canonBleSettings.cooldownMs.value
+    }
     val canonBleNameRemote: StateFlow<String> get() = canonBleSettings.nameRemote
     fun setCanonBleNameRemote(v: String) = canonBleSettings.setNameRemote(v)
     val canonBleNameSmart: StateFlow<String> get() = canonBleSettings.nameSmart
@@ -1060,7 +1085,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     /** Called on mode-screen entry with the mode's dial requirement (true = Bulb,
      *  false = M, null = ignored). Gated on Canon BLE being the active transport. */
     fun noteModeDial(bulbDial: Boolean?) =
-        canonBleSettings.noteModeDial(bulbDial, _canonBleTransport.value != null)
+        canonBleSettings.noteModeDial(bulbDial, canonBleController.transport.value != null)
 
     /** True while a Canon BLE run is waking the body + settling before the first
      *  frame. The run screen shows a "Preparing…" state so that ~2 s gap doesn't
@@ -1779,191 +1804,25 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     // ── Canon BLE direct: connect / disconnect / auto-reconnect ────────
 
-    private var canonBleConnectJob: Job? = null
+    /** Begin / refresh the Canon BLE service scan (ScanScreen visible). */
+    fun startCanonBleScan() = canonBleController.startScan()
 
-    init {
-        // Canon BLE discovery collector. Watches the Canon BLE service-scan
-        // for our last-paired body reappearing while we're idle. Mirrors
-        // the PTP cable-replug pattern in the earlier init {} block:
-        // spontaneous link drop arms `_canonBleReconnecting`, discovery
-        // fires when the body advertises again, this collector reconnects
-        // automatically.
-        viewModelScope.launch {
-            canonBleDiscovery.cameras.collect { cameras ->
-                val want = lastCanonBleAddress ?: return@collect
-                if (!_canonBleReconnecting.value) return@collect
-                if (_canonBleTransport.value != null) return@collect
-                // Don't cancel an OS-managed autoConnect that's already
-                // in-flight (started by onCanonBleLinkDropped) — restarting
-                // with autoConnect=false would churn the connect attempt.
-                if (_canonBleConnecting.value) return@collect
-                if (!noTransportActive()) return@collect
-                val match = cameras.firstOrNull { it.address == want } ?: return@collect
-                Log.i(TAG, "Canon BLE re-advertise from $want — auto-reconnecting")
-                connectCanonBle(match, auto = true)
-            }
-        }
-    }
+    /** Stop the Canon BLE scan (ScanScreen exits, or a connect is in-flight). */
+    fun stopCanonBleScan() = canonBleController.stopScan()
 
-    /** Begin / refresh the Canon BLE service scan. Called when ScanScreen
-     *  becomes visible so the "Canon BLE remotes" section populates
-     *  alongside Pulsar ESP32 + Canon Wi-Fi + USB cameras. */
-    fun startCanonBleScan() = canonBleDiscovery.start()
-
-    /** Stop the Canon BLE scan. Called when ScanScreen exits or when a
-     *  connect is in-flight. */
-    fun stopCanonBleScan() = canonBleDiscovery.stop()
-
-    /** Connect to a Canon BLE camera. First-time pairing triggers the OS
-     *  pair dialog; subsequent connects reuse the bond. Mutually exclusive
-     *  with the other transports — they're dropped first. [auto] is true
-     *  when the call originates from the auto-reconnect collector (the
-     *  previously-bonded body just re-advertised); false on explicit user
-     *  taps. Auto-reconnect must not override an active simulator. */
+    /** Connect to a Canon BLE camera — delegated to [canonBleController]. First
+     *  connect triggers the OS pair dialog; later ones reuse the bond. [auto]
+     *  marks an auto-reconnect call (must not override the simulator);
+     *  [autoReconnect] uses OS-managed autoConnect for a body that may only
+     *  advertise directedly. Mutually exclusive with the other transports. */
     fun connectCanonBle(
         device: android.bluetooth.BluetoothDevice,
         auto: Boolean = false,
-        /** Reconnect to a previously-bonded body: use OS-managed autoConnect
-         *  (waits for the camera to become available — a directed-advertising
-         *  body never shows in the service-UUID scan) + a longer window. */
         autoReconnect: Boolean = false,
-    ) {
-        canonBleConnectJob?.cancel()
-        lastCanonBleDevice = device
-        canonBleConnectJob = viewModelScope.launch {
-            if (auto && _simulatorActive.value) {
-                Log.i(TAG, "connectCanonBle(auto): simulator active, skipping")
-                return@launch
-            }
-            _canonBleError.value = null
-            _canonBleConnecting.value = true
-            if (autoReconnect) _canonBleReconnecting.value = true
-            try {
-                if (bleController.connected.value) bleController.disconnect()
-                if (_canonCcapiTransport.value != null) disconnectCanonCcapi()
-                if (_ptpTransport.value != null) disconnectPtp()
-                if (_ptpIpTransport.value != null) disconnectPtpIp()
-                if (_simulatorActive.value) disconnectSimulator()
-                stopScan()
-                // Stop the BLE scan once connected — Android shouldn't be
-                // scanning and connected at the same time on the same radio
-                // (battery + scan-callback noise). The disconnect handler
-                // re-arms scanning so the auto-reconnect collector picks
-                // up the body's next advertisement.
-                stopCanonBleScan()
+    ) = canonBleController.connect(device, auto, autoReconnect)
 
-                val appCtx = getApplication<Application>()
-                val result = com.ehrocha.pulsar.canonble.CanonBleTransport.connect(
-                    appCtx, device,
-                    onSpontaneousDisconnect = { onCanonBleLinkDropped() },
-                    onAwaitConfirm = { _canonBleAwaitingConfirm.value = true },
-                    autoConnect = autoReconnect,
-                    connectTimeoutMs = if (autoReconnect) 120_000L else 30_000L,
-                    bre1Name = canonBleSettings.nameRemote.value,
-                    smartName = canonBleSettings.nameSmart.value,
-                )
-                _canonBleAwaitingConfirm.value = false
-                val transport = when (result) {
-                    is com.ehrocha.pulsar.canonble.CanonBleConnectResult.Ok -> result.transport
-                    com.ehrocha.pulsar.canonble.CanonBleConnectResult.NoBleShutter -> {
-                        // Smartphone-mode body with no BLE shutter (2018 EOS R):
-                        // steer the user to USB / Wi-Fi instead of "failed".
-                        _canonBleError.value = "no_ble_shutter"
-                        _canonBleReconnecting.value = false
-                        return@launch
-                    }
-                    com.ehrocha.pulsar.canonble.CanonBleConnectResult.Failed -> {
-                        _canonBleError.value = "connect_failed"
-                        // Clear the reconnecting banner — a timed-out patient
-                        // reconnect must not leave it stuck on forever.
-                        _canonBleReconnecting.value = false
-                        return@launch
-                    }
-                }
-                transport.postFrameCooldownMs = canonBleSettings.cooldownMs.value
-                _canonBleTransport.value = transport
-                lastCanonBleAddress = device.address
-                _canonBleReconnecting.value = false
-                _deviceName.value = transport.label.value
-                _connected.value = true
-                recordLastConnection(com.ehrocha.pulsar.model.LastConnection(
-                    kind = com.ehrocha.pulsar.transport.TransportKind.CANON_BLE,
-                    label = transport.label.value,
-                    identifier = device.address,
-                ))
-                _status.value = StatusFrame(
-                    state = DeviceState.IDLE,
-                    mode = TriggerMode.TIMELAPSE.id,
-                    shotsTaken = 0,
-                    timeRemainingMs = 0L,
-                    batteryPct = 0,
-                    errorCode = 0,
-                    fwVersion = "",
-                )
-            } finally {
-                _canonBleConnecting.value = false
-                _canonBleAwaitingConfirm.value = false
-            }
-        }
-    }
-
-    /** Called from the BLE GATT callback when a previously-good link
-     *  drops. Flips the reconnecting banner on and arms the auto-reconnect
-     *  collector. We DON'T release the transport here — `connectCanonBle`
-     *  will overwrite the StateFlow with a fresh transport on
-     *  re-advertise, and the old transport's `release()` is idempotent.
-     *
-     *  **Thread**: invoked from Android's GATT binder thread (the BLE
-     *  stack runs `BluetoothGattCallback`s off-main). Everything we touch
-     *  here must be thread-safe: `MutableStateFlow.value` setters are,
-     *  `canonBleDiscovery.start()` is, and `disconnectCanonBle()` launches
-     *  release work on `viewModelScope` rather than running it inline. */
-    private fun onCanonBleLinkDropped() {
-        Log.i(TAG, "Canon BLE link dropped — arming auto-reconnect")
-        abortFlowOnTransportDrop()
-        _canonBleReconnecting.value = true
-        val device = lastCanonBleDevice
-        // Tear down the dropped transport's GATT resources, but preserve
-        // lastCanonBleAddress / lastCanonBleDevice for the reconnect.
-        disconnectCanonBle(clearAutoReconnect = false)
-        if (device != null) {
-            // OS-managed autoConnect: the stack re-establishes when the body
-            // is next available (including directed advertisements a scan can't
-            // see). More reliable than waiting for the service-UUID scan.
-            connectCanonBle(device, auto = true, autoReconnect = true)
-        } else {
-            // No cached device (e.g. reconnect target only known by MAC) —
-            // fall back to the scan + collector path.
-            canonBleDiscovery.start()
-        }
-    }
-
-    private fun disconnectCanonBle(clearAutoReconnect: Boolean = true) {
-        // Cancel any in-flight connect / reconnect FIRST — must run even
-        // when `_canonBleTransport.value` is already null. After a
-        // spontaneous link drop the transport is cleared but the
-        // OS-managed autoConnect job started by `onCanonBleLinkDropped`
-        // is still in flight; without this cancel, switching to a
-        // sibling transport (simulator, Pulsar BLE, CCAPI, PTP) leaves
-        // the camera trying to reconnect in the background and racing
-        // to overwrite the chosen transport when the camera comes back.
-        canonBleConnectJob?.cancel()
-        canonBleConnectJob = null
-        val transport = _canonBleTransport.value
-        if (transport != null) {
-            viewModelScope.launch { transport.release() }
-            _canonBleTransport.value = null
-        }
-        if (clearAutoReconnect) {
-            lastCanonBleAddress = null
-            lastCanonBleDevice = null
-            _canonBleReconnecting.value = false
-        }
-        if (noTransportActive()) {
-            _connected.value = false
-            _status.value = null
-        }
-    }
+    private fun disconnectCanonBle(clearAutoReconnect: Boolean = true) =
+        canonBleController.disconnect(clearAutoReconnect)
 
     internal fun disconnectPtp(clearAutoReconnect: Boolean = true) {
         val transport = _ptpTransport.value ?: return
@@ -2029,7 +1888,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         when {
             _canonCcapiTransport.value != null -> disconnectCanonCcapi()
             _ptpTransport.value != null -> disconnectPtp()
-            _canonBleTransport.value != null -> disconnectCanonBle()
+            canonBleController.transport.value != null -> disconnectCanonBle()
             _ptpIpTransport.value != null -> disconnectPtpIp()
             _simulatorActive.value -> disconnectSimulator()
             else -> {
@@ -2185,7 +2044,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  [runCameraTest] fires Timelapse only. Drives the Tools-tab tile
      *  copy too. */
     val activeTransportSupportsBulb: StateFlow<Boolean> = combine(
-        _canonCcapiTransport, _ptpTransport, _canonBleTransport, _ptpIpTransport,
+        _canonCcapiTransport, _ptpTransport, canonBleController.transport, _ptpIpTransport,
     ) { ccapi, ptp, ble, ptpIp ->
         // First non-null transport wins. ESP32 BLE + simulator paths don't
         // appear here — neither implements CameraTransport, and both own
@@ -2211,7 +2070,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  the wire. Wizards gate the AutofocusToggle on this so it doesn't show
      *  on transports where it would be cosmetic (PTP/IP, BR-E1 smart-mode). */
     val activeTransportSupportsAf: StateFlow<Boolean> = combine(
-        _canonCcapiTransport, _ptpTransport, _canonBleTransport, _ptpIpTransport,
+        _canonCcapiTransport, _ptpTransport, canonBleController.transport, _ptpIpTransport,
     ) { ccapi, ptp, ble, ptpIp ->
         when {
             ccapi != null -> ccapi.supportsAfToggle
@@ -2488,7 +2347,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     private fun activeCameraTransport(): com.ehrocha.pulsar.transport.CameraTransport? {
         val cc = _canonCcapiTransport.value
         val pu = _ptpTransport.value
-        val cb = _canonBleTransport.value
+        val cb = canonBleController.transport.value
         val pi = _ptpIpTransport.value
         if (com.ehrocha.pulsar.BuildConfig.DEBUG) {
             // Mutual exclusion invariant — every connect* path is supposed to
@@ -2520,7 +2379,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _canonCcapiTransport.value?.stop()
             _ptpTransport.value?.stop()
-            _canonBleTransport.value?.stop()
+            canonBleController.transport.value?.stop()
             flowJob?.cancelAndJoin()
             flowJob = null
             // Belt-and-braces release after cancellation. The runner's
@@ -2539,7 +2398,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  open. Reads the TRUE shutter state (00050004) and closes if open; no-op on
      *  other transports / when disconnected. Cheap (a read) when already closed. */
     fun ensureShutterSafelyClosed() {
-        val ble = _canonBleTransport.value ?: return
+        val ble = canonBleController.transport.value ?: return
         viewModelScope.launch { runCatching { ble.ensureShutterClosedSafely() } }
     }
 
