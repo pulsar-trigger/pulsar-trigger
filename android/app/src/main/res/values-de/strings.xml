@@ -244,7 +244,7 @@
     <string name="btn_single_shot">Einzelaufnahme</string>
     <string name="btn_release_shutter">Auslöser loslassen</string>
     <string name="btn_open_shutter">Verschluss öffnen</string>
-    <string name="btn_close_shutter">Verschluss schliessen</string>
+    <string name="btn_close_shutter">Verschluss schließen</string>
     <string name="status_shutter_open">Verschluss offen…</string>
     <string name="status_press_hold">Taste gedrückt halten</string>
     <string name="status_shutter_locked">Verschluss offen gesperrt</string>
