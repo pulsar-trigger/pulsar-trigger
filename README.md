@@ -652,3 +652,7 @@ Pulsar is an independent, open-source project. It is **not affiliated with, auth
 Canon CCAPI is accessed through Canon's Developer Programme over standard HTTP; no Canon SDK or proprietary binary is bundled or linked. This repository does **not** redistribute Canon's SDK, its documentation, or the CCAPI Activation Tool — users obtain the activation tool from Canon's official Developer Programme themselves. Canon's specification is NDA-covered and kept outside this repository.
 
 Controlling a camera with this software is at your own risk; the authors accept no liability for damage to equipment or missed/lost shots. See [LICENSE](LICENSE) for the full warranty disclaimer.
+
+> ### ⚠️ Here be dragons — the direct camera-control paths
+>
+> Pulsar's **Canon BLE** transport, and the Canon-vendor parts of the **USB PTP** and **Wi-Fi PTP/IP** transports, drive cameras using **reverse-engineered, undocumented** protocols — not official APIs. (Canon **CCAPI** is the exception: it's an official Canon Developer Programme API.) These reverse-engineered paths carry **no manufacturer support or guarantee**, can behave differently across bodies and firmware, and a firmware update could change or break them at any time. Rare failure modes include a **shutter left open, an extra/short frame, or a body that needs a power-cycle** to recover, plus a little extra battery drain while connected. They're well-tested on the author's Canon bodies (EOS R / RP / R6), but **your mileage may vary — use these paths entirely at your own risk.**

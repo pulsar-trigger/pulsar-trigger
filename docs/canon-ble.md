@@ -1,5 +1,20 @@
 # Canon BLE direct transport
 
+> ## ⚠️ Here be dragons
+>
+> This transport drives your camera over **reverse-engineered, undocumented**
+> Bluetooth protocols (Canon's BR-E1 remote and smartphone-pairing modes) — not
+> an official API. There is **no manufacturer support or guarantee**: behaviour
+> varies between bodies and firmware versions, and a Canon firmware update could
+> change or break it at any time. In rare cases a mis-sequenced command can leave
+> the shutter open, fire an extra/short frame, or put the body in a state that
+> needs a power-cycle to clear; keeping BLE connected also draws a little extra
+> battery. It's well-exercised on the author's EOS R / RP / R6, but **your
+> mileage may vary**. Pulsar is **not affiliated with or endorsed by Canon** —
+> use it entirely **at your own risk**. See the
+> [README disclaimer](../README.md#trademarks--disclaimer) and
+> [LICENSE](../LICENSE) (the software comes with no warranty).
+
 Pulsar's fourth transport: drive a Canon body directly over Bluetooth Low Energy using Canon's BR-E1 remote-control protocol. No ESP32 hardware in line, no Wi-Fi setup, no cable — just BLE between the phone and the camera.
 
 Its reason to exist: a fully wireless, hardware-free path on Canon bodies that takes the same `CameraTransport` abstraction as CCAPI and PTP. CCAPI shipped first and remains the most featureful (live view + Star Focus + lens info + battery), PTP-over-USB shipped second to cover the EOS R where CCAPI cannot be activated, and Canon BLE direct now covers the "I just want to wirelessly trigger my Canon from my phone, no cables, no extra gear" case.
