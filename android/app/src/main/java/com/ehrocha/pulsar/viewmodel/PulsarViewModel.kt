@@ -1071,7 +1071,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     )
     val canonBleCooldownMs: StateFlow<Long> = _canonBleCooldownMs
     fun setCanonBleCooldownMs(v: Long) {
-        val clamped = v.coerceIn(1_000L, 10_000L)
+        val clamped = com.ehrocha.pulsar.canonble.CanonBleRules.clampCooldown(v)
         prefs.edit().putLong("canon_ble_cooldown_ms", clamped).apply()
         _canonBleCooldownMs.value = clamped
         // Push to a live transport so the step-boundary floor uses it at once.
@@ -1083,7 +1083,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  printable ASCII + length-capped (they go into the BR-E1 pair-write / smart
      *  identity write). Applied on the NEXT connect. */
     private fun sanitizeBleName(s: String, fallback: String): String =
-        s.filter { it.code in 0x20..0x7E }.trim().take(20).ifBlank { fallback }
+        com.ehrocha.pulsar.canonble.CanonBleRules.sanitizeName(s, fallback)
     private val _canonBleNameRemote = MutableStateFlow(
         prefs.getString("canon_ble_name_remote", null)
             ?: com.ehrocha.pulsar.canonble.CanonBleTransport.PAIR_NAME_BRE1
@@ -1093,7 +1093,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         val name = sanitizeBleName(v, com.ehrocha.pulsar.canonble.CanonBleTransport.PAIR_NAME_BRE1)
         // Must stay distinct from the smart name — otherwise the two protocols
         // are indistinguishable in the camera's device list (the whole point).
-        if (name.equals(_canonBleNameSmart.value, ignoreCase = true)) return
+        if (!com.ehrocha.pulsar.canonble.CanonBleRules.namesDistinct(name, _canonBleNameSmart.value)) return
         prefs.edit().putString("canon_ble_name_remote", name).apply()
         _canonBleNameRemote.value = name
     }
@@ -1104,7 +1104,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val canonBleNameSmart: StateFlow<String> = _canonBleNameSmart
     fun setCanonBleNameSmart(v: String) {
         val name = sanitizeBleName(v, com.ehrocha.pulsar.canonble.CanonBleTransport.PAIR_NAME_SMART)
-        if (name.equals(_canonBleNameRemote.value, ignoreCase = true)) return
+        if (!com.ehrocha.pulsar.canonble.CanonBleRules.namesDistinct(name, _canonBleNameRemote.value)) return
         prefs.edit().putString("canon_ble_name_smart", name).apply()
         _canonBleNameSmart.value = name
     }
@@ -1123,7 +1123,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         if (bulbDial == null) return
         val prev = lastModeBulbDial
         lastModeBulbDial = bulbDial
-        if (prev != null && prev != bulbDial && _canonBleTransport.value != null) {
+        if (com.ehrocha.pulsar.canonble.CanonBleRules.shouldRemindDial(
+                prev, bulbDial, _canonBleTransport.value != null)) {
             _canonBleDialReminder.tryEmit(bulbDial)
         }
     }
@@ -1134,10 +1135,12 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         // Applies to BOTH BR-E1 and smartphone mode: Eduardo confirmed the RP
         // ALSO eats presses / skips frames below the cool-down (2026-07-03).
         val floor = _canonBleCooldownMs.value
-        if (intervalMs >= floor) return intervalMs
-        Log.i(TAG, "Canon BLE: interval ${intervalMs}ms below cool-down — raised to ${floor}ms")
-        _canonBleIntervalRaised.tryEmit(Unit)
-        return floor
+        val safe = com.ehrocha.pulsar.canonble.CanonBleRules.safeInterval(intervalMs, floor)
+        if (safe != intervalMs) {
+            Log.i(TAG, "Canon BLE: interval ${intervalMs}ms below cool-down — raised to ${floor}ms")
+            _canonBleIntervalRaised.tryEmit(Unit)
+        }
+        return safe
     }
     private val _flowPaused = MutableStateFlow(false)
     val flowPaused: StateFlow<Boolean> = _flowPaused
@@ -2383,8 +2386,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
      *  mismatched manual phase can't leave the bulb phase desynced/open); 1 on
      *  transports that aren't a toggle. Also drives the phase's "X / N" counter. */
     val cameraTestManualShots: Int
-        get() = if (activeCameraTransport()?.kind ==
-            com.ehrocha.pulsar.transport.TransportKind.CANON_BLE) 2 else 1
+        get() = com.ehrocha.pulsar.canonble.CanonBleRules.manualTestShots(
+            activeCameraTransport()?.kind == com.ehrocha.pulsar.transport.TransportKind.CANON_BLE)
 
     fun runCameraTestBulbPhase() {
         if (!activeTransportSupportsBulb.value) return
