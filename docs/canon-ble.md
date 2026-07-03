@@ -147,8 +147,8 @@ shutter pattern differs:
 
 | Mode | BR-E1 (older bodies) | Smartphone-mode (R-series) |
 |---|---|---|
-| Timelapse / single-shot (`fireShutter`) | Per shot: `0x8C` (press) → 200 ms → `0x0C` (release) on `00050003`. AF: `0x4C` → 200 ms → `0x0C` first. | Per shot: `[00,01]` (M-mode **press** event) → 200 ms → `[00,02]` (M-mode **release** event) on `00030030`. AF is folded into the release — no separate half-press. (`smartShutterTap` in `CanonBleClient`.) |
-| Intervalometer (bulb) / Astro / DarkFrame | Optional AF half-press, `startBulb` writes `0x8C` → `delay(exposureMs)` → `stopBulb` writes `0x0C`. | `startBulb` writes `[00,01]` → `delay(exposureMs)` → `stopBulb` writes `[00,01]`. Bulb tracks the shutter-open state on `[00,01]` toggles only. (`smartShutter` in `CanonBleClient`.) |
+| Timelapse / single-shot (`fireShutter`) | Per shot: `0x8C` (press) → 200 ms → `0x0C` (release) on `00050003`. AF: `0x4C` → 200 ms → `0x0C` first. | Per shot: `[00,01]` (M-mode **press** event) → 200 ms → `[00,02]` (M-mode **release** event) on `00030030`. **No AF over BLE** (`afToggle=false`). (`smartShutterTap` in `CanonBleClient`.) |
+| Intervalometer (bulb) / Astro / DarkFrame | Optional AF half-press, `startBulb` writes `0x8C` → `delay(exposureMs)` → `stopBulb` writes `0x0C`. | `startBulb` writes `[00,01]` → `delay(exposureMs)` → `stopBulb` writes `[00,01]` (a second toggle → closed). Bulb tracks open/closed on `[00,01]` toggles only; `[00,02]` is inert in Bulb. (`smartBulbToggle` in `CanonBleClient`, v0.620 — an earlier `[00,02]`-close regression left the sensor stuck open.) |
 | Ramp | Same as bulb; `exposureMs` interpolates linearly. | Same as bulb; `exposureMs` interpolates linearly. |
 
 The smartphone shutter behaves differently by **camera dial setting**, not
@@ -161,6 +161,24 @@ just by bytes:
   shutter events** — `[00,01]` = press, `[00,02]` = release. Sending two
   `[00,01]`s in M mode re-presses on the second byte and leaves the body
   shooting continuously (verified on EOS RP, v0.288 diagnostics).
+
+Two more smartphone-mode facts, both established on the RP 2026-07-03:
+
+- **Same ~4 s post-frame cooldown as BR-E1.** The RP also eats presses / skips
+  frames below ~4 s of quiet between exposures, so `canonBleSafeInterval` clamps
+  sub-4 s intervals to 4 s for smartphone mode too (v0.628; the v0.619 attempt to
+  exempt smart mode was wrong).
+- **No trustworthy readable shutter state.** The `00030031` state char (READ +
+  NOTIFY partner of `00030030`) looked like a clean `01`=open / `03`=closed signal
+  but its **read is stuck at `010101` regardless of the real state** — acting on it
+  fired stray shots. So the safety-close uses the **`bulbOpen` parity flag** (only
+  toggles when we believe the shutter is open), never a state read. Same
+  "the reads lie" conclusion as BR-E1's `00050004`.
+- **Camera Test / dial mismatch:** because a single-shot tap's `[00,01]` toggles
+  the Bulb shutter (if the dial is on Bulb) without touching the flag, the Camera
+  Test fires its manual phase **twice** on Canon BLE (even `[00,01]` count → the
+  shutter returns to closed on either dial), so a wrong-dial manual phase can't
+  leave the following bulb phase open (v0.629).
 
 Because the app can't read the dial position over BLE, Pulsar gates the
 choice at the UI level: the **Manual** tile drives bulb (camera dial → Bulb),

@@ -392,6 +392,10 @@ class CanonBleTransport private constructor(
             client.smartShutterTap(press = true)
             delay(SHUTTER_TAP_MS)
             client.smartShutterTap(press = false)
+            // A shot (or a bulb toggle, if the dial's on Bulb) just fired — anchor
+            // the cooldown so a following bulb open waits it out (the RP shares the
+            // ~4 s cooldown; the Camera Test's manual→bulb hand-off relied on this).
+            lastRealCloseElapsed = SystemClock.elapsedRealtime()
         } else {
             pressShutter()
             delay(SHUTTER_TAP_MS)
@@ -442,10 +446,14 @@ class CanonBleTransport private constructor(
     override suspend fun startBulb(af: Boolean) = opLock.withLock {
         if (!_connected.value) return@withLock
         // Post-frame cooldown: don't press until ≥4 s after the last real close, or
-        // the EOS R eats the open (card-proven ~0.5 s frame). Backstops the
-        // viewmodel's per-interval clamp for step boundaries + each step's first
-        // frame. BR-E1 only; the first frame of the session (lastRealClose=0) is free.
-        if (!isSmart && lastRealCloseElapsed != 0L) {
+        // the camera eats the open (card-proven ~0.5 s frame; the eaten toggle then
+        // desyncs the parity → sensor left open). Backstops the viewmodel's
+        // per-interval clamp for STEP BOUNDARIES (the Camera Test's inconsistent
+        // inter-step delays land some opens ~1 s after the previous close).
+        // Applies to BOTH protocols — the RP shares the cooldown (Eduardo,
+        // 2026-07-03, RP Camera Test left the sensor open). First frame of the
+        // session (lastRealClose=0) is free.
+        if (lastRealCloseElapsed != 0L) {
             val since = SystemClock.elapsedRealtime() - lastRealCloseElapsed
             if (since in 0 until POST_FRAME_COOLDOWN_MS) {
                 val wait = POST_FRAME_COOLDOWN_MS - since

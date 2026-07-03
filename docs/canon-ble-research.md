@@ -415,10 +415,16 @@ implementations (and Pulsar) all pair-but-won't-shoot on the R.
 | `0001000a-…` | `0xf104` | **IDENTITY / registration** (write) |
 | `00030000-…` | — | mode + shutter service |
 | `00030010-…` | `0xf307` | **MODE select** (write) |
+| `00030011-…` | — | mode notify (partner of `00030010`) |
 | `00030030-…` | `0xf311` | **SHUTTER** (write) |
+| `00030031-…` | — | **shutter STATE** (read+notify partner of `00030030`) — byte[1] `01`/`03`, but the READ is unreliable (see below) |
+| `00030001/2`, `00030020/21` | — | other control/notify pairs (unused) |
 | `00040000-…` | — | location/geo service |
 | `00040002-…` | — | geo write (GPS + time-sync packet) |
 | `00040003-…` | — | geo indicate (camera requests location) |
+
+_(Full GATT dump from the RP MonsteRP `D0:40:EF:6C:F1:08`, v0.622 diag: services
+`00001800/1801/180a` (GAP/GATT/DevInfo) + `00010000/00020000/00030000/00040000`.)_
 
 ### Constants
 
@@ -448,29 +454,55 @@ name         = the controller's display string
 11. write [MODE_SHOOT = 0x02]        → 00030010  (switch camera to shooting mode)
 ```
 
-### Shutter (after the handshake)
+### Shutter (after the handshake) — DEFINITIVE model (RP, on-device 2026-07-02→03)
 
-```
-toggle  → write [0x00, 0x01] → 00030030     (button DOWN ↔ UP)
-focus   → no-op (smartphone mode does not split AF; the camera AFs on release)
-```
+> ⚠️ **This supersedes the earlier "press/release on both dials" write-up**
+> (v0.358). That was itself a regression: `[00,02]` does **not** close bulb, so a
+> bulb frame closed with `[00,02]` left the sensor stuck open (the "manual hold
+> won't stop" + every-other-shot bug). The correct model is dial-dependent, and
+> matches BR-E1 (see `canon-ble-bulb-status.md`).
 
-**The RP shutter uses press/release codes on both dial settings** — the
-previously-documented "Bulb dial toggles on `[00 01]`" claim was wrong:
+The `[00,01]` / `[00,02]` bytes **mean different things depending on the mode
+dial** — because this is a button-remote protocol and a button doesn't know the
+mode; the camera resolves it from the dial, which the app can't read.
 
-- **Both dials**: `[00 01]` = shutter **press**, `[00 02]` = shutter
-  **release**. Sending `[00 01]` twice in a row in Bulb (the v0.290 "toggle"
-  recipe) makes the body shoot non-stop — same failure mode as in M. The
-  release byte is not inert; it just doesn't visibly cancel the open bulb on
-  a casual log read, which is what created the original 2026-05-29
-  misinterpretation.
-- **v0.358 correction (verified 2026-06-03 on EOS RP)**: the in-app camera
-  test fired bulb continuously when `smartShutter` used `[00 01]` for both
-  press and release. Switching to the same `[00 01]/[00 02]` pattern as the
-  tap path stopped the runaway.
-- **Single shot in M**: `[00 01]` → wait → `[00 02]` (verified firing one
-  frame, v0.290 — still correct).
-- **Bulb sequence**: `[00 01]` → hold for exposure → `[00 02]` (v0.358).
+- **Bulb dial:** `[00,01]` is a **TOGGLE** — first press opens, next closes.
+  **`[00,02]` is INERT** (does nothing in Bulb). So a bulb frame = `[00,01]`
+  (open) → hold → `[00,01]` (close). Sent by `smartBulbToggle()` (v0.620), used by
+  `startBulb`/`stopBulb`. The app tracks open/closed with the `bulbOpen` **parity
+  flag** (no reliable state read — below).
+- **M (non-bulb) dial:** `[00,01]` = **press**, `[00,02]` = **release** — one shot
+  at the dial's shutter speed. Sent by `smartShutterTap()`, used by `fireShutter`
+  (single-shot / timelapse / cable-release). Two `[00,01]`s in M re-press → the
+  body shoots continuously (this is what caused the v0.358 misdiagnosis when the
+  test happened to be on M).
+- **AF:** none over BLE in smartphone mode (`afToggle=false`).
+
+**`00030031` shutter STATE is NOT a usable read.** It's the read+notify partner of
+`00030030`; byte[1] looked like `01`=open / `03`=closed, but a full session
+(2026-07-03) proved the **READ is stuck at `010101` regardless of actual state**
+(returned `010101` at connect-rest, after a manual tap, and after a clean run that
+ended *closed*). `010301` only ever appeared once on a NOTIFY and never
+reproduced. Acting on the read fired **stray shots** (v0.623–627, reverted v0.628).
+So: no trustworthy wire-truth — same as BR-E1's `00050004` lying during the
+cooldown. Close via the parity flag, not a state read.
+
+**~4 s post-frame cooldown — the RP shares it with BR-E1** (Eduardo, 2026-07-03):
+below ~4 s of quiet between exposures the RP eats presses / skips frames, so
+`canonBleSafeInterval` clamps sub-4 s intervals to 4 s for smartphone mode too
+(v0.628; the v0.619 smart-mode bypass was wrong).
+
+**Dial-mismatch / Camera Test:** a single-shot tap's `[00,01]` toggles the Bulb
+shutter (if the dial's on Bulb) without touching `bulbOpen` → the following bulb
+run ends open. Fixed deterministically by making the Camera Test manual phase fire
+**2** shots on Canon BLE (even `[00,01]` count → shutter returns to closed on
+either dial), v0.629.
+
+**RP direct-drive is blocked** (auth wall): the RP requires a bonded link for
+GATT, but BlueZ ↔ RP reconnect fails `LE.Disconnected Reason.Authentication` every
+time (persists after clearing the camera's wireless settings + fresh mutual pair).
+Android bonds it correctly, so **the app is the probe** for smart-mode work — not
+`tools/canon_ble_test.py`. See `canon-ble-bulb-status.md → Direct drive`.
 
 Pulsar keeps two methods at the wire layer for clarity:
 `CanonBleClient.smartShutter` (used by `startBulb` / `stopBulb`) and
@@ -584,8 +616,8 @@ to a known family for free). Two-level selection:
    from the GATT** (toggle and press/release both expose `00030000`/`00030030`).
    If it ever diverges, key the override on the **model family / generation**
    (Device Information `0x2a24` model, `0x2a26` firmware), in one spot:
-   `CanonBleClient.smartShutter` / `smartShutterTap`. Pulsar's `[00 01]`
-   toggle (bulb) and `[00 01]` press / `[00 02]` release (M) are both
+   `CanonBleClient.smartBulbToggle` / `smartShutterTap`. Pulsar's `[00 01]`
+   bulb toggle and `[00 01]` press / `[00 02]` release (M) are both
    confirmed on the RP — no per-family override needed today.
 
 | Path | Detection | Shutter encoding | Bodies |
