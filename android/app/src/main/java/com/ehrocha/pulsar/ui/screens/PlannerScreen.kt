@@ -397,6 +397,10 @@ fun EventSessionsScreen(
     var showAddSession by remember { mutableStateOf(mapResult != null) }
     var editingSession by remember { mutableStateOf<PlannerSession?>(null) }
     val scope = rememberCoroutineScope()
+    // Night Strips: per-session NightModel (the Sky Dial's single-source
+    // model), cache-first with polite sequential fetches on miss.
+    val nightRepoContext = LocalContext.current
+    val nightRepo = remember { SessionNightRepo(nightRepoContext, plannerManager) }
 
     // Bulk delete state
     var selectionMode by remember { mutableStateOf(false) }
@@ -621,6 +625,7 @@ fun EventSessionsScreen(
                         items(daySessions, key = { it.id }) { session ->
                             SessionCard(
                                 session = session,
+                                nightRepo = nightRepo,
                                 onClick = {
                                     if (selectionMode) {
                                         selectedIds = if (session.id in selectedIds)
@@ -649,6 +654,7 @@ fun EventSessionsScreen(
                     items(sessions, key = { it.id }) { session ->
                         SessionCard(
                             session = session,
+                            nightRepo = nightRepo,
                             onClick = {
                                 if (selectionMode) {
                                     selectedIds = if (session.id in selectedIds)
@@ -808,6 +814,7 @@ private fun EventCard(
 @Composable
 private fun SessionCard(
     session: PlannerSession,
+    nightRepo: SessionNightRepo,
     onClick: () -> Unit,
     onDelete: () -> Unit,
     onEdit: () -> Unit = {},
@@ -816,6 +823,16 @@ private fun SessionCard(
     onLongClick: () -> Unit = {},
 ) {
     val isPast = session.date.isBefore(LocalDate.now())
+    // The session's night as an instrument (cache-first; a fetch fills it in
+    // once the forecast is reachable). Keyed on the fields whose change
+    // invalidates the model, incl. lastChecked so a manual condition check
+    // refreshes the strip too.
+    val night by produceState<com.ehrocha.pulsar.astro.NightModel?>(
+        initialValue = null,
+        session.id, session.date, session.latitude, session.longitude, session.lastChecked,
+    ) {
+        value = nightRepo.get(session)
+    }
 
     Surface(
         shape = RoundedCornerShape(12.dp),
@@ -887,6 +904,19 @@ private fun SessionCard(
                         )
                     }
                 }
+            }
+
+            // The Night Strip — the whole night at a glance (quality ridge,
+            // moon/core bands, best-window blaze). Same model as the Sky Dial.
+            night?.let { model ->
+                Spacer(Modifier.height(10.dp))
+                com.ehrocha.pulsar.ui.components.NightStrip(
+                    model,
+                    Modifier
+                        .fillMaxWidth()
+                        .height(46.dp),
+                    compact = true,
+                )
             }
 
             if (session.summary.isNotBlank()) {
