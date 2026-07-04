@@ -740,6 +740,9 @@ fun PulsarNavHost(
                     plannerManager = vm.plannerManager,
                     onBack = { currentScreen = AppScreen.Menu },
                     onEventSessions = { event -> currentScreen = AppScreen.EventSessions(event) },
+                    onSessionDetail = { session, event ->
+                        currentScreen = AppScreen.SessionDetail(session, event)
+                    },
                 )
             }
             is AppScreen.MapPicker -> {

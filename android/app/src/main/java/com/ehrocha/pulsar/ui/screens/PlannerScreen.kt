@@ -191,16 +191,32 @@ private fun escapeIcal(text: String): String =
 /** Data returned from the map location picker. */
 data class MapPickerResult(val name: String, val lat: Double, val lon: Double)
 
+/** Quality rank for comparisons. The enum declares UNKNOWN first and POOR
+ *  last, so raw `ordinal` ranks POOR as the "best" — that latent inversion
+ *  made the event card's best-verdict chip and the verdict sort favour the
+ *  WORST night. Always compare through this. */
+private val PlannerVerdict.rank: Int
+    get() = when (this) {
+        PlannerVerdict.EXCELLENT -> 4
+        PlannerVerdict.GOOD -> 3
+        PlannerVerdict.FAIR -> 2
+        PlannerVerdict.POOR -> 1
+        PlannerVerdict.UNKNOWN -> 0
+    }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlannerScreen(
     plannerManager: PlannerManager,
     onBack: () -> Unit,
     onEventSessions: (PlannerEvent) -> Unit = {},
+    onSessionDetail: (PlannerSession, PlannerEvent) -> Unit = { _, _ -> },
 ) {
     val state by plannerManager.state.collectAsState()
     var showAddEvent by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
+    val heroContext = LocalContext.current
+    val heroNightRepo = remember { SessionNightRepo(heroContext, plannerManager) }
 
     if (showAddEvent) {
         AddEventDialog(
@@ -275,6 +291,15 @@ fun PlannerScreen(
                 }
             }
         } else {
+            // The planner opens with an ANSWER, not a list: the best upcoming
+            // night across every event, as a full Night Strip, with the next
+            // candidates ranked under it.
+            NextBestNightHero(
+                state = state,
+                nightRepo = heroNightRepo,
+                onOpen = onSessionDetail,
+            )
+
             var selectedTab by remember { mutableIntStateOf(0) }
             val tabs = listOf(
                 stringResource(R.string.tab_upcoming) to upcoming,
@@ -323,7 +348,7 @@ fun PlannerScreen(
                         EventCard(
                             event = event,
                             sessionCount = sessions.size,
-                            bestVerdict = sessions.maxByOrNull { it.verdict.ordinal }?.verdict
+                            bestVerdict = sessions.maxByOrNull { it.verdict.rank }?.verdict
                                 ?: PlannerVerdict.UNKNOWN,
                             onClick = { onEventSessions(event) },
                             onShare = { ctx ->
@@ -390,7 +415,7 @@ fun EventSessionsScreen(
         .let { list ->
             when (sortMode) {
                 SessionSortMode.DATE -> list.sortedWith(compareBy({ it.date }, { it.startTime }))
-                SessionSortMode.VERDICT -> list.sortedByDescending { it.verdict.ordinal }
+                SessionSortMode.VERDICT -> list.sortedByDescending { it.verdict.rank }
                 SessionSortMode.NAME -> list.sortedBy { it.name.lowercase() }
             }
         }
@@ -608,10 +633,22 @@ fun EventSessionsScreen(
             // Group by date for agenda view (or flat list if sorting by non-date)
             if (sortMode == SessionSortMode.DATE) {
                 val byDate = sessions.groupBy { it.date }
+                val comparable = sessions.filter { !it.date.isBefore(LocalDate.now()) }
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxSize(),
                 ) {
+                    // Nights at a glance: the event's upcoming nights stacked on
+                    // one axis — the comparison a ring can't draw.
+                    if (comparable.size >= 2) {
+                        item(key = "nights_glance") {
+                            NightsAtAGlance(
+                                sessions = comparable.take(7),
+                                nightRepo = nightRepo,
+                                onRow = { onSessionDetail(it, event) },
+                            )
+                        }
+                    }
                     byDate.forEach { (date, daySessions) ->
                         item(key = "header_$date") {
                             Text(
@@ -938,6 +975,175 @@ private fun SessionCard(
             }
         }
     }
+}
+
+// ── Next best night hero ─────────────────────────────────────────────────────
+
+/** The planner's answer-first hero: the highest-ranked upcoming session across
+ *  all events, with its full Night Strip, plus up to two runner-up nights.
+ *  Hidden until at least one upcoming session has a checked verdict. */
+@Composable
+private fun NextBestNightHero(
+    state: PlannerState,
+    nightRepo: SessionNightRepo,
+    onOpen: (PlannerSession, PlannerEvent) -> Unit,
+) {
+    val today = LocalDate.now()
+    val ranked = remember(state) {
+        state.sessions
+            .filter { !it.date.isBefore(today) && it.verdict != PlannerVerdict.UNKNOWN }
+            .sortedWith(compareByDescending<PlannerSession> { it.verdict.rank }.thenBy { it.date })
+    }
+    val best = ranked.firstOrNull() ?: return
+    val bestEvent = state.events.find { it.id == best.eventId } ?: return
+    val night by produceState<com.ehrocha.pulsar.astro.NightModel?>(
+        initialValue = null, best.id, best.date, best.lastChecked,
+    ) { value = nightRepo.get(best) }
+
+    Surface(
+        onClick = { onOpen(best, bestEvent) },
+        shape = RoundedCornerShape(16.dp),
+        tonalElevation = 2.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp),
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Text(
+                stringResource(R.string.planner_next_best).uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        best.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                    )
+                    Text(
+                        "${best.date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL))} · ${bestEvent.name}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                }
+                VerdictChip(best.verdict)
+            }
+            night?.let { model ->
+                Spacer(Modifier.height(10.dp))
+                com.ehrocha.pulsar.ui.components.NightStrip(
+                    model,
+                    Modifier
+                        .fillMaxWidth()
+                        .height(72.dp),
+                    compact = false,
+                )
+            }
+            val runnersUp = ranked.drop(1).take(2)
+            if (runnersUp.isNotEmpty()) Spacer(Modifier.height(6.dp))
+            runnersUp.forEach { s ->
+                val ev = state.events.find { it.id == s.eventId } ?: return@forEach
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onOpen(s, ev) }
+                        .padding(vertical = 4.dp),
+                ) {
+                    Text(
+                        s.date.format(DateTimeFormatter.ofPattern("EEE d")),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.width(56.dp),
+                    )
+                    Text(
+                        s.name,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f),
+                    )
+                    VerdictDot(s.verdict)
+                }
+            }
+        }
+    }
+}
+
+/** Stacked mini Night Strips for every upcoming session of an event — nights
+ *  compared side by side on the same visual axis. */
+@Composable
+private fun NightsAtAGlance(
+    sessions: List<PlannerSession>,
+    nightRepo: SessionNightRepo,
+    onRow: (PlannerSession) -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        tonalElevation = 1.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                stringResource(R.string.planner_compare_header).uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(4.dp))
+            sessions.forEach { s ->
+                val night by produceState<com.ehrocha.pulsar.astro.NightModel?>(
+                    initialValue = null, s.id, s.date, s.lastChecked,
+                ) { value = nightRepo.get(s) }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onRow(s) }
+                        .padding(vertical = 3.dp),
+                ) {
+                    Text(
+                        s.date.format(DateTimeFormatter.ofPattern("EEE d")),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        modifier = Modifier.width(56.dp),
+                    )
+                    val model = night
+                    if (model != null) {
+                        com.ehrocha.pulsar.ui.components.NightStrip(
+                            model,
+                            Modifier
+                                .weight(1f)
+                                .height(26.dp),
+                            compact = true,
+                        )
+                    } else {
+                        Spacer(Modifier.weight(1f))
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    VerdictDot(s.verdict)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VerdictDot(verdict: PlannerVerdict) {
+    val color = when (verdict) {
+        PlannerVerdict.EXCELLENT -> VerdictExcellent
+        PlannerVerdict.GOOD -> VerdictGood
+        PlannerVerdict.FAIR -> VerdictFair
+        PlannerVerdict.POOR -> VerdictPoor
+        PlannerVerdict.UNKNOWN -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+    }
+    Surface(
+        color = color,
+        shape = androidx.compose.foundation.shape.CircleShape,
+        modifier = Modifier.size(8.dp),
+    ) {}
 }
 
 // ── Verdict chip ─────────────────────────────────────────────────────────────

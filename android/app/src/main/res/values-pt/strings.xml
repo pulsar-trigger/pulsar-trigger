@@ -547,6 +547,8 @@ A altura vem da escuridão do céu × céu limpo × sem lua brilhante × sem chu
     <!-- Planner -->
     <string name="mode_planner">Planejador de sessões</string>
     <string name="planner_title">Planejador de sessões</string>
+    <string name="planner_next_best">Próxima melhor noite</string>
+    <string name="planner_compare_header">Noites num relance</string>
     <string name="planner_add">Adicionar</string>
     <string name="planner_no_sessions">Nenhuma sessão planejada ainda</string>
     <string name="planner_no_upcoming">Nenhum evento futuro</string>

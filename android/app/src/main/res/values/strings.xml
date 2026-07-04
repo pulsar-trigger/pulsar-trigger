@@ -759,6 +759,8 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <!-- Planner -->
     <string name="mode_planner">Session Planner</string>
     <string name="planner_title">Session Planner</string>
+    <string name="planner_next_best">Next best night</string>
+    <string name="planner_compare_header">Nights at a glance</string>
     <string name="planner_help">Plan and track astrophotography sessions across multiple locations and dates.\n\n• Create events with date ranges (e.g. a star party weekend)\n• Add sessions with GPS coordinates, dates, and time windows\n• Automatic weather and sky condition checks per session\n• Share events as .pulsar files or calendar entries (.ics)\n• Import shared events from other Pulsar users\n\nLong-press a session to enter bulk selection mode.</string>
     <string name="planner_add">Add</string>
     <string name="planner_no_sessions">No planned sessions yet</string>

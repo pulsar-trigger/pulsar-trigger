@@ -547,6 +547,8 @@ La hauteur vient de l\'obscurité du ciel × ciel dégagé × pas de lune brilla
     <!-- Planner -->
     <string name="mode_planner">Planificateur de sessions</string>
     <string name="planner_title">Planificateur de sessions</string>
+    <string name="planner_next_best">Prochaine meilleure nuit</string>
+    <string name="planner_compare_header">Les nuits en un coup d\'œil</string>
     <string name="planner_add">Ajouter</string>
     <string name="planner_no_sessions">Aucune session planifiée</string>
     <string name="planner_no_upcoming">Aucun événement à venir</string>

@@ -541,6 +541,8 @@
     <!-- Planner -->
     <string name="mode_planner">セッションプランナー</string>
     <string name="planner_title">セッションプランナー</string>
+    <string name="planner_next_best">次のベストな夜</string>
+    <string name="planner_compare_header">夜を一目で比較</string>
     <string name="planner_add">追加</string>
     <string name="planner_no_sessions">計画されたセッションはありません</string>
     <string name="planner_no_upcoming">今後のイベントはありません</string>

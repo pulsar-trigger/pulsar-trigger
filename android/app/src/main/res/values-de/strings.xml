@@ -544,6 +544,8 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <!-- Planner -->
     <string name="mode_planner">Sitzungsplaner</string>
     <string name="planner_title">Sitzungsplaner</string>
+    <string name="planner_next_best">Nächste beste Nacht</string>
+    <string name="planner_compare_header">Nächte auf einen Blick</string>
     <string name="planner_add">Hinzufügen</string>
     <string name="planner_no_sessions">Noch keine Sitzungen geplant</string>
     <string name="planner_no_upcoming">Keine kommenden Ereignisse</string>
