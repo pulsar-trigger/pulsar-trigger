@@ -435,12 +435,19 @@ private fun StarTrailScope(arcDeg: Float, modifier: Modifier) {
     Canvas(modifier) {
         val pole = Offset(size.width * 0.15f, size.height * 0.18f)
         val maxR = hypot(size.width, size.height) * 0.9f
-        // radius fraction → start angle (deg) for a handful of stars
+        // radius fraction → start angle (deg). Hand-placed, pseudo-random
+        // spread — dense enough to read as a sky, sparse enough that the
+        // arcs stay distinguishable.
         val stars = listOf(
-            0.30f to 20f, 0.44f to 65f, 0.57f to 110f,
-            0.70f to 45f, 0.83f to 92f, 0.95f to 135f,
-            0.37f to 160f, 0.51f to 205f, 0.64f to 250f,
-            0.78f to 295f, 0.90f to 175f,
+            0.18f to 75f, 0.24f to 210f, 0.30f to 20f,
+            0.34f to 130f, 0.37f to 160f, 0.41f to 310f,
+            0.44f to 65f, 0.47f to 235f, 0.51f to 205f,
+            0.54f to 5f, 0.57f to 110f, 0.60f to 330f,
+            0.64f to 250f, 0.67f to 85f, 0.70f to 45f,
+            0.73f to 190f, 0.76f to 350f, 0.78f to 295f,
+            0.81f to 140f, 0.83f to 92f, 0.86f to 265f,
+            0.90f to 175f, 0.93f to 30f, 0.95f to 135f,
+            0.98f to 225f,
         )
         stars.forEach { (rf, startA) ->
             val r = maxR * rf
