@@ -616,6 +616,8 @@ La hauteur vient de l\'obscurité du ciel × ciel dégagé × pas de lune brilla
     <string name="star_trails_sub">Sous-exposition : %1$d s</string>
     <string name="star_trails_gap">Intervalle entre images : %1$d s</string>
     <string name="star_trails_hint">Réglez Bulb + Manuel sur la molette. Filés empilés : nombreuses poses avec un intervalle minime, fusionnées ensuite (StarStaX, Sequator…). Gardez l\'intervalle court pour éviter les filés en pointillés. Faites quelques darks après.</string>
+    <string name="star_trails_session_lens_hint">À %1$dmm (%2$s), les traînées traversent tout le cadre après ~%3$d min — au-delà, on gagne en densité, pas en longueur (sauf près du pôle).</string>
+    <string name="star_trails_session_lens_wide">À %1$dmm (%2$s), les traînées restent dans le cadre sur toute la plage de session.</string>
     <string name="star_trails_not_connected">Connectez un appareil pour démarrer.</string>
     <string name="star_trails_ble_gap_note">Canon BLE : intervalle minimum de 4 s — l\'appareil rate les cycles plus rapides.</string>
     <string name="star_trails_focal">Objectif %1$d mm · %2$s</string>

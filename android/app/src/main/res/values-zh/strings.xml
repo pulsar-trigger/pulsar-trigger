@@ -608,6 +608,8 @@
     <string name="star_trails_sub">子曝光：%1$d 秒</string>
     <string name="star_trails_gap">帧间间隔：%1$d 秒</string>
     <string name="star_trails_hint">将拨盘设为 B 门 + 手动。堆栈星轨：以极小间隔拍摄多张子曝光，之后合成（StarStaX、Sequator 等）。间隔要小，星轨才不会断裂。结束后拍几张暗场。</string>
+    <string name="star_trails_session_lens_hint">%1$dmm（%2$s）下，约%3$d分钟后星轨即横贯整个画面 — 再长只增加密度而非长度（极点附近除外）。</string>
+    <string name="star_trails_session_lens_wide">%1$dmm（%2$s）下，星轨在整个会话范围内都保持在画面内。</string>
     <string name="star_trails_not_connected">连接相机后开始。</string>
     <string name="star_trails_ble_gap_note">Canon BLE：最小间隔为 4 秒——更快的释放/按下循环相机会漏掉。</string>
     <string name="star_trails_focal">镜头 %1$d mm · %2$s</string>

@@ -69,12 +69,15 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /** Tabs for the Star Trails wizard. The Sweep-arc + stats header stays pinned
- *  above all of them — every tab's value resizes the same arc. */
+ *  above all of them — every tab's value resizes the same arc. LENS leads: the
+ *  glass is the input all the in-frame math is interpreted through (what an
+ *  arc *means* depends on FOV), so it's set first and the session guidance
+ *  derives from it. */
 private enum class StTab(val labelRes: Int) {
+    LENS(R.string.star_trails_tab_lens),
     SESSION(R.string.star_trails_tab_session),
     SUB(R.string.star_trails_tab_sub),
     GAP(R.string.star_trails_tab_gap),
-    LENS(R.string.star_trails_tab_lens),
 }
 
 /**
@@ -123,7 +126,7 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit, initialPresetId: S
     var sensorIdx by rememberSaveable { mutableIntStateOf((lp?.ruleDivisor ?: 0).coerceIn(0, 1)) }
     val tabs = StTab.entries
     var tabIdx by rememberSaveable { mutableIntStateOf(0) }
-    val tab = tabs.getOrNull(tabIdx) ?: StTab.SESSION
+    val tab = tabs.getOrNull(tabIdx) ?: StTab.LENS
 
     val runState = LocalRunState.current
     val running = runState !is RunState.Idle
@@ -154,6 +157,11 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit, initialPresetId: S
         2.0 * Math.atan(sensorWidthMm / (2.0 * focalMm)),
     )
     val framePct = (arcDeg / hFovDeg * 100.0)
+    // Session length at which an equatorial trail spans the full frame width
+    // with this glass (15°/h). Guidance only — polar compositions legitimately
+    // shoot far past it (circumpolar stars never exit the frame), so the
+    // session slider is deliberately NOT capped by this.
+    val fullFrameMin = (hFovDeg / 15.0 * 60.0).roundToInt()
 
     Scaffold(
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
@@ -269,6 +277,7 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit, initialPresetId: S
                         } else {
                             stringResource(R.string.star_trails_frame_value, framePct.roundToInt())
                         },
+                        emphasise = framePct >= 100.0,
                     )
                 }
             }
@@ -299,6 +308,26 @@ fun StarTrailsScreen(vm: PulsarViewModel, onBack: () -> Unit, initialPresetId: S
                             value = totalMin.toFloat(),
                             onChange = { totalMin = it.roundToInt() },
                             range = 10f..240f,
+                        )
+                        // Lens-aware guidance (why LENS is the first tab): where
+                        // this session length lands relative to a full-frame
+                        // trail with the chosen glass. Colour flips once past it.
+                        val sensorLabel = listOf("FF", "APS-C")[sensorIdx]
+                        Text(
+                            if (fullFrameMin > 240) {
+                                stringResource(
+                                    R.string.star_trails_session_lens_wide,
+                                    focalMm, sensorLabel,
+                                )
+                            } else {
+                                stringResource(
+                                    R.string.star_trails_session_lens_hint,
+                                    focalMm, sensorLabel, fullFrameMin,
+                                )
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (framePct >= 100.0) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
                             stringResource(R.string.star_trails_hint),

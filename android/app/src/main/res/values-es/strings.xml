@@ -614,6 +614,8 @@ La altura proviene de la oscuridad del cielo × cielo despejado × sin luna bril
     <string name="star_trails_sub">Subexposición: %1$d s</string>
     <string name="star_trails_gap">Intervalo entre tomas: %1$d s</string>
     <string name="star_trails_hint">Pon Bulb + Manual en el dial. Estelas apiladas: muchas tomas con un intervalo mínimo, combinadas después (StarStaX, Sequator…). Mantén el intervalo corto para que las estelas no salgan discontinuas. Haz unos darks después.</string>
+    <string name="star_trails_session_lens_hint">Con %1$dmm (%2$s), las estelas cruzan todo el encuadre tras ~%3$d min — más tiempo añade densidad, no longitud (salvo cerca del polo).</string>
+    <string name="star_trails_session_lens_wide">Con %1$dmm (%2$s), las estelas permanecen dentro del encuadre en todo el rango de sesión.</string>
     <string name="star_trails_not_connected">Conecta una cámara para empezar.</string>
     <string name="star_trails_ble_gap_note">Canon BLE: intervalo mínimo de 4 s — la cámara pierde ciclos más rápidos.</string>
     <string name="star_trails_focal">Objetivo %1$d mm · %2$s</string>

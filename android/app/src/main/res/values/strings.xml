@@ -854,6 +854,8 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <string name="star_trails_sub">Sub-exposure: %1$d s</string>
     <string name="star_trails_gap">Gap between frames: %1$d s</string>
     <string name="star_trails_hint">Set Bulb + Manual on the camera dial. Stacked trails: many subs with a tiny gap, blended later (StarStaX, Sequator…). Keep the gap small so the trails don\'t come out dashed. Shoot a few dark frames after for noise.</string>
+    <string name="star_trails_session_lens_hint">At %1$dmm (%2$s), trails span the full frame after ~%3$d min — longer adds density, not length (except near the pole).</string>
+    <string name="star_trails_session_lens_wide">At %1$dmm (%2$s), trails stay inside the frame across the whole session range.</string>
     <string name="star_trails_not_connected">Connect a camera to start.</string>
     <string name="star_trails_ble_gap_note">Canon BLE: minimum gap is 4 s — the camera misses faster release/press cycles.</string>
     <string name="star_trails_focal">Lens %1$d mm · %2$s</string>

@@ -616,6 +616,8 @@ A altura vem da escuridão do céu × céu limpo × sem lua brilhante × sem chu
     <string name="star_trails_sub">Subexposição: %1$d s</string>
     <string name="star_trails_gap">Intervalo entre quadros: %1$d s</string>
     <string name="star_trails_hint">Coloque Bulb + Manual no seletor. Rastros empilhados: muitos quadros com intervalo mínimo, combinados depois (StarStaX, Sequator…). Mantenha o intervalo curto para os rastros não saírem tracejados. Faça alguns darks depois.</string>
+    <string name="star_trails_session_lens_hint">Com %1$dmm (%2$s), os rastros cruzam o quadro inteiro após ~%3$d min — mais tempo adiciona densidade, não comprimento (exceto perto do polo).</string>
+    <string name="star_trails_session_lens_wide">Com %1$dmm (%2$s), os rastros permanecem dentro do quadro durante toda a faixa de sessão.</string>
     <string name="star_trails_not_connected">Conecte uma câmera para iniciar.</string>
     <string name="star_trails_ble_gap_note">Canon BLE: intervalo mínimo de 4 s — a câmera perde ciclos mais rápidos.</string>
     <string name="star_trails_focal">Lente %1$d mm · %2$s</string>

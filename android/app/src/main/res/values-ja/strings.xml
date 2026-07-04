@@ -608,6 +608,8 @@
     <string name="star_trails_sub">サブ露光: %1$d 秒</string>
     <string name="star_trails_gap">フレーム間隔: %1$d 秒</string>
     <string name="star_trails_hint">ダイヤルをバルブ＋マニュアルに。比較明合成（StarStaX、Sequator など）用に、わずかな間隔で多数のサブ露光を撮影します。間隔を短く保つと軌跡が途切れません。終了後にダークフレームを数枚撮影してください。</string>
+    <string name="star_trails_session_lens_hint">%1$dmm（%2$s）では約%3$d分で軌跡が画面幅いっぱいに達します — それ以上は長さではなく密度が増えます（極付近を除く）。</string>
+    <string name="star_trails_session_lens_wide">%1$dmm（%2$s）では軌跡はセッション全域で画面内に収まります。</string>
     <string name="star_trails_not_connected">開始するにはカメラを接続してください。</string>
     <string name="star_trails_ble_gap_note">Canon BLE: 最小間隔は 4 秒 — それより速い解放/押下サイクルをカメラが取りこぼします。</string>
     <string name="star_trails_focal">レンズ %1$d mm · %2$s</string>
