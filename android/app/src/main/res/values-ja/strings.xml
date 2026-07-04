@@ -542,6 +542,12 @@
     <string name="mode_planner">セッションプランナー</string>
     <string name="planner_title">セッションプランナー</string>
     <string name="planner_next_best">次のベストな夜</string>
+    <string name="planner_shoot_window">この時間帯に撮影 · %1$s</string>
+    <string name="planner_moon_by_night">夜ごとの月</string>
+    <string name="notif_planner_clear_title">%1$s は晴天です！</string>
+    <string name="notif_planner_degraded_title">%1$s の条件が悪化しました</string>
+    <string name="notif_planner_body">%1$s · %2$s: %3$s</string>
+    <string name="notif_channel_planner">プランナー通知</string>
     <string name="planner_compare_header">夜を一目で比較</string>
     <string name="planner_add">追加</string>
     <string name="planner_no_sessions">計画されたセッションはありません</string>

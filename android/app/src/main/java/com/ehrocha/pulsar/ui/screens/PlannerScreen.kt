@@ -54,6 +54,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
+import kotlin.math.roundToInt
 
 // ── iCal export ─────────────────────────────────────────────────────────────
 
@@ -1553,6 +1554,60 @@ private fun AddSessionDialog(
                     Icon(Icons.Default.DateRange, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text(date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)))
+                }
+
+                // ── Moon-aware date strip: pick the DARK night, not just a
+                // date. One cell per event night (moon phase + illumination,
+                // green % = good for astro), tap to select. ─────────────
+                val moonDates = remember(event.startDate, event.endDate) {
+                    generateSequence(event.startDate) { it.plusDays(1) }
+                        .takeWhile { !it.isAfter(event.endDate) }
+                        .take(28)
+                        .toList()
+                }
+                if (moonDates.size >= 2) {
+                    Text(
+                        stringResource(R.string.planner_moon_by_night),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    androidx.compose.foundation.lazy.LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        items(moonDates) { d ->
+                            val age = com.ehrocha.pulsar.astro.MoonPhase.moonAge(d)
+                            val illum = com.ehrocha.pulsar.astro.MoonPhase.illumination(age)
+                            val sel = d == date
+                            Surface(
+                                onClick = { date = d },
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (sel) MaterialTheme.colorScheme.primaryContainer
+                                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                ) {
+                                    Text(
+                                        "${d.dayOfMonth}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal,
+                                    )
+                                    Text(
+                                        com.ehrocha.pulsar.astro.MoonPhase.emoji(age),
+                                        style = MaterialTheme.typography.labelSmall,
+                                    )
+                                    Text(
+                                        "${illum.roundToInt()}%",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (com.ehrocha.pulsar.astro.MoonPhase.goodForAstro(illum))
+                                            VerdictExcellent
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // ── Time window (optional) ───────────────────────────

@@ -542,6 +542,12 @@
     <string name="mode_planner">会话规划器</string>
     <string name="planner_title">会话规划器</string>
     <string name="planner_next_best">下一个最佳夜晚</string>
+    <string name="planner_shoot_window">拍摄此时间窗 · %1$s</string>
+    <string name="planner_moon_by_night">每晚月相</string>
+    <string name="notif_planner_clear_title">%1$s 天气晴朗！</string>
+    <string name="notif_planner_degraded_title">%1$s 的条件变差了</string>
+    <string name="notif_planner_body">%1$s · %2$s：%3$s</string>
+    <string name="notif_channel_planner">规划提醒</string>
     <string name="planner_compare_header">夜晚一览</string>
     <string name="planner_add">添加</string>
     <string name="planner_no_sessions">尚无计划的会话</string>

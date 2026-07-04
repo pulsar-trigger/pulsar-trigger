@@ -548,6 +548,12 @@ A altura vem da escuridão do céu × céu limpo × sem lua brilhante × sem chu
     <string name="mode_planner">Planejador de sessões</string>
     <string name="planner_title">Planejador de sessões</string>
     <string name="planner_next_best">Próxima melhor noite</string>
+    <string name="planner_shoot_window">Fotografar esta janela · %1$s</string>
+    <string name="planner_moon_by_night">Lua por noite</string>
+    <string name="notif_planner_clear_title">Céu limpo para %1$s!</string>
+    <string name="notif_planner_degraded_title">Condições pioraram para %1$s</string>
+    <string name="notif_planner_body">%1$s · %2$s: %3$s</string>
+    <string name="notif_channel_planner">Alertas do planejador</string>
     <string name="planner_compare_header">Noites num relance</string>
     <string name="planner_add">Adicionar</string>
     <string name="planner_no_sessions">Nenhuma sessão planejada ainda</string>

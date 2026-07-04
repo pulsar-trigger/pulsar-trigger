@@ -781,6 +781,9 @@ fun PulsarNavHost(
                     event = screen.event,
                     plannerManager = vm.plannerManager,
                     onBack = { currentScreen = AppScreen.EventSessions(screen.event) },
+                    onShootWindow = { step ->
+                        currentScreen = AppScreen.AstroMode2(prefill = step)
+                    },
                 )
             }
             AppScreen.Alignment -> {
@@ -974,6 +977,7 @@ fun PulsarNavHost(
                         currentScreen = AppScreen.PresetPicker(TriggerMode.ASTRO)
                     },
                     initialPresetId = screen.presetId,
+                    stepEditInitial = screen.prefill,
                 )
             }
         }
@@ -1022,7 +1026,11 @@ private sealed class AppScreen {
     data object GattExplorer : AppScreen()
     data object CableRelease : AppScreen()
     data class Intervalometer2(val presetId: String? = null) : AppScreen()
-    data class AstroMode2(val presetId: String? = null) : AppScreen()
+    data class AstroMode2(
+        val presetId: String? = null,
+        /** Plan→shoot handoff: seeds the wizard (notably the start delay). */
+        val prefill: com.ehrocha.pulsar.model.FlowStep.Astro? = null,
+    ) : AppScreen()
     data class Timelapse(val presetId: String? = null) : AppScreen()
     data class DarkFrame2(val presetId: String? = null) : AppScreen()
     data class Ramp2(val presetId: String? = null) : AppScreen()

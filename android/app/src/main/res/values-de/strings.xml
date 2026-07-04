@@ -545,6 +545,12 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="mode_planner">Sitzungsplaner</string>
     <string name="planner_title">Sitzungsplaner</string>
     <string name="planner_next_best">Nächste beste Nacht</string>
+    <string name="planner_shoot_window">Dieses Fenster fotografieren · %1$s</string>
+    <string name="planner_moon_by_night">Mond pro Nacht</string>
+    <string name="notif_planner_clear_title">Klarer Himmel für %1$s!</string>
+    <string name="notif_planner_degraded_title">Bedingungen verschlechtert für %1$s</string>
+    <string name="notif_planner_body">%1$s · %2$s: %3$s</string>
+    <string name="notif_channel_planner">Planer-Benachrichtigungen</string>
     <string name="planner_compare_header">Nächte auf einen Blick</string>
     <string name="planner_add">Hinzufügen</string>
     <string name="planner_no_sessions">Noch keine Sitzungen geplant</string>

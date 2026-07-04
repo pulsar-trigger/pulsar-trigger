@@ -41,6 +41,9 @@ fun SessionDetailScreen(
     event: PlannerEvent,
     plannerManager: PlannerManager,
     onBack: () -> Unit,
+    /** Plan→shoot handoff: called with a prefilled Astro step (start delay =
+     *  time until tonight's best window) when the user arms the window. */
+    onShootWindow: ((com.ehrocha.pulsar.model.FlowStep.Astro) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val dashManager = remember { AstroDashboardManager(context) }
@@ -179,6 +182,47 @@ fun SessionDetailScreen(
             Spacer(Modifier.height(8.dp))
         }
 
+        // ── Plan→shoot: arm tonight's best window ────────────────────
+        // Only on the session's own night, with a computed best window: one
+        // tap opens the Astro wizard with the start delay preloaded so the
+        // run begins exactly when the window opens.
+        val night = remember(state) {
+            if (state.location != null) buildNightModel(state) else null
+        }
+        if (onShootWindow != null && night != null &&
+            night.windowEndF > night.windowStartF &&
+            session.date == java.time.LocalDate.now()
+        ) {
+            Button(
+                onClick = {
+                    val sunsetT = parseHm(state.sun?.sunset) ?: parseHm(state.twilight?.civilEnd)
+                    val sunriseT = parseHm(state.sun?.sunrise) ?: parseHm(state.twilight?.civilStart)
+                    if (sunsetT != null && sunriseT != null) {
+                        var nightStart = session.date.atTime(sunsetT)
+                        var nightEnd = session.date.atTime(sunriseT)
+                        if (!nightEnd.isAfter(nightStart)) nightEnd = nightEnd.plusDays(1)
+                        val spanMin = java.time.Duration.between(nightStart, nightEnd).toMinutes()
+                        val windowStart = nightStart.plusMinutes((night.windowStartF * spanMin).toLong())
+                        val delayMs = java.time.Duration
+                            .between(java.time.LocalDateTime.now(), windowStart)
+                            .toMillis().coerceAtLeast(0L)
+                        onShootWindow(
+                            com.ehrocha.pulsar.model.FlowStep.Astro(
+                                focalLength = 24,
+                                delayMs = delayMs,
+                            ),
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.planner_shoot_window, night.windowLabel))
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+
         if (state.loading && state.location == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -220,4 +264,12 @@ fun SessionDetailScreen(
             AstroDashboardContent(state, Modifier.fillMaxSize())
         } // PullToRefreshBox
     }
+}
+
+/** Open-Meteo local ISO ("…THH:mm") or bare "HH:mm" → LocalTime. Mirrors the
+ *  NightModel parser so the window-start arithmetic matches the strip. */
+private fun parseHm(s: String?): java.time.LocalTime? {
+    if (s.isNullOrEmpty()) return null
+    val hhmm = s.substringAfter("T", s).take(5)
+    return runCatching { java.time.LocalTime.parse(hhmm) }.getOrNull()
 }

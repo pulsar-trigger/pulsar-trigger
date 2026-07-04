@@ -546,6 +546,12 @@ La altura proviene de la oscuridad del cielo × cielo despejado × sin luna bril
     <string name="mode_planner">Planificador de sesiones</string>
     <string name="planner_title">Planificador de sesiones</string>
     <string name="planner_next_best">Próxima mejor noche</string>
+    <string name="planner_shoot_window">Fotografiar esta ventana · %1$s</string>
+    <string name="planner_moon_by_night">Luna por noche</string>
+    <string name="notif_planner_clear_title">¡Cielo despejado para %1$s!</string>
+    <string name="notif_planner_degraded_title">Las condiciones empeoraron para %1$s</string>
+    <string name="notif_planner_body">%1$s · %2$s: %3$s</string>
+    <string name="notif_channel_planner">Alertas del planificador</string>
     <string name="planner_compare_header">Noches de un vistazo</string>
     <string name="planner_add">Añadir</string>
     <string name="planner_no_sessions">Sin sesiones planificadas</string>
