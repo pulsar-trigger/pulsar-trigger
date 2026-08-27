@@ -33,7 +33,7 @@ I built this for my own photography, but figured if it's useful to me it might b
 | Component | Version | Source of truth |
 |-----------|---------|-----------------|
 | Firmware | 0.31.0 | `firmware/platformio.ini` build flags → `config.h` |
-| Android | 0.334.0 | `android/app/build.gradle.kts` → `BuildConfig.VERSION_NAME` |
+| Android | 0.649.0 | `android/app/build.gradle.kts` → `BuildConfig.VERSION_NAME` |
 
 > ### 🐉 Here Be Dragons — Safety Warning (BLE/ESP32 path only)
 >
@@ -548,7 +548,7 @@ A browser-based firmware installer lives at `web/index.html`. It uses [ESP Web T
 - **Firmware:** C++ (Arduino framework on ESP32). Non-blocking only — `delay()` is banned in the trigger tick.
 - **Android:** Kotlin, Jetpack Compose (Material 3), no XML layouts.
 - **BLE:** Nordic Android BLE (`no.nordicsemi.android:ble:2.7.5`).
-- **Permissions:** Accompanist Permissions (`com.google.accompanist:accompanist-permissions:0.36.0`).
+- **Permissions:** Accompanist Permissions (`com.google.accompanist:accompanist-permissions:0.37.3`).
 - **Packed structs** use `__attribute__((packed))` and match the wire format exactly.
 - **Parameter validation** happens in firmware `triggers_set_mode()` — all values clamped to `config.h` ranges.
 - **State is authoritative on firmware** (for the BLE path) — the app reads it via TLV status notifications. For CCAPI, the app owns the run loop; status is synthesized by the polling job.
