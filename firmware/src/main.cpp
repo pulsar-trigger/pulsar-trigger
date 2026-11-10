@@ -27,13 +27,34 @@ void setup() {
 #ifdef HAS_M5DISPLAY
     auto cfg = M5.config();
     // Disable peripherals we don't use to save power
-    // Note: IMU left enabled — disabling it on M5StickC Plus2 can
-    // disrupt the shared I2C bus and prevent PMIC init.
+    // Note: IMU left enabled on the Core2 — disabling it on M5StickC Plus2
+    // disrupted the shared I2C bus and prevented PMIC init.
     cfg.internal_spk = false;
     cfg.internal_mic = false;
     cfg.led_brightness = 0;
+#ifdef BOARD_M5STICKS3
+    // The StickS3's IMU is never read. Left uninitialised it stays in its
+    // power-on suspend state instead of being started in normal mode. (The
+    // I2C caveat above is the StickC Plus2's, a different board.)
+    cfg.internal_imu = false;
+#endif
     M5.begin(cfg);
     Serial.println("\n=== Pulsar Intervalometer (M5) ===");
+#ifdef BOARD_M5STICKS3
+    {
+        // The 5 V output boost (PM1 register 0x06 bit 3) feeds the Hat and
+        // Grove 5 V pins. Pulsar's trigger hats use only GPIOs and GND, so
+        // the boost is switched off; a running converter draws current even
+        // with nothing attached. Logged before and after so a change shows.
+        constexpr uint8_t PM1_ADDR = 0x6E, PM1_PWR_CTRL = 0x06, PM1_5V_OUT = 0x08;
+        uint8_t before = M5.In_I2C.readRegister8(PM1_ADDR, PM1_PWR_CTRL, 100000);
+        M5.Power.setExtOutput(false);
+        uint8_t after = M5.In_I2C.readRegister8(PM1_ADDR, PM1_PWR_CTRL, 100000);
+        log_i("[PM] 5V output %s -> %s (PM1 0x06: 0x%02X -> 0x%02X)",
+              (before & PM1_5V_OUT) ? "on" : "off",
+              (after & PM1_5V_OUT) ? "on" : "off", before, after);
+    }
+#endif
 #else
     Serial.begin(115200);
     Serial.println("\n=== Pulsar Intervalometer ===");
