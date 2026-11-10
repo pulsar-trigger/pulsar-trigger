@@ -14,10 +14,20 @@
 #include "triggers.h"
 #include "status.h"
 #include "ota.h"
+#include "wake.h"
+#include "serial_hooks.h"
 #include <BLEDevice.h>
 
 #ifdef HAS_M5DISPLAY
 #include <M5Unified.h>
+#endif
+
+// The longest single block in loop() with nothing scheduled, so its slow
+// housekeeping (link mode, auto-off, the generic board's status LED) runs.
+#ifdef HAS_M5DISPLAY
+static constexpr uint32_t LOOP_IDLE_CAP_MS = 1000;
+#else
+static constexpr uint32_t LOOP_IDLE_CAP_MS = 100;  // the LED blinks at 200 ms
 #endif
 
 void setup() {
@@ -118,6 +128,7 @@ void setup() {
         log_i("[BOOT] Partition state: %s (%d)", state_str, (int)img_state);
     }
 
+    wake_init();  // setup() runs on the loop task: the one BLE commands wake
     camera_init();
     triggers_init();
     ble_init();
@@ -161,6 +172,9 @@ void loop() {
     // Finalize OTA if pending (deferred from BLE callback to avoid stack overflow)
     ota_poll();
 
+    // Single-key test commands on the USB console (r, t, s, i, ?)
+    serial_hooks_poll();
+
     // Run active trigger mode
     triggers_tick();
 
@@ -198,8 +212,16 @@ void loop() {
         }
     }
 
-    // Yield to FreeRTOS — longer sleep when idle to save power
-    bool active = (triggers_current_state() == STATE_RUNNING ||
-                   triggers_current_state() == STATE_WAITING);
-    delay(active ? 1 : 20);
+    // Block until the next scheduled shot (or the idle cap) instead of
+    // waking every 1 ms to look at the clock. BLE commands kick the wait,
+    // so STOP and the rest are still handled at once; the last
+    // WAKE_EARLY_MS before a shot is spun, so it fires no later than before.
+    uint32_t until = triggers_ms_until_next_event();
+    uint32_t block = wake_sleep_ms(until, ota_in_progress() ? WAKE_OTA_CAP_MS
+                                                            : LOOP_IDLE_CAP_MS);
+    if (block > 0) {
+        wake_wait_ms(block);
+    } else if (until != 0 && until != WAKE_NO_EVENT) {
+        wake_spin_until_ms(millis() + until);
+    }
 }

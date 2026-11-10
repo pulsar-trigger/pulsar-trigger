@@ -12,6 +12,7 @@
 #include "camera.h"
 #include "ota.h"
 #include "link_policy.h"
+#include "wake.h"
 
 #include <BLEDevice.h>
 #include <BLEServer.h>
@@ -62,10 +63,12 @@ class PulsarServerCB : public BLEServerCallbacks {
         memcpy(_peer, param->connect.remote_bda, sizeof(esp_bd_addr_t));
         _peerValid = true;
         _lastInteractionMs = millis();  // a fresh connection is someone at the app
+        wake_kick();                    // loop(): pick the link mode now
     }
     void onDisconnect(BLEServer* s) override {
         _connected = false;
         _peerValid = false;
+        wake_kick();
         ESP_LOGI(TAG, "Client disconnected — job continues");
         // Skip re-advertising if a reinit is pending (deinit is tearing down the stack)
         if (!_pendingReinit) {
@@ -161,6 +164,10 @@ class CmdCharCB : public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic* c) override {
         const uint8_t* data = c->getData();
         size_t len = c->getLength();
+        // Whatever the command did (START, STOP, a setting), loop() must see
+        // it now, not at the end of its current wait - every return below
+        // passes through this guard.
+        struct KickOnExit { ~KickOnExit() { wake_kick(); } } kick_on_exit;
         if (len < 1) return;
         _lastInteractionMs = millis();  // link_policy: someone is at the app
 
@@ -379,12 +386,14 @@ class OtaCtrlCB : public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic* c) override {
         _lastInteractionMs = millis();  // link_policy: OTA is interactive
         ota_handle_control(c->getData(), c->getLength());
+        wake_kick();  // ota_poll() finalises in loop()
     }
 };
 
 class OtaDataCB : public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic* c) override {
         ota_handle_data(c->getData(), c->getLength());
+        wake_kick();
     }
 };
 

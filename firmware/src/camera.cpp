@@ -5,6 +5,7 @@
 
 #include "camera.h"
 #include "triggers.h"
+#include "wake.h"
 
 static uint8_t _pin_shutter = DEFAULT_PIN_SHUTTER;
 static uint8_t _pin_focus   = DEFAULT_PIN_FOCUS;
@@ -49,13 +50,24 @@ void camera_shutter_set(bool on) {
 /// Returns true if the full duration elapsed, false if aborted. Only a shot
 /// that belongs to a run can be aborted: STOP ends a run by setting IDLE,
 /// and a single shot runs while the state is IDLE already.
+///
+/// It blocks rather than polling every 10 ms, so the chip can idle through
+/// an exposure: STOP (a BLE write) kicks the wait, so an abort is immediate,
+/// and the end is met by waking WAKE_EARLY_MS early and spinning the rest -
+/// the exposure no longer overruns by up to one 10 ms poll.
 static bool interruptible_delay(uint32_t ms, bool abortable) {
-    uint32_t start = millis();
-    while (millis() - start < ms) {
-        delay(10);  // yield to FreeRTOS / BLE stack
+    const uint32_t end = millis() + ms;
+    for (;;) {
         if (abortable && triggers_current_state() == STATE_IDLE) return false;
+        uint32_t left = wake_ms_until(millis(), end);
+        if (left == 0) return true;
+        uint32_t block = wake_sleep_ms(left, 1000);
+        if (block == 0) {
+            wake_spin_until_ms(end);
+            return !(abortable && triggers_current_state() == STATE_IDLE);
+        }
+        wake_wait_ms(block);
     }
-    return true;
 }
 
 void camera_shutter(uint32_t duration_ms, uint32_t focus_ms) {

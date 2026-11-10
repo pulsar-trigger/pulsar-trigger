@@ -204,6 +204,69 @@ void test_tick_does_nothing_when_idle(void) {
 
 // ── Runner ───────────────────────────────────────────────────────────────────
 
+
+// ── Next-event scheduling (loop() blocks this long instead of polling) ──────
+
+static void set_intervalometer_with_delay(uint32_t delay_ms) {
+    uint8_t payload[14];
+    memset(payload, 0, sizeof(payload));
+    payload[0] = 0x88; payload[1] = 0x13;  // interval 5000 ms
+    payload[4] = 0xD0; payload[5] = 0x07;  // exposure 2000 ms
+    payload[8] = 0x05;                     // 5 shots
+    memcpy(&payload[10], &delay_ms, 4);    // LE on every host we build on
+    triggers_set_mode(MODE_INTERVALOMETER, payload, sizeof(payload));
+}
+
+void test_next_event_none_when_idle(void) {
+    reset_all();
+    TEST_ASSERT_EQUAL_UINT32(WAKE_NO_EVENT, triggers_ms_until_next_event());
+}
+
+void test_next_event_counts_down_to_the_first_shot(void) {
+    reset_all();
+    stub_set_millis(1000);
+    set_intervalometer_with_delay(3000);
+    triggers_start();
+    TEST_ASSERT_EQUAL_UINT32(3000, triggers_ms_until_next_event());
+    stub_set_millis(3500);
+    TEST_ASSERT_EQUAL_UINT32(500, triggers_ms_until_next_event());
+    stub_set_millis(4000);
+    TEST_ASSERT_EQUAL_UINT32(0, triggers_ms_until_next_event());
+    stub_set_millis(4100);  // overdue reads as due, never as a huge wait
+    TEST_ASSERT_EQUAL_UINT32(0, triggers_ms_until_next_event());
+}
+
+void test_next_event_survives_millis_wraparound(void) {
+    reset_all();
+    stub_set_millis(0xFFFFFF00u);        // 256 ms before millis() wraps
+    set_intervalometer_with_delay(1000); // due 744 ms after the wrap
+    triggers_start();
+    TEST_ASSERT_EQUAL_UINT32(1000, triggers_ms_until_next_event());
+    stub_set_millis(0x00000010u);        // just past the wrap
+    TEST_ASSERT_EQUAL_UINT32(1000 - 256 - 16, triggers_ms_until_next_event());
+}
+
+void test_next_event_none_for_press_hold(void) {
+    reset_all();
+    triggers_set_mode(MODE_PRESS_HOLD, nullptr, 0);
+    triggers_start();
+    TEST_ASSERT_EQUAL_UINT32(WAKE_NO_EVENT, triggers_ms_until_next_event());
+}
+
+void test_wake_plan_blocks_until_just_before_the_event(void) {
+    TEST_ASSERT_EQUAL_UINT32(5000 - WAKE_EARLY_MS, wake_sleep_ms(5000, 60000));
+    TEST_ASSERT_EQUAL_UINT32(1000, wake_sleep_ms(5000, 1000));       // capped
+    TEST_ASSERT_EQUAL_UINT32(1000, wake_sleep_ms(WAKE_NO_EVENT, 1000));
+    TEST_ASSERT_EQUAL_UINT32(1, wake_sleep_ms(WAKE_EARLY_MS + 1, 1000));
+    TEST_ASSERT_EQUAL_UINT32(0, wake_sleep_ms(WAKE_EARLY_MS, 1000)); // spin
+    TEST_ASSERT_EQUAL_UINT32(0, wake_sleep_ms(0, 1000));             // due now
+}
+
+void test_wake_ms_until_is_wraparound_safe(void) {
+    TEST_ASSERT_EQUAL_UINT32(10, wake_ms_until(0xFFFFFFFBu, 0x00000005u));
+    TEST_ASSERT_EQUAL_UINT32(0, wake_ms_until(0x00000005u, 0xFFFFFFFBu));  // passed
+}
+
 int main(int argc, char** argv) {
     UNITY_BEGIN();
 
@@ -223,6 +286,12 @@ int main(int argc, char** argv) {
     RUN_TEST(test_stop_sends_status);
     RUN_TEST(test_intervalometer_tick_fires_shot);
     RUN_TEST(test_tick_does_nothing_when_idle);
+    RUN_TEST(test_next_event_none_when_idle);
+    RUN_TEST(test_next_event_counts_down_to_the_first_shot);
+    RUN_TEST(test_next_event_survives_millis_wraparound);
+    RUN_TEST(test_next_event_none_for_press_hold);
+    RUN_TEST(test_wake_plan_blocks_until_just_before_the_event);
+    RUN_TEST(test_wake_ms_until_is_wraparound_safe);
 
     return UNITY_END();
 }

@@ -42,5 +42,10 @@ const IntervalParams& triggers_interval_params();
 /// Get time remaining for the current sequence (ms).
 uint32_t triggers_time_remaining_ms();
 
+/// Milliseconds until the next scheduled shot (0 when due or overdue), or
+/// WAKE_NO_EVENT when nothing is scheduled. loop() blocks this long - minus
+/// WAKE_EARLY_MS - instead of polling, so the chip can idle between shots.
+uint32_t triggers_ms_until_next_event();
+
 /// Get current filtered pitch in degrees (tracker alignment mode).
 float triggers_tracker_pitch();

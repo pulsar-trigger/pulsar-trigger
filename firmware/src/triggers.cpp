@@ -4,6 +4,7 @@
  */
 
 #include "triggers.h"
+#include "wake_plan.h"
 #include "camera.h"
 #include "status.h"
 #include "ble_server.h"
@@ -62,8 +63,14 @@ static uint32_t calc_remaining_ms(uint16_t shots_left, bool include_gap) {
 }
 
 static void fire_and_count(uint32_t exposure_ms) {
+    uint32_t t0 = millis();
     camera_shutter(exposure_ms, _focus_ms);
     _shots_taken++;
+    // Timing check: the whole shot (pre-focus + exposure) against what was
+    // asked. A power change that delays wake-ups shows up here first.
+    Serial.printf("[INTV] shot %u took %lu ms (asked %lu)\n", _shots_taken,
+                  (unsigned long)(millis() - t0),
+                  (unsigned long)(_focus_ms + exposure_ms));
 }
 
 // ── Public API ───────────────────────────────────────────────────────────────
@@ -90,8 +97,9 @@ bool triggers_set_mode(Mode mode, const uint8_t* payload, size_t len) {
             _interval.delay_ms = clamp_u32(read_u32_le(payload + 10), MIN_DELAY_MS, MAX_DELAY_MS);
             _mode = mode;
             Serial.printf("[INTV] config: interval=%lu exposure=%lu count=%u delay=%lu\n",
-                          _interval.interval_ms, _interval.exposure_ms,
-                          _interval.count, _interval.delay_ms);
+                          (unsigned long)_interval.interval_ms,
+                          (unsigned long)_interval.exposure_ms,
+                          _interval.count, (unsigned long)_interval.delay_ms);
             return true;
         }
         case MODE_PRESS_HOLD:
@@ -149,6 +157,21 @@ const IntervalParams& triggers_interval_params() { return _interval; }
 uint32_t triggers_time_remaining_ms() { return _last_remaining_ms; }
 float triggers_tracker_pitch() { return 0.0f; }
 
+uint32_t triggers_ms_until_next_event() {
+    if (_state != STATE_WAITING) return WAKE_NO_EVENT;  // a shot in RUNNING is
+                                                        // inside camera_shutter
+    if (_debounce_until != 0) return 1;                 // rare: re-check soon
+    switch (_mode) {
+        case MODE_INTERVALOMETER:
+        case MODE_ASTRO:
+        case MODE_DARK_FRAME:
+        case MODE_RAMP:
+            return wake_ms_until(millis(), _next_fire_ms);
+        default:
+            return WAKE_NO_EVENT;
+    }
+}
+
 // ── Tick (called from loop) ──────────────────────────────────────────────────
 void triggers_tick() {
     if (_state != STATE_RUNNING && _state != STATE_WAITING) return;
@@ -167,7 +190,10 @@ void triggers_tick() {
         case MODE_RAMP: {
             if ((now - _next_fire_ms) < 0x80000000UL) {  // wraparound-safe: now >= _next_fire_ms
                 _state = STATE_RUNNING;
-                Serial.printf("[INTV] shot %u firing at %lu ms\n", _shots_taken + 1, millis());
+                Serial.printf("[INTV] shot %u firing at %lu ms (due %lu, late %lu ms)\n",
+                              _shots_taken + 1, (unsigned long)now,
+                              (unsigned long)_next_fire_ms,
+                              (unsigned long)(now - _next_fire_ms));
 
                 // Notify app BEFORE the blocking exposure so it can show EXPOSING state
                 {
@@ -192,7 +218,8 @@ void triggers_tick() {
                 // then fire the next shot.
                 _next_fire_ms = millis() + _interval.interval_ms;
                 Serial.printf("[INTV] gap %lu ms, next fire at %lu ms\n",
-                              _interval.interval_ms, _next_fire_ms);
+                              (unsigned long)_interval.interval_ms,
+                              (unsigned long)_next_fire_ms);
                 _state = STATE_WAITING;
 
                 // Compute total remaining time for the job
