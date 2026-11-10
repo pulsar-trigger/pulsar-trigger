@@ -34,6 +34,7 @@ void setup() {
     // Mark this firmware as valid so the bootloader won't roll back after OTA
     esp_ota_mark_app_valid_cancel_rollback();
 
+
 #ifdef HAS_M5DISPLAY
     auto cfg = M5.config();
     // Disable peripherals we don't use to save power
@@ -98,7 +99,19 @@ void setup() {
 #endif
     esp_err_t pm_err = esp_pm_configure(&pm_config);
     if (pm_err == ESP_OK) {
-        log_i("[PM] CPU max 80 MHz, light sleep enabled");
+        log_i("[PM] esp_pm_configure OK: max 80 / min 10 MHz, light sleep on "
+              "(tickless idle %s, BLE modem sleep %s); CPU now %d MHz",
+#if CONFIG_FREERTOS_USE_TICKLESS_IDLE
+              "built in",
+#else
+              "NOT built in",
+#endif
+#if CONFIG_BT_CTRL_MODEM_SLEEP || CONFIG_BTDM_CTRL_MODEM_SLEEP
+              "on",
+#else
+              "off",
+#endif
+              getCpuFrequencyMhz());
     } else {
         log_w("[PM] esp_pm_configure failed: %s (running at %d MHz)",
               esp_err_to_name(pm_err), getCpuFrequencyMhz());
@@ -106,7 +119,8 @@ void setup() {
 #else
     // CONFIG_PM_ENABLE not set — just lower CPU frequency directly
     setCpuFrequencyMhz(80);
-    log_i("[PM] CPU set to 80 MHz");
+    log_i("[PM] CONFIG_PM_ENABLE not built in: no light sleep; CPU fixed at %d MHz",
+          getCpuFrequencyMhz());
 #endif
 
     // Boot partition diagnostics — helps debug OTA issues

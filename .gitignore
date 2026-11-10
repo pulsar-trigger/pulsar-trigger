@@ -41,3 +41,6 @@ docs/qa-*.md
 # Python bytecode
 __pycache__/
 *.pyc
+
+# ESP-IDF builds (m5sticks3_pm) regenerate this from firmware/sdkconfig.defaults
+firmware/sdkconfig.m5sticks3_pm

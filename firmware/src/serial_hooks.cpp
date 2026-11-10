@@ -13,6 +13,7 @@
 //   s  stop the run
 //   o  one single shot (what the app's single-shot button does)
 //   i  print the power state: CPU MHz, PM, BLE link, run state
+//   p  list the flash partitions this firmware sees
 //   ?  this list
 
 #include "serial_hooks.h"
@@ -22,6 +23,7 @@
 
 #include <Arduino.h>
 #include <cstring>
+#include <esp_partition.h>
 
 static void start_interval(uint32_t exposure_ms, uint32_t gap_ms, uint16_t count) {
     // The SET_MODE payload, little-endian: interval, exposure, count, delay.
@@ -38,6 +40,19 @@ static void start_interval(uint32_t exposure_ms, uint32_t gap_ms, uint16_t count
     triggers_start();
     Serial.printf("[HOOK] run: %lu ms exposure, %lu ms gap, %u shots\n",
                   (unsigned long)exposure_ms, (unsigned long)gap_ms, count);
+}
+
+static void print_partitions() {
+    esp_partition_iterator_t it =
+        esp_partition_find(ESP_PARTITION_TYPE_ANY, ESP_PARTITION_SUBTYPE_ANY, nullptr);
+    if (!it) { Serial.println("[HOOK] no partitions found"); return; }
+    for (; it; it = esp_partition_next(it)) {
+        const esp_partition_t* p = esp_partition_get(it);
+        Serial.printf("[HOOK] part %-8s type %d sub 0x%02x at 0x%06lx size 0x%06lx%s\n",
+                      p->label, p->type, p->subtype, (unsigned long)p->address,
+                      (unsigned long)p->size, p->encrypted ? " ENCRYPTED" : "");
+    }
+    esp_partition_iterator_release(it);
 }
 
 static void print_state() {
@@ -66,6 +81,7 @@ void serial_hooks_poll() {
                 break;
             }
             case 'i': print_state(); break;
+            case 'p': print_partitions(); break;
             case '?':
                 Serial.println("[HOOK] r=measure run 30s/5s/20  t=timing run 2s/1s/5  "
                                "s=stop  o=single shot  i=state");
