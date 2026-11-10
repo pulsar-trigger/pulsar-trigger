@@ -11,6 +11,7 @@
 //      20 shots, no delay - state (c) of docs/power.md
 //   t  start a short timing run: 2 s exposure, 1 s gap, 5 shots
 //   s  stop the run
+//   o  one single shot (what the app's single-shot button does)
 //   i  print the power state: CPU MHz, PM, BLE link, run state
 //   ?  this list
 
@@ -58,10 +59,16 @@ void serial_hooks_poll() {
             case 'r': start_interval(30000, 5000, 20); break;
             case 't': start_interval(2000, 1000, 5); break;
             case 's': triggers_stop(); Serial.println("[HOOK] stopped"); break;
+            case 'o': {
+                uint32_t t0 = millis();
+                triggers_single_shot();
+                Serial.printf("[HOOK] single shot took %lu ms\n", (unsigned long)(millis() - t0));
+                break;
+            }
             case 'i': print_state(); break;
             case '?':
                 Serial.println("[HOOK] r=measure run 30s/5s/20  t=timing run 2s/1s/5  "
-                               "s=stop  i=state");
+                               "s=stop  o=single shot  i=state");
                 break;
             default: break;  // newlines and anything else
         }

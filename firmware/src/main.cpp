@@ -42,6 +42,11 @@ void setup() {
     cfg.internal_spk = false;
     cfg.internal_mic = false;
     cfg.led_brightness = 0;
+    // M5Unified starts Serial only when this is set (its default is 0). Without
+    // it every Serial.printf on M5 boards - the banner, the [INTV] shot lines,
+    // the serial hooks' input - went nowhere; only ESP_LOG/log_i output, which
+    // takes another path, reached the console.
+    cfg.serial_baudrate = 115200;
 #ifdef BOARD_M5STICKS3
     // The StickS3's IMU is never read. Left uninitialised it stays in its
     // power-on suspend state instead of being started in normal mode. (The
