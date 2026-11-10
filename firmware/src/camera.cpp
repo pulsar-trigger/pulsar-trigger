@@ -46,27 +46,34 @@ void camera_shutter_set(bool on) {
 }
 
 /// Non-blocking delay that yields to BLE stack and checks for stop.
-/// Returns true if the full duration elapsed, false if aborted.
-static bool interruptible_delay(uint32_t ms) {
+/// Returns true if the full duration elapsed, false if aborted. Only a shot
+/// that belongs to a run can be aborted: STOP ends a run by setting IDLE,
+/// and a single shot runs while the state is IDLE already.
+static bool interruptible_delay(uint32_t ms, bool abortable) {
     uint32_t start = millis();
     while (millis() - start < ms) {
         delay(10);  // yield to FreeRTOS / BLE stack
-        if (triggers_current_state() == STATE_IDLE) return false;
+        if (abortable && triggers_current_state() == STATE_IDLE) return false;
     }
     return true;
 }
 
 void camera_shutter(uint32_t duration_ms, uint32_t focus_ms) {
+    // A run's shot is fired in RUNNING; a single shot (triggers_single_shot)
+    // in IDLE. Before this, the single shot's pre-focus wait saw IDLE after
+    // 10 ms and returned, so the shutter never opened.
+    const bool abortable = triggers_current_state() != STATE_IDLE;
+
     // Pre-focus
     digitalWrite(_pin_focus, HIGH);
-    if (!interruptible_delay(focus_ms)) {
+    if (!interruptible_delay(focus_ms, abortable)) {
         digitalWrite(_pin_focus, LOW);
         return;
     }
 
     // Open shutter
     digitalWrite(_pin_shutter, HIGH);
-    if (!interruptible_delay(duration_ms)) {
+    if (!interruptible_delay(duration_ms, abortable)) {
         // Aborted mid-exposure — release immediately
         digitalWrite(_pin_shutter, LOW);
         digitalWrite(_pin_focus, LOW);
