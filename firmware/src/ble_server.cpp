@@ -11,6 +11,7 @@
 #include "status.h"
 #include "camera.h"
 #include "ota.h"
+#include "link_policy.h"
 
 #include <BLEDevice.h>
 #include <BLEServer.h>
@@ -38,6 +39,16 @@ static volatile bool _pendingReinit = false;
 static bool _advConfigured = false;
 static volatile uint16_t _auto_off_minutes = 5;  // default: 5 min (0 = disabled)
 
+// Connection-parameter policy (link_policy.h). The peer address comes from the
+// connect event; the mode actually requested is tracked so a request goes out
+// only on a change.
+static BLEServer* _server = nullptr;
+static esp_bd_addr_t _peer = {0};
+static volatile bool _peerValid = false;
+static LinkMode _link = LinkMode::None;
+static volatile uint32_t _lastInteractionMs = 0;
+static void link_gap_event(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param);
+
 // ── Connection callbacks ─────────────────────────────────────────────────────
 class PulsarServerCB : public BLEServerCallbacks {
     void onConnect(BLEServer* s) override {
@@ -45,8 +56,16 @@ class PulsarServerCB : public BLEServerCallbacks {
         ESP_LOGI(TAG, "Client connected (state=%d, mode=%d)",
                  triggers_current_state(), triggers_current_mode());
     }
+    // Called by the library right after onConnect(BLEServer*), with the event
+    // that carries the central's address - needed to ask for parameters.
+    void onConnect(BLEServer* s, esp_ble_gatts_cb_param_t* param) override {
+        memcpy(_peer, param->connect.remote_bda, sizeof(esp_bd_addr_t));
+        _peerValid = true;
+        _lastInteractionMs = millis();  // a fresh connection is someone at the app
+    }
     void onDisconnect(BLEServer* s) override {
         _connected = false;
+        _peerValid = false;
         ESP_LOGI(TAG, "Client disconnected — job continues");
         // Skip re-advertising if a reinit is pending (deinit is tearing down the stack)
         if (!_pendingReinit) {
@@ -143,6 +162,7 @@ class CmdCharCB : public BLECharacteristicCallbacks {
         const uint8_t* data = c->getData();
         size_t len = c->getLength();
         if (len < 1) return;
+        _lastInteractionMs = millis();  // link_policy: someone is at the app
 
         // Reject v1 frames (CMD bytes 0x01–0x0F) — v0.180+ firmware is v2-only.
         // Clients still on v1 won't be parsed; the app surfaces a clear
@@ -357,6 +377,7 @@ static void send_device_info_v2() {
 // ── OTA characteristic callbacks ─────────────────────────────────────────────
 class OtaCtrlCB : public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic* c) override {
+        _lastInteractionMs = millis();  // link_policy: OTA is interactive
         ota_handle_control(c->getData(), c->getLength());
     }
 };
@@ -404,6 +425,8 @@ void ble_init() {
     security->setInitEncryptionKey(ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK);
 
     BLEServer* server = BLEDevice::createServer();
+    _server = server;
+    BLEDevice::setCustomGapHandler(link_gap_event);
     server->setCallbacks(new PulsarServerCB());
 
     BLEService* svc = server->createService(SERVICE_UUID);
@@ -518,6 +541,39 @@ void ble_notify_pitch(float pitch) {
 
 bool ble_connected() {
     return _connected;
+}
+
+// What the link actually runs at, from the controller - the central may
+// refuse or adjust what ble_link_tick asked for, so this is the line to read.
+static void link_gap_event(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param) {
+    if (event == ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT) {
+        const auto& u = param->update_conn_params;
+        ESP_LOGI(TAG, "Link now: interval %u.%02u ms, latency %u, timeout %u ms (status %d)",
+                 u.conn_int * 5 / 4, (u.conn_int * 125) % 100, u.latency,
+                 u.timeout * 10, u.status);
+    }
+}
+
+static const char* link_name(LinkMode m) {
+    return m == LinkMode::Fast ? "fast" : m == LinkMode::Slow ? "slow" : "none";
+}
+
+void ble_link_tick(bool run_active) {
+    static bool was_running = false;
+    if (was_running && !run_active) _lastInteractionMs = millis();  // run ended
+    was_running = run_active;
+
+    bool connected = _connected && _peerValid && _server;
+    LinkMode want = link_wanted(connected, ota_in_progress(), run_active,
+                                millis() - _lastInteractionMs);
+    if (want == _link) return;
+    _link = want;
+    if (want == LinkMode::None) return;
+    const LinkParams& p = (want == LinkMode::Fast) ? LINK_FAST : LINK_SLOW;
+    _server->updateConnParams(_peer, p.min_interval, p.max_interval, p.latency, p.timeout);
+    ESP_LOGI(TAG, "Link %s: interval %u-%u ms, latency %u, timeout %u ms",
+             link_name(want), p.min_interval * 5 / 4, p.max_interval * 5 / 4,
+             p.latency, p.timeout * 10);
 }
 
 void ble_handle_reinit() {

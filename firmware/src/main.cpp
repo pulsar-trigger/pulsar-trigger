@@ -164,6 +164,11 @@ void loop() {
     // Run active trigger mode
     triggers_tick();
 
+    // Connection parameters follow the situation: fast while someone is at
+    // the app or updating firmware, low-power when idle and during a run.
+    ble_link_tick(triggers_current_state() == STATE_RUNNING ||
+                  triggers_current_state() == STATE_WAITING);
+
     // ── Auto-shutdown: power off after idle timeout ─────────────────────
     {
         static uint32_t last_active_ms = 0;

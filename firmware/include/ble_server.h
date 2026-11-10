@@ -19,6 +19,11 @@ void ble_notify_pitch(float pitch);
 /// Returns true when a BLE central is connected.
 bool ble_connected();
 
+/// Call from loop(): asks the central for fast or low-power connection
+/// parameters as the situation changes (link_policy.h). Fast while someone
+/// is using the app or during OTA, low-power when idle and during a run.
+void ble_link_tick(bool run_active);
+
 /// Call from loop() — performs deferred BLE reinit after a name change.
 void ble_handle_reinit();
 
