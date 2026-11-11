@@ -24,8 +24,8 @@ bool ble_connected();
 /// is using the app or during OTA, low-power when idle and during a run.
 void ble_link_tick(bool run_active);
 
-/// Call from loop() — performs deferred BLE reinit after a name change.
-void ble_handle_reinit();
+/// Call from loop(): applies a pending name change (SET_NAME) in place.
+void ble_handle_rename();
 
 /// Auto-shutdown timeout in minutes (0 = disabled). Persisted in NVS.
 uint16_t ble_auto_off_minutes();

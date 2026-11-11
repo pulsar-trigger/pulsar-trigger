@@ -6,6 +6,8 @@
 #include "ota.h"
 #include "config.h"
 #include "protocol.h"
+#include "board_tag.h"
+#include "triggers.h"
 
 #include <esp_ota_ops.h>
 #include <esp_partition.h>
@@ -24,6 +26,25 @@ static volatile uint32_t _ota_total_size = 0;
 static volatile uint32_t _ota_written = 0;
 static volatile bool _ota_active = false;
 static volatile bool _ota_finalize_pending = false;
+static volatile uint32_t _ota_last_rx_ms = 0;
+static BoardTagScanner _board_tag;
+
+// An upload with no data for this long is abandoned (ota_poll).
+static constexpr uint32_t OTA_IDLE_TIMEOUT_MS = 30000;
+
+/// Drop an unfinished upload. Safe from any task; a finalize already queued
+/// for the main loop is left to finish.
+static void ota_abandon(const char* why) {
+    if (!_ota_active || _ota_finalize_pending) return;
+    esp_ota_abort(_ota_handle);
+    _ota_active = false;
+    _ota_written = 0;
+    ESP_LOGW(TAG, "Abandoned: %s", why);
+}
+
+void ota_on_disconnect() {
+    ota_abandon("client disconnected");
+}
 
 void ota_init() {
     _ota_active = false;
@@ -75,8 +96,20 @@ void ota_handle_control(const uint8_t* data, size_t len) {
                 return;
             }
 
-            _ota_total_size = data[1] | (data[2] << 8) | (data[3] << 16) | (data[4] << 24);
+            // Never during a run: erasing flash stalls the CPU and the update
+            // would reboot the board mid-sequence.
+            if (triggers_current_state() != STATE_IDLE) {
+                ESP_LOGW(TAG, "BEGIN refused: a run is in progress");
+                send_ota_status(OTA_ERR_BUSY);
+                return;
+            }
+            // A second BEGIN restarts the upload rather than leaking the handle.
+            if (_ota_active) ota_abandon("restarted by a new BEGIN");
+
+            _ota_total_size = (uint32_t)data[1] | ((uint32_t)data[2] << 8) |
+                              ((uint32_t)data[3] << 16) | ((uint32_t)data[4] << 24);
             _ota_written = 0;
+            _board_tag.reset();
 
             // Diagnostic: show current boot partition and OTA state
             const esp_partition_t* running = esp_ota_get_running_partition();
@@ -113,6 +146,7 @@ void ota_handle_control(const uint8_t* data, size_t len) {
             }
 
             _ota_active = true;
+            _ota_last_rx_ms = millis();
             ESP_LOGI(TAG, "BEGIN — %u bytes → partition '%s'",
                      _ota_total_size, _ota_partition->label);
             send_ota_ready();
@@ -167,6 +201,8 @@ void ota_handle_data(const uint8_t* data, size_t len) {
     }
 
     _ota_written += len;
+    _ota_last_rx_ms = millis();
+    _board_tag.feed(data, len);
 
     // Log progress every ~10%
     if (_ota_total_size > 0) {
@@ -179,10 +215,27 @@ void ota_handle_data(const uint8_t* data, size_t len) {
 }
 
 void ota_poll() {
+    if (_ota_active && !_ota_finalize_pending &&
+        millis() - _ota_last_rx_ms > OTA_IDLE_TIMEOUT_MS) {
+        ota_abandon("no data for 30 s");
+        send_ota_status(OTA_ERR_WRITE);
+        return;
+    }
     if (!_ota_finalize_pending) return;
     _ota_finalize_pending = false;
 
     ESP_LOGI(TAG, "Finalizing OTA on main task...");
+
+    // The image must say it was built for THIS board (board_tag.h). The chip
+    // check alone let a generic ESP32 image onto an M5Core2.
+    if (_board_tag.found != PULSAR_BOARD_ID) {
+        ESP_LOGE(TAG, "Image is for board %d, this is board %d - refused",
+                 _board_tag.found, PULSAR_BOARD_ID);
+        esp_ota_abort(_ota_handle);
+        _ota_active = false;
+        send_ota_status(OTA_ERR_BOARD);
+        return;
+    }
 
     esp_err_t err = esp_ota_end(_ota_handle);
     if (err != ESP_OK) {

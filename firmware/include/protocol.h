@@ -63,6 +63,8 @@ enum OtaStatus : uint8_t {
     OTA_ERR_WRITE   = 0x02,
     OTA_ERR_VALIDATE = 0x03,
     OTA_ERR_SIZE    = 0x04,
+    OTA_ERR_BOARD   = 0x05,  // image built for another board (or carries no board tag)
+    OTA_ERR_BUSY    = 0x06,  // a run is in progress; stop it first
     OTA_READY       = 0x10,  // sent after OTA_BEGIN accepted
     OTA_COMPLETE    = 0x11,  // sent after OTA_END validated (rebooting)
 };

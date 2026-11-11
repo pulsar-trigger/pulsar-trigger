@@ -16,6 +16,7 @@
 #include "ota.h"
 #include "wake.h"
 #include "serial_hooks.h"
+#include "board_tag.h"
 #include <BLEDevice.h>
 
 #ifdef HAS_M5DISPLAY
@@ -29,6 +30,13 @@ static constexpr uint32_t LOOP_IDLE_CAP_MS = 1000;
 #else
 static constexpr uint32_t LOOP_IDLE_CAP_MS = 100;  // the LED blinks at 200 ms
 #endif
+
+// The board this image was built for, as text in the image (board_tag.h).
+// An OTA refuses an image whose tag names another board. Used in setup(),
+// so the linker keeps it.
+#define PULSAR_STR2(x) #x
+#define PULSAR_STR(x) PULSAR_STR2(x)
+const char PULSAR_BOARD_TAG[] = PULSAR_BOARD_TAG_PREFIX PULSAR_STR(PULSAR_BOARD_ID) ";";
 
 void setup() {
     // Mark this firmware as valid so the bootloader won't roll back after OTA
@@ -99,12 +107,18 @@ void setup() {
 #endif
     esp_err_t pm_err = esp_pm_configure(&pm_config);
     if (pm_err == ESP_OK) {
-        log_i("[PM] esp_pm_configure OK: max 80 / min 10 MHz, light sleep on "
-              "(tickless idle %s, BLE modem sleep %s); CPU now %d MHz",
-#if CONFIG_FREERTOS_USE_TICKLESS_IDLE
-              "built in",
+        // Light sleep needs tickless idle, and the BLE controller blocks it
+        // unless it may keep the main crystal on. Say which, so the log does
+        // not claim a sleep that cannot happen. Key 'i' lists the locks.
+        log_i("[PM] esp_pm_configure OK: max 80 / min 10 MHz, light sleep %s "
+              "(BLE modem sleep %s); CPU now %d MHz",
+#if !CONFIG_FREERTOS_USE_TICKLESS_IDLE
+              "requested but NOT possible: tickless idle not built in",
+#elif CONFIG_BT_ENABLED && CONFIG_BT_CTRL_LPCLK_SEL_MAIN_XTAL && \
+      !CONFIG_BT_CTRL_MAIN_XTAL_PU_DURING_LIGHT_SLEEP
+              "requested but BLOCKED: the BLE controller holds a no-sleep lock",
 #else
-              "NOT built in",
+              "possible when idle",
 #endif
 #if CONFIG_BT_CTRL_MODEM_SLEEP || CONFIG_BTDM_CTRL_MODEM_SLEEP
               "on",
@@ -128,6 +142,9 @@ void setup() {
     if (running) {
         log_i("[BOOT] Running from '%s' @ 0x%06X", running->label, running->address);
     }
+    // Printed unconditionally (log_i compiles out at low log levels), which
+    // also keeps the tag in the image.
+    Serial.printf("[BOOT] %s\n", PULSAR_BOARD_TAG);
     const esp_partition_t* next = esp_ota_get_next_update_partition(NULL);
     if (next) {
         log_i("[BOOT] Next OTA target: '%s' @ 0x%06X", next->label, next->address);
@@ -186,7 +203,7 @@ void loop() {
 #endif
 
     // Handle deferred BLE reinit (e.g. after name change)
-    ble_handle_reinit();
+    ble_handle_rename();
 
     // Finalize OTA if pending (deferred from BLE callback to avoid stack overflow)
     ota_poll();

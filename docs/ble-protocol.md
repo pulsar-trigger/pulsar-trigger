@@ -216,6 +216,56 @@ TLV bytes:
   56 03 00 1c 00             // FW_VERSION = 0.28.0
 ```
 
+## Firmware update (OTA service)
+
+A separate GATT service, `0000ff10-…`, outside the TLV framing above:
+control writes and status notifications on `ff11`, image chunks written to
+`ff12`.
+
+Control (app → firmware), first byte:
+
+| Byte | Command | Payload |
+|------|---------|---------|
+| `0x01` | `BEGIN` | u32 LE image size |
+| `0x02` | `END`   | — |
+| `0x03` | `ABORT` | — |
+
+Status (firmware → app), first byte:
+
+| Byte | Status | Meaning |
+|------|--------|---------|
+| `0x10` | `READY`        | Upload may start. Second byte: chip model (1 ESP32, 3 ESP32-S3) |
+| `0x11` | `COMPLETE`     | Image accepted; the board reboots into it |
+| `0x00` | `OK`           | — |
+| `0x01` | `ERR_BEGIN`    | No partition to write to |
+| `0x02` | `ERR_WRITE`    | Flash write failed, or the upload was abandoned (see below) |
+| `0x03` | `ERR_VALIDATE` | The image failed ESP-IDF validation |
+| `0x04` | `ERR_SIZE`     | Bad `BEGIN`, or the image is larger than the partition |
+| `0x05` | `ERR_BOARD`    | The image was built for another board, or has no board tag (0.33+) |
+| `0x06` | `ERR_BUSY`     | A run is in progress; stop it first (0.33+) |
+
+Rules since firmware 0.33:
+
+- **Board tag.** Every image contains the text `PULSAR-BOARD-ID=<n>;`
+  (`firmware/include/board_tag.h`). The firmware scans the image as it
+  arrives and refuses it at `END` unless `<n>` is its own `PULSAR_BOARD_ID`.
+  Images before 0.33 have no tag, so an OTA back to them is refused; USB
+  flashing still works.
+- **Abandoned uploads.** An upload is dropped, and `ERR_WRITE` sent where a
+  client is still there, when the client disconnects or no data arrives for
+  30 s. Before 0.33 an interrupted upload kept the board awake until it was
+  power-cycled.
+- **Not during a run.** `BEGIN` is refused with `ERR_BUSY` unless the
+  trigger is idle, and `START` is acknowledged with `ERROR_CODE = 3` (busy)
+  while an upload is in progress.
+
+Unknown status bytes must be treated as failures, never as `OK`.
+
+Release assets, chosen by the board id in the scan response:
+`pulsar-firmware-v<ver>-esp32.bin` (1, generic ESP32),
+`…-esp32s3.bin` (2, M5StickS3), `…-m5core2.bin` (3, M5Core2), each with a
+`<asset>.sha256` in `sha256sum` format.
+
 ## MTU
 
 The Nordic BLE client requests an extended MTU at connection time so

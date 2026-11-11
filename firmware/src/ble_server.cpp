@@ -36,8 +36,7 @@ static BLECharacteristic* _pitchChar   = nullptr;
 static BLECharacteristic* _otaCtrlChar = nullptr;
 static BLECharacteristic* _otaDataChar = nullptr;
 static volatile bool _connected = false;
-static volatile bool _pendingReinit = false;
-static bool _advConfigured = false;
+static volatile bool _pendingRename = false;
 static volatile uint16_t _auto_off_minutes = 5;  // default: 5 min (0 = disabled)
 
 // Connection-parameter policy (link_policy.h). The peer address comes from the
@@ -70,10 +69,8 @@ class PulsarServerCB : public BLEServerCallbacks {
         _peerValid = false;
         wake_kick();
         ESP_LOGI(TAG, "Client disconnected — job continues");
-        // Skip re-advertising if a reinit is pending (deinit is tearing down the stack)
-        if (!_pendingReinit) {
-            BLEDevice::startAdvertising();
-        }
+        ota_on_disconnect();  // an upload cut off mid-way must not keep the board awake
+        BLEDevice::startAdvertising();
     }
 };
 // ── NVS name helpers ─────────────────────────────────────────────────────────
@@ -225,6 +222,13 @@ class CmdCharCB : public BLECharacteristicCallbacks {
                 break;
 
             case v2::OP_START:
+                // No run during a firmware upload: the board reboots when it
+                // finishes. ERROR_CODE 3 = busy.
+                if (ota_in_progress()) {
+                    ESP_LOGW(TAG, "START refused: OTA in progress");
+                    send_ack(opcode, 3);
+                    break;
+                }
                 triggers_start();
                 ESP_LOGI(TAG, "START");
                 send_ack(opcode, 0);
@@ -331,9 +335,10 @@ class CmdCharCB : public BLECharacteristicCallbacks {
                     snprintf(_deviceName, sizeof(_deviceName), "%s%s", BLE_NAME_PREFIX, suffix);
                 }
 
-                // Defer BLE reinit to main loop (unsafe from callback context)
-                _pendingReinit = true;
-                ESP_LOGI(TAG, "SET_NAME → '%s' (reinit pending)", _deviceName);
+                // Applied from the main loop (ble_handle_rename), not from
+                // inside the GATT callback.
+                _pendingRename = true;
+                ESP_LOGI(TAG, "SET_NAME → '%s'", _deviceName);
                 send_ack(opcode, 0);
                 break;
             }
@@ -406,6 +411,38 @@ void ble_ota_notify(const uint8_t* data, size_t len) {
 }
 
 // ── Public API ───────────────────────────────────────────────────────────────
+// The scan response carries the device name and the manufacturer data:
+//   bytes 0-1: company ID 0xFFFF (unregistered / hobbyist)
+//   byte 2:    PULSAR_BOARD_ID  — 1=generic ESP32, 2=M5StickC S3, 3=M5Core2
+//   byte 3:    ESP chip model   — 1=ESP32, 2=S2, 3=S3, 4=C3
+//   byte 4-5:  firmware major / minor
+// The board id lets the app show the right device image before connecting.
+// Size: name (2 + up to 19) + manufacturer data (2 + 6) = 29 of 31 bytes.
+// Re-applied after a rename, so a scan sees the new name without a reboot.
+static void apply_scan_response(BLEAdvertising* adv) {
+    esp_chip_info_t chip;
+    esp_chip_info(&chip);
+    uint8_t chip_model = 0;
+    switch (chip.model) {
+        case CHIP_ESP32:   chip_model = 1; break;
+        case CHIP_ESP32S2: chip_model = 2; break;
+        case CHIP_ESP32S3: chip_model = 3; break;
+        case CHIP_ESP32C3: chip_model = 4; break;
+        default:           chip_model = 0; break;
+    }
+    uint8_t mfg[6] = {
+        0xFF, 0xFF,
+        (uint8_t)PULSAR_BOARD_ID,
+        chip_model,
+        (uint8_t)FW_VERSION_MAJOR,
+        (uint8_t)FW_VERSION_MINOR,
+    };
+    BLEAdvertisementData scanResp;
+    scanResp.setName(_deviceName);
+    scanResp.setManufacturerData(std::string((char*)mfg, sizeof(mfg)));
+    adv->setScanResponseData(scanResp);
+}
+
 void ble_init() {
     load_device_name();
     ota_init();
@@ -488,10 +525,7 @@ void ble_init() {
 
     // ── Advertising ──────────────────────────────────────────────────────
     BLEAdvertising* adv = BLEDevice::getAdvertising();
-    if (!_advConfigured) {
-        adv->addServiceUUID(SERVICE_UUID);
-        _advConfigured = true;
-    }
+    adv->addServiceUUID(SERVICE_UUID);
     adv->setScanResponse(true);
     // Advertising interval: 152.5ms–318.75ms (power-friendly while still
     // discoverable within a few seconds).  Units are 0.625ms.
@@ -499,35 +533,7 @@ void ble_init() {
     adv->setMaxInterval(0x01FE);  // 318.75 ms
     adv->setMinPreferred(0x06);
 
-    // Manufacturer-specific data in the scan response: lets the Android app
-    // distinguish board variants (M5Core2 vs M5Stick S3 vs generic ESP32)
-    // before connecting, so we can show the right device image.
-    //   bytes 0-1: company ID 0xFFFF (unregistered / hobbyist)
-    //   byte 2:    PULSAR_BOARD_ID  — 1=generic ESP32, 2=M5StickC S3, 3=M5Core2
-    //   byte 3:    ESP chip model   — 1=ESP32, 2=S2, 3=S3, 4=C3
-    //   byte 4-5:  firmware major / minor (for completeness)
-    {
-        esp_chip_info_t chip;
-        esp_chip_info(&chip);
-        uint8_t chip_model = 0;
-        switch (chip.model) {
-            case CHIP_ESP32:   chip_model = 1; break;
-            case CHIP_ESP32S2: chip_model = 2; break;
-            case CHIP_ESP32S3: chip_model = 3; break;
-            case CHIP_ESP32C3: chip_model = 4; break;
-            default:           chip_model = 0; break;
-        }
-        uint8_t mfg[6] = {
-            0xFF, 0xFF,
-            (uint8_t)PULSAR_BOARD_ID,
-            chip_model,
-            (uint8_t)FW_VERSION_MAJOR,
-            (uint8_t)FW_VERSION_MINOR,
-        };
-        BLEAdvertisementData scanResp;
-        scanResp.setManufacturerData(std::string((char*)mfg, sizeof(mfg)));
-        adv->setScanResponseData(scanResp);
-    }
+    apply_scan_response(adv);
 
     BLEDevice::startAdvertising();
 
@@ -585,26 +591,26 @@ void ble_link_tick(bool run_active) {
              p.latency, p.timeout * 10);
 }
 
-void ble_handle_reinit() {
-    if (!_pendingReinit) return;
-    _pendingReinit = false;
+void ble_handle_rename() {
+    if (!_pendingRename) return;
+    _pendingRename = false;
 
-    ESP_LOGI(TAG, "Reinit for rename → '%s'", _deviceName);
-
-    // Full deinit/reinit — the only reliable way to update the advertised
-    // name across all ESP32 variants.  deinit(true) fully resets the BT
-    // controller which is needed on ESP32-S3 to clear the cached GAP name.
-    BLEDevice::deinit(true);
-    _connected = false;
-    _advConfigured = false;
-    _cmdChar = nullptr;
-    _statusChar = nullptr;
-    _pitchChar = nullptr;
-    _otaCtrlChar = nullptr;
-    _otaDataChar = nullptr;
-    delay(300);
-    ble_init();
-
+    // Change the name in place. The old path tore the whole stack down with
+    // BLEDevice::deinit(true), which leaves the library marked initialised, so
+    // the init that followed did nothing and BLE stayed dead until a reboot.
+    esp_err_t err = esp_ble_gap_set_device_name(_deviceName);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Rename failed: %s", esp_err_to_name(err));
+        return;
+    }
+    BLEAdvertising* adv = BLEDevice::getAdvertising();
+    apply_scan_response(adv);
+    // While connected the controller is not advertising; onDisconnect starts
+    // it again with the new data. Otherwise restart it so scans see the name.
+    if (!_connected) {
+        adv->stop();
+        adv->start();
+    }
     ESP_LOGI(TAG, "Now advertising as '%s'", _deviceName);
 }
 

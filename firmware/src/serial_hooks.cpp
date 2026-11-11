@@ -12,7 +12,9 @@
 //   t  start a short timing run: 2 s exposure, 1 s gap, 5 shots
 //   s  stop the run
 //   o  one single shot (what the app's single-shot button does)
-//   i  print the power state: CPU MHz, PM, BLE link, run state
+//   i  print the power state: CPU MHz, PM, BLE link, run state, and with
+//      power management built in, every PM lock (a lock held while idle is
+//      what keeps the chip out of light sleep)
 //   p  list the flash partitions this firmware sees
 //   ?  this list
 
@@ -24,6 +26,10 @@
 #include <Arduino.h>
 #include <cstring>
 #include <esp_partition.h>
+#include <cstdio>
+#if CONFIG_PM_ENABLE
+#include <esp_pm.h>
+#endif
 
 static void start_interval(uint32_t exposure_ms, uint32_t gap_ms, uint16_t count) {
     // The SET_MODE payload, little-endian: interval, exposure, count, delay.
@@ -66,6 +72,19 @@ static void print_state() {
                   ble_connected() ? "connected" : "advertising",
                   (int)triggers_current_state(), (int)triggers_current_mode(),
                   triggers_shots_taken());
+#if CONFIG_PM_ENABLE
+    // esp_pm_dump_locks writes to a FILE*; stdout is not the USB console on
+    // every board, so dump into a buffer and print that.
+    static char buf[1024];
+    memset(buf, 0, sizeof(buf));
+    FILE* f = fmemopen(buf, sizeof(buf) - 1, "w");
+    if (f) {
+        esp_pm_dump_locks(f);
+        fclose(f);
+        Serial.print("[HOOK] PM locks:\n");
+        Serial.print(buf);
+    }
+#endif
 }
 
 void serial_hooks_poll() {

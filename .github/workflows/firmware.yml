@@ -48,12 +48,22 @@ jobs:
       - name: Build M5StickS3 firmware
         run: cd firmware && pio run -e m5sticks3
 
-      - name: Rename artifacts
+      - name: Build M5Core2 firmware
+        run: cd firmware && pio run -e m5core2
+
+      # Asset suffixes are what the app looks for, by board id: 1 -esp32,
+      # 2 -esp32s3 (kept for older apps that chose by chip), 3 -m5core2.
+      # Each binary gets a "<asset>.sha256" the app checks before flashing.
+      - name: Rename artifacts and write checksums
         run: |
-          cp firmware/.pio/build/esp32/firmware.bin \
-             firmware/.pio/build/esp32/pulsar-firmware-${{ steps.version.outputs.version }}-esp32.bin
-          cp firmware/.pio/build/m5sticks3/firmware.bin \
-             firmware/.pio/build/m5sticks3/pulsar-firmware-${{ steps.version.outputs.version }}-esp32s3.bin
+          V=${{ steps.version.outputs.version }}
+          mkdir -p release
+          cp firmware/.pio/build/esp32/firmware.bin     release/pulsar-firmware-$V-esp32.bin
+          cp firmware/.pio/build/m5sticks3/firmware.bin release/pulsar-firmware-$V-esp32s3.bin
+          cp firmware/.pio/build/m5core2/firmware.bin   release/pulsar-firmware-$V-m5core2.bin
+          cd release
+          for f in *.bin; do sha256sum "$f" > "$f.sha256"; done
+          cat *.sha256
 
       - name: Create or update release
         uses: softprops/action-gh-release@v2
@@ -67,13 +77,16 @@ jobs:
             **Commit:** ${{ github.sha }}
 
             **Included binaries:**
-            - `pulsar-firmware-esp32` — Generic ESP32 (DevKit, Lolin32, etc.)
-            - `pulsar-firmware-m5sticks3` — M5StickC Plus2 (ESP32-S3)
+            - `pulsar-firmware-*-esp32.bin` — Generic ESP32 (DevKit, Lolin32, etc.)
+            - `pulsar-firmware-*-esp32s3.bin` — M5StickS3 (ESP32-S3)
+            - `pulsar-firmware-*-m5core2.bin` — M5Stack Core2
+
+            Each `.bin` has a matching `.sha256`. Over-the-air updates refuse an image built for another board.
 
             Flash via the [web installer](https://${{ github.repository_owner }}.github.io/pulsar-trigger/), the Android app (Settings → Firmware Update), or manually with PlatformIO.
           files: |
-            firmware/.pio/build/esp32/pulsar-firmware-${{ steps.version.outputs.version }}-esp32.bin
-            firmware/.pio/build/m5sticks3/pulsar-firmware-${{ steps.version.outputs.version }}-esp32s3.bin
+            release/*.bin
+            release/*.sha256
           draft: false
           prerelease: false
           make_latest: true
