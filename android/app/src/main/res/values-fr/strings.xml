@@ -1092,4 +1092,24 @@ La hauteur vient de l\'obscurité du ciel × ciel dégagé × pas de lune brilla
     <string name="notif_run_paused">En pause — ouvrez Pulsar pour continuer</string>
     <string name="hold_to_stop_hint">Maintenez pour arrêter</string>
     <string name="a11y_stop_run_action">Arrêter la séance</string>
+
+    <!-- Firmware update errors (audit U-H1/U-H2/A-M7, fw 0.33 OTA codes) -->
+    <string name="ota_err_check_failed">Impossible de rechercher les mises à jour du firmware. Vérifiez votre connexion Internet.</string>
+    <string name="ota_err_no_release">Aucune version du firmware trouvée</string>
+    <string name="ota_err_unknown_board">Cette carte ne s\'est pas identifiée : aucune image de firmware ne peut être choisie sans risque. Relancez la recherche et reconnectez-vous, ou mettez à jour par USB.</string>
+    <string name="ota_err_no_asset">Le firmware %1$s n\'a pas d\'image pour cette carte</string>
+    <string name="ota_err_board_changed">Une autre carte est connectée. Recherchez de nouveau les mises à jour.</string>
+    <string name="ota_err_no_support">Ce firmware ne peut pas être mis à jour par Bluetooth</string>
+    <string name="ota_err_download">Échec du téléchargement du firmware</string>
+    <string name="ota_err_checksum_missing">La version n\'a pas de somme de contrôle : l\'image ne peut pas être vérifiée. Mise à jour refusée.</string>
+    <string name="ota_err_checksum_mismatch">L\'image téléchargée est endommagée (somme de contrôle incorrecte). Mise à jour refusée.</string>
+    <string name="ota_err_begin">L\'appareil a refusé de démarrer la mise à jour</string>
+    <string name="ota_err_busy">Arrêtez la séance avant la mise à jour</string>
+    <string name="ota_err_board">Ce firmware est destiné à une autre carte</string>
+    <string name="ota_err_size">L\'image ne tient pas sur cet appareil</string>
+    <string name="ota_err_write">L\'envoi a échoué ou a été interrompu</string>
+    <string name="ota_err_validate">L\'appareil a rejeté l\'image (échec de la validation)</string>
+    <string name="ota_err_no_answer">L\'appareil n\'a pas répondu</string>
+    <string name="ota_err_unconfirmed">L\'appareil n\'a pas confirmé la mise à jour. Vérifiez sa version de firmware une fois reconnecté.</string>
+    <string name="ota_err_unknown_status">L\'appareil a signalé une erreur de mise à jour inconnue</string>
 </resources>

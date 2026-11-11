@@ -1092,4 +1092,24 @@ A altura vem da escuridão do céu × céu limpo × sem lua brilhante × sem chu
     <string name="notif_run_paused">Pausado — abra o Pulsar para continuar</string>
     <string name="hold_to_stop_hint">Segure para parar</string>
     <string name="a11y_stop_run_action">Parar a sessão</string>
+
+    <!-- Firmware update errors (audit U-H1/U-H2/A-M7, fw 0.33 OTA codes) -->
+    <string name="ota_err_check_failed">Não foi possível verificar atualizações de firmware. Verifique sua conexão com a internet.</string>
+    <string name="ota_err_no_release">Nenhuma versão de firmware encontrada</string>
+    <string name="ota_err_unknown_board">Esta placa não se identificou, então não é possível escolher uma imagem de firmware com segurança. Busque e reconecte, ou atualize por USB.</string>
+    <string name="ota_err_no_asset">O firmware %1$s não tem imagem para esta placa</string>
+    <string name="ota_err_board_changed">Outra placa está conectada. Verifique as atualizações novamente.</string>
+    <string name="ota_err_no_support">Este firmware não pode ser atualizado por Bluetooth</string>
+    <string name="ota_err_download">Falha ao baixar o firmware</string>
+    <string name="ota_err_checksum_missing">A versão não tem checksum, então a imagem não pode ser verificada. Atualização recusada.</string>
+    <string name="ota_err_checksum_mismatch">A imagem baixada está corrompida (checksum não confere). Atualização recusada.</string>
+    <string name="ota_err_begin">O dispositivo recusou iniciar a atualização</string>
+    <string name="ota_err_busy">Pare a sessão antes de atualizar</string>
+    <string name="ota_err_board">Este firmware é para outra placa</string>
+    <string name="ota_err_size">A imagem não cabe neste dispositivo</string>
+    <string name="ota_err_write">O envio falhou ou foi interrompido</string>
+    <string name="ota_err_validate">O dispositivo rejeitou a imagem (falha na validação)</string>
+    <string name="ota_err_no_answer">O dispositivo não respondeu</string>
+    <string name="ota_err_unconfirmed">O dispositivo não confirmou a atualização. Verifique a versão do firmware quando ele reconectar.</string>
+    <string name="ota_err_unknown_status">O dispositivo informou um erro de atualização desconhecido</string>
 </resources>

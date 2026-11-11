@@ -33,6 +33,39 @@ data class GitHubAsset(
     val body: String,
 )
 
+/** One page (1-based) of the repo's release list, raw JSON. Throws on a
+ *  non-200 answer. The selection logic lives in `FirmwareAssets.kt`. */
+fun fetchReleasesPage(page: Int, perPage: Int = RELEASES_PER_PAGE): String {
+    val url = URL("${AppConfig.GITHUB_RELEASES_URL}?per_page=$perPage&page=$page")
+    val conn = url.openConnection() as HttpURLConnection
+    conn.setRequestProperty("Accept", "application/vnd.github+json")
+    conn.connectTimeout = AppConfig.API_CONNECT_TIMEOUT_MS
+    conn.readTimeout = AppConfig.API_READ_TIMEOUT_MS
+    try {
+        if (conn.responseCode != 200) {
+            throw Exception("GitHub API returned ${conn.responseCode}")
+        }
+        return conn.inputStream.bufferedReader().use { it.readText() }
+    } finally {
+        conn.disconnect()
+    }
+}
+
+/** GET a small text file; null on any failure or non-200 answer. */
+fun fetchSmallText(textUrl: String): String? = try {
+    val conn = URL(textUrl).openConnection() as HttpURLConnection
+    conn.connectTimeout = AppConfig.API_CONNECT_TIMEOUT_MS
+    conn.readTimeout = AppConfig.API_READ_TIMEOUT_MS
+    try {
+        if (conn.responseCode != 200) null
+        else conn.inputStream.bufferedReader().use { it.readText() }
+    } finally {
+        conn.disconnect()
+    }
+} catch (_: Exception) {
+    null
+}
+
 /**
  * Fetch the latest GitHub Release matching [tagPrefix] that contains an asset
  * whose name ends with [assetSuffix].

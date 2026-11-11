@@ -1083,4 +1083,24 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="notif_run_paused">Pausiert — Pulsar öffnen, um fortzufahren</string>
     <string name="hold_to_stop_hint">Zum Stoppen gedrückt halten</string>
     <string name="a11y_stop_run_action">Aufnahme stoppen</string>
+
+    <!-- Firmware update errors (audit U-H1/U-H2/A-M7, fw 0.33 OTA codes) -->
+    <string name="ota_err_check_failed">Firmware-Updates konnten nicht geprüft werden. Prüfe deine Internetverbindung.</string>
+    <string name="ota_err_no_release">Keine Firmware-Version gefunden</string>
+    <string name="ota_err_unknown_board">Diese Platine hat sich nicht identifiziert, daher kann kein Firmware-Image sicher gewählt werden. Neu suchen und verbinden oder per USB aktualisieren.</string>
+    <string name="ota_err_no_asset">Firmware %1$s enthält kein Image für diese Platine</string>
+    <string name="ota_err_board_changed">Eine andere Platine ist verbunden. Bitte erneut nach Updates suchen.</string>
+    <string name="ota_err_no_support">Diese Firmware kann nicht per Bluetooth aktualisiert werden</string>
+    <string name="ota_err_download">Firmware-Download fehlgeschlagen</string>
+    <string name="ota_err_checksum_missing">Die Version hat keine Prüfsumme, das Image kann nicht geprüft werden. Update abgelehnt.</string>
+    <string name="ota_err_checksum_mismatch">Das heruntergeladene Image ist beschädigt (Prüfsumme stimmt nicht). Update abgelehnt.</string>
+    <string name="ota_err_begin">Das Gerät hat den Start des Updates abgelehnt</string>
+    <string name="ota_err_busy">Stoppe die Aufnahme vor dem Update</string>
+    <string name="ota_err_board">Diese Firmware ist für eine andere Platine</string>
+    <string name="ota_err_size">Das Image passt nicht auf dieses Gerät</string>
+    <string name="ota_err_write">Die Übertragung ist fehlgeschlagen oder wurde unterbrochen</string>
+    <string name="ota_err_validate">Das Gerät hat das Image abgelehnt (Validierung fehlgeschlagen)</string>
+    <string name="ota_err_no_answer">Das Gerät hat nicht geantwortet</string>
+    <string name="ota_err_unconfirmed">Das Gerät hat das Update nicht bestätigt. Prüfe die Firmware-Version, sobald es wieder verbunden ist.</string>
+    <string name="ota_err_unknown_status">Das Gerät meldete einen unbekannten Update-Fehler</string>
 </resources>

@@ -223,7 +223,7 @@ fun SettingsScreen(
     val deviceName by vm.deviceName.collectAsState()
     val otaState by vm.firmwareManager.state.collectAsState()
     val otaProgress by vm.firmwareManager.progress.collectAsState()
-    val otaError by vm.firmwareManager.errorMessage.collectAsState()
+    val otaError by vm.firmwareManager.error.collectAsState()
 
     // Are we on a REAL Pulsar ESP32 firmware path (a live BLE link)? Gates the
     // hardware-only settings sub-screens — device rename, GPIO pins,
@@ -278,7 +278,7 @@ fun SettingsScreen(
             )
             OtaState.ERROR -> vm.updateOtaNotification(
                 context.getString(R.string.ota_notif_failed),
-                otaError ?: "Unknown error",
+                otaError?.message(context) ?: context.getString(R.string.status_update_failed),
                 done = true,
             )
             else -> {}

@@ -5,20 +5,25 @@
 
 package com.ehrocha.pulsar.ble
 
+import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import java.io.BufferedInputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import com.ehrocha.pulsar.AppConfig
-import com.ehrocha.pulsar.update.GitHubAsset
-import com.ehrocha.pulsar.update.fetchGitHubRelease
-import com.ehrocha.pulsar.update.fetchExpectedChecksum
+import com.ehrocha.pulsar.R
+import com.ehrocha.pulsar.update.FirmwareAssetPick
+import com.ehrocha.pulsar.update.expectedChipId
+import com.ehrocha.pulsar.update.fetchNewestRelease
+import com.ehrocha.pulsar.update.fetchReleasesPage
+import com.ehrocha.pulsar.update.fetchSmallText
 import com.ehrocha.pulsar.update.isNewerVersion
+import com.ehrocha.pulsar.update.parseSha256
+import com.ehrocha.pulsar.update.pickFirmwareAsset
 import com.ehrocha.pulsar.update.sha256Hex
 
 data class FirmwareRelease(
@@ -27,6 +32,9 @@ data class FirmwareRelease(
     val checksumUrl: String?,
     val publishedAt: String,
     val body: String,
+    /** The board this image was picked for; [FirmwareUpdateManager.startUpdate]
+     *  refuses it for any other board. */
+    val board: BoardKind,
 )
 
 enum class OtaState {
@@ -41,29 +49,80 @@ enum class OtaState {
     ERROR,
 }
 
+/** Why a firmware check or update failed. Each has its own message. */
+enum class OtaFailure {
+    CHECK_FAILED,
+    NO_RELEASE,
+    UNKNOWN_BOARD,
+    NO_ASSET_FOR_BOARD,
+    BOARD_CHANGED,
+    NO_OTA_SUPPORT,
+    DOWNLOAD_FAILED,
+    CHECKSUM_MISSING,
+    CHECKSUM_MISMATCH,
+    BEGIN_REJECTED,
+    BUSY,
+    WRONG_BOARD,
+    TOO_LARGE,
+    WRITE_FAILED,
+    VALIDATE_FAILED,
+    NO_ANSWER,
+    UNCONFIRMED,
+    UNKNOWN_STATUS,
+}
+
+data class OtaError(val failure: OtaFailure, val detail: String? = null) {
+    fun message(context: Context): String = when (failure) {
+        OtaFailure.CHECK_FAILED -> context.getString(R.string.ota_err_check_failed)
+        OtaFailure.NO_RELEASE -> context.getString(R.string.ota_err_no_release)
+        OtaFailure.UNKNOWN_BOARD -> context.getString(R.string.ota_err_unknown_board)
+        OtaFailure.NO_ASSET_FOR_BOARD -> context.getString(R.string.ota_err_no_asset, detail ?: "?")
+        OtaFailure.BOARD_CHANGED -> context.getString(R.string.ota_err_board_changed)
+        OtaFailure.NO_OTA_SUPPORT -> context.getString(R.string.ota_err_no_support)
+        OtaFailure.DOWNLOAD_FAILED -> context.getString(R.string.ota_err_download)
+        OtaFailure.CHECKSUM_MISSING -> context.getString(R.string.ota_err_checksum_missing)
+        OtaFailure.CHECKSUM_MISMATCH -> context.getString(R.string.ota_err_checksum_mismatch)
+        OtaFailure.BEGIN_REJECTED -> context.getString(R.string.ota_err_begin)
+        OtaFailure.BUSY -> context.getString(R.string.ota_err_busy)
+        OtaFailure.WRONG_BOARD -> context.getString(R.string.ota_err_board)
+        OtaFailure.TOO_LARGE -> context.getString(R.string.ota_err_size)
+        OtaFailure.WRITE_FAILED -> context.getString(R.string.ota_err_write)
+        OtaFailure.VALIDATE_FAILED -> context.getString(R.string.ota_err_validate)
+        OtaFailure.NO_ANSWER -> context.getString(R.string.ota_err_no_answer)
+        OtaFailure.UNCONFIRMED -> context.getString(R.string.ota_err_unconfirmed)
+        OtaFailure.UNKNOWN_STATUS -> context.getString(R.string.ota_err_unknown_status)
+    }
+}
+
+private class OtaException(val error: OtaError) : Exception(error.failure.name + (error.detail?.let { ": $it" } ?: ""))
+
+private fun fail(failure: OtaFailure, detail: String? = null): Nothing =
+    throw OtaException(OtaError(failure, detail))
+
+/** Map a firmware OTA error status to the failure the user sees. */
+internal fun failureFor(status: OtaStatus): OtaFailure = when (status) {
+    OtaStatus.ERR_BEGIN -> OtaFailure.BEGIN_REJECTED
+    OtaStatus.ERR_WRITE -> OtaFailure.WRITE_FAILED
+    OtaStatus.ERR_VALIDATE -> OtaFailure.VALIDATE_FAILED
+    OtaStatus.ERR_SIZE -> OtaFailure.TOO_LARGE
+    OtaStatus.ERR_BOARD -> OtaFailure.WRONG_BOARD
+    OtaStatus.ERR_BUSY -> OtaFailure.BUSY
+    OtaStatus.OK, OtaStatus.READY, OtaStatus.COMPLETE, OtaStatus.UNKNOWN -> OtaFailure.UNKNOWN_STATUS
+}
+
 class FirmwareUpdateManager(
     private val bleManager: PulsarBleManager,
     private val scope: CoroutineScope,
+    /** The connected Pulsar's board, from its scan-response manufacturer
+     *  data. Images are chosen by board, never by chip. */
+    private val boardProvider: () -> BoardKind,
 ) {
     companion object {
         private const val TAG = "FirmwareOTA"
         private const val CHUNK_DELAY_MS = AppConfig.OTA_CHUNK_DELAY_MS
-
-        /** Map chip model string from DeviceInfo → GitHub release asset suffix. */
-        private fun assetSuffixForChip(chipModel: String?): String = when (chipModel) {
-            "ESP32" -> "-esp32.bin"
-            "ESP32-S3" -> "-esp32s3.bin"
-            else -> "-unknown.bin"  // won't match any real asset
-        }
-
-        /** Map chip model string from DeviceInfo → expected chip ID byte. */
-        private fun chipIdForModel(chipModel: String?): Int = when (chipModel) {
-            "ESP32" -> 1
-            "ESP32-S2" -> 2
-            "ESP32-S3" -> 3
-            "ESP32-C3" -> 4
-            else -> 0
-        }
+        private const val TAG_PREFIX = "firmware-v"
+        private const val READY_TIMEOUT_MS = 5_000L
+        private const val END_TIMEOUT_MS = 10_000L
     }
 
     private val _state = MutableStateFlow(OtaState.IDLE)
@@ -75,126 +134,160 @@ class FirmwareUpdateManager(
     private val _latestRelease = MutableStateFlow<FirmwareRelease?>(null)
     val latestRelease: StateFlow<FirmwareRelease?> = _latestRelease
 
-    private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage
+    private val _error = MutableStateFlow<OtaError?>(null)
+    val error: StateFlow<OtaError?> = _error
 
-    private var firmwareBytes: ByteArray? = null
     private var otaJob: Job? = null
 
     fun checkForUpdate(currentVersion: String) {
         scope.launch(Dispatchers.IO) {
             _state.value = OtaState.CHECKING
-            _errorMessage.value = null
+            _error.value = null
+            _latestRelease.value = null
             try {
-                val release = fetchLatestRelease()
-                _latestRelease.value = release
-                if (release != null && isNewerVersion(release.version, currentVersion)) {
-                    _state.value = OtaState.AVAILABLE
-                } else {
-                    _state.value = OtaState.UP_TO_DATE
+                val board = boardProvider()
+                val release = fetchNewestRelease(TAG_PREFIX) { page -> fetchReleasesPage(page) }
+                when (val pick = pickFirmwareAsset(release, TAG_PREFIX, board)) {
+                    FirmwareAssetPick.UnknownBoard -> fail(OtaFailure.UNKNOWN_BOARD)
+                    FirmwareAssetPick.NoRelease -> fail(OtaFailure.NO_RELEASE)
+                    is FirmwareAssetPick.NoAssetForBoard -> {
+                        // Only a problem if it would have been an update.
+                        if (isNewerVersion(pick.version, currentVersion)) {
+                            fail(OtaFailure.NO_ASSET_FOR_BOARD, pick.version)
+                        }
+                        _state.value = OtaState.UP_TO_DATE
+                    }
+                    is FirmwareAssetPick.Found -> {
+                        val a = pick.asset
+                        Log.i(TAG, "Firmware ${a.version} for $board: ${a.downloadUrl}")
+                        _latestRelease.value = FirmwareRelease(
+                            version = a.version,
+                            downloadUrl = a.downloadUrl,
+                            checksumUrl = a.checksumUrl,
+                            publishedAt = a.publishedAt,
+                            body = a.body,
+                            board = board,
+                        )
+                        _state.value = if (isNewerVersion(a.version, currentVersion)) {
+                            OtaState.AVAILABLE
+                        } else OtaState.UP_TO_DATE
+                    }
                 }
+            } catch (e: OtaException) {
+                Log.w(TAG, "Check refused: ${e.message}")
+                _error.value = e.error
+                _state.value = OtaState.ERROR
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Check failed", e)
-                _errorMessage.value = e.message
+                _error.value = OtaError(OtaFailure.CHECK_FAILED, e.message)
                 _state.value = OtaState.ERROR
             }
         }
     }
 
+    @Synchronized
     fun startUpdate() {
+        // One update at a time: a second tap must not start a parallel upload.
+        if (otaJob?.isActive == true) return
         val release = _latestRelease.value ?: return
         if (!bleManager.hasOtaSupport()) {
-            _errorMessage.value = "Device firmware does not support OTA"
+            _error.value = OtaError(OtaFailure.NO_OTA_SUPPORT)
+            _state.value = OtaState.ERROR
+            return
+        }
+        if (release.board == BoardKind.UNKNOWN || boardProvider() != release.board) {
+            // A different Pulsar connected since the check — its image may
+            // be for another board.
+            _error.value = OtaError(OtaFailure.BOARD_CHANGED)
             _state.value = OtaState.ERROR
             return
         }
 
         otaJob = scope.launch(Dispatchers.IO) {
             try {
-                // Phase 1: Download firmware from GitHub
+                // Phase 1: download, then verify — fail closed.
                 _state.value = OtaState.DOWNLOADING
                 _progress.value = 0f
-                firmwareBytes = downloadFirmware(release.downloadUrl)
-                val fw = firmwareBytes ?: throw Exception("Download returned empty")
-                Log.i(TAG, "Downloaded ${fw.size} bytes")
-
-                // Verify SHA-256 checksum if available
-                release.checksumUrl?.let { url ->
-                    val expected = fetchExpectedChecksum(url)
-                    if (expected != null) {
-                        val actual = sha256Hex(fw)
-                        if (actual != expected) {
-                            firmwareBytes = null
-                            throw Exception("SHA-256 checksum mismatch")
-                        }
-                        Log.i(TAG, "Firmware checksum verified")
-                    }
+                val fw = try {
+                    downloadFirmware(release.downloadUrl)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "Download failed", e)
+                    fail(OtaFailure.DOWNLOAD_FAILED, e.message)
                 }
+                if (fw.isEmpty()) fail(OtaFailure.DOWNLOAD_FAILED)
+                Log.i(TAG, "Downloaded ${fw.size} bytes")
+                val checksumUrl = release.checksumUrl ?: fail(OtaFailure.CHECKSUM_MISSING)
+                val expected = fetchSmallText(checksumUrl)?.let(::parseSha256)
+                    ?: fail(OtaFailure.CHECKSUM_MISSING)
+                if (sha256Hex(fw) != expected) fail(OtaFailure.CHECKSUM_MISMATCH)
+                Log.i(TAG, "Firmware checksum verified")
 
-                // Phase 2: Send OTA_BEGIN
+                // Phase 2: BEGIN. Clear the last status first so a READY or
+                // error from an earlier attempt can't answer this one.
                 _state.value = OtaState.UPLOADING
                 _progress.value = 0f
+                bleManager.resetOtaStatus()
                 bleManager.writeOtaControl(CommandBuilder.otaBegin(fw.size))
+                val ready = withTimeoutOrNull(READY_TIMEOUT_MS) {
+                    bleManager.otaStatus.first { it == OtaStatus.READY || it?.isError == true }
+                } ?: fail(OtaFailure.NO_ANSWER)
+                if (ready != OtaStatus.READY) fail(failureFor(ready))
 
-                // Wait for OTA_READY from firmware
-                val readyStatus = withTimeout(5000) {
-                    bleManager.otaStatus.first { it == OtaStatus.READY || it == OtaStatus.ERR_BEGIN }
-                }
-                if (readyStatus != OtaStatus.READY) {
-                    throw Exception("Firmware rejected OTA begin")
-                }
-
-                // Verify chip model from OTA_READY matches device info
-                val expectedChipId = chipIdForModel(bleManager.deviceInfo.value?.chipModel)
-                val reportedChipId = bleManager.otaChipModel.value
-                if (expectedChipId != 0 && reportedChipId != null && reportedChipId != expectedChipId) {
-                    throw Exception(
-                        "Chip model mismatch: expected $expectedChipId, firmware reported $reportedChipId"
-                    )
+                // The chip in OTA_READY must be the one this board carries.
+                val expectedChip = expectedChipId(release.board)
+                val reportedChip = bleManager.otaChipModel.value
+                if (expectedChip != null && reportedChip != null && reportedChip != expectedChip) {
+                    fail(OtaFailure.WRONG_BOARD, "chip $reportedChip, expected $expectedChip")
                 }
 
-                // Phase 3: Stream firmware chunks
+                // Phase 3: stream chunks; stop at once if the device reports
+                // an error (flash write failure, abandoned upload).
                 val chunkSize = bleManager.otaChunkSize()
                 var offset = 0
                 while (offset < fw.size) {
                     ensureActive()
+                    bleManager.otaStatus.value?.takeIf { it.isError }?.let { fail(failureFor(it)) }
                     val end = minOf(offset + chunkSize, fw.size)
                     val chunk = fw.copyOfRange(offset, end)
                     if (!bleManager.writeOtaData(chunk)) {
-                        throw Exception("BLE write failed at offset $offset")
+                        fail(OtaFailure.WRITE_FAILED, "offset $offset")
                     }
                     offset = end
                     _progress.value = offset.toFloat() / fw.size
                     delay(CHUNK_DELAY_MS)
                 }
 
-                // Phase 4: Send OTA_END to validate and reboot
+                // Phase 4: END — the firmware validates (and, from 0.33,
+                // checks the image's board tag) and reboots.
                 _state.value = OtaState.VALIDATING
                 bleManager.writeOtaControl(CommandBuilder.otaEnd())
-
-                // Wait for COMPLETE or error (device will reboot)
-                val endStatus = withTimeoutOrNull(10000) {
-                    bleManager.otaStatus.first {
-                        it == OtaStatus.COMPLETE || it == OtaStatus.ERR_VALIDATE
-                    }
-                }
-
-                if (endStatus == OtaStatus.ERR_VALIDATE) {
-                    throw Exception("Firmware validation failed")
-                }
+                val endStatus = withTimeoutOrNull(END_TIMEOUT_MS) {
+                    bleManager.otaStatus.first { it == OtaStatus.COMPLETE || it?.isError == true }
+                } ?: fail(OtaFailure.UNCONFIRMED)
+                if (endStatus != OtaStatus.COMPLETE) fail(failureFor(endStatus))
 
                 _state.value = OtaState.COMPLETE
                 bleManager.requestCacheRefresh()
                 Log.i(TAG, "OTA complete — device is rebooting")
-
+            } catch (e: OtaException) {
+                Log.e(TAG, "OTA failed: ${e.message}")
+                bleManager.writeOtaControl(CommandBuilder.otaAbort())
+                _error.value = e.error
+                _state.value = OtaState.ERROR
             } catch (e: CancellationException) {
+                // A real cancel (the user's Cancel, or the scope ending).
+                // Timeouts no longer land here: they use withTimeoutOrNull.
                 bleManager.writeOtaControl(CommandBuilder.otaAbort())
                 _state.value = OtaState.IDLE
                 Log.i(TAG, "OTA cancelled")
             } catch (e: Exception) {
                 Log.e(TAG, "OTA failed", e)
                 bleManager.writeOtaControl(CommandBuilder.otaAbort())
-                _errorMessage.value = e.message
+                _error.value = OtaError(OtaFailure.WRITE_FAILED, e.message)
                 _state.value = OtaState.ERROR
             }
         }
@@ -209,34 +302,8 @@ class FirmwareUpdateManager(
 
     fun reset() {
         cancel()
-        _errorMessage.value = null
+        _error.value = null
         _latestRelease.value = null
-    }
-
-    private suspend fun fetchLatestRelease(): FirmwareRelease? {
-        var chipModel = bleManager.deviceInfo.value?.chipModel
-        if (chipModel == null) {
-            // Device info may not have arrived yet — request and wait briefly
-            bleManager.sendCommand(CommandBuilder.deviceInfoRequest())
-            chipModel = withTimeoutOrNull(3000) {
-                bleManager.deviceInfo.filterNotNull().first()
-            }?.chipModel
-        }
-        if (chipModel == null) {
-            Log.w(TAG, "Device info not available — cannot determine chip model for firmware asset")
-            return null
-        }
-        val suffix = assetSuffixForChip(chipModel)
-        Log.i(TAG, "Looking for firmware asset with suffix '$suffix' (chip=$chipModel)")
-        val asset = fetchGitHubRelease(tagPrefix = "firmware-v", assetSuffix = suffix, perPage = 5)
-            ?: return null
-        return FirmwareRelease(
-            version = asset.version,
-            downloadUrl = asset.downloadUrl,
-            checksumUrl = asset.checksumUrl,
-            publishedAt = asset.publishedAt,
-            body = asset.body,
-        )
     }
 
     private fun downloadFirmware(downloadUrl: String): ByteArray {

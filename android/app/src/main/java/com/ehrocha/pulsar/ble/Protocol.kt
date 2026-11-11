@@ -152,11 +152,22 @@ enum class OtaStatus(val id: Byte) {
     ERR_WRITE(0x02),
     ERR_VALIDATE(0x03),
     ERR_SIZE(0x04),
+    /** Image built for another board, or carries no board tag (fw 0.33+;
+     *  every image before 0.33 is untagged). Sent at END. */
+    ERR_BOARD(0x05),
+    /** A run is in progress — stop it first (fw 0.33+). Sent at BEGIN. */
+    ERR_BUSY(0x06),
     READY(0x10),
-    COMPLETE(0x11);
+    COMPLETE(0x11),
+    /** Any byte this app doesn't know. Never read as success: a future
+     *  firmware error code must fail the update, not pass it. */
+    UNKNOWN(0xFF.toByte());
+
+    /** True for every status that ends an update in failure. */
+    val isError: Boolean get() = this != OK && this != READY && this != COMPLETE
 
     companion object {
-        fun fromByte(b: Byte) = entries.firstOrNull { it.id == b } ?: OK
+        fun fromByte(b: Byte) = entries.firstOrNull { it.id == b && it != UNKNOWN } ?: UNKNOWN
     }
 }
 

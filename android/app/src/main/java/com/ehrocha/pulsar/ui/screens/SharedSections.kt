@@ -1530,7 +1530,7 @@ private fun UpdatesSection(vm: PulsarViewModel, showFirmware: Boolean = true) {
     val otaState by fwManager.state.collectAsState()
     val fwProgress by fwManager.progress.collectAsState()
     val fwRelease by fwManager.latestRelease.collectAsState()
-    val fwError by fwManager.errorMessage.collectAsState()
+    val fwError by fwManager.error.collectAsState()
     val status = LocalDeviceStatus.current
     val fwVersion = status?.fwVersion ?: ""
 
@@ -1680,7 +1680,8 @@ private fun UpdatesSection(vm: PulsarViewModel, showFirmware: Boolean = true) {
 
             OtaState.ERROR -> {
                 Text(
-                    fwError ?: stringResource(R.string.status_update_failed),
+                    fwError?.message(androidx.compose.ui.platform.LocalContext.current)
+                        ?: stringResource(R.string.status_update_failed),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )

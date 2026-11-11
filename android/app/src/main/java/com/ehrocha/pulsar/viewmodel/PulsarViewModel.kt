@@ -30,6 +30,7 @@ import com.ehrocha.pulsar.ptp.watchPtpIpWire
 import com.ehrocha.pulsar.service.PulsarNotificationService
 import com.ehrocha.pulsar.transport.ccapi.attemptCanonCcapiReconnect
 import com.ehrocha.pulsar.transport.ccapi.awaitCcapiReady
+import androidx.core.content.edit
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -877,7 +878,24 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
     val catalogManager = com.ehrocha.pulsar.catalog.CatalogManager(app)
 
     // ── Firmware OTA ─────────────────────────────────────────────────
-    val firmwareManager = FirmwareUpdateManager(bleManager, viewModelScope)
+    /** The connected Pulsar's board (scan-response manufacturer data).
+     *  Firmware images are picked by board, never by chip (audit U-H2). */
+    private val _connectedBoard = MutableStateFlow(com.ehrocha.pulsar.ble.BoardKind.UNKNOWN)
+    val connectedBoard: StateFlow<com.ehrocha.pulsar.ble.BoardKind> = _connectedBoard
+    /** Last board seen per MAC, so a one-tap reconnect (no scan, so no
+     *  manufacturer data) still knows which image the board takes. */
+    private val boardPrefs = app.getSharedPreferences("pulsar_board_ids", Context.MODE_PRIVATE)
+
+    val firmwareManager = FirmwareUpdateManager(bleManager, viewModelScope) { _connectedBoard.value }
+
+    private fun boardFor(mac: String): com.ehrocha.pulsar.ble.BoardKind {
+        val scanned = bleController.devices.value.firstOrNull { it.device.address == mac }?.boardKind
+        if (scanned != null && scanned != com.ehrocha.pulsar.ble.BoardKind.UNKNOWN) {
+            boardPrefs.edit { putInt(mac, scanned.id) }
+            return scanned
+        }
+        return com.ehrocha.pulsar.ble.BoardKind.fromId(boardPrefs.getInt(mac, 0))
+    }
 
     // ── App self-update ──────────────────────────────────────────────
     val appUpdateManager = com.ehrocha.pulsar.update.AppUpdateManager(app, viewModelScope)
@@ -1329,6 +1347,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         if (_ptpIpTransport.value != null) disconnectPtpIp()
         if (_simulatorActive.value) disconnectSimulator()
         _deviceName.value = device.name ?: "Pulsar"
+        _connectedBoard.value = boardFor(device.address)
         pendingBleConnectMac = device.address
         bleController.connect(device)
     }

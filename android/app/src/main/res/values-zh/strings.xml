@@ -1068,4 +1068,24 @@
     <string name="notif_run_paused">已暂停 — 打开 Pulsar 继续</string>
     <string name="hold_to_stop_hint">长按停止</string>
     <string name="a11y_stop_run_action">停止拍摄</string>
+
+    <!-- Firmware update errors (audit U-H1/U-H2/A-M7, fw 0.33 OTA codes) -->
+    <string name="ota_err_check_failed">无法检查固件更新。请检查网络连接。</string>
+    <string name="ota_err_no_release">未找到固件版本</string>
+    <string name="ota_err_unknown_board">该主板未报告身份，无法安全选择固件镜像。请重新扫描并连接，或通过 USB 更新。</string>
+    <string name="ota_err_no_asset">固件 %1$s 没有适用于此主板的镜像</string>
+    <string name="ota_err_board_changed">已连接另一块主板。请重新检查更新。</string>
+    <string name="ota_err_no_support">此固件无法通过蓝牙更新</string>
+    <string name="ota_err_download">固件下载失败</string>
+    <string name="ota_err_checksum_missing">该版本没有校验和，无法验证镜像。已拒绝更新。</string>
+    <string name="ota_err_checksum_mismatch">下载的镜像已损坏（校验和不匹配）。已拒绝更新。</string>
+    <string name="ota_err_begin">设备拒绝开始更新</string>
+    <string name="ota_err_busy">请先停止拍摄再更新</string>
+    <string name="ota_err_board">此固件适用于另一块主板</string>
+    <string name="ota_err_size">镜像超出此设备的容量</string>
+    <string name="ota_err_write">上传失败或被中断</string>
+    <string name="ota_err_validate">设备拒绝了该镜像（验证失败）</string>
+    <string name="ota_err_no_answer">设备没有响应</string>
+    <string name="ota_err_unconfirmed">设备未确认更新。重新连接后请检查其固件版本。</string>
+    <string name="ota_err_unknown_status">设备报告了未知的更新错误</string>
 </resources>

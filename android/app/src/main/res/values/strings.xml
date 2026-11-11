@@ -1172,4 +1172,24 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <string name="notif_run_paused">Paused — open Pulsar to continue</string>
     <string name="hold_to_stop_hint">Hold to stop</string>
     <string name="a11y_stop_run_action">Stop the run</string>
+
+    <!-- Firmware update errors (audit U-H1/U-H2/A-M7, fw 0.33 OTA codes) -->
+    <string name="ota_err_check_failed">Couldn\'t check for firmware updates. Check your internet connection.</string>
+    <string name="ota_err_no_release">No firmware release found</string>
+    <string name="ota_err_unknown_board">This board didn\'t identify itself, so no firmware image can be chosen safely. Rescan and reconnect, or update over USB.</string>
+    <string name="ota_err_no_asset">Firmware %1$s has no image for this board</string>
+    <string name="ota_err_board_changed">A different board is connected. Check for updates again.</string>
+    <string name="ota_err_no_support">This firmware can\'t be updated over Bluetooth</string>
+    <string name="ota_err_download">Firmware download failed</string>
+    <string name="ota_err_checksum_missing">The release has no checksum, so the image can\'t be verified. Update refused.</string>
+    <string name="ota_err_checksum_mismatch">The downloaded image is damaged (checksum mismatch). Update refused.</string>
+    <string name="ota_err_begin">The device refused to start the update</string>
+    <string name="ota_err_busy">Stop the run before updating</string>
+    <string name="ota_err_board">This firmware is for a different board</string>
+    <string name="ota_err_size">The image doesn\'t fit on this device</string>
+    <string name="ota_err_write">The upload failed or was interrupted</string>
+    <string name="ota_err_validate">The device rejected the image (validation failed)</string>
+    <string name="ota_err_no_answer">The device didn\'t answer</string>
+    <string name="ota_err_unconfirmed">The device didn\'t confirm the update. Check its firmware version once it reconnects.</string>
+    <string name="ota_err_unknown_status">The device reported an unknown update error</string>
 </resources>

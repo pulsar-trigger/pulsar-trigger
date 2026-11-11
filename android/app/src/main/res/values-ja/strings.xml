@@ -1074,4 +1074,24 @@
     <string name="notif_run_paused">一時停止中 — Pulsar を開いて続行</string>
     <string name="hold_to_stop_hint">長押しで停止</string>
     <string name="a11y_stop_run_action">撮影を停止</string>
+
+    <!-- Firmware update errors (audit U-H1/U-H2/A-M7, fw 0.33 OTA codes) -->
+    <string name="ota_err_check_failed">ファームウェアの更新を確認できませんでした。インターネット接続を確認してください。</string>
+    <string name="ota_err_no_release">ファームウェアのリリースが見つかりません</string>
+    <string name="ota_err_unknown_board">このボードが識別情報を送らなかったため、安全にファームウェアを選べません。再スキャンして接続し直すか、USB で更新してください。</string>
+    <string name="ota_err_no_asset">ファームウェア %1$s にはこのボード用のイメージがありません</string>
+    <string name="ota_err_board_changed">別のボードが接続されています。もう一度更新を確認してください。</string>
+    <string name="ota_err_no_support">このファームウェアは Bluetooth で更新できません</string>
+    <string name="ota_err_download">ファームウェアのダウンロードに失敗しました</string>
+    <string name="ota_err_checksum_missing">リリースにチェックサムがないため、イメージを検証できません。更新を中止しました。</string>
+    <string name="ota_err_checksum_mismatch">ダウンロードしたイメージが破損しています（チェックサム不一致）。更新を中止しました。</string>
+    <string name="ota_err_begin">デバイスが更新の開始を拒否しました</string>
+    <string name="ota_err_busy">更新する前に撮影を停止してください</string>
+    <string name="ota_err_board">このファームウェアは別のボード用です</string>
+    <string name="ota_err_size">イメージがこのデバイスに収まりません</string>
+    <string name="ota_err_write">転送に失敗したか、中断されました</string>
+    <string name="ota_err_validate">デバイスがイメージを拒否しました（検証失敗）</string>
+    <string name="ota_err_no_answer">デバイスが応答しませんでした</string>
+    <string name="ota_err_unconfirmed">デバイスが更新を確認しませんでした。再接続後にファームウェアのバージョンを確認してください。</string>
+    <string name="ota_err_unknown_status">デバイスが不明な更新エラーを報告しました</string>
 </resources>

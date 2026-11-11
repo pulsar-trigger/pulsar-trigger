@@ -52,6 +52,13 @@ class PulsarBleManager(context: Context) : BleManager(context) {
     private val _otaChipModel = MutableStateFlow<Int?>(null)
     val otaChipModel: StateFlow<Int?> = _otaChipModel
 
+    /** Forget the last OTA status before a new BEGIN, so a READY or an error
+     *  left over from a previous attempt can't satisfy the next wait. */
+    fun resetOtaStatus() {
+        _otaStatus.value = null
+        _otaChipModel.value = null
+    }
+
     private val _mtu = MutableStateFlow(AppConfig.BLE_DEFAULT_MTU)  // default BLE MTU
     val mtu: StateFlow<Int> = _mtu
 
@@ -115,11 +122,12 @@ class PulsarBleManager(context: Context) : BleManager(context) {
         otaCtrlChar?.let { ctrl ->
             setNotificationCallback(ctrl).with { _, data ->
                 data.value?.takeIf { it.isNotEmpty() }?.let { bytes ->
-                    _otaStatus.value = OtaStatus.fromByte(bytes[0])
-                    // OTA_READY carries chip model in byte[1]
+                    // OTA_READY carries chip model in byte[1]. Stored BEFORE the
+                    // status, so a waiter woken by READY reads this attempt's chip.
                     if (bytes[0] == OtaStatus.READY.id && bytes.size >= 2) {
                         _otaChipModel.value = bytes[1].toInt() and 0xFF
                     }
+                    _otaStatus.value = OtaStatus.fromByte(bytes[0])
                 }
             }
             enableNotifications(ctrl).enqueue()
