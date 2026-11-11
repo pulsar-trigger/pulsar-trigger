@@ -1079,4 +1079,15 @@ La altura proviene de la oscuridad del cielo × cielo despejado × sin luna bril
     <string name="canon_ble_names_distinct">Los dos nombres deben ser diferentes.</string>
     <string name="canon_ble_dial_bulb">Pon el dial de modo de la cámara en BULB</string>
     <string name="canon_ble_dial_m">Pon el dial de modo de la cámara en M</string>
+
+    <!-- Run-in-progress notification + hold-to-stop (audit A-H1/A-H2) -->
+    <string name="notif_channel_run_active">Sesión en curso</string>
+    <string name="notif_channel_run_active_desc">Mantiene la sesión activa con la pantalla apagada y muestra su progreso, con un botón Detener.</string>
+    <string name="notif_run_title_generic">Sesión Pulsar</string>
+    <string name="notif_run_title_step">%1$s · paso %2$d de %3$d</string>
+    <string name="notif_run_shots">%1$s fotos</string>
+    <string name="notif_run_shots_remaining">%1$s fotos · quedan %2$s</string>
+    <string name="notif_run_paused">En pausa — abre Pulsar para continuar</string>
+    <string name="hold_to_stop_hint">Mantén pulsado para detener</string>
+    <string name="a11y_stop_run_action">Detener la sesión</string>
 </resources>

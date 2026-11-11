@@ -1161,4 +1161,15 @@ Height comes from sky darkness (sun below the horizon) × clear sky × no bright
     <string name="canon_ble_names_distinct">The two names must be different.</string>
     <string name="canon_ble_dial_bulb">Set the camera mode dial to BULB</string>
     <string name="canon_ble_dial_m">Set the camera mode dial to M</string>
+
+    <!-- Run-in-progress notification + hold-to-stop (audit A-H1/A-H2) -->
+    <string name="notif_channel_run_active">Run in progress</string>
+    <string name="notif_channel_run_active_desc">Keeps a run going with the screen off and shows its progress, with a Stop button.</string>
+    <string name="notif_run_title_generic">Pulsar run</string>
+    <string name="notif_run_title_step">%1$s · step %2$d of %3$d</string>
+    <string name="notif_run_shots">%1$s shots</string>
+    <string name="notif_run_shots_remaining">%1$s shots · %2$s left</string>
+    <string name="notif_run_paused">Paused — open Pulsar to continue</string>
+    <string name="hold_to_stop_hint">Hold to stop</string>
+    <string name="a11y_stop_run_action">Stop the run</string>
 </resources>

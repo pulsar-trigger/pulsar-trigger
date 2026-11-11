@@ -5,7 +5,6 @@
 
 package com.ehrocha.pulsar.ui.screens
 
-import android.view.WindowManager
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -52,13 +51,7 @@ fun AlignmentScreen(
     LaunchedEffect(Unit) { alignVm.acquireLocation() }
 
     // Keep screen awake
-    val activity = androidx.activity.compose.LocalActivity.current
-    DisposableEffect(Unit) {
-        activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        onDispose {
-            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
-    }
+    com.ehrocha.pulsar.ui.components.KeepScreenOn("alignment")
 
     val altError = pitch - targetAlt
     val azError = shortestAngle(trueAz, targetAz)

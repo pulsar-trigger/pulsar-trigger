@@ -213,11 +213,20 @@ class MainActivity : AppCompatActivity() {
                 ThemeMode.RedLight -> RedLightColorScheme
             }
             val snackbarHost = remember { androidx.compose.material3.SnackbarHostState() }
+            // The one owner of FLAG_KEEP_SCREEN_ON: screens request/release
+            // tags through LocalKeepScreenOn; only this effect touches the window.
+            val keepScreenOn = remember { com.ehrocha.pulsar.util.KeepScreenOnRequests() }
+            val screenOnHeld by keepScreenOn.active.collectAsState()
+            LaunchedEffect(screenOnHeld) {
+                val flag = android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                if (screenOnHeld) window.addFlags(flag) else window.clearFlags(flag)
+            }
             CompositionLocalProvider(
                 LocalNightMode provides nightMode,
                 LocalNightModeLocked provides nightModeLocked,
                 com.ehrocha.pulsar.ui.theme.LocalVisualStyle provides visualStyle,
                 com.ehrocha.pulsar.ui.components.LocalSnackbarHost provides snackbarHost,
+                com.ehrocha.pulsar.ui.components.LocalKeepScreenOn provides keepScreenOn,
                 // Semantic roles resolved per mode — under RedLight every
                 // role collapses to a red/grey luminance ramp so the user's
                 // night-vision choice is honoured by all surfaces.
@@ -514,17 +523,11 @@ fun PulsarNavHost(
 
     // Keep the screen awake while a sequence is running — long timelapses /
     // astro sessions outlast a phone's default sleep timer, and a sleeping
-    // screen means the user can't glance progress without unlocking.
-    val activityForWake = androidx.activity.compose.LocalActivity.current
+    // screen means the user can't glance progress without unlocking. The run
+    // itself survives screen-off (foreground service + wake lock); this is
+    // only so progress stays glanceable.
     val runActive = runState !is com.ehrocha.pulsar.model.RunState.Idle
-    DisposableEffect(runActive) {
-        if (runActive) {
-            activityForWake?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
-        onDispose {
-            activityForWake?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
-    }
+    com.ehrocha.pulsar.ui.components.KeepScreenOn("run", runActive)
     CompositionLocalProvider(
         LocalDeviceStatus provides deviceStatus,
         LocalRunState provides runState,

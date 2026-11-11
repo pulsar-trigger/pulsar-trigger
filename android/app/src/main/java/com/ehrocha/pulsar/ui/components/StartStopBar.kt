@@ -25,7 +25,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -121,18 +120,13 @@ fun StartStopBar(
                 when {
                     running -> {
                         Spacer(Modifier.weight(1f))
-                        Button(
-                            onClick = onStop,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error,
-                            ),
-                            shape = RoundedCornerShape(20.dp),
-                            modifier = Modifier.height(56.dp).fillMaxWidth(0.6f),
-                        ) {
-                            Icon(Icons.Default.Stop, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.btn_stop), fontWeight = FontWeight.Bold)
-                        }
+                        // Press-and-hold (audit A-H2): the screen is held on
+                        // during a run, so one stray tap from a pocket or a bag
+                        // must not end the session.
+                        HoldToStopButton(
+                            onStop = onStop,
+                            modifier = Modifier.fillMaxWidth(0.6f),
+                        )
                         Spacer(Modifier.weight(1f))
                     }
                     tabCount <= 1 -> {

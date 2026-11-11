@@ -1199,16 +1199,14 @@ private fun FlowEditorView(
 
         // ── Action buttons ───────────────────────────────────────────────
         if (running) {
-            Button(
-                onClick = { vm.stopFlow() },
+            // Same hold-to-stop guard as StartStopBar (audit A-H2).
+            com.ehrocha.pulsar.ui.components.HoldToStopButton(
+                onStop = { vm.stopFlow() },
+                label = stringResource(R.string.btn_stop_flow),
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = StatusRed),
-            ) {
-                Icon(Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.btn_stop_flow), fontWeight = FontWeight.Bold)
-            }
+                height = 48.dp,
+                cornerRadius = 12.dp,
+            )
         } else {
             // Duration estimate before starting
             if (steps.isNotEmpty()) {

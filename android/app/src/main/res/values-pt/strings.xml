@@ -1081,4 +1081,15 @@ A altura vem da escuridão do céu × céu limpo × sem lua brilhante × sem chu
     <string name="canon_ble_names_distinct">Os dois nomes devem ser diferentes.</string>
     <string name="canon_ble_dial_bulb">Coloque o seletor de modo da câmera em BULB</string>
     <string name="canon_ble_dial_m">Coloque o seletor de modo da câmera em M</string>
+
+    <!-- Run-in-progress notification + hold-to-stop (audit A-H1/A-H2) -->
+    <string name="notif_channel_run_active">Sessão em andamento</string>
+    <string name="notif_channel_run_active_desc">Mantém a sessão ativa com a tela desligada e mostra o progresso, com um botão Parar.</string>
+    <string name="notif_run_title_generic">Sessão Pulsar</string>
+    <string name="notif_run_title_step">%1$s · etapa %2$d de %3$d</string>
+    <string name="notif_run_shots">%1$s fotos</string>
+    <string name="notif_run_shots_remaining">%1$s fotos · faltam %2$s</string>
+    <string name="notif_run_paused">Pausado — abra o Pulsar para continuar</string>
+    <string name="hold_to_stop_hint">Segure para parar</string>
+    <string name="a11y_stop_run_action">Parar a sessão</string>
 </resources>

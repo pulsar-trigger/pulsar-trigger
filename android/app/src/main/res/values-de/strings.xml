@@ -1072,4 +1072,15 @@ Die Höhe ergibt sich aus Himmelsdunkelheit × klarer Himmel × kein heller Mond
     <string name="canon_ble_names_distinct">Die beiden Namen müssen unterschiedlich sein.</string>
     <string name="canon_ble_dial_bulb">Stelle das Moduswahlrad der Kamera auf BULB</string>
     <string name="canon_ble_dial_m">Stelle das Moduswahlrad der Kamera auf M</string>
+
+    <!-- Run-in-progress notification + hold-to-stop (audit A-H1/A-H2) -->
+    <string name="notif_channel_run_active">Aufnahme läuft</string>
+    <string name="notif_channel_run_active_desc">Hält die Aufnahme bei ausgeschaltetem Bildschirm am Laufen und zeigt den Fortschritt, mit einer Stopp-Taste.</string>
+    <string name="notif_run_title_generic">Pulsar-Aufnahme</string>
+    <string name="notif_run_title_step">%1$s · Schritt %2$d von %3$d</string>
+    <string name="notif_run_shots">%1$s Aufnahmen</string>
+    <string name="notif_run_shots_remaining">%1$s Aufnahmen · noch %2$s</string>
+    <string name="notif_run_paused">Pausiert — Pulsar öffnen, um fortzufahren</string>
+    <string name="hold_to_stop_hint">Zum Stoppen gedrückt halten</string>
+    <string name="a11y_stop_run_action">Aufnahme stoppen</string>
 </resources>

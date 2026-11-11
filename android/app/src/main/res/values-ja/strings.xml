@@ -1063,4 +1063,15 @@
     <string name="canon_ble_names_distinct">2つの名前は異なる必要があります。</string>
     <string name="canon_ble_dial_bulb">カメラのモードダイヤルを BULB に設定してください</string>
     <string name="canon_ble_dial_m">カメラのモードダイヤルを M に設定してください</string>
+
+    <!-- Run-in-progress notification + hold-to-stop (audit A-H1/A-H2) -->
+    <string name="notif_channel_run_active">撮影実行中</string>
+    <string name="notif_channel_run_active_desc">画面がオフでも撮影を続け、進行状況と停止ボタンを表示します。</string>
+    <string name="notif_run_title_generic">Pulsar 撮影</string>
+    <string name="notif_run_title_step">%1$s · ステップ %2$d / %3$d</string>
+    <string name="notif_run_shots">%1$s 枚</string>
+    <string name="notif_run_shots_remaining">%1$s 枚 · 残り %2$s</string>
+    <string name="notif_run_paused">一時停止中 — Pulsar を開いて続行</string>
+    <string name="hold_to_stop_hint">長押しで停止</string>
+    <string name="a11y_stop_run_action">撮影を停止</string>
 </resources>

@@ -178,29 +178,10 @@ fun AircraftWatchScreen(
         onDispose { vm.stopAircraftWatch() }
     }
 
-    // Keep-screen-on: set the window flag while the toggle is on and this
-    // screen is composed; always cleared on dispose so we never leak the
-    // flag back to the rest of the app. The activity is found by unwrapping
-    // the ContextWrapper chain (Compose's LocalContext may be a wrapper).
-    DisposableEffect(keepScreenOn) {
-        val activity = run {
-            var c: android.content.Context? = ctx
-            while (c is android.content.ContextWrapper) {
-                if (c is android.app.Activity) return@run c
-                c = c.baseContext
-            }
-            null
-        }
-        val window = activity?.window
-        if (keepScreenOn) {
-            window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        } else {
-            window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
-        onDispose {
-            window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
-    }
+    // Keep-screen-on while the toggle is on and this screen is composed.
+    // Released under this screen's own tag only, so leaving the screen never
+    // drops a running flow's request.
+    com.ehrocha.pulsar.ui.components.KeepScreenOn("aircraft", keepScreenOn)
 
     // BottomSheet — collapsed (peek): just the status row sits above the
     // map+list. Drag up or tap the handle to reveal the three sliders.

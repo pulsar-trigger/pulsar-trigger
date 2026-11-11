@@ -39,6 +39,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -73,7 +75,8 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
         private const val KEY_FLOW_STEPS = "flow_steps"
         private const val KEY_SAVED_FLOWS = "saved_flows"
         private const val KEY_AUTO_OFF = "auto_off_minutes"
-        private const val NOTIFICATION_THROTTLE_MS = 5_000L
+        /** The run notification refreshes at most once a second. */
+        private const val NOTIFICATION_THROTTLE_MS = 1_000L
         // Canon BLE post-frame cool-down (default/min/max) now lives in
         // CanonBleRules; the tunable state is in CanonBleSettings.
         /** Poll failures before we abandon the long-poll and switch into
@@ -1152,6 +1155,61 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
             steps.take(idx).sumOf { plannedShotsFor(it) } + perStep
         } else perStep
     }.stateIn(viewModelScope, SharingStarted.Eagerly, 0)
+
+    /** Foreground notification + wake lock for a live run (audit A-H1). */
+    private val runKeepAlive = com.ehrocha.pulsar.service.RunKeepAlive(app)
+
+    /** The run as the notification sees it: null when nothing is running.
+     *  "Running" = a flow the app sequences, or a firmware run in progress
+     *  (an ESP32 run the app picked up but didn't start). */
+    private val runSnapshot: kotlinx.coroutines.flow.Flow<com.ehrocha.pulsar.service.RunSnapshot?> =
+        combine(runState, flowShotsCompleted, _flowSteps, _flowCurrentStep, _flowRunning) {
+                rs, shots, steps, idx, running ->
+            val active = running || rs is RunState.Running || rs is RunState.Waiting ||
+                rs is RunState.Paused || rs is RunState.Preparing
+            if (!active) return@combine null
+            val remaining = when (rs) {
+                is RunState.Running -> rs.timeRemainingMs
+                is RunState.Waiting -> rs.timeRemainingMs
+                else -> 0L
+            }
+            com.ehrocha.pulsar.service.RunSnapshot(
+                step = if (running) steps.getOrNull(idx) else null,
+                stepIndex = if (running) idx else -1,
+                stepCount = if (running) steps.size else 0,
+                shotsTaken = shots,
+                plannedShots = if (running && steps.isNotEmpty())
+                    com.ehrocha.pulsar.service.RunNoticeFormat.plannedShots(steps) else null,
+                timeRemainingMs = remaining,
+                paused = rs is RunState.Paused,
+                preparing = rs is RunState.Preparing,
+                phoneTimed = com.ehrocha.pulsar.service.RunNoticeFormat.isPhoneTimed(
+                    flowRunning = running,
+                    firmwareTimesShots = activeCameraTransport() == null && !_simulatorActive.value,
+                    steps = steps,
+                ),
+            )
+        }
+
+    init {
+        // Throttle-latest: apply a change at once, then at most one per
+        // NOTIFICATION_THROTTLE_MS — conflate keeps only the newest pending
+        // snapshot while the delay runs, so the last state always lands.
+        viewModelScope.launch {
+            runSnapshot
+                .distinctUntilChanged()
+                .conflate()
+                .collect { snapshot ->
+                    runKeepAlive.update(snapshot)
+                    delay(NOTIFICATION_THROTTLE_MS)
+                }
+        }
+        // The notification's Stop action — a single tap, by design: it sits
+        // behind the lock screen / notification shade, not in a pocket.
+        viewModelScope.launch {
+            com.ehrocha.pulsar.service.RunSession.stopRequests.collect { stop() }
+        }
+    }
 
     init {
         // Forward BLE controller state into the viewmodel's writable flows.
@@ -3266,6 +3324,7 @@ class PulsarViewModel(app: Application) : AndroidViewModel(app) {
 
     override fun onCleared() {
         super.onCleared()
+        runKeepAlive.release()
         stopScan()
         simulatorJob?.cancel()
         aircraftJob?.cancel()
