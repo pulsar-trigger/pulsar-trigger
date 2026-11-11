@@ -5,6 +5,7 @@
 
 package com.ehrocha.pulsar.ui.screens
 
+import com.ehrocha.pulsar.ui.theme.PulsarTheme
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -44,9 +45,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import java.text.DateFormat
 import java.util.Date
 import com.ehrocha.pulsar.ui.theme.DarkColorScheme
-import com.ehrocha.pulsar.ui.theme.ExposureGreen
-import com.ehrocha.pulsar.ui.theme.StatusRed
-import com.ehrocha.pulsar.ui.theme.WaitingYellow
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
@@ -573,9 +571,9 @@ private fun RunningStatusContent(
 
     val stateColor by animateColorAsState(
         targetValue = when (status.state) {
-            DeviceState.RUNNING -> ExposureGreen
-            DeviceState.WAITING -> WaitingYellow
-            DeviceState.ERROR -> StatusRed
+            DeviceState.RUNNING -> PulsarTheme.colors.exposing
+            DeviceState.WAITING -> PulsarTheme.colors.waiting
+            DeviceState.ERROR -> PulsarTheme.colors.statusBad
             else -> MaterialTheme.colorScheme.primary
         },
         label = "stateColor",
@@ -649,7 +647,7 @@ private fun RunningStatusContent(
             Text(
                 text = stringResource(R.string.state_exposing),
                 style = MaterialTheme.typography.labelSmall,
-                color = ExposureGreen,
+                color = PulsarTheme.colors.exposing,
                 modifier = Modifier.width(72.dp),
             )
             LinearProgressIndicator(
@@ -657,7 +655,7 @@ private fun RunningStatusContent(
                 modifier = Modifier
                     .weight(1f)
                     .height(8.dp),
-                color = ExposureGreen,
+                color = PulsarTheme.colors.exposing,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
             )
@@ -670,7 +668,7 @@ private fun RunningStatusContent(
             Text(
                 text = stringResource(R.string.state_waiting),
                 style = MaterialTheme.typography.labelSmall,
-                color = WaitingYellow,
+                color = PulsarTheme.colors.waiting,
                 modifier = Modifier.width(72.dp),
             )
             LinearProgressIndicator(
@@ -678,7 +676,7 @@ private fun RunningStatusContent(
                 modifier = Modifier
                     .weight(1f)
                     .height(8.dp),
-                color = WaitingYellow,
+                color = PulsarTheme.colors.waiting,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
             )

@@ -5,6 +5,7 @@
 
 package com.ehrocha.pulsar.ui.screens
 
+import com.ehrocha.pulsar.ui.theme.PulsarTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -45,9 +46,6 @@ import com.ehrocha.pulsar.ui.components.ModeUsageBar
 import com.ehrocha.pulsar.ui.components.PulsarTopBar
 import com.ehrocha.pulsar.ui.components.SessionStat
 import com.ehrocha.pulsar.ui.components.SuccessRing
-import com.ehrocha.pulsar.ui.theme.StatusGreen
-import com.ehrocha.pulsar.ui.theme.StatusOrange
-import com.ehrocha.pulsar.ui.theme.StatusRed
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import kotlinx.coroutines.launch
 import java.text.DateFormat
@@ -404,9 +402,9 @@ private fun MiniStat(label: String, value: String) {
 @Composable
 private fun statusIconAndColor(status: ShotLogStatus): Pair<ImageVector, androidx.compose.ui.graphics.Color> {
     return when (status) {
-        ShotLogStatus.COMPLETED -> Icons.Default.CheckCircle to StatusGreen
-        ShotLogStatus.STOPPED   -> Icons.Default.StopCircle to StatusOrange
-        ShotLogStatus.ERROR     -> Icons.Default.ErrorOutline to StatusRed
+        ShotLogStatus.COMPLETED -> Icons.Default.CheckCircle to PulsarTheme.colors.statusGood
+        ShotLogStatus.STOPPED   -> Icons.Default.StopCircle to PulsarTheme.colors.statusWarn
+        ShotLogStatus.ERROR     -> Icons.Default.ErrorOutline to PulsarTheme.colors.statusBad
     }
 }
 

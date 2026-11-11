@@ -138,7 +138,7 @@ fun StartStopBar(
                             shape = RoundedCornerShape(20.dp),
                             colors = if (canStart) ButtonDefaults.buttonColors(
                                 containerColor = Color.Transparent,
-                                contentColor = Color.White,
+                                contentColor = PulsarTheme.colors.onLive,
                             ) else ButtonDefaults.buttonColors(),
                             modifier = Modifier
                                 .height(56.dp)
@@ -180,7 +180,7 @@ fun StartStopBar(
                                 shape = RoundedCornerShape(20.dp),
                                 colors = if (canStart) ButtonDefaults.buttonColors(
                                     containerColor = Color.Transparent,
-                                    contentColor = Color.White,
+                                    contentColor = PulsarTheme.colors.onLive,
                                 ) else ButtonDefaults.buttonColors(),
                                 modifier = Modifier
                                     .height(56.dp)

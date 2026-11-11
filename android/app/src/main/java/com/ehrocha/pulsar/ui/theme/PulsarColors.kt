@@ -61,6 +61,22 @@ data class PulsarColors(
     val badgeVintage: Color,
     val badgeMilitary: Color,
     val badgeHeavy: Color,
+    // Status indicators — signal bars, latency, battery-low, run state,
+    // shot-log outcome, alignment lock. Brighter, more saturated than the
+    // verdict-style positive/caution/critical so a small glyph reads at a
+    // glance on carbon; in RedLight they join the luminance ramp.
+    val statusGood: Color,
+    val statusWarn: Color,
+    val statusBad: Color,
+    /** Unlit bar / inactive indicator. */
+    val statusOff: Color,
+    /** Live run phases on the run readout: shutter open vs. inter-shot gap. */
+    val exposing: Color,
+    val waiting: Color,
+    /** Text/icons on the live gradient (armed Start, the shutter button). */
+    val onLive: Color,
+    /** The brief shutter-fired flash over a live control. */
+    val flash: Color,
     /** Alpha used when a role colour becomes a chip/tint background. */
     val chipAlpha: Float = 0.18f,
 )
@@ -94,6 +110,14 @@ private val ChromaticPulsarColors = PulsarColors(
     badgeVintage = Color(0xFF6D4C41),
     badgeMilitary = Color(0xFF455A64),
     badgeHeavy = Color(0xFF1565C0),
+    statusGood = Color(0xFF4CAF50),
+    statusWarn = Color(0xFFFFA726),
+    statusBad = Color(0xFFFF1744),
+    statusOff = Color(0xFF3A3A3A),
+    exposing = Color(0xFF00E676),
+    waiting = Color(0xFFFFD600),
+    onLive = Color.White,
+    flash = Color.White,
 )
 
 /** Outdoor: same hues, deepened for contrast under direct sunlight. */
@@ -139,6 +163,14 @@ private val RedPulsarColors = PulsarColors(
     badgeVintage = Color(0xFF8F2C2C),
     badgeMilitary = Color(0xFF7A2A2A),
     badgeHeavy = Color(0xFFA03030),
+    statusGood = Color(0xFFCC4444),
+    statusWarn = Color(0xFF993333),
+    statusBad = Color(0xFFFF4444),
+    statusOff = Color(0xFF3A1010),
+    exposing = Color(0xFFFF4444),
+    waiting = Color(0xFF993333),
+    onLive = Color(0xFF0A0000),
+    flash = Color(0xFFFF4444),
     chipAlpha = 0.22f,
 )
 

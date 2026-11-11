@@ -215,7 +215,7 @@ fun CableReleaseScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                         Modifier
                             .matchParentSize()
                             .background(
-                                androidx.compose.ui.graphics.Color.White.copy(alpha = flashAlpha),
+                                com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.flash.copy(alpha = flashAlpha),
                                 RoundedCornerShape(20.dp),
                             ),
                     )
@@ -224,7 +224,7 @@ fun CableReleaseScreen(vm: PulsarViewModel, onBack: () -> Unit) {
                     stringResource(R.string.btn_single_shot),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (connected) androidx.compose.ui.graphics.Color.White
+                    color = if (connected) com.ehrocha.pulsar.ui.theme.PulsarTheme.colors.onLive
                             else MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )

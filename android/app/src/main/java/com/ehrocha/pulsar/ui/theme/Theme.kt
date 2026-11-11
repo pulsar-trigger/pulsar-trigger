@@ -31,6 +31,12 @@ val PulsarSurface = Color(0xFF131318)
 val PulsarOnSurface = Color(0xFFECECF1)
 val PulsarSecondary = Color(0xFF1C1C24)
 
+// Every Material 3 colour role is set in all four schemes (audit D-H1).
+// A role left out falls back to Material's baseline palette — near-white
+// snackbars, purple containers, pink tertiary, violet-grey cards and
+// dialogs — which in Phosphor Red is a flashlight at the tripod. Each
+// scheme derives its roles from its own palette only.
+
 // "Chart Paper" — black traces on warm paper, like a pen plotter. NOT a
 // white SaaS app: the background is cream, the primary is deep violet.
 val LightColorScheme = lightColorScheme(
@@ -38,17 +44,39 @@ val LightColorScheme = lightColorScheme(
     onPrimary = Color.White,
     primaryContainer = Color(0xFFE7DBFB),
     onPrimaryContainer = Color(0xFF26104A),
+    inversePrimary = PulsarViolet,
     secondary = Color(0xFFC8327E),
     onSecondary = Color.White,
+    secondaryContainer = Color(0xFFF8DCE9),
+    onSecondaryContainer = Color(0xFF3E0A26),
+    // Tertiary pinned at Material's light baseline: the look it always had.
+    tertiary = Color(0xFF7D5260),
+    onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFFFD8E4),
+    onTertiaryContainer = Color(0xFF31111D),
     background = Color(0xFFF7F4EE),
-    surface = Color(0xFFF7F4EE),
     onBackground = Color(0xFF17171C),
+    surface = Color(0xFFF7F4EE),
     onSurface = Color(0xFF17171C),
     surfaceVariant = Color(0xFFEAE5DA),
     onSurfaceVariant = Color(0xFF4A4A52),
+    surfaceTint = Color(0xFF6A30D9),
+    inverseSurface = Color(0xFF2A2A30),
+    inverseOnSurface = Color(0xFFF2EFE8),
+    error = Color(0xFFB3261E),
+    onError = Color.White,
+    errorContainer = Color(0xFFF9DEDC),
+    onErrorContainer = Color(0xFF410E0B),
+    outline = Color(0xFF74747E),
+    outlineVariant = Color(0xFFD6D0C4),
+    scrim = Color.Black,
+    surfaceBright = Color(0xFFF7F4EE),
+    surfaceDim = Color(0xFFE3DED2),
+    surfaceContainerLowest = Color(0xFFFDFBF7),
+    surfaceContainerLow = Color(0xFFF4F1EA),
+    surfaceContainer = Color(0xFFF2EEE6),
     surfaceContainerHigh = Color(0xFFEFEBE2),
     surfaceContainerHighest = Color(0xFFE8E3D8),
-    outline = Color(0xFF74747E),
 )
 
 // "Carbon" — the default. Near-black with violet reserved for what's live.
@@ -57,20 +85,39 @@ val DarkColorScheme = darkColorScheme(
     onPrimary = Color(0xFF1C0A33),
     primaryContainer = Color(0xFF2A1247),
     onPrimaryContainer = Color(0xFFE4CCFF),
+    inversePrimary = Color(0xFF6A30D9),
     secondary = PulsarMagenta,
     onSecondary = Color(0xFF330D20),
     secondaryContainer = Color(0xFF2A1430),
     onSecondaryContainer = Color(0xFFFFD6E8),
+    // Tertiary pinned at Material's dark baseline: the look it always had.
+    tertiary = Color(0xFFEFB8C8),
+    onTertiary = Color(0xFF492532),
+    tertiaryContainer = Color(0xFF633B48),
+    onTertiaryContainer = Color(0xFFFFD8E4),
     background = PulsarDark,
-    surface = PulsarSurface,
     onBackground = PulsarOnSurface,
+    surface = PulsarSurface,
     onSurface = PulsarOnSurface,
     surfaceVariant = PulsarSecondary,
     onSurfaceVariant = Color(0xFF9C9CAC),
+    surfaceTint = PulsarViolet,
+    inverseSurface = PulsarOnSurface,
+    inverseOnSurface = Color(0xFF1C1C24),
+    error = Color(0xFFFF5C5C),
+    onError = Color(0xFF2B0000),
+    errorContainer = Color(0xFF4A1414),
+    onErrorContainer = Color(0xFFFFD7D4),
+    outline = Color(0xFF3A3A46),
+    outlineVariant = Color(0xFF2A2A34),
+    scrim = Color.Black,
+    surfaceBright = Color(0xFF2C2C37),
+    surfaceDim = PulsarDark,
+    surfaceContainerLowest = Color(0xFF08080A),
+    surfaceContainerLow = Color(0xFF101014),
+    surfaceContainer = Color(0xFF17171D),
     surfaceContainerHigh = Color(0xFF1C1C24),
     surfaceContainerHighest = Color(0xFF24242E),
-    outline = Color(0xFF3A3A46),
-    error = Color(0xFFFF5C5C),
 )
 
 // ── Outdoor / high-contrast mode ───────────────────────────────────────────
@@ -83,45 +130,90 @@ val OutdoorColorScheme = lightColorScheme(
     onPrimary = Color.White,
     primaryContainer = Color(0xFFE3D8FF),
     onPrimaryContainer = Color(0xFF1C0A4D),
+    inversePrimary = Color(0xFFC9B5FF),
     secondary = Color(0xFF005530),
     onSecondary = Color.White,
+    secondaryContainer = Color(0xFFCDEBDB),
+    onSecondaryContainer = Color(0xFF00210F),
+    tertiary = Color(0xFF7D5260),
+    onTertiary = Color.White,
+    tertiaryContainer = Color(0xFFFFD8E4),
+    onTertiaryContainer = Color(0xFF31111D),
     background = Color(0xFFFFFFFF),
     onBackground = Color(0xFF000000),
     surface = Color(0xFFFFFFFF),
     onSurface = Color(0xFF000000),
     surfaceVariant = Color(0xFFE0E0E0),
     onSurfaceVariant = Color(0xFF000000),
-    surfaceContainerHigh = Color(0xFFEAEAEA),
-    outline = Color(0xFF000000),
-    outlineVariant = Color(0xFF555555),
+    surfaceTint = Color(0xFF4B1FB8),
+    inverseSurface = Color(0xFF1A1A1A),
+    inverseOnSurface = Color(0xFFFFFFFF),
     error = Color(0xFFB00020),
     onError = Color.White,
     errorContainer = Color(0xFFFFD8D8),
     onErrorContainer = Color(0xFF400000),
+    outline = Color(0xFF000000),
+    outlineVariant = Color(0xFF555555),
+    scrim = Color.Black,
+    surfaceBright = Color(0xFFFFFFFF),
+    surfaceDim = Color(0xFFD8D8D8),
+    surfaceContainerLowest = Color(0xFFFFFFFF),
+    surfaceContainerLow = Color(0xFFF7F7F7),
+    surfaceContainer = Color(0xFFF0F0F0),
+    surfaceContainerHigh = Color(0xFFEAEAEA),
+    surfaceContainerHighest = Color(0xFFE0E0E0),
 )
 
 // ── Red-light / Night mode ──────────────────────────────────────────────────
-// Dim red tones to preserve night vision at the telescope.
+// Dim red tones to preserve night vision at the telescope. EVERY role sits on
+// one red/near-black luminance ramp — no white, no hue but red. Containers
+// and inverse surfaces (snackbars) are dim reds a step brighter than the
+// background; "on" colours on bright red fills are near-black, never white.
 
 private val RedDark = Color(0xFF120000)
 private val RedSurface = Color(0xFF1A0000)
 private val RedOnSurface = Color(0xFFCC4444)
 private val RedSecondary = Color(0xFF220808)
 private val RedAccent = Color(0xFFCC2222)
+private val RedInk = Color(0xFF0A0000)        // text/icons on a red fill
 
 val RedLightColorScheme = darkColorScheme(
     primary = RedAccent,
-    onPrimary = Color.White,
+    onPrimary = RedInk,
+    primaryContainer = Color(0xFF3A0C0C),
+    onPrimaryContainer = Color(0xFFE05050),
+    inversePrimary = Color(0xFFE86060),
+    secondary = Color(0xFFB03838),
+    onSecondary = RedInk,
+    secondaryContainer = Color(0xFF330808),
+    onSecondaryContainer = RedOnSurface,
+    tertiary = Color(0xFF993333),
+    onTertiary = RedInk,
+    tertiaryContainer = Color(0xFF2A0A0A),
+    onTertiaryContainer = Color(0xFFB84040),
     background = RedDark,
-    surface = RedSurface,
     onBackground = RedOnSurface,
+    surface = RedSurface,
     onSurface = RedOnSurface,
     surfaceVariant = RedSecondary,
     onSurfaceVariant = Color(0xFF993333),
-    outline = Color(0xFF662222),
+    surfaceTint = RedAccent,
+    inverseSurface = Color(0xFF3A0C0C),
+    inverseOnSurface = Color(0xFFE05050),
     error = Color(0xFFFF4444),
-    secondaryContainer = Color(0xFF330808),
-    onSecondaryContainer = Color(0xFFCC4444),
+    onError = RedInk,
+    errorContainer = Color(0xFF4A0E0E),
+    onErrorContainer = Color(0xFFFF6A6A),
+    outline = Color(0xFF662222),
+    outlineVariant = Color(0xFF401414),
+    scrim = Color.Black,
+    surfaceBright = Color(0xFF2E0808),
+    surfaceDim = RedDark,
+    surfaceContainerLowest = Color(0xFF0E0000),
+    surfaceContainerLow = Color(0xFF160000),
+    surfaceContainer = Color(0xFF1E0404),
+    surfaceContainerHigh = Color(0xFF260606),
+    surfaceContainerHighest = Color(0xFF300A0A),
 )
 
 /** Global theme mode — survives recomposition. */
@@ -147,25 +239,10 @@ val PlanetAzure = Color(0xFF4F9DF2)   // Pulsar BLE (ESP32) — your own world
 val PlanetRose = Color(0xFFD9648F)    // Canon direct BLE — small moon
 val PlanetMint = Color(0xFF49C9A8)    // Simulator — ghost/wireframe world
 
-// ── Status / semantic colors (shared across all themes) ────────────────────
-val StatusGreen = Color(0xFF4CAF50)
-val StatusOrange = Color(0xFFFFA726)
-val StatusRed = Color(0xFFFF1744)
-val StatusOff = Color(0xFF3A3A3A)
-
-// Caution palette — used by WizardWarning. Yellow signals "you can still
-// proceed, but heads-up" (e.g. interval-too-short, sub-second bulb),
-// distinct from error red which would imply a hard blocker.
-val WarningContainer = Color(0xFFFFF1C2)   // light cream-yellow surface
-val OnWarningContainer = Color(0xFF6E4F00) // dark amber for icon + text
-val ExposureGreen = Color(0xFF00E676)
-val WaitingYellow = Color(0xFFFFD600)
-
-// Planner verdict colors
-val VerdictExcellent = Color(0xFF2E7D32)
-val VerdictGood = Color(0xFF558B2F)
-val VerdictFair = Color(0xFFF9A825)
-val VerdictPoor = Color(0xFFE65100)
+// Status, warning and verdict colours are PulsarColors roles, resolved per
+// ThemeMode (statusGood/Warn/Bad/Off, exposing/waiting, cautionContainer,
+// positive/positiveMuted/caution/negative). Shared constants here could not
+// follow the user into RedLight mode (audit D-H1).
 
 /** Global device status — available to every composable without parameter threading. */
 val LocalDeviceStatus = compositionLocalOf<StatusFrame?> { null }

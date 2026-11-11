@@ -5,6 +5,7 @@
 
 package com.ehrocha.pulsar.ui.screens
 
+import com.ehrocha.pulsar.ui.theme.PulsarTheme
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -25,7 +26,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ui.components.PulsarTopBar
-import com.ehrocha.pulsar.ui.theme.StatusGreen
 import com.ehrocha.pulsar.viewmodel.AlignmentViewModel
 import kotlin.math.abs
 import kotlin.math.min
@@ -198,10 +198,11 @@ private fun BullseyeReticle(
     val primary = MaterialTheme.colorScheme.primary
     val background = MaterialTheme.colorScheme.background
     val errorColor = MaterialTheme.colorScheme.error
+    val lockedColor = PulsarTheme.colors.statusGood
 
-    // Colors switch to green when fully aligned
-    val reticleColor = if (allAligned) StatusGreen else outline
-    val bubbleColor = if (allAligned) StatusGreen else primary
+    // Colors switch to the "good" role when fully aligned
+    val reticleColor = if (allAligned) lockedColor else outline
+    val bubbleColor = if (allAligned) lockedColor else primary
 
     // Clamp errors to ±30° for display; full range = 60°
     val maxAngle = 30f
@@ -278,8 +279,8 @@ private fun BullseyeReticle(
         val rollDy = (rollBarHalf * Math.sin(rollRad)).toFloat()
 
         val rollColor = when {
-            allAligned -> StatusGreen
-            abs(roll) < 1f -> StatusGreen
+            allAligned -> lockedColor
+            abs(roll) < 1f -> lockedColor
             abs(roll) < 5f -> primary
             else -> errorColor
         }
@@ -362,9 +363,9 @@ private fun ReadoutRow(
     allAligned: Boolean,
 ) {
     val errColor = when {
-        allAligned -> StatusGreen
+        allAligned -> PulsarTheme.colors.statusGood
         !active -> MaterialTheme.colorScheme.onSurfaceVariant
-        abs(errorValue) < 0.5f -> StatusGreen
+        abs(errorValue) < 0.5f -> PulsarTheme.colors.statusGood
         abs(errorValue) < 5f -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.error
     }

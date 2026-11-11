@@ -5,6 +5,7 @@
 
 package com.ehrocha.pulsar.ui.components
 
+import com.ehrocha.pulsar.ui.theme.PulsarTheme
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,10 +32,6 @@ import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
 import com.ehrocha.pulsar.ui.theme.LocalDeviceLatency
 import com.ehrocha.pulsar.ui.theme.LocalDeviceRssi
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
-import com.ehrocha.pulsar.ui.theme.StatusGreen
-import com.ehrocha.pulsar.ui.theme.StatusOrange
-import com.ehrocha.pulsar.ui.theme.StatusOff
-import com.ehrocha.pulsar.ui.theme.StatusRed
 
 @Composable
 fun BatteryIndicator() {
@@ -58,7 +55,7 @@ fun BatteryIndicator() {
                 fontWeight = FontWeight.Bold,
                 color = when {
                     status == null || unknown -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
-                    status.batteryPct < 20 -> StatusRed
+                    status.batteryPct < 20 -> PulsarTheme.colors.statusBad
                     else -> MaterialTheme.colorScheme.onSurface
                 },
             )
@@ -81,11 +78,6 @@ fun BatteryIndicator() {
 
 // ── Signal Strength Indicator ─────────────────────────────────────────────
 
-private val SignalGood = StatusGreen
-private val SignalMedium = StatusOrange
-private val SignalWeak = StatusRed
-private val SignalOff = StatusOff
-
 /**
  * Compact BLE signal strength indicator showing 3 bars sized S/M/L.
  * Colour reflects the current RSSI against [AppConfig] thresholds.
@@ -103,12 +95,14 @@ fun SignalStrengthIndicator() {
         rssi >= AppConfig.BLE_RSSI_WEAK -> 2
         else -> 1
     }
+    val roles = PulsarTheme.colors
     val color = when (bars) {
-        3 -> SignalGood
-        2 -> SignalMedium
-        1 -> SignalWeak
-        else -> SignalOff
+        3 -> roles.statusGood
+        2 -> roles.statusWarn
+        1 -> roles.statusBad
+        else -> roles.statusOff
     }
+    val unlit = roles.statusOff
 
     Row(
         verticalAlignment = Alignment.Bottom,
@@ -119,7 +113,7 @@ fun SignalStrengthIndicator() {
         barHeights.forEachIndexed { index, height ->
             Canvas(modifier = Modifier.size(width = 4.dp, height = height)) {
                 drawRoundRect(
-                    color = if (index < bars) color else SignalOff,
+                    color = if (index < bars) color else unlit,
                     cornerRadius = CornerRadius(1.dp.toPx()),
                     size = Size(size.width, size.height),
                 )
@@ -139,9 +133,9 @@ fun LatencyIndicator() {
     val ms = LocalDeviceLatency.current ?: return
 
     val color = when {
-        ms < 80 -> StatusGreen
-        ms < 200 -> StatusOrange
-        else -> StatusRed
+        ms < 80 -> PulsarTheme.colors.statusGood
+        ms < 200 -> PulsarTheme.colors.statusWarn
+        else -> PulsarTheme.colors.statusBad
     }
     Text(
         text = "${ms}ms",

@@ -5,6 +5,7 @@
 
 package com.ehrocha.pulsar.ui.components
 
+import com.ehrocha.pulsar.ui.theme.PulsarTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -30,7 +31,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
-import com.ehrocha.pulsar.ui.theme.StatusRed
 
 /**
  * Compact connection status pill for a single top bar — the whole persistent
@@ -51,7 +51,7 @@ fun ConnectionPill(
     val battText = if (status != null && !unknown) "${status.batteryPct}%" else "—"
     val battColor = when {
         status == null || unknown -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f)
-        status.batteryPct < 20 -> StatusRed
+        status.batteryPct < 20 -> PulsarTheme.colors.statusBad
         else -> MaterialTheme.colorScheme.onSurface
     }
     val appName = stringResource(R.string.app_name)

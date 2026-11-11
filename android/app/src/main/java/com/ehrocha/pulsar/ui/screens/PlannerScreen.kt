@@ -5,6 +5,7 @@
 
 package com.ehrocha.pulsar.ui.screens
 
+import com.ehrocha.pulsar.ui.theme.PulsarTheme
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -39,10 +40,6 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.ehrocha.pulsar.R
 import com.ehrocha.pulsar.ui.components.PulsarTopBar
-import com.ehrocha.pulsar.ui.theme.VerdictExcellent
-import com.ehrocha.pulsar.ui.theme.VerdictFair
-import com.ehrocha.pulsar.ui.theme.VerdictGood
-import com.ehrocha.pulsar.ui.theme.VerdictPoor
 
 import com.ehrocha.pulsar.planner.*
 import org.json.JSONObject
@@ -1134,10 +1131,10 @@ private fun NightsAtAGlance(
 @Composable
 private fun VerdictDot(verdict: PlannerVerdict) {
     val color = when (verdict) {
-        PlannerVerdict.EXCELLENT -> VerdictExcellent
-        PlannerVerdict.GOOD -> VerdictGood
-        PlannerVerdict.FAIR -> VerdictFair
-        PlannerVerdict.POOR -> VerdictPoor
+        PlannerVerdict.EXCELLENT -> PulsarTheme.colors.positive
+        PlannerVerdict.GOOD -> PulsarTheme.colors.positiveMuted
+        PlannerVerdict.FAIR -> PulsarTheme.colors.caution
+        PlannerVerdict.POOR -> PulsarTheme.colors.negative
         PlannerVerdict.UNKNOWN -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
     }
     Surface(
@@ -1152,10 +1149,10 @@ private fun VerdictDot(verdict: PlannerVerdict) {
 @Composable
 private fun VerdictChip(verdict: PlannerVerdict) {
     val (color, label) = when (verdict) {
-        PlannerVerdict.EXCELLENT -> VerdictExcellent to stringResource(R.string.verdict_excellent)
-        PlannerVerdict.GOOD -> VerdictGood to stringResource(R.string.verdict_good)
-        PlannerVerdict.FAIR -> VerdictFair to stringResource(R.string.verdict_fair)
-        PlannerVerdict.POOR -> VerdictPoor to stringResource(R.string.verdict_poor)
+        PlannerVerdict.EXCELLENT -> PulsarTheme.colors.positive to stringResource(R.string.verdict_excellent)
+        PlannerVerdict.GOOD -> PulsarTheme.colors.positiveMuted to stringResource(R.string.verdict_good)
+        PlannerVerdict.FAIR -> PulsarTheme.colors.caution to stringResource(R.string.verdict_fair)
+        PlannerVerdict.POOR -> PulsarTheme.colors.negative to stringResource(R.string.verdict_poor)
         PlannerVerdict.UNKNOWN -> MaterialTheme.colorScheme.onSurfaceVariant to stringResource(R.string.verdict_unknown)
     }
     val animatedColor by animateColorAsState(color, label = "verdict")
@@ -1601,7 +1598,7 @@ private fun AddSessionDialog(
                                         "${illum.roundToInt()}%",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = if (com.ehrocha.pulsar.astro.MoonPhase.goodForAstro(illum))
-                                            VerdictExcellent
+                                            PulsarTheme.colors.positive
                                         else MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }

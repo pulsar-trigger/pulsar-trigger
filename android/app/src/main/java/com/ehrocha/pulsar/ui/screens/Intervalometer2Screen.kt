@@ -5,6 +5,7 @@
 
 package com.ehrocha.pulsar.ui.screens
 
+import com.ehrocha.pulsar.ui.theme.PulsarTheme
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -51,8 +52,6 @@ import com.ehrocha.pulsar.ui.theme.LocalCurrentFlowStep
 import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
 import com.ehrocha.pulsar.ui.theme.LocalRunState
-import com.ehrocha.pulsar.ui.theme.StatusOrange
-import com.ehrocha.pulsar.ui.theme.StatusRed
 import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 import java.util.Calendar
 import java.util.Locale
@@ -829,9 +828,9 @@ private fun StatusPill(state: DeviceState, preparing: Boolean = false) {
     // before the first frame) overrides the state pill so the pre-roll gap
     // reads as deliberate, not a stall.
     val (labelRes, color) = when {
-        preparing -> R.string.iv2_state_preparing to StatusOrange
-        state == DeviceState.RUNNING -> R.string.iv2_state_exposing to StatusRed
-        state == DeviceState.WAITING -> R.string.iv2_state_waiting to StatusOrange
+        preparing -> R.string.iv2_state_preparing to PulsarTheme.colors.statusWarn
+        state == DeviceState.RUNNING -> R.string.iv2_state_exposing to PulsarTheme.colors.statusBad
+        state == DeviceState.WAITING -> R.string.iv2_state_waiting to PulsarTheme.colors.statusWarn
         state == DeviceState.ERROR   -> R.string.iv2_state_error to MaterialTheme.colorScheme.error
         else                         -> R.string.iv2_state_starting to MaterialTheme.colorScheme.onSurfaceVariant
     }
@@ -852,7 +851,8 @@ private fun StatusPill(state: DeviceState, preparing: Boolean = false) {
     // Fill colour vs background: RUNNING (and PREPARING) = filled with strong
     // colour (LED on) + pulse, WAITING/others = soft halo.
     val (fillColor, textColor) = if (pulsing) {
-        color.copy(alpha = pulseAlpha) to androidx.compose.ui.graphics.Color.White
+        // onLive: white on the chromatic fill, near-black ink on RedLight's red.
+        color.copy(alpha = pulseAlpha) to PulsarTheme.colors.onLive
     } else {
         color.copy(alpha = 0.15f) to color
     }

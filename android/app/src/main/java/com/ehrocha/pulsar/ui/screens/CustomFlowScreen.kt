@@ -5,6 +5,7 @@
 
 package com.ehrocha.pulsar.ui.screens
 
+import com.ehrocha.pulsar.ui.theme.PulsarTheme
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -52,9 +53,6 @@ import com.ehrocha.pulsar.viewmodel.PulsarViewModel
 
 import com.ehrocha.pulsar.ui.theme.LocalDeviceConnected
 import com.ehrocha.pulsar.ui.theme.LocalDeviceStatus
-import com.ehrocha.pulsar.ui.theme.StatusGreen
-import com.ehrocha.pulsar.ui.theme.StatusOrange
-import com.ehrocha.pulsar.ui.theme.StatusRed
 import java.text.DateFormat
 import java.util.Date
 import kotlinx.coroutines.delay
@@ -980,13 +978,13 @@ private fun FlowEditorView(
                     ) {
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = StatusOrange.copy(alpha = 0.15f),
+                            color = PulsarTheme.colors.statusWarn.copy(alpha = 0.15f),
                         ) {
                             Text(
                                 stringResource(R.string.flow_waiting_for_user),
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = StatusOrange,
+                                color = PulsarTheme.colors.statusWarn,
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                             )
                         }
@@ -1010,7 +1008,7 @@ private fun FlowEditorView(
                                 Text(
                                     stringResource(R.string.pause_camera_manual, info.manual.joinToString(" · ")),
                                     style = MaterialTheme.typography.bodyMedium,
-                                    color = StatusOrange,
+                                    color = PulsarTheme.colors.statusWarn,
                                     textAlign = TextAlign.Center,
                                 )
                             }
@@ -1454,10 +1452,10 @@ private fun FlowStepCard(
                     DeviceState.ERROR -> stringResource(R.string.flow_state_error)
                 }
                 val stateColor = when (status.state) {
-                    DeviceState.RUNNING -> StatusGreen
-                    DeviceState.WAITING -> StatusOrange
+                    DeviceState.RUNNING -> PulsarTheme.colors.statusGood
+                    DeviceState.WAITING -> PulsarTheme.colors.statusWarn
                     DeviceState.IDLE -> MaterialTheme.colorScheme.onSurfaceVariant
-                    DeviceState.ERROR -> StatusRed
+                    DeviceState.ERROR -> PulsarTheme.colors.statusBad
                 }
 
                 // Shot display: always +1 while active so count starts at 1
@@ -1543,7 +1541,7 @@ private fun FlowStepCard(
                     Text(
                         stringResource(R.string.flow_state_exposing),
                         style = MaterialTheme.typography.labelSmall,
-                        color = StatusGreen,
+                        color = PulsarTheme.colors.statusGood,
                         modifier = Modifier.width(60.dp),
                     )
                     LinearProgressIndicator(
@@ -1551,7 +1549,7 @@ private fun FlowStepCard(
                         modifier = Modifier
                             .weight(1f)
                             .height(4.dp),
-                        color = StatusGreen,
+                        color = PulsarTheme.colors.statusGood,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     )
                 }
@@ -1563,7 +1561,7 @@ private fun FlowStepCard(
                     Text(
                         stringResource(R.string.flow_state_waiting),
                         style = MaterialTheme.typography.labelSmall,
-                        color = StatusOrange,
+                        color = PulsarTheme.colors.statusWarn,
                         modifier = Modifier.width(60.dp),
                     )
                     LinearProgressIndicator(
@@ -1571,7 +1569,7 @@ private fun FlowStepCard(
                         modifier = Modifier
                             .weight(1f)
                             .height(4.dp),
-                        color = StatusOrange,
+                        color = PulsarTheme.colors.statusWarn,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     )
                 }
@@ -1608,14 +1606,14 @@ private fun FlowStepCard(
                 // Pause step gets a "Waiting for user" badge
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = StatusOrange.copy(alpha = 0.15f),
+                    color = PulsarTheme.colors.statusWarn.copy(alpha = 0.15f),
                     modifier = Modifier.padding(bottom = 8.dp),
                 ) {
                     Text(
                         stringResource(R.string.flow_waiting_for_user),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = StatusOrange,
+                        color = PulsarTheme.colors.statusWarn,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                     )
                 }
@@ -1635,7 +1633,7 @@ private fun FlowStepCard(
                         Text(
                             stringResource(R.string.pause_camera_manual, info.manual.joinToString(" · ")),
                             style = MaterialTheme.typography.bodySmall,
-                            color = StatusOrange,
+                            color = PulsarTheme.colors.statusWarn,
                             modifier = Modifier.padding(bottom = 4.dp),
                         )
                     }

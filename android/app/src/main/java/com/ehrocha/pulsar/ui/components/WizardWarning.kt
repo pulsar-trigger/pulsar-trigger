@@ -5,6 +5,7 @@
 
 package com.ehrocha.pulsar.ui.components
 
+import com.ehrocha.pulsar.ui.theme.PulsarTheme
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
@@ -29,8 +30,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.ehrocha.pulsar.ui.theme.OnWarningContainer
-import com.ehrocha.pulsar.ui.theme.WarningContainer
 
 /** Full slot height when a warning is showing. Sized for **3 lines of
  *  body-small text + 10 dp top/bottom padding** — covers the English copy
@@ -87,7 +86,7 @@ fun WizardWarning(text: String?, modifier: Modifier = Modifier) {
         if (animatedHeight > 0.dp && latchedText != null) {
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = WarningContainer,
+                color = PulsarTheme.colors.cautionContainer,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(WarningSlotHeight),
@@ -100,13 +99,13 @@ fun WizardWarning(text: String?, modifier: Modifier = Modifier) {
                     Icon(
                         Icons.Default.Warning,
                         contentDescription = null,
-                        tint = OnWarningContainer,
+                        tint = PulsarTheme.colors.onCautionContainer,
                         modifier = Modifier.size(20.dp),
                     )
                     Text(
                         text = latchedText,
                         style = MaterialTheme.typography.bodySmall,
-                        color = OnWarningContainer,
+                        color = PulsarTheme.colors.onCautionContainer,
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis,
                     )
