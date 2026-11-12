@@ -10,6 +10,11 @@
 #    set"): every setting fell back to its default.
 #  - power management, tickless idle (automatic light sleep) and BLE
 #    controller modem sleep with the main crystal as its low-power clock
+#  - the idle task's stack at 4096, not Arduino's 1024. With tickless idle
+#    the IDLE task is what enters light sleep (esp_light_sleep_start, CPU
+#    power-down), and 1024 overflowed it every few minutes: a panic in IDLE1,
+#    debug exception = the end-of-stack watchpoint (2026-11-12, read from the
+#    core dump over BLE). Below even ESP-IDF's own default of 1536.
 CONFIG_IDF_CMAKE=y
 CONFIG_IDF_TARGET_ARCH_XTENSA=y
 CONFIG_IDF_TARGET="esp32s3"
@@ -950,7 +955,7 @@ CONFIG_FREERTOS_THREAD_LOCAL_STORAGE_POINTERS=1
 CONFIG_FREERTOS_ASSERT_FAIL_ABORT=y
 # CONFIG_FREERTOS_ASSERT_FAIL_PRINT_CONTINUE is not set
 # CONFIG_FREERTOS_ASSERT_DISABLE is not set
-CONFIG_FREERTOS_IDLE_TASK_STACKSIZE=1024
+CONFIG_FREERTOS_IDLE_TASK_STACKSIZE=4096
 CONFIG_FREERTOS_ISR_STACKSIZE=2096
 # CONFIG_FREERTOS_LEGACY_HOOKS is not set
 CONFIG_FREERTOS_MAX_TASK_NAME_LEN=16

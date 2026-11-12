@@ -162,6 +162,31 @@ whatever the receiver did understand.
 | `0x76` | `GPIO_COUNT`       | u8        |
 | `0x77` | `SAFE_OUT_COUNT`   | u8        |
 | `0x78` | `UPTIME_MIN`       | u16 LE    |
+| `0x79` | `RESET_REASON`     | u8        |
+| `0x7A` | `UPTIME_S`         | u32 LE    |
+
+`RESET_REASON` is ESP-IDF's `esp_reset_reason_t` for the last boot: 1 power-on,
+3 software (`esp_restart`, e.g. after OTA), 4 panic, 5 interrupt watchdog, 6 task
+watchdog, 7 other watchdog, 8 deep sleep, 9 brownout.
+
+### Crash info (notify `0x83`)
+
+Sent right after `DEVICE_INFO` when the coredump partition holds a valid core dump
+(boards built with core dump to flash in ELF format: the `m5sticks3_pm` env). It is
+the only account of a panic on a board whose USB is unavailable. The dump stays in
+flash until the next panic overwrites it, so `CRASH_ELF_SHA` says which image it
+belongs to. Decode the addresses against that image's ELF:
+`xtensa-esp32s3-elf-addr2line -pfiaC -e firmware.elf <PC> <BT...>`.
+
+| Tag   | Name                | Type      |
+| ----- | ------------------- | --------- |
+| `0x7B` | `CRASH_TASK`       | bytes, task name |
+| `0x7C` | `CRASH_PC`         | u32 LE    |
+| `0x7D` | `CRASH_CAUSE`      | u32 LE, Xtensa `EXCCAUSE` |
+| `0x7E` | `CRASH_VADDR`      | u32 LE, `EXCVADDR` |
+| `0x7F` | `CRASH_BT`         | bytes, up to 8 × u32 LE return addresses |
+| `0x80` | `CRASH_BT_BAD`     | u8, 1 = backtrace corrupted |
+| `0x81` | `CRASH_ELF_SHA`    | bytes, leading hex chars of the image's ELF SHA-256 |
 
 ## Version-mismatch policy
 

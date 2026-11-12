@@ -36,6 +36,7 @@ enum Op : uint8_t {
     OP_SHUTTER            = 0x52,
     OP_STATUS_REQ         = 0x53,
     OP_DEVICE_INFO_REQ    = 0x54,
+    OP_CRASH_INFO_REQ     = 0x55,  // answered by NOTIFY_CRASH_INFO (nothing if no core dump)
 };
 
 // ── Notification opcodes (firmware → app) ─────────────────────────────────
@@ -44,6 +45,7 @@ enum NotifyOp : uint8_t {
     NOTIFY_STATUS      = 0x80,
     NOTIFY_DEVICE_INFO = 0x81,
     NOTIFY_ACK         = 0x82,
+    NOTIFY_CRASH_INFO  = 0x83,  // sent after DEVICE_INFO when a core dump is stored
 };
 
 // ── TLV tag registry ──────────────────────────────────────────────────────
@@ -91,6 +93,16 @@ enum Tag : uint8_t {
     TAG_GPIO_COUNT     = 0x76,  // u8
     TAG_SAFE_OUT_COUNT = 0x77,  // u8
     TAG_UPTIME_MIN     = 0x78,  // u16 LE
+    TAG_RESET_REASON   = 0x79,  // u8, esp_reset_reason_t of the last boot
+    TAG_UPTIME_S       = 0x7A,  // u32 LE
+    // Crash info (NOTIFY_CRASH_INFO): the core dump summary in flash
+    TAG_CRASH_TASK     = 0x7B,  // bytes, task name (no NUL)
+    TAG_CRASH_PC       = 0x7C,  // u32 LE
+    TAG_CRASH_CAUSE    = 0x7D,  // u32 LE, Xtensa EXCCAUSE
+    TAG_CRASH_VADDR    = 0x7E,  // u32 LE, EXCVADDR
+    TAG_CRASH_BT       = 0x7F,  // bytes, up to 8 x u32 LE return addresses
+    TAG_CRASH_BT_BAD   = 0x80,  // u8, 1 = backtrace corrupted
+    TAG_CRASH_ELF_SHA  = 0x81,  // bytes, leading hex chars of the crashing image's ELF SHA-256
 };
 
 // ── TLV writer ────────────────────────────────────────────────────────────

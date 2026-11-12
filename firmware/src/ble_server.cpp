@@ -24,6 +24,10 @@
 #include <esp_chip_info.h>
 #include <esp_system.h>
 #include <esp_spi_flash.h>
+#if CONFIG_ESP_COREDUMP_ENABLE_TO_FLASH && CONFIG_ESP_COREDUMP_DATA_FORMAT_ELF
+#include <esp_core_dump.h>
+#define PULSAR_CRASH_INFO 1
+#endif
 #include <esp_log.h>
 
 static const char* TAG = "BLE";
@@ -37,6 +41,7 @@ static BLECharacteristic* _otaCtrlChar = nullptr;
 static BLECharacteristic* _otaDataChar = nullptr;
 static volatile bool _connected = false;
 static volatile bool _pendingRename = false;
+static volatile bool _pendingCrashInfo = false;  // sent from loop(), not the GATT callback
 static volatile uint16_t _auto_off_minutes = 5;  // default: 5 min (0 = disabled)
 
 // Connection-parameter policy (link_policy.h). The peer address comes from the
@@ -123,6 +128,7 @@ static bool save_device_name(const char* suffix) {
 
 // Forward decl — v2 device-info sender, defined below.
 static void send_device_info_v2();
+static void send_crash_info_v2();
 
 // ── TLV → IntervalParams adapter ───────────────────────────────────────────
 // Drains a TLV iterator into the legacy IntervalParams struct so we can keep
@@ -260,6 +266,10 @@ class CmdCharCB : public BLECharacteristicCallbacks {
                 ESP_LOGI(TAG, "DEVICE_INFO sent");
                 break;
 
+            case v2::OP_CRASH_INFO_REQ:
+                _pendingCrashInfo = true;  // ble_handle_rename() sends it from loop()
+                break;
+
             case v2::OP_SET_FOCUS: {
                 uint8_t tag, tlen; const uint8_t* v;
                 while (rdr.next(tag, tlen, v)) {
@@ -360,6 +370,53 @@ class CmdCharCB : public BLECharacteristicCallbacks {
     }
 };
 
+// ── v2 crash-info notify ───────────────────────────────────────────────────
+// A panic (exception, task or interrupt watchdog) writes a core dump to the
+// coredump partition before it reboots. Its summary is the only account of a
+// crash on a board whose USB is gone - the power-saving build's - so it goes
+// out over BLE after DEVICE_INFO. The dump is left in place: it says which
+// image crashed (ELF SHA), and the next panic overwrites it.
+//
+// 🔴 Nothing here runs in the GATT write callback. The dump is read ONCE at
+// boot (crash_info_load from ble_init) and the frame is sent from loop()
+// (ble_handle_rename). The BTC task that runs the callback has a 3072-byte
+// stack: building this frame there reset the board on every request
+// (2026-11-12), and each reset wrote a fresh dump over the one being read.
+#ifdef PULSAR_CRASH_INFO
+static esp_core_dump_summary_t _crash;
+static bool _crash_ok = false;
+#endif
+
+static void crash_info_load() {
+#ifdef PULSAR_CRASH_INFO
+    _crash_ok = esp_core_dump_image_check() == ESP_OK
+             && esp_core_dump_get_summary(&_crash) == ESP_OK;
+    ESP_LOGI(TAG, "Core dump in flash: %s", _crash_ok ? "yes" : "no");
+#endif
+}
+
+static void send_crash_info_v2() {
+#ifdef PULSAR_CRASH_INFO
+    if (!_crash_ok) return;
+    const esp_core_dump_summary_t& sum = _crash;
+    uint8_t buf[128];
+    v2::FrameWriter w(buf, sizeof(buf));
+    if (!w.begin(v2::NOTIFY_CRASH_INFO)) return;
+    w.putBytes(v2::TAG_CRASH_TASK, (const uint8_t*)sum.exc_task, (uint8_t)strnlen(sum.exc_task, sizeof(sum.exc_task)));
+    w.putU32(v2::TAG_CRASH_PC,    sum.exc_pc);
+    w.putU32(v2::TAG_CRASH_CAUSE, sum.ex_info.exc_cause);
+    w.putU32(v2::TAG_CRASH_VADDR, sum.ex_info.exc_vaddr);
+    uint8_t bt[8 * 4];
+    uint32_t depth = sum.exc_bt_info.depth < 8 ? sum.exc_bt_info.depth : 8;
+    for (uint32_t i = 0; i < depth; i++) memcpy(bt + i * 4, &sum.exc_bt_info.bt[i], 4);
+    w.putBytes(v2::TAG_CRASH_BT, bt, (uint8_t)(depth * 4));
+    w.putU8(v2::TAG_CRASH_BT_BAD, sum.exc_bt_info.corrupted ? 1 : 0);
+    w.putBytes(v2::TAG_CRASH_ELF_SHA, sum.app_elf_sha256, 16);
+    size_t n = w.finish();
+    if (n > 0) ble_notify(buf, n);
+#endif
+}
+
 // ── v2 device-info notify ──────────────────────────────────────────────────
 static void send_device_info_v2() {
     uint8_t buf[64];
@@ -390,9 +447,12 @@ static void send_device_info_v2() {
     w.putU8 (v2::TAG_GPIO_COUNT,     (uint8_t)GPIO_NUM_MAX);
     w.putU8 (v2::TAG_SAFE_OUT_COUNT, (uint8_t)SAFE_OUTPUT_PIN_COUNT);
     w.putU16(v2::TAG_UPTIME_MIN,     (uint16_t)(millis() / 60000UL));
+    w.putU8 (v2::TAG_RESET_REASON,   (uint8_t)esp_reset_reason());
+    w.putU32(v2::TAG_UPTIME_S,       (uint32_t)(millis() / 1000UL));
 
     size_t n = w.finish();
     if (n > 0) ble_notify(buf, n);
+    _pendingCrashInfo = true;  // the crash frame follows, from loop()
 }
 
 // ── OTA characteristic callbacks ─────────────────────────────────────────────
@@ -453,6 +513,7 @@ static void apply_scan_response(BLEAdvertising* adv) {
 }
 
 void ble_init() {
+    crash_info_load();
     load_device_name();
     ota_init();
 
@@ -608,6 +669,10 @@ void ble_link_tick(bool run_active) {
 }
 
 void ble_handle_rename() {
+    if (_pendingCrashInfo) {
+        _pendingCrashInfo = false;
+        send_crash_info_v2();
+    }
     if (!_pendingRename) return;
     _pendingRename = false;
 
