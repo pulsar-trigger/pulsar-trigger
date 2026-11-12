@@ -57,3 +57,64 @@ constexpr LinkMode link_wanted(bool connected, bool ota, bool run_active,
          : since_interaction_ms < LINK_INTERACTIVE_MS ? LinkMode::Fast
                                                       : LinkMode::Slow;
 }
+
+// Whether a link running at `interval` (1.25 ms units, 0 = not known yet)
+// already serves mode `m`. Fast is served by anything up to Fast's maximum,
+// Slow by anything from Slow's minimum: the central picks inside the range.
+constexpr bool link_serves(LinkMode m, uint16_t interval) {
+    return m == LinkMode::None ||
+           (interval != 0 &&
+            (m == LinkMode::Fast ? interval <= LINK_FAST.max_interval
+                                 : interval >= LINK_SLOW.min_interval));
+}
+
+// How long to wait for the central to answer a request before asking again.
+constexpr uint32_t LINK_ANSWER_MS = 10000;
+// Requests per mode change. A central that answers with something else (a
+// phone that will not go below 50 ms, say) is left alone after this many.
+constexpr uint8_t LINK_MAX_TRIES = 3;
+
+// Decides when to ask the central for new parameters, from what the link
+// actually runs at rather than from what was last asked for.
+//
+// Asking and getting are not the same thing: a request can be refused, and
+// one still in flight can land after a newer one. Both happened on the
+// bench - a Slow request sent before an OTA landed after the OTA's Fast one,
+// and the upload crawled at the 795 ms interval while the firmware believed
+// the link was fast. So: one request in flight at a time, and the interval
+// the controller reports is the truth to compare against.
+struct LinkTracker {
+    LinkMode want = LinkMode::None;  // the mode decided last
+    uint16_t interval = 0;           // in force now, from the controller (0 = unknown)
+    uint8_t tries = 0;               // requests sent for `want`
+    bool waiting = false;            // a request is out, no answer yet
+    uint32_t asked_ms = 0;
+
+    // A new connection, with the interval the central opened it at.
+    void connected(uint16_t interval_now) {
+        *this = LinkTracker{};
+        interval = interval_now;
+    }
+
+    // The controller's report of a parameter update. A failed one changes
+    // nothing on the link, but it does answer the request.
+    void updated(uint16_t interval_now, bool ok) {
+        waiting = false;
+        if (ok) interval = interval_now;
+    }
+
+    // Whether to send a request for `w` now. Call it every loop.
+    bool should_ask(LinkMode w, uint32_t now_ms) {
+        if (w != want) {
+            want = w;
+            tries = 0;
+        }
+        if (link_serves(w, interval)) return false;
+        if (waiting && now_ms - asked_ms < LINK_ANSWER_MS) return false;
+        if (tries >= LINK_MAX_TRIES) return false;
+        tries++;
+        waiting = true;
+        asked_ms = now_ms;
+        return true;
+    }
+};

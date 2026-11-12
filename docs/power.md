@@ -70,7 +70,7 @@ be cheaper. Not checked.
 | 2 s / 1 s / 5-shot run (`t`) | every shot 0 ms late, 2200 ms (first: due at start, 2 ms late) | the same |
 | BLE fast link granted | 30 ms | 30 ms |
 | BLE slow link granted | — (central dropped first) | 795 ms, latency 2, 6 s |
-| USB serial while sleeping | — | keeps working |
+| USB serial while sleeping | — | keeps working (11-10: light sleep was not yet engaging - see below) |
 
 ## Serial hooks
 
@@ -120,6 +120,47 @@ the timing.
 
 Before = the branch's own `m5sticks3` build, which already has fixes 2–4. For a true baseline,
 also flash `master` once.
+
+## Firmware updates (OTA) and the link - 2026-11-11/12
+
+Since `CONFIG_BT_CTRL_MAIN_XTAL_PU_DURING_LIGHT_SLEEP` (0.33) light sleep really engages, and
+three things followed.
+
+**The upload crawled at ~7 writes/s - a link race, every build.** The stick asks for the slow
+link 10 s after the last command (`LINK_INTERACTIVE_MS`). If an OTA started while that request
+was still in flight, it landed AFTER the OTA's fast request, the link stayed at 795 ms, and the
+firmware - which tracked what it had *asked* for - never asked again. `LinkTracker`
+(`link_policy.h`) now decides from the interval the controller *reports*, one request at a
+time, up to 3 per mode change. On the air (btmon), reproduced by idling 14 s before `BEGIN`:
+30 ms -> 795 ms -> 30 ms, the upload completing.
+
+**The power-saving build went silent during uploads - fixed by staying awake.** With the link
+fast, light sleep while flash was being erased and written stopped the radio (the central saw a
+supervision timeout) three times out of three. `ota.cpp`'s `set_active()` now holds
+`ESP_PM_NO_LIGHT_SLEEP` + `ESP_PM_CPU_FREQ_MAX` and turns BLE modem sleep off for the length of
+an upload.
+
+| Build | OTA runs | Result |
+|---|---|---|
+| `m5sticks3` (stock, what ships) | 3 + 3, plain and under the race | all complete, 37-45 s, 64-79 writes/s |
+| `m5sticks3_pm` | 2 under the race | complete, 46-52 s |
+| `m5sticks3_pm` | 2 started on the fast link | 🔴 failed: link lost 4 s in; data stalled at 60 % (the stick logged both and kept running) |
+
+🔴 **Still open on `m5sticks3_pm`:** an upload that starts on the fast link (4 s supervision
+timeout) can lose the link while flash is busy; one that starts on the slow link (6 s,
+latency 2) survives. Not seen on the stock build, so it is in this build's ESP-IDF
+configuration (octal PSRAM started at boot, SPI flash settings), not in the link logic.
+Candidates: `esp_ota_begin` with `OTA_WITH_SEQUENTIAL_WRITES` (erase per sector instead of
+the whole image up front), a longer fast-link supervision timeout, the flash-erase yield
+settings. Keep `m5sticks3_pm` experimental until it passes.
+
+🔴 **USB on the power-saving build is dead while it sleeps - from about a second after boot.**
+The port stays listed but answers nothing (`OSError: [Errno 71] Protocol error` on the first
+control request). Flash it in **download mode**: G0 to GND while powering on, flash, remove
+the wire, power-cycle. Or OTA it.
+
+Test harness: `tools/ota_ble_test.py <image.bin> <address> [idle-seconds]`, with `sudo btmon`
+alongside for the link intervals.
 
 ## Follow-ups (not in this work)
 

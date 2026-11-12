@@ -32,12 +32,51 @@ static BoardTagScanner _board_tag;
 // An upload with no data for this long is abandoned (ota_poll).
 static constexpr uint32_t OTA_IDLE_TIMEOUT_MS = 30000;
 
+// Keep the chip fully awake for the whole upload (power-saving build).
+// 2026-11-11, M5StickS3: with light sleep allowed, an upload over a FAST link
+// stopped the radio dead - the central saw a supervision timeout - three runs
+// out of three, at BEGIN or ~27 s in, while flash was being erased/written.
+// The one run that completed was on a build holding exactly these three for
+// the upload: no light sleep, CPU at max, BLE modem sleep off. (Before the
+// link fix the upload crawled on a 795 ms link, the radio was nearly idle, and
+// it survived - slowly. Speed and stability are separate fixes; both are needed.)
+#if CONFIG_PM_ENABLE
+#include <esp_pm.h>
+#include <esp_bt.h>
+static esp_pm_lock_handle_t _ota_no_sleep = nullptr;
+static esp_pm_lock_handle_t _ota_cpu_max = nullptr;
+#endif
+
+/// The only place _ota_active changes after init: entering and leaving an
+/// upload takes and releases the locks, each exactly once.
+static void set_active(bool on) {
+    if (_ota_active == on) return;
+    _ota_active = on;
+#if CONFIG_PM_ENABLE
+    if (!_ota_no_sleep) esp_pm_lock_create(ESP_PM_NO_LIGHT_SLEEP, 0, "ota", &_ota_no_sleep);
+    if (!_ota_cpu_max) esp_pm_lock_create(ESP_PM_CPU_FREQ_MAX, 0, "ota-cpu", &_ota_cpu_max);
+    if (on) {
+        if (_ota_no_sleep) esp_pm_lock_acquire(_ota_no_sleep);
+        if (_ota_cpu_max) esp_pm_lock_acquire(_ota_cpu_max);
+#if CONFIG_BT_CTRL_MODEM_SLEEP
+        esp_bt_sleep_disable();
+#endif
+    } else {
+#if CONFIG_BT_CTRL_MODEM_SLEEP
+        esp_bt_sleep_enable();
+#endif
+        if (_ota_cpu_max) esp_pm_lock_release(_ota_cpu_max);
+        if (_ota_no_sleep) esp_pm_lock_release(_ota_no_sleep);
+    }
+#endif
+}
+
 /// Drop an unfinished upload. Safe from any task; a finalize already queued
 /// for the main loop is left to finish.
 static void ota_abandon(const char* why) {
     if (!_ota_active || _ota_finalize_pending) return;
     esp_ota_abort(_ota_handle);
-    _ota_active = false;
+    set_active(false);
     _ota_written = 0;
     ESP_LOGW(TAG, "Abandoned: %s", why);
 }
@@ -47,7 +86,7 @@ void ota_on_disconnect() {
 }
 
 void ota_init() {
-    _ota_active = false;
+    set_active(false);
     _ota_handle = 0;
     _ota_partition = nullptr;
     _ota_total_size = 0;
@@ -145,7 +184,7 @@ void ota_handle_control(const uint8_t* data, size_t len) {
                 return;
             }
 
-            _ota_active = true;
+            set_active(true);
             _ota_last_rx_ms = millis();
             ESP_LOGI(TAG, "BEGIN — %u bytes → partition '%s'",
                      _ota_total_size, _ota_partition->label);
@@ -174,7 +213,7 @@ void ota_handle_control(const uint8_t* data, size_t len) {
         case OTA_ABORT: {
             if (_ota_active) {
                 esp_ota_abort(_ota_handle);
-                _ota_active = false;
+                set_active(false);
                 _ota_written = 0;
                 ESP_LOGI(TAG, "ABORTED");
             }
@@ -195,7 +234,7 @@ void ota_handle_data(const uint8_t* data, size_t len) {
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Write error at offset %u: %s", _ota_written, esp_err_to_name(err));
         esp_ota_abort(_ota_handle);
-        _ota_active = false;
+        set_active(false);
         send_ota_status(OTA_ERR_WRITE);
         return;
     }
@@ -232,7 +271,7 @@ void ota_poll() {
         ESP_LOGE(TAG, "Image is for board %d, this is board %d - refused",
                  _board_tag.found, PULSAR_BOARD_ID);
         esp_ota_abort(_ota_handle);
-        _ota_active = false;
+        set_active(false);
         send_ota_status(OTA_ERR_BOARD);
         return;
     }
@@ -240,7 +279,7 @@ void ota_poll() {
     esp_err_t err = esp_ota_end(_ota_handle);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "esp_ota_end failed: %s", esp_err_to_name(err));
-        _ota_active = false;
+        set_active(false);
         send_ota_status(OTA_ERR_VALIDATE);
         return;
     }
@@ -248,7 +287,7 @@ void ota_poll() {
     err = esp_ota_set_boot_partition(_ota_partition);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "set_boot_partition failed: %s", esp_err_to_name(err));
-        _ota_active = false;
+        set_active(false);
         send_ota_status(OTA_ERR_VALIDATE);
         return;
     }

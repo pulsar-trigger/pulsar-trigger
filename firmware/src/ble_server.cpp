@@ -40,12 +40,15 @@ static volatile bool _pendingRename = false;
 static volatile uint16_t _auto_off_minutes = 5;  // default: 5 min (0 = disabled)
 
 // Connection-parameter policy (link_policy.h). The peer address comes from the
-// connect event; the mode actually requested is tracked so a request goes out
-// only on a change.
+// connect event. LinkTracker decides when to ask, from the interval the
+// controller REPORTS - not from what was last asked: a stale request can land
+// after a newer one (the pm-build OTA crawled at 795 ms because of that).
+// The BT task writes it (connect, update reports), loop() reads it: one lock.
 static BLEServer* _server = nullptr;
 static esp_bd_addr_t _peer = {0};
 static volatile bool _peerValid = false;
-static LinkMode _link = LinkMode::None;
+static LinkTracker _linkT;
+static portMUX_TYPE _linkMux = portMUX_INITIALIZER_UNLOCKED;
 static volatile uint32_t _lastInteractionMs = 0;
 static void link_gap_event(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param);
 
@@ -60,6 +63,9 @@ class PulsarServerCB : public BLEServerCallbacks {
     // that carries the central's address - needed to ask for parameters.
     void onConnect(BLEServer* s, esp_ble_gatts_cb_param_t* param) override {
         memcpy(_peer, param->connect.remote_bda, sizeof(esp_bd_addr_t));
+        portENTER_CRITICAL(&_linkMux);
+        _linkT.connected(param->connect.conn_params.interval);
+        portEXIT_CRITICAL(&_linkMux);
         _peerValid = true;
         _lastInteractionMs = millis();  // a fresh connection is someone at the app
         wake_kick();                    // loop(): pick the link mode now
@@ -67,6 +73,9 @@ class PulsarServerCB : public BLEServerCallbacks {
     void onDisconnect(BLEServer* s) override {
         _connected = false;
         _peerValid = false;
+        portENTER_CRITICAL(&_linkMux);
+        _linkT = LinkTracker{};
+        portEXIT_CRITICAL(&_linkMux);
         wake_kick();
         ESP_LOGI(TAG, "Client disconnected — job continues");
         ota_on_disconnect();  // an upload cut off mid-way must not keep the board awake
@@ -563,9 +572,13 @@ bool ble_connected() {
 static void link_gap_event(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param) {
     if (event == ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT) {
         const auto& u = param->update_conn_params;
+        portENTER_CRITICAL(&_linkMux);
+        _linkT.updated(u.conn_int, u.status == ESP_BT_STATUS_SUCCESS);
+        portEXIT_CRITICAL(&_linkMux);
         ESP_LOGI(TAG, "Link now: interval %u.%02u ms, latency %u, timeout %u ms (status %d)",
                  u.conn_int * 5 / 4, (u.conn_int * 125) % 100, u.latency,
                  u.timeout * 10, u.status);
+        wake_kick();  // loop(): compare against the wanted mode now
     }
 }
 
@@ -579,16 +592,19 @@ void ble_link_tick(bool run_active) {
     was_running = run_active;
 
     bool connected = _connected && _peerValid && _server;
+    uint32_t now = millis();
     LinkMode want = link_wanted(connected, ota_in_progress(), run_active,
-                                millis() - _lastInteractionMs);
-    if (want == _link) return;
-    _link = want;
-    if (want == LinkMode::None) return;
+                                now - _lastInteractionMs);
+    portENTER_CRITICAL(&_linkMux);
+    bool ask = _linkT.should_ask(want, now);
+    uint8_t tries = _linkT.tries;
+    portEXIT_CRITICAL(&_linkMux);
+    if (!ask) return;
     const LinkParams& p = (want == LinkMode::Fast) ? LINK_FAST : LINK_SLOW;
     _server->updateConnParams(_peer, p.min_interval, p.max_interval, p.latency, p.timeout);
-    ESP_LOGI(TAG, "Link %s: interval %u-%u ms, latency %u, timeout %u ms",
+    ESP_LOGI(TAG, "Link %s: interval %u-%u ms, latency %u, timeout %u ms (request %u of %u)",
              link_name(want), p.min_interval * 5 / 4, p.max_interval * 5 / 4,
-             p.latency, p.timeout * 10);
+             p.latency, p.timeout * 10, tries, LINK_MAX_TRIES);
 }
 
 void ble_handle_rename() {
