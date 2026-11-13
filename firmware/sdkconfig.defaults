@@ -15,6 +15,11 @@
 #    power-down), and 1024 overflowed it every few minutes: a panic in IDLE1,
 #    debug exception = the end-of-stack watchpoint (2026-11-12, read from the
 #    core dump over BLE). Below even ESP-IDF's own default of 1536.
+#  - the Bluedroid BTC task's stack at 6144, not 3072. The GATT write
+#    callbacks run there, and Arduino's BLECharacteristic::notify()
+#    hex-dumps every value with sprintf into 240 bytes of locals even with
+#    logging off: answering a STATUS_REQ overflowed it right after boot
+#    (BTC_TASK, end-of-stack watchpoint, 2026-11-12).
 CONFIG_IDF_CMAKE=y
 CONFIG_IDF_TARGET_ARCH_XTENSA=y
 CONFIG_IDF_TARGET="esp32s3"
@@ -327,7 +332,7 @@ CONFIG_BT_CTRL_HCI_TL_EFF=1
 CONFIG_BT_BLUEDROID_ENABLED=y
 # CONFIG_BT_NIMBLE_ENABLED is not set
 # CONFIG_BT_CONTROLLER_ONLY is not set
-CONFIG_BT_BTC_TASK_STACK_SIZE=3072
+CONFIG_BT_BTC_TASK_STACK_SIZE=6144
 CONFIG_BT_BLUEDROID_PINNED_TO_CORE_0=y
 # CONFIG_BT_BLUEDROID_PINNED_TO_CORE_1 is not set
 CONFIG_BT_BLUEDROID_PINNED_TO_CORE=0
@@ -1513,7 +1518,7 @@ CONFIG_ESP32_APPTRACE_DEST_NONE=y
 CONFIG_ESP32_APPTRACE_LOCK_ENABLE=y
 CONFIG_BLUEDROID_ENABLED=y
 # CONFIG_NIMBLE_ENABLED is not set
-CONFIG_BTC_TASK_STACK_SIZE=3072
+CONFIG_BTC_TASK_STACK_SIZE=6144
 CONFIG_BLUEDROID_PINNED_TO_CORE_0=y
 # CONFIG_BLUEDROID_PINNED_TO_CORE_1 is not set
 CONFIG_BLUEDROID_PINNED_TO_CORE=0
