@@ -144,15 +144,18 @@ an upload.
 |---|---|---|
 | `m5sticks3` (stock, what ships) | 3 + 3, plain and under the race | all complete, 37-45 s, 64-79 writes/s |
 | `m5sticks3_pm` | 2 under the race | complete, 46-52 s |
-| `m5sticks3_pm` | 2 started on the fast link | 🔴 failed: link lost 4 s in; data stalled at 60 % (the stick logged both and kept running) |
+| `m5sticks3_pm`, 2026-11-11 | 2 started on the fast link | 🔴 failed: link lost 4 s in; data stalled at 60 % (the stick logged both and kept running) |
+| `m5sticks3_pm`, 2026-11-13, after the reboot fixes below | 6 started on the fast link, back to back | all complete, 39 s, 80 writes/s; each restarted into the new image with no core dump |
 
-🔴 **Still open on `m5sticks3_pm`:** an upload that starts on the fast link (4 s supervision
-timeout) can lose the link while flash is busy; one that starts on the slow link (6 s,
-latency 2) survives. Not seen on the stock build, so it is in this build's ESP-IDF
-configuration (octal PSRAM started at boot, SPI flash settings), not in the link logic.
-Candidates: `esp_ota_begin` with `OTA_WITH_SEQUENTIAL_WRITES` (erase per sector instead of
-the whole image up front), a longer fast-link supervision timeout, the flash-erase yield
-settings. Keep `m5sticks3_pm` experimental until it passes.
+**The fast-link failures did not come back, and why is not known.** On 11-11 two uploads that
+started on the fast link failed, and the stick logged the loss and kept running: it was a lost
+link, not a reboot. On 11-13, six in a row passed. Each run: no idle before `BEGIN`, then reset
+reason, uptime and core dump read over BLE. The build had changed in between (idle-task stack,
+`esp_pm` clamp, BTC stack; see "Reboots on the power-saving build"), but none of those obviously
+explains a link lost without a reboot, so treat this as not reproduced rather than fixed. If an upload fails again, read the crash info first (`OP_CRASH_INFO_REQ`).
+
+The up-front erase in `esp_ota_begin` takes 2.5-4 s, in the BTC task, before `set_active()`
+takes the locks. Nothing so far shows that it matters, so it is left as it is.
 
 🔴 **USB on the power-saving build is dead while it sleeps - from about a second after boot.**
 The port stays listed but answers nothing (`OSError: [Errno 71] Protocol error` on the first
@@ -248,7 +251,7 @@ Verified: 30 back-to-back connect-and-status cycles, a 15-minute run with 0 rebo
 - Bluedroid → NimBLE: smaller and lighter, a bigger change.
 - A light-sleep build for the Core2 and the generic ESP32, the same way, after the StickS3
   numbers say it is worth it.
-- Make `m5sticks3_pm` the default StickS3 build once it has run a few real sessions (one 2 h rundown so far, 2026-11-12) and the fast-link OTA issue above is fixed.
+- Make `m5sticks3_pm` the default StickS3 build once it has run a few real sessions (one 2 h rundown so far, 2026-11-12). The fast-link OTA failures have not come back (6/6, 2026-11-13); cause unknown.
 - Advertising interval (152–318 ms today) could be longer when idle.
 - The StickS3 trigger pins are still the prototype's G0/G1 in saved settings; the jack hat
   uses G5/G6 (separate change).

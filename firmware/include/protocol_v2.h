@@ -37,6 +37,7 @@ enum Op : uint8_t {
     OP_STATUS_REQ         = 0x53,
     OP_DEVICE_INFO_REQ    = 0x54,
     OP_CRASH_INFO_REQ     = 0x55,  // answered by NOTIFY_CRASH_INFO (nothing if no core dump)
+    OP_CRASH_CLEAR        = 0x56,  // erase the stored core dump; ACK 0 done, 1 failed, 0xFF no core dump support
 };
 
 // ── Notification opcodes (firmware → app) ─────────────────────────────────

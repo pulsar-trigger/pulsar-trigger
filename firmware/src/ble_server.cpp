@@ -45,6 +45,7 @@ static BLECharacteristic* _otaDataChar = nullptr;
 static volatile bool _connected = false;
 static volatile bool _pendingRename = false;
 static volatile bool _pendingCrashInfo = false;  // sent from loop(), not the GATT callback
+static volatile bool _pendingCrashClear = false; // erased from loop(), not the GATT callback
 static volatile uint16_t _auto_off_minutes = 5;  // default: 5 min (0 = disabled)
 
 // Connection-parameter policy (link_policy.h). The peer address comes from the
@@ -272,6 +273,9 @@ class CmdCharCB : public BLECharacteristicCallbacks {
             case v2::OP_CRASH_INFO_REQ:
                 _pendingCrashInfo = true;  // ble_handle_rename() sends it from loop()
                 break;
+            case v2::OP_CRASH_CLEAR:
+                _pendingCrashClear = true;  // a flash erase: loop() does it and ACKs
+                break;
 
             case v2::OP_SET_FOCUS: {
                 uint8_t tag, tlen; const uint8_t* v;
@@ -382,9 +386,11 @@ class CmdCharCB : public BLECharacteristicCallbacks {
 //
 // 🔴 Nothing here runs in the GATT write callback. The dump is read ONCE at
 // boot (crash_info_load from ble_init) and the frame is sent from loop()
-// (ble_handle_rename). The BTC task that runs the callback has a 3072-byte
+// (ble_handle_rename). The BTC task that runs the callback had a 3072-byte
 // stack: building this frame there reset the board on every request
 // (2026-11-12), and each reset wrote a fresh dump over the one being read.
+// OP_CRASH_CLEAR erases the dump once it has been read, so an old crash does
+// not read as a new one; it erases flash, so it runs from loop() as well.
 #ifdef PULSAR_CRASH_INFO
 static esp_core_dump_summary_t _crash;
 static bool _crash_ok = false;
@@ -395,6 +401,18 @@ static void crash_info_load() {
     _crash_ok = esp_core_dump_image_check() == ESP_OK
              && esp_core_dump_get_summary(&_crash) == ESP_OK;
     ESP_LOGI(TAG, "Core dump in flash: %s", _crash_ok ? "yes" : "no");
+#endif
+}
+
+// -> ACK error code: 0 erased, 1 the erase failed, 0xFF no core dump in this build.
+static uint8_t crash_info_clear() {
+#ifdef PULSAR_CRASH_INFO
+    esp_err_t err = esp_core_dump_image_erase();
+    if (err == ESP_OK) _crash_ok = false;
+    ESP_LOGI(TAG, "Core dump erase: %s", esp_err_to_name(err));
+    return err == ESP_OK ? 0 : 1;
+#else
+    return 0xFF;
 #endif
 }
 
@@ -676,6 +694,10 @@ void ble_handle_rename() {
     if (_pendingCrashInfo) {
         _pendingCrashInfo = false;
         send_crash_info_v2();
+    }
+    if (_pendingCrashClear) {
+        _pendingCrashClear = false;
+        send_ack(v2::OP_CRASH_CLEAR, crash_info_clear());
     }
     if (!_pendingRename) return;
     _pendingRename = false;

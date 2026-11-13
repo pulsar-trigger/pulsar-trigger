@@ -76,6 +76,8 @@ Control opcodes:
 | `0x52` | `SHUTTER`       |
 | `0x53` | `STATUS_REQ`    |
 | `0x54` | `DEVICE_INFO_REQ` |
+| `0x55` | `CRASH_INFO_REQ` — answered by notify `0x83`, nothing if no core dump |
+| `0x56` | `CRASH_CLEAR` — erase the stored core dump; ACK `0` done, `1` failed, `0xFF` no core dump in this build |
 
 ## Opcodes (firmware → app, notify channel)
 
@@ -175,8 +177,9 @@ watchdog, 7 other watchdog, 8 deep sleep, 9 brownout.
 Sent right after `DEVICE_INFO` when the coredump partition holds a valid core dump
 (boards built with core dump to flash in ELF format: the `m5sticks3_pm` env). It is
 the only account of a panic on a board whose USB is unavailable. The dump stays in
-flash until the next panic overwrites it, so `CRASH_ELF_SHA` says which image it
-belongs to. Decode the addresses against that image's ELF:
+flash until the next panic overwrites it or `CRASH_CLEAR` (`0x56`) erases it, so
+`CRASH_ELF_SHA` says which image it belongs to. Clear it once it has been read, so an
+old crash is not mistaken for a new one. Decode the addresses against that image's ELF:
 `xtensa-esp32s3-elf-addr2line -pfiaC -e firmware.elf <PC> <BT...>`.
 
 | Tag   | Name                | Type      |
