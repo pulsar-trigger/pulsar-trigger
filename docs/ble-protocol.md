@@ -164,6 +164,7 @@ whatever the receiver did understand.
 | `0x78` | `UPTIME_MIN`       | u16 LE    |
 | `0x79` | `RESET_REASON`     | u8        |
 | `0x7A` | `UPTIME_S`         | u32 LE    |
+| `0x82` | `PM_TICK_CLAMPS`   | u32 LE, power-saving build only: light-sleep tick steps clamped by the esp_pm patch |
 
 `RESET_REASON` is ESP-IDF's `esp_reset_reason_t` for the last boot: 1 power-on,
 3 software (`esp_restart`, e.g. after OTA), 4 panic, 5 interrupt watchdog, 6 task

@@ -95,6 +95,7 @@ enum Tag : uint8_t {
     TAG_UPTIME_MIN     = 0x78,  // u16 LE
     TAG_RESET_REASON   = 0x79,  // u8, esp_reset_reason_t of the last boot
     TAG_UPTIME_S       = 0x7A,  // u32 LE
+    TAG_PM_TICK_CLAMPS = 0x82,  // u32 LE, light-sleep tick steps clamped (m5sticks3_pm only)
     // Crash info (NOTIFY_CRASH_INFO): the core dump summary in flash
     TAG_CRASH_TASK     = 0x7B,  // bytes, task name (no NUL)
     TAG_CRASH_PC       = 0x7C,  // u32 LE

@@ -28,6 +28,9 @@
 #include <esp_core_dump.h>
 #define PULSAR_CRASH_INFO 1
 #endif
+// Defined by the patched esp_pm (firmware/components/esp_pm), which only the
+// m5sticks3_pm env builds; weak, so it is null everywhere else.
+extern "C" volatile uint32_t pulsar_pm_tick_clamps __attribute__((weak));
 #include <esp_log.h>
 
 static const char* TAG = "BLE";
@@ -449,6 +452,7 @@ static void send_device_info_v2() {
     w.putU16(v2::TAG_UPTIME_MIN,     (uint16_t)(millis() / 60000UL));
     w.putU8 (v2::TAG_RESET_REASON,   (uint8_t)esp_reset_reason());
     w.putU32(v2::TAG_UPTIME_S,       (uint32_t)(millis() / 1000UL));
+    if (&pulsar_pm_tick_clamps) w.putU32(v2::TAG_PM_TICK_CLAMPS, pulsar_pm_tick_clamps);
 
     size_t n = w.finish();
     if (n > 0) ble_notify(buf, n);
