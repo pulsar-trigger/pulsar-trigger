@@ -8,9 +8,11 @@
 
 // ── GPIO pins ────────────────────────────────────────────────────────────────
 #ifdef BOARD_M5STICKS3
-  // M5StickS3: user-wired optocoupler on Hat2-Bus (G0, G1)
-  #define DEFAULT_PIN_SHUTTER  0
-  #define DEFAULT_PIN_FOCUS    1
+  // M5StickS3: the Pulsar Jack HAT drives its optocouplers from G5 (shutter) and
+  // G6 (focus) - hardware/s3-jack-hat. G0/G3 are boot-strapping pins: an
+  // optocoupler LED on G0 holds it low at reset and the chip boots to download mode.
+  #define DEFAULT_PIN_SHUTTER  5
+  #define DEFAULT_PIN_FOCUS    6
   // No dedicated status LED GPIO — M5 board
   #define PIN_LED       GPIO_NUM_NC
   // Battery via M5PM1 I2C PMIC — no ADC pin
@@ -36,9 +38,10 @@
 
 // ── Safe digital-output pins for shutter / focus ─────────────────────────────
 #ifdef BOARD_M5STICKS3
-  // Hat2-Bus exposes: G0-G8, G43, G44
+  // Hat2-Bus exposes G0-G8, G43, G44; G0/G3 (strapping) are left out. A pin saved
+  // by an older build that is no longer listed falls back to the defaults at boot.
   static const uint8_t SAFE_OUTPUT_PINS[] = {
-      0, 1, 2, 3, 4, 5, 6, 7, 8, 43, 44
+      1, 2, 4, 5, 6, 7, 8, 43, 44
   };
 #elif defined(BOARD_M5CORE2)
   // Core2 M5-Bus: most GPIOs accessible

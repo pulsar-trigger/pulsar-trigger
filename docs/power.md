@@ -253,5 +253,3 @@ Verified: 30 back-to-back connect-and-status cycles, a 15-minute run with 0 rebo
   numbers say it is worth it.
 - Make `m5sticks3_pm` the default StickS3 build once it has run a few real sessions (one 2 h rundown so far, 2026-11-12). The fast-link OTA failures have not come back (6/6, 2026-11-13); cause unknown.
 - Advertising interval (152–318 ms today) could be longer when idle.
-- The StickS3 trigger pins are still the prototype's G0/G1 in saved settings; the jack hat
-  uses G5/G6 (separate change).
