@@ -1,0 +1,10 @@
+(version 1)
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Pulsar S3 Jack Hat custom rules (written for Pulsar).
+# Camera side (the jack nets) keeps >= 1 mm copper clearance from everything
+# that is not camera side: board GND, the GPIO nets, and the Hat2 pins that
+# carry the stick's own rails (no-net pads). The jack's own open switch
+# contacts (J2 pins 5 and 7) are camera side by construction and exempt.
+(rule "camera side isolation"
+	(constraint clearance (min 1.0mm))
+	(condition "(A.NetName == '/JACK_TIP' || A.NetName == '/JACK_RING' || A.NetName == '/JACK_SLEEVE') && B.NetName != '/JACK_TIP' && B.NetName != '/JACK_RING' && B.NetName != '/JACK_SLEEVE' && !B.memberOfFootprint('J2')"))

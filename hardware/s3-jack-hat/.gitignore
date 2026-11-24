@@ -1,0 +1,7 @@
+# KiCad local state and caches
+*.kicad_prl
+*-backups/
+fp-info-cache
+_autosave-*
+*.lck
+__pycache__/
